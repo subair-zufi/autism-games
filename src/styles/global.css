@@ -124,6 +124,63 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 }
 .level-btn.selected { background: var(--accent); color: #fff; }
 
+/* ---- in-game layout ---- */
+.game-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-top: 64px;
+}
+.game-canvas {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+.game-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px 22px;
+}
+.choice-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 120px;
+  min-height: 96px;
+  padding: 12px 18px;
+  font-size: 1.15rem;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 5px 0 rgba(0, 0, 0, 0.1);
+}
+.choice-btn:disabled { opacity: 0.4; }
+.choice-emoji { font-size: 2.2rem; }
+.celebrate {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 6rem;
+  pointer-events: none;
+  animation: star-pop 1.3s ease forwards;
+}
+@keyframes star-pop {
+  0% { transform: scale(0.2); opacity: 0; }
+  30% { transform: scale(1.25); opacity: 1; }
+  70% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.1) translateY(-30px); opacity: 0; }
+}
+
 /* ---- home page ---- */
 .home {
   min-height: 100%;
