@@ -27,7 +27,7 @@ export const GARDEN_OBJECTS: ObjectMeta[] = [
   { id: 'tree', label: 'Tree', emoji: '🌳', category: 'tree', position: [-2.7, -1.6] },
   { id: 'bird', label: 'Bird', emoji: '🐦', category: 'bird', position: [-0.9, -1] },
   { id: 'mushroom', label: 'Mushroom', emoji: '🍄', category: 'mushroom', position: [2.6, -0.5] },
-  { id: 'bee', label: 'Bee', emoji: '🐝', category: 'bee', position: [-2.3, 0.3] },
+  { id: 'bee', label: 'Bee', emoji: '🐝', category: 'bee', position: [-2.4, 1.2] },
 ]
 
 export function objectMeta(id: ObjectId): ObjectMeta {
