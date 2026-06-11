@@ -14,6 +14,6 @@ export const useScores = create<ScoresState>()(
       reportScore: (game, score) =>
         set((s) => ({ best: { ...s.best, [game]: Math.max(s.best[game], score) } })),
     }),
-    { name: 'otist-scores' },
+    { name: 'autism-scores' },
   ),
 )

@@ -14,7 +14,7 @@ export function Home() {
   return (
     <div className="home">
       <header className="home-header">
-        <h1>Otist Games</h1>
+        <h1>Autism Games</h1>
         <p>Pick a game to play!</p>
       </header>
       <div className="card-grid">

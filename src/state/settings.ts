@@ -22,6 +22,6 @@ export const useSettings = create<SettingsState>()(
       setDifficulty: (game, d) =>
         set((s) => ({ difficulty: { ...s.difficulty, [game]: d } })),
     }),
-    { name: 'otist-settings' },
+    { name: 'autism-settings' },
   ),
 )

@@ -6,7 +6,7 @@
 
 **Architecture:** Same proven pattern — pure logic module (TDD), one scene component, one flow component on the shared kit. All 3D models are built from primitives in small sub-components. The hand glides between targets each round; choice buttons are DOM (no 3D picking needed, simpler than Ball Drop).
 
-**Spec:** `docs/superpowers/specs/2026-06-10-otist-games-design.md` §4.3
+**Spec:** `docs/superpowers/specs/2026-06-10-autism-games-design.md` §4.3
 
 ---
 

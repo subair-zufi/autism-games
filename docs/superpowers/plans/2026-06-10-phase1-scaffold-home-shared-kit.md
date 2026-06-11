@@ -8,7 +8,7 @@
 
 **Tech Stack:** Vite, React 18, TypeScript, react-router-dom, zustand, three + @react-three/fiber + @react-three/drei (installed now, used from Phase 2), Vitest + jsdom.
 
-**Spec:** `docs/superpowers/specs/2026-06-10-otist-games-design.md`
+**Spec:** `docs/superpowers/specs/2026-06-10-autism-games-design.md`
 
 ---
 
@@ -63,7 +63,7 @@ export default defineConfig({
 })
 ```
 
-- [ ] **Step 3:** Delete Vite demo cruft (`src/App.css`, `src/assets/react.svg`, demo content of `App.tsx`). Set `<title>Otist Games</title>` and `<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">` in `index.html`.
+- [ ] **Step 3:** Delete Vite demo cruft (`src/App.css`, `src/assets/react.svg`, demo content of `App.tsx`). Set `<title>Autism Games</title>` and `<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">` in `index.html`.
 
 - [ ] **Step 4:** Verify: `npm run dev` serves a page; `npm run build` succeeds. Commit: `chore: scaffold vite react-ts app with deps`
 
@@ -125,7 +125,7 @@ test('setDifficulty updates one game only', () => {
 
 test('persists to localStorage', () => {
   useSettings.getState().setVoiceOn(false)
-  expect(JSON.parse(localStorage.getItem('otist-settings')!).state.voiceOn).toBe(false)
+  expect(JSON.parse(localStorage.getItem('autism-settings')!).state.voiceOn).toBe(false)
 })
 ```
 
@@ -157,7 +157,7 @@ export const useSettings = create<SettingsState>()(
       setDifficulty: (game, d) =>
         set((s) => ({ difficulty: { ...s.difficulty, [game]: d } })),
     }),
-    { name: 'otist-settings' },
+    { name: 'autism-settings' },
   ),
 )
 ```
@@ -211,7 +211,7 @@ export const useScores = create<ScoresState>()(
       reportScore: (game, score) =>
         set((s) => ({ best: { ...s.best, [game]: Math.max(s.best[game], score) } })),
     }),
-    { name: 'otist-scores' },
+    { name: 'autism-scores' },
   ),
 )
 ```

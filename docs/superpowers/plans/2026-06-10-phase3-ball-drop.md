@@ -6,7 +6,7 @@
 
 **Architecture:** Same pattern as Phase 2 — pure logic module (`logic.ts`, unit-tested), one 3D scene component (`BallDropScene`), one flow component (`BallDropGame`) reusing the shared kit. Falling/dragging is hand-rolled in `useFrame` (gravity + bounce) — no physics engine dependency. Box positions stay fixed for the whole session (predictability matters for this audience); only the requested color changes.
 
-**Spec:** `docs/superpowers/specs/2026-06-10-otist-games-design.md` §4.4
+**Spec:** `docs/superpowers/specs/2026-06-10-autism-games-design.md` §4.4
 
 ---
 

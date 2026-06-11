@@ -8,7 +8,7 @@
 
 **Tech Stack:** React Three Fiber + drei (already installed), zustand stores, speech + sounds services from Phase 1.
 
-**Spec:** `docs/superpowers/specs/2026-06-10-otist-games-design.md` §4.1
+**Spec:** `docs/superpowers/specs/2026-06-10-autism-games-design.md` §4.1
 
 ---
 

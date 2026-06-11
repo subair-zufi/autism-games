@@ -21,5 +21,5 @@ test('setDifficulty updates one game only', () => {
 
 test('persists to localStorage', () => {
   useSettings.getState().setVoiceOn(false)
-  expect(JSON.parse(localStorage.getItem('otist-settings')!).state.voiceOn).toBe(false)
+  expect(JSON.parse(localStorage.getItem('autism-settings')!).state.voiceOn).toBe(false)
 })
