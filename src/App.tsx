@@ -4,9 +4,11 @@ import { Home } from './pages/Home'
 import { ComingSoon } from './components/ComingSoon'
 import { GAME_LIST, type GameId } from './types'
 import { EmotionsGame } from './games/emotions/EmotionsGame'
+import { BallDropGame } from './games/balldrop/BallDropGame'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotions: EmotionsGame,
+  balldrop: BallDropGame,
 }
 
 export default function App() {
