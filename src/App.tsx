@@ -11,6 +11,7 @@ import { MirrorGame } from './games/mirror/MirrorGame'
 import { BlockGame } from './games/blocks/BlockGame'
 import { MuseumGame } from './games/museum/MuseumGame'
 import { RightWayGame } from './games/rightway/RightWayGame'
+import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotions: EmotionsGame,
@@ -21,6 +22,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   blocks: BlockGame,
   museum: MuseumGame,
   rightway: RightWayGame,
+  rulefixer: RuleFixerGame,
 }
 
 export default function App() {
