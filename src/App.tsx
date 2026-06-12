@@ -10,6 +10,7 @@ import { ZebraGame } from './games/zebra/ZebraGame'
 import { MirrorGame } from './games/mirror/MirrorGame'
 import { BlockGame } from './games/blocks/BlockGame'
 import { MuseumGame } from './games/museum/MuseumGame'
+import { RightWayGame } from './games/rightway/RightWayGame'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotions: EmotionsGame,
@@ -19,6 +20,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   mirror: MirrorGame,
   blocks: BlockGame,
   museum: MuseumGame,
+  rightway: RightWayGame,
 }
 
 export default function App() {

@@ -207,6 +207,23 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   pointer-events: none;
   animation: star-pop 1.3s ease forwards;
 }
+/* floating "what is happening" bubble over a scene (social-rules games) */
+.action-bubble {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  border-radius: 50%;
+  width: 84px;
+  height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.6rem;
+  box-shadow: 0 8px 20px rgba(63, 58, 85, 0.18);
+  pointer-events: none;
+}
 @keyframes star-pop {
   0% { transform: scale(0.2); opacity: 0; }
   30% { transform: scale(1.25); opacity: 1; }
