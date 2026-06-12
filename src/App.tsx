@@ -8,6 +8,7 @@ import { BallDropGame } from './games/balldrop/BallDropGame'
 import { GardenGame } from './games/garden/GardenGame'
 import { ZebraGame } from './games/zebra/ZebraGame'
 import { MirrorGame } from './games/mirror/MirrorGame'
+import { BlockGame } from './games/blocks/BlockGame'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotions: EmotionsGame,
@@ -15,6 +16,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   garden: GardenGame,
   zebra: ZebraGame,
   mirror: MirrorGame,
+  blocks: BlockGame,
 }
 
 export default function App() {
