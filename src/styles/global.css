@@ -149,6 +149,26 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   color: var(--ink-soft);
   font-size: 1.05rem;
 }
+
+/* ---- zebra crossing WALK button ---- */
+.walk-btn {
+  min-height: 84px;
+  min-width: 220px;
+  padding: 16px 40px;
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 1px;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
+  transition: transform 0.1s, background 0.3s;
+}
+.walk-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.18); }
+.walk-btn:disabled { opacity: 0.55; }
+.walk-btn.ready {
+  background: #4caf50;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18), 0 0 26px rgba(76, 175, 80, 0.7);
+}
+.walk-btn.wait { background: #c77b6b; }
 .game-bottom {
   display: flex;
   flex-direction: column;

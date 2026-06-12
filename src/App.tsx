@@ -6,11 +6,13 @@ import { GAME_LIST, type GameId } from './types'
 import { EmotionsGame } from './games/emotions/EmotionsGame'
 import { BallDropGame } from './games/balldrop/BallDropGame'
 import { GardenGame } from './games/garden/GardenGame'
+import { ZebraGame } from './games/zebra/ZebraGame'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotions: EmotionsGame,
   balldrop: BallDropGame,
   garden: GardenGame,
+  zebra: ZebraGame,
 }
 
 export default function App() {
