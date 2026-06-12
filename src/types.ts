@@ -9,6 +9,7 @@ export type GameId =
   | 'rightway'
   | 'rulefixer'
   | 'weather'
+  | 'torch'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
 export interface GameMeta {
@@ -30,4 +31,5 @@ export const GAME_LIST: GameMeta[] = [
   { id: 'rightway', title: 'Right or Fix?', icon: '✅', path: '/rightway', color: '#9bd0a0' },
   { id: 'rulefixer', title: 'Good Choice', icon: '💡', path: '/rulefixer', color: '#e8a06f' },
   { id: 'weather', title: 'Feelings Weather', icon: '🌦️', path: '/weather', color: '#86c5da' },
+  { id: 'torch', title: 'Talking Torch', icon: '🔥', path: '/torch', color: '#e2906f' },
 ]

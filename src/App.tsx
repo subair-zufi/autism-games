@@ -13,6 +13,7 @@ import { MuseumGame } from './games/museum/MuseumGame'
 import { RightWayGame } from './games/rightway/RightWayGame'
 import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
 import { WeatherGame } from './games/weather/WeatherGame'
+import { TorchGame } from './games/torch/TorchGame'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotions: EmotionsGame,
@@ -25,6 +26,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   rightway: RightWayGame,
   rulefixer: RuleFixerGame,
   weather: WeatherGame,
+  torch: TorchGame,
 }
 
 export default function App() {
