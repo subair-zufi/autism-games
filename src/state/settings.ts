@@ -16,7 +16,7 @@ export const useSettings = create<SettingsState>()(
     (set) => ({
       voiceOn: true,
       soundOn: true,
-      difficulty: { emotions: 'easy', zebra: 'easy', garden: 'easy', balldrop: 'easy', mirror: 'easy', blocks: 'easy' },
+      difficulty: { emotions: 'easy', zebra: 'easy', garden: 'easy', balldrop: 'easy', mirror: 'easy', blocks: 'easy', museum: 'easy' },
       setVoiceOn: (voiceOn) => set({ voiceOn }),
       setSoundOn: (soundOn) => set({ soundOn }),
       setDifficulty: (game, d) =>

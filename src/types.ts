@@ -1,4 +1,4 @@
-export type GameId = 'emotions' | 'zebra' | 'garden' | 'balldrop' | 'mirror' | 'blocks'
+export type GameId = 'emotions' | 'zebra' | 'garden' | 'balldrop' | 'mirror' | 'blocks' | 'museum'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
 export interface GameMeta {
@@ -16,4 +16,5 @@ export const GAME_LIST: GameMeta[] = [
   { id: 'balldrop', title: 'Ball Drop', icon: '🔴', path: '/balldrop', color: '#c4a7e7' },
   { id: 'mirror', title: 'Emotion Mirror', icon: '🪞', path: '/mirror', color: '#e0a3c8' },
   { id: 'blocks', title: 'Block Buddies', icon: '🧱', path: '/blocks', color: '#f0a868' },
+  { id: 'museum', title: 'Museum Look', icon: '🖼️', path: '/museum', color: '#8fb8e0' },
 ]
