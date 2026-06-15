@@ -35,7 +35,7 @@ export function SliderScene(props: SliderSceneProps) {
   )
 }
 
-function SceneInner({ ahead, queueColors, showYou, slideTrigger, sliderIsYou }: SliderSceneProps) {
+export function SceneInner({ ahead, queueColors, showYou, slideTrigger, sliderIsYou }: SliderSceneProps) {
   return (
     <group>
       <Ground />

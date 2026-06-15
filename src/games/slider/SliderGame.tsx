@@ -18,10 +18,10 @@ const MAX_LIVES = 3
 const YOUR_SLIDE_MS = 1500
 
 export function SliderGame() {
-  const difficulty = useSettings((s) => s.difficulty.slider)
-  const best = useScores((s) => s.best.slider)
+  const difficulty = useSettings((s) => s.difficulty.slider) ?? 'easy'
+  const best = useScores((s) => s.best.slider) ?? 0
   const reportScore = useScores((s) => s.reportScore)
-  const config = CONFIG[difficulty]
+  const config = CONFIG[difficulty] ?? CONFIG.easy
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [ahead, setAhead] = useState(config.queue) // kids still in front of you

@@ -23,3 +23,16 @@ test('persists to localStorage', () => {
   useSettings.getState().setVoiceOn(false)
   expect(JSON.parse(localStorage.getItem('autism-settings')!).state.voiceOn).toBe(false)
 })
+
+test('stale saved state (missing newer game keys) still gets defaults', async () => {
+  // simulate a store saved before the slider game existed
+  localStorage.setItem(
+    'autism-settings',
+    JSON.stringify({ state: { voiceOn: false, soundOn: true, difficulty: { emotions: 'hard' } }, version: 0 }),
+  )
+  await useSettings.persist.rehydrate()
+  const s = useSettings.getState()
+  expect(s.voiceOn).toBe(false) // saved value kept
+  expect(s.difficulty.emotions).toBe('hard') // saved value kept
+  expect(s.difficulty.slider).toBe('easy') // new key filled from defaults
+})

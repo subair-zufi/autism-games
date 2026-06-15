@@ -22,6 +22,19 @@ export const useSettings = create<SettingsState>()(
       setDifficulty: (game, d) =>
         set((s) => ({ difficulty: { ...s.difficulty, [game]: d } })),
     }),
-    { name: 'autism-settings' },
+    {
+      name: 'autism-settings',
+      // Deep-merge so saved state from an older version (missing newer game
+      // keys) still gets defaults for every game — otherwise a stale store
+      // would leave e.g. difficulty.slider undefined and crash that game.
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<SettingsState>
+        return {
+          ...current,
+          ...p,
+          difficulty: { ...current.difficulty, ...(p.difficulty ?? {}) },
+        }
+      },
+    },
   ),
 )
