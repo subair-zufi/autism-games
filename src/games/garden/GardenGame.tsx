@@ -9,7 +9,7 @@ import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
 import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
-import { makeRound, objectMeta, type ObjectId, type Round } from './logic'
+import { GOAL, makeRound, objectMeta, type ObjectId, type Round } from './logic'
 import { GardenScene } from './GardenScene'
 
 const META = GAME_LIST.find((g) => g.id === 'garden')!
@@ -19,6 +19,7 @@ export function GardenGame() {
   const difficulty = useSettings((s) => s.difficulty.garden)
   const best = useScores((s) => s.best.garden)
   const reportScore = useScores((s) => s.reportScore)
+  const goal = GOAL[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [round, setRound] = useState<Round>(() => makeRound(difficulty, null))
@@ -44,8 +45,15 @@ export function GardenGame() {
       setLocked(true)
       setCelebrate((c) => c + 1)
       playSuccess()
+      const nextScore = score + 1
+      setScore(nextScore)
+      if (nextScore >= goal) {
+        speak('You found them all! Wonderful looking!')
+        reportScore('garden', nextScore)
+        setTimeout(() => setPhase('over'), 1200)
+        return
+      }
       speak(`Yes! The hand points at the ${objectMeta(id).label}!`)
-      setScore((s) => s + 1)
       setTimeout(() => {
         setWrongPicks([])
         setLocked(false)
@@ -69,7 +77,7 @@ export function GardenGame() {
   return (
     <WebGLGate>
       <div className="game-page">
-        <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
+        <ScoreBar score={score} goal={goal} lives={lives} maxLives={MAX_LIVES} />
         <div className="game-canvas">
           <GardenScene target={round.target} celebrate={celebrate} />
         </div>

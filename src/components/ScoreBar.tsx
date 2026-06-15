@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 
 export function ScoreBar(props: {
   score: number
+  /** when set, score is shown as progress toward a winning goal (e.g. 2/5) */
+  goal?: number
   lives?: number
   maxLives?: number
   /** seconds remaining; shown as a countdown for timed games */
@@ -10,7 +12,7 @@ export function ScoreBar(props: {
   return (
     <div className="score-bar">
       <Link to="/" className="home-btn" aria-label="Home">🏠</Link>
-      <span className="score">⭐ {props.score}</span>
+      <span className="score">⭐ {props.score}{props.goal !== undefined ? ` / ${props.goal}` : ''}</span>
       {props.timeLeft !== undefined && <span className="score">⏱️ {props.timeLeft}s</span>}
       {props.lives !== undefined && (
         <span className="lives">

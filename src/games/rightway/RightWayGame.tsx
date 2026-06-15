@@ -77,7 +77,7 @@ export function RightWayGame() {
   return (
     <WebGLGate>
       <div className="game-page">
-        <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
+        <ScoreBar score={score} goal={total} lives={lives} maxLives={MAX_LIVES} />
         <div className="game-canvas">
           <RightWayScene scenario={scenario} celebrate={celebrate} />
           {/* action bubble shows what is happening */}

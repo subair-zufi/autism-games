@@ -17,7 +17,17 @@ export interface Situation {
   text: string
   /** emoji cue shown in the bubble */
   bubble: string
-  scene: { mood: PeerMood; books?: boolean; tall?: boolean }
+  scene: {
+    mood: PeerMood
+    books?: boolean
+    tall?: boolean
+    /** show a playground swing the peer is standing beside, waiting */
+    swing?: boolean
+    /** peer is lying fallen on the ground */
+    fallen?: boolean
+    /** peer stands off to the side watching a game (ball cue) */
+    watching?: boolean
+  }
   options: Option[]
 }
 
@@ -59,7 +69,7 @@ export const SITUATIONS: Situation[] = [
     id: 'fell',
     text: 'A friend trips and falls in the playground.',
     bubble: '🤕',
-    scene: { mood: 'hurt' },
+    scene: { mood: 'hurt', fallen: true },
     options: [
       { id: 'helpup', label: 'Help them up', emoji: '🤝', isGood: true, result: 'You helped them up. They feel safe and thankful.' },
       { id: 'run', label: 'Run away', emoji: '🏃', isGood: false, result: 'They are left hurt. Stopping to help is kinder.' },
@@ -70,7 +80,7 @@ export const SITUATIONS: Situation[] = [
     id: 'lonely',
     text: 'A child stands alone, watching your game.',
     bubble: '🧍',
-    scene: { mood: 'sad' },
+    scene: { mood: 'sad', watching: true },
     options: [
       { id: 'invite', label: 'Invite them to play', emoji: '👋', isGood: true, result: 'They join in and have fun. That was very kind.' },
       { id: 'ignore2', label: 'Ignore them', emoji: '🙈', isGood: false, result: 'They keep feeling left out. Inviting them is kind.' },
@@ -81,7 +91,7 @@ export const SITUATIONS: Situation[] = [
     id: 'swing',
     text: 'Your friend has waited a long time for the swing.',
     bubble: '⏳',
-    scene: { mood: 'sad' },
+    scene: { mood: 'sad', swing: true },
     options: [
       { id: 'turnit', label: 'Give them a turn', emoji: '🤝', isGood: true, result: 'You took turns! Your friend is happy and grateful.' },
       { id: 'keep', label: 'Keep swinging', emoji: '🙃', isGood: false, result: 'Your friend keeps waiting. Taking turns is fair.' },
@@ -90,7 +100,7 @@ export const SITUATIONS: Situation[] = [
   },
 ]
 
-const ROUNDS: Record<Difficulty, number> = { easy: 4, medium: 5, hard: 6 }
+const ROUNDS: Record<Difficulty, number> = { easy: 3, medium: 5, hard: 7 }
 export function rounds(difficulty: Difficulty): number {
   return ROUNDS[difficulty]
 }

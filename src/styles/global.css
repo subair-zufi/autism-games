@@ -153,12 +153,13 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 /* ---- zebra crossing WALK button ---- */
 .walk-btn {
   min-height: 84px;
-  min-width: 220px;
-  padding: 16px 40px;
+  min-width: 180px;
+  padding: 16px 32px;
   font-size: 1.7rem;
   font-weight: 700;
   color: #fff;
   letter-spacing: 1px;
+  background: #8a93a3;
   box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18);
   transition: transform 0.1s, background 0.3s;
 }
@@ -168,7 +169,16 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   background: #4caf50;
   box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18), 0 0 26px rgba(76, 175, 80, 0.7);
 }
-.walk-btn.wait { background: #c77b6b; }
+.walk-btn.wait {
+  background: #c77b6b;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.18), 0 0 26px rgba(199, 123, 107, 0.6);
+}
+.twobtn-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
 .game-bottom {
   display: flex;
   flex-direction: column;

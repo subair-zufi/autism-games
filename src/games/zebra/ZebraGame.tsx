@@ -80,6 +80,19 @@ export function ZebraGame() {
     }
   }
 
+  function pressWait() {
+    if (phase !== 'playing' || walking) return
+    if (canWalk(light)) {
+      // it's already safe — nudge them to walk, never a failure
+      playGentle()
+      speak('The cars have stopped. You can tap Walk now!')
+    } else {
+      // patient waiting is exactly right — praise it
+      playSuccess()
+      speak('Good waiting! Wait for the cars to stop.')
+    }
+  }
+
   function handleCrossed() {
     setWalking(false)
     playSuccess()
@@ -113,13 +126,22 @@ export function ZebraGame() {
         </div>
         <div className="game-bottom">
           <PromptBanner text={`Cross when the walk light is green. ${score} of ${level.goal}.`} />
-          <button
-            className={safe ? 'walk-btn ready' : 'walk-btn wait'}
-            onClick={pressWalk}
-            disabled={walking}
-          >
-            {safe ? '🚶 WALK' : '✋ WAIT'}
-          </button>
+          <div className="twobtn-row">
+            <button
+              className={safe ? 'walk-btn ready' : 'walk-btn'}
+              onClick={pressWalk}
+              disabled={walking}
+            >
+              🚶 WALK
+            </button>
+            <button
+              className={safe ? 'walk-btn' : 'walk-btn wait'}
+              onClick={pressWait}
+              disabled={walking}
+            >
+              ✋ WAIT
+            </button>
+          </div>
           <p className="hint-text">
             {safe ? 'The cars have stopped — tap WALK!' : 'Watch the light. Wait for the cars to stop.'}
           </p>

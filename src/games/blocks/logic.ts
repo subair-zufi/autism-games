@@ -19,7 +19,7 @@ export interface BlockConfig {
 export const CONFIG: Record<Difficulty, BlockConfig> = {
   easy: { rounds: 5, robotTurnMs: 1300 },
   medium: { rounds: 7, robotTurnMs: 1800 },
-  hard: { rounds: 9, robotTurnMs: 2400 },
+  hard: { rounds: 10, robotTurnMs: 2400 },
 }
 
 export const BLOCK_COLORS = ['#e2554c', '#f5c542', '#5aa9e6', '#7ac74f', '#b06fd6', '#f08a3c']

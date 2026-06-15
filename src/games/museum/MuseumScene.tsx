@@ -17,14 +17,290 @@ export interface MuseumSceneProps {
 export function MuseumScene(props: MuseumSceneProps) {
   return (
     <Canvas
-      camera={{ position: [0, 2.2, 6.4], fov: 45 }}
+      camera={{ position: [0, 2.4, 6.6], fov: 47 }}
       onCreated={({ camera }) => camera.lookAt(0, 1.3, 0)}
     >
-      <color attach="background" args={['#efe9df']} />
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[3, 6, 5]} intensity={0.85} />
+      <color attach="background" args={['#2a2520']} />
+      {/* soft warm ambient so nothing is pitch black */}
+      <ambientLight intensity={0.5} color="#fff3e0" />
+      {/* gentle fill from the front-top, like skylights */}
+      <directionalLight position={[2, 7, 6]} intensity={0.35} color="#fff6e8" />
+      <GalleryRoom />
       <SceneInner {...props} />
     </Canvas>
+  )
+}
+
+/* ---- room dimensions, shared so decor lines up with the exhibit row ---- */
+const ROOM_W = 14 // total width (x: -7..7)
+const ROOM_D = 13 // total depth
+const WALL_H = 8
+const BACK_Z = -6 // back wall well behind the exhibits (which sit at z >= -0.91)
+const SIDE_X = ROOM_W / 2
+
+function GalleryRoom() {
+  const wallColor = '#ddd2c0'
+  const trimColor = '#c4b79e'
+  return (
+    <group>
+      {/* polished marble floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, -1]}>
+        <planeGeometry args={[ROOM_W, ROOM_D]} />
+        <meshStandardMaterial color="#cfc9c0" metalness={0.35} roughness={0.18} />
+      </mesh>
+      {/* a darker inlaid marble disc under the exhibit row for a "stage" feel */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, -0.3]}>
+        <circleGeometry args={[4.4, 48]} />
+        <meshStandardMaterial color="#bcb09a" metalness={0.3} roughness={0.25} />
+      </mesh>
+
+      {/* ceiling */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, WALL_H, -1]}>
+        <planeGeometry args={[ROOM_W, ROOM_D]} />
+        <meshStandardMaterial color="#efe9dd" />
+      </mesh>
+
+      {/* back wall */}
+      <mesh position={[0, WALL_H / 2, BACK_Z]}>
+        <planeGeometry args={[ROOM_W, WALL_H]} />
+        <meshStandardMaterial color={wallColor} />
+      </mesh>
+      {/* back wall baseboard + crown trim */}
+      <mesh position={[0, 0.2, BACK_Z + 0.02]}>
+        <boxGeometry args={[ROOM_W, 0.4, 0.05]} />
+        <meshStandardMaterial color={trimColor} />
+      </mesh>
+      <mesh position={[0, WALL_H - 0.25, BACK_Z + 0.02]}>
+        <boxGeometry args={[ROOM_W, 0.5, 0.08]} />
+        <meshStandardMaterial color={trimColor} />
+      </mesh>
+
+      {/* left wall */}
+      <mesh rotation={[0, Math.PI / 2, 0]} position={[-SIDE_X, WALL_H / 2, -1]}>
+        <planeGeometry args={[ROOM_D, WALL_H]} />
+        <meshStandardMaterial color={wallColor} />
+      </mesh>
+      {/* right wall */}
+      <mesh rotation={[0, -Math.PI / 2, 0]} position={[SIDE_X, WALL_H / 2, -1]}>
+        <planeGeometry args={[ROOM_D, WALL_H]} />
+        <meshStandardMaterial color={wallColor} />
+      </mesh>
+
+      {/* MUSEUM sign / banner near the top of the back wall */}
+      <MuseumSign />
+
+      {/* framed artwork on the walls */}
+      <Painting position={[-4.2, 4.2, BACK_Z + 0.06]} canvas="#7a93b5" w={1.7} h={2.1} />
+      <Painting position={[-1.4, 4.4, BACK_Z + 0.06]} canvas="#b56b6b" w={1.4} h={1.7} />
+      <Painting position={[1.4, 4.4, BACK_Z + 0.06]} canvas="#7fae7a" w={1.4} h={1.7} />
+      <Painting position={[4.2, 4.2, BACK_Z + 0.06]} canvas="#c9a24a" w={1.7} h={2.1} />
+      {/* side wall paintings, rotated to face inward */}
+      <Painting position={[-SIDE_X + 0.06, 3.8, -2]} canvas="#9a7bb0" w={1.4} h={1.9} rotY={Math.PI / 2} />
+      <Painting position={[-SIDE_X + 0.06, 3.8, 1.2]} canvas="#5a8fa8" w={1.4} h={1.9} rotY={Math.PI / 2} />
+      <Painting position={[SIDE_X - 0.06, 3.8, -2]} canvas="#b08a5a" w={1.4} h={1.9} rotY={-Math.PI / 2} />
+      <Painting position={[SIDE_X - 0.06, 3.8, 1.2]} canvas="#6a9a6a" w={1.4} h={1.9} rotY={-Math.PI / 2} />
+
+      {/* warm spotlights aimed down at the row of pedestals */}
+      <GallerySpots />
+
+      {/* a visitor bench off to the side, out of the click area */}
+      <Bench position={[4.6, 0, 2.2]} />
+
+      {/* velvet rope barrier in front of the exhibits (between exhibits and camera) */}
+      <VelvetRope />
+    </group>
+  )
+}
+
+function MuseumSign() {
+  return (
+    <group position={[0, WALL_H - 1.4, BACK_Z + 0.07]}>
+      {/* banner backing */}
+      <mesh>
+        <boxGeometry args={[6.2, 1.1, 0.08]} />
+        <meshStandardMaterial color="#5c2230" />
+      </mesh>
+      <mesh position={[0, 0, 0.05]}>
+        <boxGeometry args={[5.9, 0.85, 0.06]} />
+        <meshStandardMaterial color="#7a2d3e" />
+      </mesh>
+      {/* "MUSEUM" rendered as simple gold letter blocks */}
+      <SignLetters />
+    </group>
+  )
+}
+
+/** spells MUSEUM with little extruded gold blocks (no font dependency). */
+function SignLetters() {
+  // 5x7 pixel patterns per letter, rows top->bottom
+  const FONT: Record<string, string[]> = {
+    M: ['10001', '11011', '10101', '10001', '10001', '10001', '10001'],
+    U: ['10001', '10001', '10001', '10001', '10001', '10001', '01110'],
+    S: ['01111', '10000', '10000', '01110', '00001', '00001', '11110'],
+    E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
+  }
+  const word = 'MUSEUM'
+  const px = 0.07 // pixel size
+  const letterW = 5 * px
+  const gap = px * 1.6
+  const totalW = word.length * letterW + (word.length - 1) * gap
+  const blocks: { x: number; y: number }[] = []
+  let cursor = -totalW / 2
+  for (const ch of word) {
+    const pat = FONT[ch]
+    for (let r = 0; r < pat.length; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (pat[r][c] === '1') {
+          blocks.push({ x: cursor + c * px, y: (3 - r) * px })
+        }
+      }
+    }
+    cursor += letterW + gap
+  }
+  return (
+    <group position={[0, 0, 0.09]}>
+      {blocks.map((b, i) => (
+        <mesh key={i} position={[b.x + px / 2, b.y, 0]}>
+          <boxGeometry args={[px * 0.95, px * 0.95, 0.04]} />
+          <meshStandardMaterial color="#e9c66b" emissive="#9c7a1f" emissiveIntensity={0.3} metalness={0.5} roughness={0.4} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+function Painting({
+  position,
+  canvas,
+  w,
+  h,
+  rotY = 0,
+}: {
+  position: [number, number, number]
+  canvas: string
+  w: number
+  h: number
+  rotY?: number
+}) {
+  return (
+    <group position={position} rotation={[0, rotY, 0]}>
+      {/* gilt frame */}
+      <mesh position={[0, 0, -0.02]}>
+        <boxGeometry args={[w + 0.22, h + 0.22, 0.08]} />
+        <meshStandardMaterial color="#b08a2e" metalness={0.5} roughness={0.4} />
+      </mesh>
+      {/* inner mat */}
+      <mesh position={[0, 0, 0.02]}>
+        <planeGeometry args={[w + 0.06, h + 0.06]} />
+        <meshStandardMaterial color="#f3ecdc" />
+      </mesh>
+      {/* the canvas */}
+      <mesh position={[0, 0, 0.03]}>
+        <planeGeometry args={[w, h]} />
+        <meshStandardMaterial color={canvas} roughness={0.9} />
+      </mesh>
+    </group>
+  )
+}
+
+function GallerySpots() {
+  // one warm spotlight high above the centre and two flanking, all aimed down
+  return (
+    <group>
+      <spotLight
+        position={[0, WALL_H - 0.6, 1]}
+        angle={0.9}
+        penumbra={0.6}
+        intensity={70}
+        distance={20}
+        color="#ffe6bf"
+        target-position={[0, 0, -0.5]}
+      />
+      <spotLight
+        position={[-4, WALL_H - 0.6, 1.5]}
+        angle={0.7}
+        penumbra={0.6}
+        intensity={45}
+        distance={18}
+        color="#ffe6bf"
+        target-position={[-3, 0, -0.5]}
+      />
+      <spotLight
+        position={[4, WALL_H - 0.6, 1.5]}
+        angle={0.7}
+        penumbra={0.6}
+        intensity={45}
+        distance={18}
+        color="#ffe6bf"
+        target-position={[3, 0, -0.5]}
+      />
+      {/* a soft point light to wash the artwork on the back wall */}
+      <pointLight position={[0, 5.5, -3]} intensity={12} distance={12} color="#fff1da" />
+    </group>
+  )
+}
+
+function Bench({ position }: { position: [number, number, number] }) {
+  return (
+    <group position={position}>
+      {/* seat */}
+      <mesh position={[0, 0.5, 0]}>
+        <boxGeometry args={[1.8, 0.18, 0.6]} />
+        <meshStandardMaterial color="#6b4a2f" roughness={0.7} />
+      </mesh>
+      {/* legs */}
+      {[-0.75, 0.75].map((dx) =>
+        [-0.22, 0.22].map((dz) => (
+          <mesh key={`${dx}-${dz}`} position={[dx, 0.25, dz]}>
+            <boxGeometry args={[0.12, 0.5, 0.12]} />
+            <meshStandardMaterial color="#4a3320" />
+          </mesh>
+        )),
+      )}
+    </group>
+  )
+}
+
+/** posts + draped rope, placed in front of the exhibit row (toward camera). */
+function VelvetRope() {
+  const ROPE_Z = 2.2 // in front of exhibits (z up to ~ -0.9) but behind camera (z 6.6)
+  const posts: number[] = [-3.6, -1.8, 0, 1.8, 3.6]
+  const postTop = 0.95
+  return (
+    <group>
+      {posts.map((x) => (
+        <group key={x} position={[x, 0, ROPE_Z]}>
+          {/* brass post */}
+          <mesh position={[0, postTop / 2, 0]}>
+            <cylinderGeometry args={[0.05, 0.06, postTop, 12]} />
+            <meshStandardMaterial color="#c9a23a" metalness={0.7} roughness={0.3} />
+          </mesh>
+          {/* ball cap */}
+          <mesh position={[0, postTop + 0.06, 0]}>
+            <sphereGeometry args={[0.09, 14, 14]} />
+            <meshStandardMaterial color="#e0bd55" metalness={0.7} roughness={0.25} />
+          </mesh>
+          {/* heavy base */}
+          <mesh position={[0, 0.05, 0]}>
+            <cylinderGeometry args={[0.18, 0.22, 0.1, 16]} />
+            <meshStandardMaterial color="#8a7430" metalness={0.6} roughness={0.4} />
+          </mesh>
+        </group>
+      ))}
+      {/* draped velvet ropes between consecutive posts */}
+      {posts.slice(0, -1).map((x, i) => {
+        const x2 = posts[i + 1]
+        const mid = (x + x2) / 2
+        const len = x2 - x
+        return (
+          <mesh key={i} position={[mid, postTop - 0.18, ROPE_Z]} rotation={[0, 0, 0]}>
+            {/* a gently sagging rope approximated by a thin rotated box dipping in the middle */}
+            <boxGeometry args={[len, 0.07, 0.07]} />
+            <meshStandardMaterial color="#7a1f33" roughness={0.85} />
+          </mesh>
+        )
+      })}
+    </group>
   )
 }
 
@@ -35,16 +311,6 @@ function SceneInner({ round, locked, disabledIds, celebrate, onPick }: MuseumSce
 
   return (
     <group>
-      {/* floor + back wall for a gallery feel */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-        <planeGeometry args={[30, 20]} />
-        <meshStandardMaterial color="#d8cfc0" />
-      </mesh>
-      <mesh position={[0, 4, -5]}>
-        <planeGeometry args={[30, 12]} />
-        <meshStandardMaterial color="#e7e0d4" />
-      </mesh>
-
       {round.visible.map((id, i) => {
         const [x, z] = slotPosition(i, n)
         return (

@@ -9,7 +9,7 @@ import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
 import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
-import { BOX_COLORS, boxesFor, pickTarget, type ColorId } from './logic'
+import { BOX_COLORS, GOAL, boxesFor, pickTarget, type ColorId } from './logic'
 import { BallDropScene } from './BallDropScene'
 
 const META = GAME_LIST.find((g) => g.id === 'balldrop')!
@@ -23,6 +23,7 @@ export function BallDropGame() {
   const difficulty = useSettings((s) => s.difficulty.balldrop)
   const best = useScores((s) => s.best.balldrop)
   const reportScore = useScores((s) => s.reportScore)
+  const goal = GOAL[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [boxes, setBoxes] = useState<ColorId[]>(() => boxesFor(difficulty))
@@ -60,9 +61,16 @@ export function BallDropGame() {
     if (box === target) {
       setLocked(true)
       playSuccess()
-      speak(`Wonderful! That's the ${metaOf(box).label} box!`)
-      setScore((s) => s + 1)
+      const nextScore = score + 1
+      setScore(nextScore)
       setConfetti((c) => ({ color: box, trigger: c.trigger + 1 }))
+      if (nextScore >= goal) {
+        speak('You did it! All the balls are home!')
+        reportScore('balldrop', nextScore)
+        setTimeout(() => setPhase('over'), 1400)
+        return
+      }
+      speak(`Wonderful! That's the ${metaOf(box).label} box!`)
       setTimeout(() => {
         setTarget((t) => pickTarget(boxes, t))
         setResetKey((k) => k + 1)
@@ -92,7 +100,7 @@ export function BallDropGame() {
   return (
     <WebGLGate>
       <div className="game-page">
-        <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
+        <ScoreBar score={score} goal={goal} lives={lives} maxLives={MAX_LIVES} />
         <div className="game-canvas">
           <BallDropScene
             boxes={boxes}

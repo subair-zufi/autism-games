@@ -36,6 +36,9 @@ export function objectMeta(id: ObjectId): ObjectMeta {
 
 const CHOICE_COUNT: Record<Difficulty, number> = { easy: 3, medium: 4, hard: 4 }
 
+/** correct finds needed to win a session */
+export const GOAL: Record<Difficulty, number> = { easy: 5, medium: 7, hard: 10 }
+
 export interface Round {
   target: ObjectId
   choices: ObjectId[]

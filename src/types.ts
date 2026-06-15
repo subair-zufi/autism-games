@@ -8,9 +8,7 @@ export type GameId =
   | 'museum'
   | 'rightway'
   | 'rulefixer'
-  | 'weather'
-  | 'torch'
-  | 'share'
+  | 'slider'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
 export interface GameMeta {
@@ -29,9 +27,7 @@ export const GAME_LIST: GameMeta[] = [
   { id: 'mirror', title: 'Emotion Mirror', icon: '🪞', path: '/mirror', color: '#e0a3c8' },
   { id: 'blocks', title: 'Block Buddies', icon: '🧱', path: '/blocks', color: '#f0a868' },
   { id: 'museum', title: 'Museum Look', icon: '🖼️', path: '/museum', color: '#8fb8e0' },
-  { id: 'rightway', title: 'Right or Fix?', icon: '✅', path: '/rightway', color: '#9bd0a0' },
+  { id: 'rightway', title: 'Right or Wrong', icon: '✅', path: '/rightway', color: '#9bd0a0' },
   { id: 'rulefixer', title: 'Good Choice', icon: '💡', path: '/rulefixer', color: '#e8a06f' },
-  { id: 'weather', title: 'Feelings Weather', icon: '🌦️', path: '/weather', color: '#86c5da' },
-  { id: 'torch', title: 'Talking Torch', icon: '🔥', path: '/torch', color: '#e2906f' },
-  { id: 'share', title: 'Show & Share', icon: '🤗', path: '/share', color: '#b5d68f' },
+  { id: 'slider', title: 'Slide Queue', icon: '🛝', path: '/slider', color: '#f3a3b5' },
 ]

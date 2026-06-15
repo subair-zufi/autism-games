@@ -76,7 +76,7 @@ export function RuleFixerGame() {
   return (
     <WebGLGate>
       <div className="game-page">
-        <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
+        <ScoreBar score={score} goal={total} lives={lives} maxLives={MAX_LIVES} />
         <div className="game-canvas">
           <RuleFixerScene situation={round.situation} outcome={outcome} />
           <div className="action-bubble">{round.situation.bubble}</div>
