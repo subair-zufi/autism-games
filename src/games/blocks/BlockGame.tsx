@@ -92,7 +92,7 @@ export function BlockGame() {
   return (
     <WebGLGate>
       <div className="game-page">
-        <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
+        <ScoreBar score={score} goal={config.rounds} lives={lives} maxLives={MAX_LIVES} />
         <div className="game-canvas">
           <BlockScene placed={sequence.slice(0, index)} turn={current} robotReaching={robotReaching} />
         </div>

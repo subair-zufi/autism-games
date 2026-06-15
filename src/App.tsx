@@ -12,9 +12,7 @@ import { BlockGame } from './games/blocks/BlockGame'
 import { MuseumGame } from './games/museum/MuseumGame'
 import { RightWayGame } from './games/rightway/RightWayGame'
 import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
-import { WeatherGame } from './games/weather/WeatherGame'
-import { TorchGame } from './games/torch/TorchGame'
-import { ShareGame } from './games/share/ShareGame'
+import { SliderGame } from './games/slider/SliderGame'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotions: EmotionsGame,
@@ -26,9 +24,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   museum: MuseumGame,
   rightway: RightWayGame,
   rulefixer: RuleFixerGame,
-  weather: WeatherGame,
-  torch: TorchGame,
-  share: ShareGame,
+  slider: SliderGame,
 }
 
 export default function App() {

@@ -18,6 +18,9 @@ export const BOX_COLORS: ColorMeta[] = [
 
 const BOX_COUNT: Record<Difficulty, number> = { easy: 3, medium: 4, hard: 5 }
 
+/** correct drops needed to win a session */
+export const GOAL: Record<Difficulty, number> = { easy: 5, medium: 7, hard: 10 }
+
 export function boxesFor(difficulty: Difficulty): ColorId[] {
   return BOX_COLORS.slice(0, BOX_COUNT[difficulty]).map((c) => c.id)
 }

@@ -11,19 +11,17 @@
 
 ## ✨ Features
 
-🎮 **12 Interactive Games** - Carefully designed therapeutic games for engagement and learning
+🎮 **10 Interactive Games** - Carefully designed therapeutic games for engagement and learning
 - **Feelings Faces** - Explore and recognize emotions
-- **Cross the Road** - Develop timing and decision-making skills
+- **Cross the Road** - Choose Walk or Wait to cross safely _(timing and decision-making)_
 - **Garden Finder** - Visual search and pattern recognition
 - **Ball Drop** - Physics-based interactive gameplay
 - **Emotion Mirror** - Read feelings on an animated 3D face _(emotional recognition)_
 - **Block Buddies** - Take turns stacking a tower with a robot _(turn taking)_
 - **Museum Look** - Follow a pointing hand to the right exhibit _(joint attention)_
-- **Right or Fix?** - Judge whether a social behaviour is fine or needs fixing _(social rules)_
+- **Right or Wrong** - Judge whether a social behaviour is fine or needs fixing _(social rules)_
 - **Good Choice** - Pick the kind action in a social situation _(social rules)_
-- **Feelings Weather** - Match situations to emotion weather zones _(emotional recognition)_
-- **Talking Torch** - Campfire chat where the glowing torch shows whose turn it is _(turn taking)_
-- **Show & Share** - Find amazing things and share them with a robot friend _(joint attention)_
+- **Slide Queue** - Wait patiently in line for your turn on the slide _(turn taking / patience)_
 
 🔊 **Sound & Voice Support** - Toggle audio and voice guidance on/off
 📊 **Score Tracking** - Monitor progress with a built-in scoring system

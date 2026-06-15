@@ -37,19 +37,19 @@ export const LEVELS: Record<Difficulty, LevelConfig> = {
     durations: { 'cars-go': 6, 'cars-slow': 2.2, walk: 6, 'walk-ending': 2.2 },
     carCount: 3,
     carSpeed: 2.6,
-    goal: 5,
+    goal: 3,
   },
   medium: {
     durations: { 'cars-go': 6, 'cars-slow': 1.8, walk: 4.5, 'walk-ending': 1.8 },
     carCount: 4,
     carSpeed: 3.6,
-    goal: 6,
+    goal: 5,
   },
   hard: {
     durations: { 'cars-go': 5.5, 'cars-slow': 1.5, walk: 3.2, 'walk-ending': 1.6 },
     carCount: 5,
     carSpeed: 4.6,
-    goal: 8,
+    goal: 7,
   },
 }
 

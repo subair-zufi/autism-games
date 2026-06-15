@@ -10,7 +10,7 @@ export interface RuleFixerSceneProps {
 }
 
 export function RuleFixerScene({ situation, outcome }: RuleFixerSceneProps) {
-  const { mood, books, tall } = situation.scene
+  const { mood, books, tall, swing, fallen, watching } = situation.scene
   return (
     <Canvas camera={{ position: [0, 1.7, 6], fov: 45 }} onCreated={({ camera }) => camera.lookAt(0, 1, 0)}>
       <color attach="background" args={['#eef0f7']} />
@@ -18,7 +18,15 @@ export function RuleFixerScene({ situation, outcome }: RuleFixerSceneProps) {
       <directionalLight position={[3, 6, 5]} intensity={0.85} />
       <Room />
       {books && <Books />}
-      <Peer mood={mood} tall={tall} happy={outcome === 'good'} />
+      {swing && <Swing />}
+      {watching && <Ball />}
+      <Peer
+        mood={mood}
+        tall={tall}
+        happy={outcome === 'good'}
+        fallen={fallen}
+        offset={watching ? -1.6 : 0}
+      />
     </Canvas>
   )
 }
@@ -55,9 +63,91 @@ function Books() {
   )
 }
 
-function Peer({ mood, tall, happy }: { mood: PeerMood; tall?: boolean; happy: boolean }) {
+function Swing() {
+  // A-frame swing set off to the right; peer (at x=0) stands beside it waiting.
+  const seat = useRef<THREE.Group>(null)
+  useFrame((state) => {
+    const g = seat.current
+    if (!g) return
+    g.rotation.z = Math.sin(state.clock.elapsedTime * 1.2) * 0.18
+  })
+  return (
+    <group position={[1.7, 0, 0.2]}>
+      {/* top bar */}
+      <mesh position={[0, 2.2, 0]}>
+        <boxGeometry args={[1.8, 0.12, 0.12]} />
+        <meshStandardMaterial color="#9aa3bd" />
+      </mesh>
+      {/* legs (A-frame) */}
+      <mesh position={[-0.8, 1.1, 0.35]} rotation={[0.35, 0, 0.18]}>
+        <boxGeometry args={[0.1, 2.3, 0.1]} />
+        <meshStandardMaterial color="#9aa3bd" />
+      </mesh>
+      <mesh position={[-0.8, 1.1, -0.35]} rotation={[-0.35, 0, 0.18]}>
+        <boxGeometry args={[0.1, 2.3, 0.1]} />
+        <meshStandardMaterial color="#9aa3bd" />
+      </mesh>
+      <mesh position={[0.8, 1.1, 0.35]} rotation={[0.35, 0, -0.18]}>
+        <boxGeometry args={[0.1, 2.3, 0.1]} />
+        <meshStandardMaterial color="#9aa3bd" />
+      </mesh>
+      <mesh position={[0.8, 1.1, -0.35]} rotation={[-0.35, 0, -0.18]}>
+        <boxGeometry args={[0.1, 2.3, 0.1]} />
+        <meshStandardMaterial color="#9aa3bd" />
+      </mesh>
+      {/* swinging seat hangs from the top bar */}
+      <group ref={seat} position={[0, 2.2, 0]}>
+        <mesh position={[-0.22, -0.7, 0]}>
+          <boxGeometry args={[0.04, 1.4, 0.04]} />
+          <meshStandardMaterial color="#5b6b8c" />
+        </mesh>
+        <mesh position={[0.22, -0.7, 0]}>
+          <boxGeometry args={[0.04, 1.4, 0.04]} />
+          <meshStandardMaterial color="#5b6b8c" />
+        </mesh>
+        <mesh position={[0, -1.42, 0]}>
+          <boxGeometry args={[0.6, 0.08, 0.34]} />
+          <meshStandardMaterial color="#e2554c" />
+        </mesh>
+      </group>
+    </group>
+  )
+}
+
+function Ball() {
+  // a game cue on the ground that the lonely child is watching from the side
+  const ref = useRef<THREE.Mesh>(null)
+  useFrame((state) => {
+    const m = ref.current
+    if (!m) return
+    m.position.x = 1.4 + Math.sin(state.clock.elapsedTime * 1.4) * 0.4
+    m.rotation.z = state.clock.elapsedTime * 0.8
+  })
+  return (
+    <mesh ref={ref} position={[1.4, 0.32, 1]}>
+      <sphereGeometry args={[0.32, 24, 24]} />
+      <meshStandardMaterial color="#f5c542" />
+    </mesh>
+  )
+}
+
+function Peer({
+  mood,
+  tall,
+  happy,
+  fallen,
+  offset = 0,
+}: {
+  mood: PeerMood
+  tall?: boolean
+  happy: boolean
+  fallen?: boolean
+  offset?: number
+}) {
   const group = useRef<THREE.Group>(null)
   const hop = useRef(99)
+  // a fallen peer gets up (stands) when the kind choice is made
+  const down = fallen && !happy
   useEffect(() => {
     if (happy) hop.current = 0
   }, [happy])
@@ -65,6 +155,10 @@ function Peer({ mood, tall, happy }: { mood: PeerMood; tall?: boolean; happy: bo
   useFrame((state, dt) => {
     const g = group.current
     if (!g) return
+    if (down) {
+      g.position.y = 0
+      return
+    }
     let y = 0
     if (hop.current < 1.2) {
       hop.current += dt * 1.6
@@ -81,7 +175,12 @@ function Peer({ mood, tall, happy }: { mood: PeerMood; tall?: boolean; happy: bo
   const showTear = !happy && mood === 'cry'
 
   return (
-    <group ref={group} position={[0, 0, 0]} scale={scale}>
+    <group
+      ref={group}
+      position={[offset, down ? 0.3 : 0, down ? 1 : 0]}
+      rotation={down ? [0, 0, Math.PI / 2] : [0, 0, 0]}
+      scale={scale}
+    >
       {/* legs */}
       <mesh position={[-0.16, 0.35, 0]}><boxGeometry args={[0.22, 0.7, 0.24]} /><meshStandardMaterial color="#5b6b8c" /></mesh>
       <mesh position={[0.16, 0.35, 0]}><boxGeometry args={[0.22, 0.7, 0.24]} /><meshStandardMaterial color="#5b6b8c" /></mesh>
