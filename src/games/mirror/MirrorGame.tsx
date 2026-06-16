@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { GAME_LIST } from '../../types'
 import { useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
@@ -25,13 +25,10 @@ export function MirrorGame() {
   const [locked, setLocked] = useState(false)
   const [wrongPicks, setWrongPicks] = useState<EmotionId[]>([])
   const [celebrating, setCelebrating] = useState(false)
-  const [imgLoaded, setImgLoaded] = useState(false)
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null)
 
   const currentSrc = round.imageMap[round.target]
-
-  useEffect(() => {
-    setImgLoaded(false)
-  }, [currentSrc])
+  const imgLoaded = loadedSrc === currentSrc
 
   function start() {
     setScore(0)
@@ -39,7 +36,7 @@ export function MirrorGame() {
     setWrongPicks([])
     setLocked(false)
     setCelebrating(false)
-    setImgLoaded(false)
+    setLoadedSrc(null)
     setRound(makeRound(difficulty, null))
     setPhase('playing')
   }
@@ -84,8 +81,8 @@ export function MirrorGame() {
           style={{ opacity: imgLoaded ? 1 : 0 }}
           src={currentSrc}
           alt="How does the mirror face feel?"
-          onLoad={() => setImgLoaded(true)}
-          onError={() => setImgLoaded(true)}
+          onLoad={() => setLoadedSrc(currentSrc)}
+          onError={() => setLoadedSrc(currentSrc)}
         />
         {celebrating && <div className="celebrate">⭐</div>}
       </div>
