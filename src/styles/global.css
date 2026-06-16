@@ -207,6 +207,12 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 }
 .choice-btn:disabled { opacity: 0.4; }
 .choice-emoji { font-size: 2.2rem; }
+.choice-emotion-img {
+  width: 72px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: 8px;
+}
 .celebrate {
   position: absolute;
   inset: 0;

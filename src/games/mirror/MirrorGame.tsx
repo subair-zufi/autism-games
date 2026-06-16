@@ -87,7 +87,7 @@ export function MirrorGame() {
                   disabled={locked || wrongPicks.includes(id)}
                   onClick={() => pick(id)}
                 >
-                  <span className="choice-emoji">{m.emoji}</span>
+                  <img className="choice-emotion-img" src={round.imageMap[id]} alt={m.label} />
                   <span>{m.label}</span>
                 </button>
               )

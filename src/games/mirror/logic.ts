@@ -6,6 +6,7 @@ export interface EmotionMeta {
   id: EmotionId
   label: string
   emoji: string
+  images: string[]
   /** shape hints the 3D face reads to actually emote (not just a label) */
   face: {
     mouthCurve: number // + smile, - frown
@@ -16,12 +17,12 @@ export interface EmotionMeta {
 }
 
 export const EMOTIONS: EmotionMeta[] = [
-  { id: 'happy', label: 'Happy', emoji: '😊', face: { mouthCurve: 0.55, mouthOpen: 0.2, browInner: 0.1, eyeWide: 1 } },
-  { id: 'sad', label: 'Sad', emoji: '😢', face: { mouthCurve: -0.45, mouthOpen: 0.05, browInner: 0.5, eyeWide: 0.9 } },
-  { id: 'angry', label: 'Angry', emoji: '😠', face: { mouthCurve: -0.3, mouthOpen: 0.15, browInner: -0.6, eyeWide: 0.85 } },
-  { id: 'scared', label: 'Scared', emoji: '😨', face: { mouthCurve: -0.1, mouthOpen: 0.6, browInner: 0.6, eyeWide: 1.35 } },
-  { id: 'surprised', label: 'Surprised', emoji: '😮', face: { mouthCurve: 0, mouthOpen: 0.95, browInner: 0.4, eyeWide: 1.45 } },
-  { id: 'disgusted', label: 'Yucky', emoji: '🤢', face: { mouthCurve: -0.35, mouthOpen: 0.25, browInner: -0.4, eyeWide: 0.8 } },
+  { id: 'happy', label: 'Happy', emoji: '😊', images: ['/emotions/HappyFace.png', '/emotions/Happy_Girl.png', '/emotions/HappyG.png'], face: { mouthCurve: 0.55, mouthOpen: 0.2, browInner: 0.1, eyeWide: 1 } },
+  { id: 'sad', label: 'Sad', emoji: '😢', images: ['/emotions/SadFace.png', '/emotions/Sad_Boy.png', '/emotions/Sad_G.png', '/emotions/SadGirl.png'], face: { mouthCurve: -0.45, mouthOpen: 0.05, browInner: 0.5, eyeWide: 0.9 } },
+  { id: 'angry', label: 'Angry', emoji: '😠', images: ['/emotions/Angry_Boy.png', '/emotions/AngryGirl.png', '/emotions/Angry.png'], face: { mouthCurve: -0.3, mouthOpen: 0.15, browInner: -0.6, eyeWide: 0.85 } },
+  { id: 'scared', label: 'Scared', emoji: '😨', images: ['/emotions/Fear_Boy.png', '/emotions/Fear.png'], face: { mouthCurve: -0.1, mouthOpen: 0.6, browInner: 0.6, eyeWide: 1.35 } },
+  { id: 'surprised', label: 'Surprised', emoji: '😮', images: ['/emotions/Surprise_Boy.png', '/emotions/Surprise.png'], face: { mouthCurve: 0, mouthOpen: 0.95, browInner: 0.4, eyeWide: 1.45 } },
+  { id: 'disgusted', label: 'Yucky', emoji: '🤢', images: ['/emotions/Disgust_boy.png', '/emotions/Disgust.png'], face: { mouthCurve: -0.35, mouthOpen: 0.25, browInner: -0.4, eyeWide: 0.8 } },
 ]
 
 export function emotionMeta(id: EmotionId): EmotionMeta {
@@ -39,6 +40,7 @@ const CHOICE_COUNT: Record<Difficulty, number> = { easy: 2, medium: 3, hard: 4 }
 export interface Round {
   target: EmotionId
   choices: EmotionId[]
+  imageMap: Record<EmotionId, string>
 }
 
 export function makeRound(
@@ -51,7 +53,12 @@ export function makeRound(
   const target = targets[Math.floor(rng() * targets.length)]
   const others = shuffle(pool.filter((e) => e !== target), rng)
   const choices = shuffle([target, ...others.slice(0, CHOICE_COUNT[difficulty] - 1)], rng)
-  return { target, choices }
+  const imageMap = {} as Record<EmotionId, string>
+  for (const id of pool) {
+    const meta = EMOTIONS.find((e) => e.id === id)!
+    imageMap[id] = meta.images[Math.floor(rng() * meta.images.length)]
+  }
+  return { target, choices, imageMap }
 }
 
 function shuffle<T>(arr: T[], rng: () => number): T[] {
