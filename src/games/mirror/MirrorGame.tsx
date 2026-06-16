@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { GAME_LIST } from '../../types'
 import { useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
@@ -25,6 +25,13 @@ export function MirrorGame() {
   const [locked, setLocked] = useState(false)
   const [wrongPicks, setWrongPicks] = useState<EmotionId[]>([])
   const [celebrating, setCelebrating] = useState(false)
+  const [imgLoaded, setImgLoaded] = useState(false)
+
+  const currentSrc = round.imageMap[round.target]
+
+  useEffect(() => {
+    setImgLoaded(false)
+  }, [currentSrc])
 
   function start() {
     setScore(0)
@@ -32,6 +39,7 @@ export function MirrorGame() {
     setWrongPicks([])
     setLocked(false)
     setCelebrating(false)
+    setImgLoaded(false)
     setRound(makeRound(difficulty, null))
     setPhase('playing')
   }
@@ -70,10 +78,14 @@ export function MirrorGame() {
     <div className="game-page">
       <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
       <div className="game-canvas">
+        {!imgLoaded && <div className="emotion-img-loader"><div className="emotion-spinner" /></div>}
         <img
           className="emotion-display-img"
-          src={round.imageMap[round.target]}
+          style={{ opacity: imgLoaded ? 1 : 0 }}
+          src={currentSrc}
           alt="How does the mirror face feel?"
+          onLoad={() => setImgLoaded(true)}
+          onError={() => setImgLoaded(true)}
         />
         {celebrating && <div className="celebrate">⭐</div>}
       </div>
