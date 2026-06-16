@@ -10,12 +10,12 @@ export interface EmotionMeta {
 }
 
 export const EMOTIONS: EmotionMeta[] = [
-  { id: 'happy', label: 'Happy', emoji: '😊', images: ['/emotions/HappyFace.png', '/emotions/Happy_Girl.png', '/emotions/HappyG.png'] },
-  { id: 'sad', label: 'Sad', emoji: '😢', images: ['/emotions/SadFace.png', '/emotions/Sad_Boy.png', '/emotions/Sad_G.png', '/emotions/SadGirl.png'] },
-  { id: 'angry', label: 'Angry', emoji: '😠', images: ['/emotions/Angry_Boy.png', '/emotions/AngryGirl.png', '/emotions/Angry.png'] },
-  { id: 'surprised', label: 'Surprised', emoji: '😮', images: ['/emotions/Surprise_Boy.png', '/emotions/Surprise.png'] },
-  { id: 'scared', label: 'Scared', emoji: '😨', images: ['/emotions/Fear_Boy.png', '/emotions/Fear.png'] },
-  { id: 'calm', label: 'Calm', emoji: '😌', images: ['/emotions/Smile_Boy.png', '/emotions/Smile_Girl.png', '/emotions/Smile2_Girl.png'] },
+  { id: 'happy', label: 'Happy', emoji: '😊', images: ['./emotions/HappyFace.png', './emotions/Happy_Girl.png', './emotions/HappyG.png'] },
+  { id: 'sad', label: 'Sad', emoji: '😢', images: ['./emotions/SadFace.png', './emotions/Sad_Boy.png', './emotions/Sad_G.png', './emotions/SadGirl.png'] },
+  { id: 'angry', label: 'Angry', emoji: '😠', images: ['./emotions/Angry_Boy.png', './emotions/AngryGirl.png', './emotions/Angry.png'] },
+  { id: 'surprised', label: 'Surprised', emoji: '😮', images: ['./emotions/Surprise_Boy.png', './emotions/Surprise.png'] },
+  { id: 'scared', label: 'Scared', emoji: '😨', images: ['./emotions/Fear_Boy.png', './emotions/Fear.png'] },
+  { id: 'calm', label: 'Calm', emoji: '😌', images: ['./emotions/Smile_Boy.png', './emotions/Smile_Girl.png', './emotions/Smile2_Girl.png'] },
 ]
 
 const POOLS: Record<Difficulty, EmotionId[]> = {
