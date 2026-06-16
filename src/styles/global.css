@@ -233,6 +233,44 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+/* ---- mirror game ---- */
+.mirror-canvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mirror-frame {
+  position: relative;
+  width: 210px;
+  height: 290px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 14px solid #c9a227;
+  box-shadow:
+    0 0 0 3px #7a5c08,
+    0 0 0 9px #e8d06a,
+    0 0 0 13px #7a5c08,
+    0 20px 56px rgba(0, 0, 0, 0.45);
+  flex-shrink: 0;
+}
+.mirror-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.22) 0%, transparent 55%);
+  pointer-events: none;
+}
+.mirror-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: opacity 0.2s ease;
+}
+.mirror-frame .emotion-img-loader {
+  position: absolute;
+  inset: 0;
+}
 .celebrate {
   position: absolute;
   inset: 0;

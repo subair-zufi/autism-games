@@ -74,16 +74,18 @@ export function MirrorGame() {
   return (
     <div className="game-page">
       <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
-      <div className="game-canvas">
-        {!imgLoaded && <div className="emotion-img-loader"><div className="emotion-spinner" /></div>}
-        <img
-          className="emotion-display-img"
-          style={{ opacity: imgLoaded ? 1 : 0 }}
-          src={currentSrc}
-          alt="How does the mirror face feel?"
-          onLoad={() => setLoadedSrc(currentSrc)}
-          onError={() => setLoadedSrc(currentSrc)}
-        />
+      <div className="game-canvas mirror-canvas">
+        <div className="mirror-frame">
+          {!imgLoaded && <div className="emotion-img-loader"><div className="emotion-spinner" /></div>}
+          <img
+            className="mirror-img"
+            style={{ opacity: imgLoaded ? 1 : 0 }}
+            src={currentSrc}
+            alt="How does the mirror face feel?"
+            onLoad={() => setLoadedSrc(currentSrc)}
+            onError={() => setLoadedSrc(currentSrc)}
+          />
+        </div>
         {celebrating && <div className="celebrate">⭐</div>}
       </div>
       <div className="game-bottom">
