@@ -6,11 +6,9 @@ import { StartScreen } from '../../components/StartScreen'
 import { ScoreBar } from '../../components/ScoreBar'
 import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
-import { WebGLGate } from '../../components/WebGLGate'
 import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { emotionMeta, makeRound, type EmotionId, type Round } from './logic'
-import { MirrorScene } from './MirrorScene'
 
 const META = GAME_LIST.find((g) => g.id === 'mirror')!
 const MAX_LIVES = 3
@@ -26,14 +24,14 @@ export function MirrorGame() {
   const [lives, setLives] = useState(MAX_LIVES)
   const [locked, setLocked] = useState(false)
   const [wrongPicks, setWrongPicks] = useState<EmotionId[]>([])
-  const [celebrate, setCelebrate] = useState(0)
+  const [celebrating, setCelebrating] = useState(false)
 
   function start() {
     setScore(0)
     setLives(MAX_LIVES)
     setWrongPicks([])
     setLocked(false)
-    setCelebrate(0)
+    setCelebrating(false)
     setRound(makeRound(difficulty, null))
     setPhase('playing')
   }
@@ -43,11 +41,12 @@ export function MirrorGame() {
     const meta = emotionMeta(id)
     if (id === round.target) {
       setLocked(true)
-      setCelebrate((c) => c + 1)
+      setCelebrating(true)
       playSuccess()
       speak(`Yes! The mirror face feels ${meta.label}!`)
       setScore((s) => s + 1)
       setTimeout(() => {
+        setCelebrating(false)
         setWrongPicks([])
         setLocked(false)
         setRound((r) => makeRound(difficulty, r.target))
@@ -68,36 +67,38 @@ export function MirrorGame() {
   if (phase === 'start') return <StartScreen game={META} onStart={start} />
 
   return (
-    <WebGLGate>
-      <div className="game-page">
-        <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
-        <div className="game-canvas">
-          <MirrorScene target={round.target} celebrate={celebrate} />
-          {celebrate > 0 && locked && <div className="celebrate">⭐</div>}
-        </div>
-        <div className="game-bottom">
-          <PromptBanner text="How does the mirror face feel?" />
-          <div className="choice-row">
-            {round.choices.map((id) => {
-              const m = emotionMeta(id)
-              return (
-                <button
-                  key={id}
-                  className="choice-btn"
-                  disabled={locked || wrongPicks.includes(id)}
-                  onClick={() => pick(id)}
-                >
-                  <img className="choice-emotion-img" src={round.imageMap[id]} alt={m.label} />
-                  <span>{m.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-        {phase === 'over' && (
-          <GameOverDialog score={score} best={Math.max(best, score)} onRestart={start} />
-        )}
+    <div className="game-page">
+      <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
+      <div className="game-canvas">
+        <img
+          className="emotion-display-img"
+          src={round.imageMap[round.target]}
+          alt="How does the mirror face feel?"
+        />
+        {celebrating && <div className="celebrate">⭐</div>}
       </div>
-    </WebGLGate>
+      <div className="game-bottom">
+        <PromptBanner text="How does the mirror face feel?" />
+        <div className="choice-row">
+          {round.choices.map((id) => {
+            const m = emotionMeta(id)
+            return (
+              <button
+                key={id}
+                className="choice-btn"
+                disabled={locked || wrongPicks.includes(id)}
+                onClick={() => pick(id)}
+              >
+                <span className="choice-emoji">{m.emoji}</span>
+                <span>{m.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      {phase === 'over' && (
+        <GameOverDialog score={score} best={Math.max(best, score)} onRestart={start} />
+      )}
+    </div>
   )
 }

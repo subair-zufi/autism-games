@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Canvas } from '@react-three/fiber'
 import { GAME_LIST } from '../../types'
 import { useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
@@ -7,11 +6,9 @@ import { StartScreen } from '../../components/StartScreen'
 import { ScoreBar } from '../../components/ScoreBar'
 import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
-import { WebGLGate } from '../../components/WebGLGate'
 import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { EMOTIONS, makeRound, type EmotionId, type Round } from './logic'
-import { EmotionFace } from './EmotionFace'
 
 const META = GAME_LIST.find((g) => g.id === 'emotions')!
 const MAX_LIVES = 3
@@ -70,41 +67,38 @@ export function EmotionsGame() {
   if (phase === 'start') return <StartScreen game={META} onStart={start} />
 
   return (
-    <WebGLGate>
-      <div className="game-page">
-        <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
-        <div className="game-canvas">
-          <Canvas camera={{ position: [0, 0, 4.1], fov: 40 }}>
-            <color attach="background" args={['#e8f1f8']} />
-            <ambientLight intensity={0.8} />
-            <directionalLight position={[2, 3, 4]} intensity={0.9} />
-            <EmotionFace emotion={round.target} />
-          </Canvas>
-          {celebrating && <div className="celebrate">⭐</div>}
-        </div>
-        <div className="game-bottom">
-          <PromptBanner text="How does this face feel?" />
-          <div className="choice-row">
-            {round.choices.map((id) => {
-              const m = EMOTIONS.find((e) => e.id === id)!
-              return (
-                <button
-                  key={id}
-                  className="choice-btn"
-                  disabled={locked || wrongPicks.includes(id)}
-                  onClick={() => pick(id)}
-                >
-                  <img className="choice-emotion-img" src={round.imageMap[id]} alt={m.label} />
-                  <span>{m.label}</span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-        {phase === 'over' && (
-          <GameOverDialog score={score} best={Math.max(best, score)} onRestart={start} />
-        )}
+    <div className="game-page">
+      <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} />
+      <div className="game-canvas">
+        <img
+          className="emotion-display-img"
+          src={round.imageMap[round.target]}
+          alt="How does this face feel?"
+        />
+        {celebrating && <div className="celebrate">⭐</div>}
       </div>
-    </WebGLGate>
+      <div className="game-bottom">
+        <PromptBanner text="How does this face feel?" />
+        <div className="choice-row">
+          {round.choices.map((id) => {
+            const m = EMOTIONS.find((e) => e.id === id)!
+            return (
+              <button
+                key={id}
+                className="choice-btn"
+                disabled={locked || wrongPicks.includes(id)}
+                onClick={() => pick(id)}
+              >
+                <span className="choice-emoji">{m.emoji}</span>
+                <span>{m.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      {phase === 'over' && (
+        <GameOverDialog score={score} best={Math.max(best, score)} onRestart={start} />
+      )}
+    </div>
   )
 }
