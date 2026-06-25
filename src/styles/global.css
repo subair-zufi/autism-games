@@ -417,14 +417,20 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   flex-direction: column;
   gap: 12px;
   height: 100%;
+  min-height: 0; /* allow children to shrink below content size on short viewports */
+  overflow: hidden; /* never let the clip/button spill into the prompt area */
 }
 .quiz-video {
   max-width: 100%;
   max-height: 56vh;
+  min-height: 0;
+  flex-shrink: 1; /* shrink to keep the replay button clear of the prompt */
+  object-fit: contain;
   border-radius: 18px;
   background: #000;
 }
 .replay-btn {
+  flex-shrink: 0;
   padding: 8px 20px;
   font-size: 1.05rem;
   background: var(--card);
