@@ -9,6 +9,7 @@ export type GameId =
   | 'rightway'
   | 'rulefixer'
   | 'slider'
+  | 'knowemotion'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
 export interface GameMeta {
@@ -30,4 +31,5 @@ export const GAME_LIST: GameMeta[] = [
   { id: 'rightway', title: 'Right or Wrong', icon: '✅', path: '/rightway', color: '#9bd0a0' },
   { id: 'rulefixer', title: 'Good Choice', icon: '💡', path: '/rulefixer', color: '#e8a06f' },
   { id: 'slider', title: 'Slide Queue', icon: '🛝', path: '/slider', color: '#f3a3b5' },
+  { id: 'knowemotion', title: 'Know the Emotion', icon: '🧒', path: '/knowemotion', color: '#7fb6a4' },
 ]
