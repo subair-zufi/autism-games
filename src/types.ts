@@ -10,6 +10,7 @@ export type GameId =
   | 'rulefixer'
   | 'slider'
   | 'knowemotion'
+  | 'identifyemotions'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
 export interface GameMeta {
@@ -32,4 +33,5 @@ export const GAME_LIST: GameMeta[] = [
   { id: 'rulefixer', title: 'Good Choice', icon: '💡', path: '/rulefixer', color: '#e8a06f' },
   { id: 'slider', title: 'Slide Queue', icon: '🛝', path: '/slider', color: '#f3a3b5' },
   { id: 'knowemotion', title: 'Know the Emotion', icon: '🧒', path: '/knowemotion', color: '#7fb6a4' },
+  { id: 'identifyemotions', title: 'Emotion Clips', icon: '🎬', path: '/identifyemotions', color: '#c9a0e0' },
 ]
