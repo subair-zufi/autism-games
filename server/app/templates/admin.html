@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autism Games — Admin Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root { --bg:#0f172a; --card:#1e293b; --muted:#94a3b8; --text:#e2e8f0; --accent:#6366f1; --accent2:#22d3ee; --danger:#ef4444; --ok:#22c55e; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
+    a { color: var(--accent2); }
+    .hidden { display:none !important; }
+    /* Login */
+    #login-view { min-height:100vh; display:flex; align-items:center; justify-content:center; }
+    .login-card { background:var(--card); padding:32px; border-radius:16px; width:340px; box-shadow:0 10px 40px rgba(0,0,0,.4); }
+    .login-card h1 { font-size:20px; margin:0 0 4px; }
+    .login-card p { color:var(--muted); margin:0 0 20px; font-size:14px; }
+    label { display:block; font-size:13px; color:var(--muted); margin:12px 0 4px; }
+    input { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #334155; background:#0b1220; color:var(--text); font-size:14px; }
+    button { cursor:pointer; border:none; border-radius:8px; font-size:14px; font-weight:600; }
+    .btn-primary { background:var(--accent); color:#fff; padding:11px; width:100%; margin-top:18px; }
+    .btn-primary:hover { background:#4f46e5; }
+    .error { color:var(--danger); font-size:13px; margin-top:12px; min-height:18px; }
+    /* Dashboard */
+    header { display:flex; align-items:center; justify-content:space-between; padding:16px 28px; background:var(--card); border-bottom:1px solid #334155; }
+    header h1 { font-size:18px; margin:0; }
+    header .right { display:flex; gap:14px; align-items:center; font-size:14px; color:var(--muted); }
+    .btn-ghost { background:transparent; color:var(--muted); border:1px solid #334155; padding:7px 14px; }
+    main { padding:28px; max-width:1200px; margin:0 auto; }
+    .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:16px; margin-bottom:28px; }
+    .stat { background:var(--card); border-radius:14px; padding:18px; }
+    .stat .v { font-size:28px; font-weight:700; }
+    .stat .l { color:var(--muted); font-size:13px; margin-top:4px; }
+    .panel { background:var(--card); border-radius:14px; padding:20px; margin-bottom:24px; }
+    .panel h2 { font-size:15px; margin:0 0 16px; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+    @media (max-width:880px){ .grid2{ grid-template-columns:1fr; } }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { text-align:left; padding:9px 10px; border-bottom:1px solid #334155; }
+    th { color:var(--muted); font-weight:600; }
+    .pill { padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; }
+    .pill.on { background:rgba(34,197,94,.15); color:var(--ok); }
+    .pill.off { background:rgba(239,68,68,.15); color:var(--danger); }
+    .toolbar { display:flex; gap:10px; margin-bottom:14px; }
+    .toolbar input { max-width:280px; }
+    .act { background:transparent; border:1px solid #334155; color:var(--muted); padding:4px 9px; font-size:12px; margin-right:6px; }
+    .act.danger { color:var(--danger); border-color:rgba(239,68,68,.4); }
+  </style>
+</head>
+<body>
+  <!-- LOGIN -->
+  <div id="login-view">
+    <form class="login-card" id="login-form">
+      <h1>🧠 Admin Dashboard</h1>
+      <p>Autism Games analytics</p>
+      <label>Email</label>
+      <input type="email" id="email" autocomplete="username" required />
+      <label>Password</label>
+      <input type="password" id="password" autocomplete="current-password" required />
+      <button class="btn-primary" type="submit">Sign in</button>
+      <div class="error" id="login-error"></div>
+    </form>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dash-view" class="hidden">
+    <header>
+      <h1>🧠 Autism Games — Admin</h1>
+      <div class="right">
+        <span id="admin-email"></span>
+        <button class="btn-ghost" id="logout">Log out</button>
+      </div>
+    </header>
+    <main>
+      <div class="cards" id="stat-cards"></div>
+
+      <div class="grid2">
+        <div class="panel">
+          <h2>Activity (last 30 days)</h2>
+          <canvas id="timeChart" height="160"></canvas>
+        </div>
+        <div class="panel">
+          <h2>Events by game</h2>
+          <canvas id="gameChart" height="160"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Per-game breakdown</h2>
+        <table id="games-table">
+          <thead><tr><th>Game</th><th>Events</th><th>Players</th><th>Avg score</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <div class="panel">
+        <h2>Players</h2>
+        <div class="toolbar">
+          <input type="search" id="user-search" placeholder="Search email or name…" />
+        </div>
+        <table id="users-table">
+          <thead><tr><th>Email</th><th>Name</th><th>City</th><th>Education</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const API = ""; // same origin
+    const TOKEN_KEY = "ag_admin_token";
+    let timeChart, gameChart;
+
+    const token = () => localStorage.getItem(TOKEN_KEY);
+    const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
+    const clearToken = () => localStorage.removeItem(TOKEN_KEY);
+
+    async function api(path, opts = {}) {
+      const res = await fetch(API + path, {
+        ...opts,
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token(), ...(opts.headers || {}) },
+      });
+      if (res.status === 401) { logout(); throw new Error("Unauthorized"); }
+      if (!res.ok) {
+        let msg = "Request failed";
+        try { msg = (await res.json()).detail || msg; } catch (_) {}
+        throw new Error(msg);
+      }
+      return res.status === 204 ? null : res.json();
+    }
+
+    // ---- Login ----
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const err = document.getElementById("login-error");
+      err.textContent = "";
+      try {
+        const res = await fetch(API + "/api/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: document.getElementById("email").value,
+            password: document.getElementById("password").value,
+          }),
+        });
+        if (!res.ok) { err.textContent = (await res.json()).detail || "Login failed"; return; }
+        const data = await res.json();
+        setToken(data.access_token);
+        showDashboard();
+      } catch (e) { err.textContent = "Could not reach the server."; }
+    });
+
+    function logout() { clearToken(); document.getElementById("dash-view").classList.add("hidden"); document.getElementById("login-view").classList.remove("hidden"); }
+    document.getElementById("logout").addEventListener("click", logout);
+
+    // ---- Dashboard ----
+    async function showDashboard() {
+      try {
+        const me = await api("/api/admin/me");
+        document.getElementById("admin-email").textContent = me.email;
+      } catch (_) { return; }
+      document.getElementById("login-view").classList.add("hidden");
+      document.getElementById("dash-view").classList.remove("hidden");
+      loadSummary(); loadTimeseries(); loadGames(); loadUsers();
+    }
+
+    async function loadSummary() {
+      const s = await api("/api/admin/analytics/summary");
+      const cards = [
+        ["Total players", s.total_users], ["Active players", s.active_users],
+        ["Total events", s.total_events], ["Sessions", s.total_sessions],
+        ["Events (7d)", s.events_last_7_days], ["New players (7d)", s.new_users_last_7_days],
+      ];
+      document.getElementById("stat-cards").innerHTML = cards
+        .map(([l, v]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+    }
+
+    async function loadTimeseries() {
+      const data = await api("/api/admin/analytics/timeseries?days=30");
+      const labels = data.map((d) => d.date);
+      const ctx = document.getElementById("timeChart");
+      if (timeChart) timeChart.destroy();
+      timeChart = new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets: [
+          { label: "Events", data: data.map((d) => d.events), borderColor: "#6366f1", backgroundColor: "rgba(99,102,241,.2)", tension: .3, fill: true },
+          { label: "Active players", data: data.map((d) => d.active_users), borderColor: "#22d3ee", tension: .3 },
+        ]},
+        options: { plugins: { legend: { labels: { color: "#94a3b8" } } }, scales: { x: { ticks: { color: "#64748b" } }, y: { ticks: { color: "#64748b" } } } },
+      });
+    }
+
+    async function loadGames() {
+      const data = await api("/api/admin/analytics/games");
+      const ctx = document.getElementById("gameChart");
+      if (gameChart) gameChart.destroy();
+      gameChart = new Chart(ctx, {
+        type: "bar",
+        data: { labels: data.map((d) => d.game_key), datasets: [{ label: "Events", data: data.map((d) => d.event_count), backgroundColor: "#6366f1" }] },
+        options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: "#64748b" } }, y: { ticks: { color: "#64748b" } } } },
+      });
+      document.querySelector("#games-table tbody").innerHTML = data
+        .map((g) => `<tr><td>${g.game_key}</td><td>${g.event_count}</td><td>${g.user_count}</td><td>${g.avg_score ?? "—"}</td></tr>`).join("")
+        || `<tr><td colspan="4" style="color:#64748b">No data yet</td></tr>`;
+    }
+
+    let searchTimer;
+    document.getElementById("user-search").addEventListener("input", (e) => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => loadUsers(e.target.value), 300);
+    });
+
+    async function loadUsers(q = "") {
+      const data = await api("/api/admin/users?limit=100" + (q ? "&q=" + encodeURIComponent(q) : ""));
+      const tbody = document.querySelector("#users-table tbody");
+      tbody.innerHTML = data.items.map((u) => `
+        <tr data-id="${u.id}">
+          <td>${u.email}</td>
+          <td>${u.full_name || "—"}</td>
+          <td>${u.city || "—"}</td>
+          <td>${u.education_level || "—"}</td>
+          <td><span class="pill ${u.is_active ? "on" : "off"}">${u.is_active ? "active" : "disabled"}</span></td>
+          <td>${new Date(u.created_at).toLocaleDateString()}</td>
+          <td>
+            <button class="act" data-act="toggle">${u.is_active ? "Disable" : "Enable"}</button>
+            <button class="act danger" data-act="delete">Delete</button>
+          </td>
+        </tr>`).join("") || `<tr><td colspan="7" style="color:#64748b">No players yet</td></tr>`;
+
+      tbody.querySelectorAll("button[data-act]").forEach((btn) => {
+        btn.addEventListener("click", async (e) => {
+          const tr = e.target.closest("tr"); const id = tr.dataset.id;
+          if (btn.dataset.act === "delete") {
+            if (!confirm("Delete this player and all their analytics? This cannot be undone.")) return;
+            await api("/api/admin/users/" + id, { method: "DELETE" });
+          } else {
+            const isActive = tr.querySelector(".pill").classList.contains("on");
+            await api("/api/admin/users/" + id, { method: "PATCH", body: JSON.stringify({ is_active: !isActive }) });
+          }
+          loadUsers(document.getElementById("user-search").value);
+          loadSummary();
+        });
+      });
+    }
+
+    // ---- Boot ----
+    if (token()) showDashboard();
+  </script>
+</body>
+</html>

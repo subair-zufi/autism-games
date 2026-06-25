@@ -1,0 +1,115 @@
+"""SQLAlchemy ORM models."""
+import uuid
+from datetime import datetime
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .database import Base
+
+
+def _uuid() -> uuid.UUID:
+    return uuid.uuid4()
+
+
+class User(Base):
+    """A game player. Created on sign-up (which also logs them in)."""
+
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str | None] = mapped_column(String(200))
+
+    # Address information
+    address_line1: Mapped[str | None] = mapped_column(String(255))
+    address_line2: Mapped[str | None] = mapped_column(String(255))
+    city: Mapped[str | None] = mapped_column(String(120))
+    state: Mapped[str | None] = mapped_column(String(120))
+    postal_code: Mapped[str | None] = mapped_column(String(40))
+    country: Mapped[str | None] = mapped_column(String(120))
+
+    # Education information
+    education_level: Mapped[str | None] = mapped_column(String(120))
+    institution: Mapped[str | None] = mapped_column(String(200))
+    field_of_study: Mapped[str | None] = mapped_column(String(200))
+
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    events: Mapped[list["GameEvent"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+    sessions: Mapped[list["GameSession"]] = relationship(
+        back_populates="user", cascade="all, delete-orphan"
+    )
+
+
+class Admin(Base):
+    """A dashboard administrator. Logs in with email + password."""
+
+    __tablename__ = "admins"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class GameSession(Base):
+    """A single play session grouping a sequence of steps/events."""
+
+    __tablename__ = "game_sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    game_key: Mapped[str] = mapped_column(String(80), index=True, nullable=False)
+    final_score: Mapped[int | None] = mapped_column(Integer)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped["User"] = relationship(back_populates="sessions")
+    events: Mapped[list["GameEvent"]] = relationship(
+        back_populates="session", cascade="all, delete-orphan"
+    )
+
+
+class GameEvent(Base):
+    """A single recorded step/event. One row per step, stored only for logged-in players."""
+
+    __tablename__ = "game_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    session_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("game_sessions.id", ondelete="SET NULL"), index=True
+    )
+
+    game_key: Mapped[str] = mapped_column(String(80), index=True, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(80), index=True, nullable=False)
+    step_index: Mapped[int | None] = mapped_column(Integer)
+    score: Mapped[int | None] = mapped_column(Integer)
+    payload: Mapped[dict | None] = mapped_column(JSONB)
+
+    # Timestamp reported by the client (optional) + authoritative server time
+    client_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+    user: Mapped["User"] = relationship(back_populates="events")
+    session: Mapped["GameSession | None"] = relationship(back_populates="events")
+
+
+Index("ix_game_events_game_type", GameEvent.game_key, GameEvent.event_type)
