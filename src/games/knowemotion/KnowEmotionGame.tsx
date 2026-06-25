@@ -13,10 +13,15 @@ import { buildQuiz, type Question } from './logic'
 const META = GAME_LIST.find((g) => g.id === 'knowemotion')!
 const POS_LABEL = ['left', 'middle', 'right']
 
+// Position word for panel `i` in a photo of `count` people: 2-person photos read
+// left/right, 3-person photos read left/middle/right.
+function posLabel(i: number, count: number): string {
+  return count === 2 ? (i === 0 ? 'left' : 'right') : POS_LABEL[i]
+}
+
 function promptText(q: Question): string {
   if (q.type === 'find') return `Who is feeling ${emotionMeta(q.targetEmotion).label.toLowerCase()}?`
-  const pos = q.photo.emotions.length === 2 ? (q.position === 0 ? 'left' : 'right') : POS_LABEL[q.position]
-  return `What is the ${pos} one feeling?`
+  return `What is the ${posLabel(q.position, q.photo.emotions.length)} one feeling?`
 }
 
 export function KnowEmotionGame() {
@@ -116,7 +121,7 @@ export function KnowEmotionGame() {
                 }
                 style={{ left: `${i * colWidth}%`, width: `${colWidth}%` }}
                 disabled={q.type !== 'find' || locked || wrongFind.includes(i)}
-                aria-label={`${POS_LABEL[q.photo.emotions.length === 2 ? i * 2 : i]} person`}
+                aria-label={`${posLabel(i, q.photo.emotions.length)} person`}
                 onClick={() => pickRegion(i)}
               />
             ))}
