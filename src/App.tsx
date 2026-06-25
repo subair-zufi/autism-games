@@ -13,6 +13,8 @@ import { MuseumGame } from './games/museum/MuseumGame'
 import { RightWayGame } from './games/rightway/RightWayGame'
 import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
 import { SliderGame } from './games/slider/SliderGame'
+import { KnowEmotionGame } from './games/knowemotion/KnowEmotionGame'
+import { IdentifyEmotionsGame } from './games/identifyemotions/IdentifyEmotionsGame'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotions: EmotionsGame,
@@ -25,6 +27,8 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   rightway: RightWayGame,
   rulefixer: RuleFixerGame,
   slider: SliderGame,
+  knowemotion: KnowEmotionGame,
+  identifyemotions: IdentifyEmotionsGame,
 }
 
 export default function App() {
