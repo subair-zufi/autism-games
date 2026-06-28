@@ -11,6 +11,7 @@ import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { BOX_COLORS, GOAL, boxesFor, pickTarget, type ColorId } from './logic'
 import { BallDropScene } from './BallDropScene'
+import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'balldrop')!
 const MAX_LIVES = 3
@@ -23,6 +24,7 @@ export function BallDropGame() {
   const difficulty = useSettings((s) => s.difficulty.balldrop)
   const best = useScores((s) => s.best.balldrop)
   const reportScore = useScores((s) => s.reportScore)
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('balldrop')
   const goal = GOAL[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
@@ -40,6 +42,7 @@ export function BallDropGame() {
   const mode = difficulty === 'easy' ? 'tap' : 'drag'
 
   function start() {
+    resetSession()
     const b = boxesFor(difficulty)
     setBoxes(b)
     setTarget(pickTarget(b, null))
@@ -63,10 +66,12 @@ export function BallDropGame() {
       playSuccess()
       const nextScore = score + 1
       setScore(nextScore)
+      recordStep('answer', { correct: true, target, box, score: nextScore }, { score: nextScore })
       setConfetti((c) => ({ color: box, trigger: c.trigger + 1 }))
       if (nextScore >= goal) {
         speak('You did it! All the balls are home!')
         reportScore('balldrop', nextScore)
+        finishGame(nextScore)
         setTimeout(() => setPhase('over'), 1400)
         return
       }
@@ -81,8 +86,10 @@ export function BallDropGame() {
       speak(`That's the ${metaOf(box).label} box. Let's find the ${metaOf(target).label} box.`)
       const next = lives - 1
       setLives(next)
+      recordStep('answer', { correct: false, target, box })
       if (next <= 0) {
         reportScore('balldrop', score)
+        finishGame(score)
         setPhase('over')
       } else {
         setLocked(true)

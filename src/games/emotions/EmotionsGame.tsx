@@ -9,6 +9,7 @@ import { GameOverDialog } from '../../components/GameOverDialog'
 import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { EMOTIONS, makeRound, type EmotionId, type Round } from './logic'
+import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'emotions')!
 const MAX_LIVES = 3
@@ -17,6 +18,7 @@ export function EmotionsGame() {
   const difficulty = useSettings((s) => s.difficulty.emotions)
   const best = useScores((s) => s.best.emotions)
   const reportScore = useScores((s) => s.reportScore)
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('emotions')
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [round, setRound] = useState<Round>(() => makeRound(difficulty, null))
@@ -31,6 +33,7 @@ export function EmotionsGame() {
   const imgLoaded = loadedSrc === currentSrc
 
   function start() {
+    resetSession()
     setScore(0)
     setLives(MAX_LIVES)
     setWrongPicks([])
@@ -50,6 +53,7 @@ export function EmotionsGame() {
       playSuccess()
       speak(`Great! That's ${meta.label}!`)
       setScore((s) => s + 1)
+      recordStep('answer', { correct: true, target: round.target, score: score + 1 }, { score: score + 1 })
       setTimeout(() => {
         setCelebrating(false)
         setWrongPicks([])
@@ -62,8 +66,10 @@ export function EmotionsGame() {
       setWrongPicks((w) => [...w, id])
       const next = lives - 1
       setLives(next)
+      recordStep('answer', { correct: false, target: round.target, picked: id })
       if (next <= 0) {
         reportScore('emotions', score)
+        finishGame(score)
         setPhase('over')
       }
     }

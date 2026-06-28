@@ -11,6 +11,7 @@ import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { GOAL, makeRound, objectMeta, type ObjectId, type Round } from './logic'
 import { GardenScene } from './GardenScene'
+import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'garden')!
 const MAX_LIVES = 3
@@ -19,6 +20,7 @@ export function GardenGame() {
   const difficulty = useSettings((s) => s.difficulty.garden)
   const best = useScores((s) => s.best.garden)
   const reportScore = useScores((s) => s.reportScore)
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('garden')
   const goal = GOAL[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
@@ -30,6 +32,7 @@ export function GardenGame() {
   const [celebrate, setCelebrate] = useState(0)
 
   function start() {
+    resetSession()
     setScore(0)
     setLives(MAX_LIVES)
     setWrongPicks([])
@@ -47,9 +50,11 @@ export function GardenGame() {
       playSuccess()
       const nextScore = score + 1
       setScore(nextScore)
+      recordStep('answer', { correct: true, target: round.target, picked: id, score: nextScore }, { score: nextScore })
       if (nextScore >= goal) {
         speak('You found them all! Wonderful looking!')
         reportScore('garden', nextScore)
+        finishGame(nextScore)
         setTimeout(() => setPhase('over'), 1200)
         return
       }
@@ -65,8 +70,10 @@ export function GardenGame() {
       setWrongPicks((w) => [...w, id])
       const next = lives - 1
       setLives(next)
+      recordStep('answer', { correct: false, target: round.target, picked: id })
       if (next <= 0) {
         reportScore('garden', score)
+        finishGame(score)
         setPhase('over')
       }
     }
