@@ -11,7 +11,14 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 
-os.environ.setdefault("ADMIN_EMAIL", "admin@test.local")
+# Run against a dedicated test database when provided, so the dev DB is never
+# dropped by the schema reset in the `client` fixture below.
+if os.environ.get("TEST_DATABASE_URL"):
+    os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
+
+# Use a normal registrable domain — email-validator rejects reserved TLDs
+# like `.local` / `.test`, which would make the admin-login body fail validation.
+os.environ.setdefault("ADMIN_EMAIL", "admin@example.com")
 os.environ.setdefault("ADMIN_PASSWORD", "admin-pass-123")
 
 from app.config import settings  # noqa: E402
