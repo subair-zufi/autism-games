@@ -11,6 +11,7 @@ import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { CONFIG, queueColors } from './logic'
 import { SliderScene } from './SliderScene'
+import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'slider')!
 const MAX_LIVES = 3
@@ -22,6 +23,7 @@ export function SliderGame() {
   const best = useScores((s) => s.best.slider) ?? 0
   const reportScore = useScores((s) => s.reportScore)
   const config = CONFIG[difficulty] ?? CONFIG.easy
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('slider')
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [ahead, setAhead] = useState(config.queue) // kids still in front of you
@@ -35,6 +37,7 @@ export function SliderGame() {
   const sliding = useRef(false) // same flag for the turn-timer effect (synchronous)
 
   function start() {
+    resetSession()
     setAhead(config.queue)
     setYourTurn(false)
     setScore(0)
@@ -70,10 +73,12 @@ export function SliderGame() {
       // tapped while others are still going — gently coach patience
       playGentle()
       speak('Not yet — wait for your turn in the line.')
+      recordStep('answer', { correct: false, ahead })
       const next = lives - 1
       setLives(next)
       if (next <= 0) {
         reportScore('slider', score)
+        finishGame(score)
         setPhase('over')
       }
       return
@@ -87,10 +92,12 @@ export function SliderGame() {
     playSuccess()
     const nextScore = score + 1
     setScore(nextScore)
+    recordStep('answer', { correct: true, score: nextScore }, { score: nextScore })
 
     if (nextScore >= config.goal) {
       speak('Wheee! You waited so well and had your turn! You win!')
       reportScore('slider', nextScore)
+      finishGame(nextScore)
       setTimeout(() => setPhase('over'), YOUR_SLIDE_MS)
       return
     }

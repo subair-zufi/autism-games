@@ -1,6 +1,8 @@
 import type { ComponentType } from 'react'
+import { useEffect } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { Home } from './pages/Home'
+import { Login } from './pages/Login'
 import { ComingSoon } from './components/ComingSoon'
 import { GAME_LIST, type GameId } from './types'
 import { EmotionsGame } from './games/emotions/EmotionsGame'
@@ -15,6 +17,7 @@ import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
 import { SliderGame } from './games/slider/SliderGame'
 import { KnowEmotionGame } from './games/knowemotion/KnowEmotionGame'
 import { IdentifyEmotionsGame } from './games/identifyemotions/IdentifyEmotionsGame'
+import { useAuth } from './state/auth'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotions: EmotionsGame,
@@ -32,9 +35,14 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
 }
 
 export default function App() {
+  useEffect(() => {
+    useAuth.getState().hydrate()
+  }, [])
+
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
       {GAME_LIST.map((g) => {
         const Game = GAME_COMPONENTS[g.id]
         return (

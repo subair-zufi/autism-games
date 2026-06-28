@@ -1,13 +1,14 @@
 import { useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Text } from '@react-three/drei'
 import * as THREE from 'three'
-import { blockY, BLOCK_H, type BlockSpec, type Owner } from './logic'
+import { blockY, BLOCK_H, type TurnSpec, type Player } from './logic'
 
 export interface BlockSceneProps {
-  placed: BlockSpec[]
-  turn: Owner | 'done'
-  /** true while the robot arm is reaching down to set its block */
-  robotReaching: boolean
+  placed: TurnSpec[]
+  players: Player[]
+  activeIndex: number
+  reaching: boolean
 }
 
 export function BlockScene(props: BlockSceneProps) {
@@ -21,11 +22,12 @@ export function BlockScene(props: BlockSceneProps) {
   )
 }
 
-function SceneInner({ placed, turn, robotReaching }: BlockSceneProps) {
-  const towerTop = blockY(placed.length - 1) + BLOCK_H / 2 // y of the current top surface
+function SceneInner({ placed, players, activeIndex, reaching }: BlockSceneProps) {
+  const towerTop = blockY(placed.length - 1) + BLOCK_H / 2
   return (
     <group>
       <CameraRig towerTop={Math.max(towerTop, 0)} />
+
       {/* table */}
       <mesh position={[0, -0.35, 0]}>
         <boxGeometry args={[6, 0.5, 3]} />
@@ -36,11 +38,28 @@ function SceneInner({ placed, turn, robotReaching }: BlockSceneProps) {
         <meshStandardMaterial color="#e8c79c" />
       </mesh>
 
-      {placed.map((b, i) => (
-        <Block key={i} spec={b} index={i} fresh={i === placed.length - 1} />
+      {/* stacked tower */}
+      {placed.map((spec, i) => (
+        <Block key={i} spec={spec} index={i} fresh={i === placed.length - 1} />
       ))}
 
-      <RobotArm towerTop={Math.max(towerTop, 0)} reaching={robotReaching} active={turn === 'robot'} />
+      {/* player avatars spread along the front of the table */}
+      {players.map((player, i) => {
+        const isActive = i === activeIndex
+        const isReaching = isActive && reaching
+        // spread avatars symmetrically around x=0, spaced ~1.4 units apart
+        const spread = (players.length - 1) * 0.7
+        const x = players.length > 1 ? -spread + i * (spread * 2) / (players.length - 1) : 0
+        return (
+          <PlayerAvatar
+            key={player.id}
+            player={player}
+            x={x}
+            active={isActive}
+            reaching={isReaching}
+          />
+        )
+      })}
     </group>
   )
 }
@@ -58,9 +77,9 @@ function CameraRig({ towerTop }: { towerTop: number }) {
   return null
 }
 
-function Block({ spec, index, fresh }: { spec: BlockSpec; index: number; fresh: boolean }) {
+function Block({ spec, index, fresh }: { spec: TurnSpec; index: number; fresh: boolean }) {
   const ref = useRef<THREE.Mesh>(null)
-  const drop = useRef(fresh ? 1 : 0) // 1 = just dropped, animates to 0
+  const drop = useRef(fresh ? 1 : 0)
   const y = blockY(index)
   useFrame((_, dt) => {
     const m = ref.current
@@ -83,49 +102,77 @@ function Block({ spec, index, fresh }: { spec: BlockSpec; index: number; fresh: 
   )
 }
 
-function RobotArm({ towerTop, reaching, active }: { towerTop: number; reaching: boolean; active: boolean }) {
-  const claw = useRef<THREE.Group>(null)
-  const restY = towerTop + 2.6
+/**
+ * A simple avatar: a sphere body with an emoji label above it.
+ * Active player is scaled up and gets an emissive glow.
+ * Reaching pose tilts the body forward slightly.
+ */
+function PlayerAvatar({
+  player,
+  x,
+  active,
+  reaching,
+}: {
+  player: Player
+  x: number
+  active: boolean
+  reaching: boolean
+}) {
+  const groupRef = useRef<THREE.Group>(null)
+  // child sits at z=1.4 (front of table), peers are behind the tower at z=-1.4
+  const z = player.kind === 'child' ? 1.4 : -1.4
+  const baseY = 0.05
+
   useFrame((state) => {
-    const g = claw.current
+    const g = groupRef.current
     if (!g) return
-    const targetY = reaching ? towerTop + 0.55 : restY
-    g.position.y += (targetY - g.position.y) * 0.12
-    // gentle idle sway when it is the robot's turn
-    g.position.x = 2.4 + (active ? Math.sin(state.clock.elapsedTime * 4) * 0.04 : 0)
+    const targetScale = active ? 1.25 : 1.0
+    const currentScale = g.scale.x
+    const newScale = currentScale + (targetScale - currentScale) * 0.1
+    g.scale.setScalar(newScale)
+
+    // gentle bob when active
+    if (active) {
+      g.position.y = baseY + Math.sin(state.clock.elapsedTime * 3) * 0.04
+    } else {
+      g.position.y += (baseY - g.position.y) * 0.1
+    }
+
+    // lean forward when reaching
+    const targetRot = reaching ? -0.45 : 0
+    g.rotation.x += (targetRot - g.rotation.x) * 0.1
   })
+
   return (
-    <group>
-      {/* gantry post */}
-      <mesh position={[3.1, towerTop + 1.8, 0]}>
-        <boxGeometry args={[0.3, towerTop + 5, 0.3]} />
-        <meshStandardMaterial color="#8a93a6" />
+    <group ref={groupRef} position={[x, baseY, z]}>
+      {/* body sphere */}
+      <mesh>
+        <sphereGeometry args={[0.28, 16, 16]} />
+        <meshStandardMaterial
+          color={player.kind === 'child' ? '#f9a84d' : '#7ac9f1'}
+          emissive={active ? (player.kind === 'child' ? '#f9a84d' : '#7ac9f1') : '#000000'}
+          emissiveIntensity={active ? 0.35 : 0}
+        />
       </mesh>
-      <group ref={claw} position={[2.4, restY, 0]}>
-        {/* arm bar */}
-        <mesh position={[0.35, 0, 0]}>
-          <boxGeometry args={[1.4, 0.18, 0.18]} />
-          <meshStandardMaterial color="#aab3c4" metalness={0.3} />
-        </mesh>
-        {/* claw head */}
-        <mesh>
-          <boxGeometry args={[0.5, 0.4, 0.5]} />
-          <meshStandardMaterial color="#5b677d" />
-        </mesh>
-        <mesh position={[-0.22, -0.3, 0]} rotation={[0, 0, reaching ? 0.5 : 0.1]}>
-          <boxGeometry args={[0.1, 0.36, 0.4]} />
-          <meshStandardMaterial color="#3f4860" />
-        </mesh>
-        <mesh position={[0.22, -0.3, 0]} rotation={[0, 0, reaching ? -0.5 : -0.1]}>
-          <boxGeometry args={[0.1, 0.36, 0.4]} />
-          <meshStandardMaterial color="#3f4860" />
-        </mesh>
-        {/* friendly eye */}
-        <mesh position={[0, 0.1, 0.26]}>
-          <sphereGeometry args={[0.1, 12, 12]} />
-          <meshStandardMaterial color="#fff" emissive="#9fe2ff" emissiveIntensity={0.5} />
-        </mesh>
-      </group>
+      {/* small head */}
+      <mesh position={[0, 0.38, 0]}>
+        <sphereGeometry args={[0.16, 12, 12]} />
+        <meshStandardMaterial
+          color={player.kind === 'child' ? '#fbd29a' : '#b8e4f9'}
+          emissive={active ? (player.kind === 'child' ? '#fbd29a' : '#b8e4f9') : '#000000'}
+          emissiveIntensity={active ? 0.25 : 0}
+        />
+      </mesh>
+      {/* emoji + name label */}
+      <Text
+        position={[0, 0.72, 0]}
+        fontSize={0.22}
+        anchorX="center"
+        anchorY="bottom"
+        color="#333333"
+      >
+        {player.emoji} {player.name}
+      </Text>
     </group>
   )
 }

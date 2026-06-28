@@ -18,6 +18,7 @@ import {
   type TrafficState,
 } from './logic'
 import { ZebraScene } from './ZebraScene'
+import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'zebra')!
 
@@ -25,6 +26,7 @@ export function ZebraGame() {
   const difficulty = useSettings((s) => s.difficulty.zebra)
   const best = useScores((s) => s.best.zebra)
   const reportScore = useScores((s) => s.reportScore)
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('zebra')
   const level = LEVELS[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
@@ -57,6 +59,7 @@ export function ZebraGame() {
   }, [phase, level])
 
   function start() {
+    resetSession()
     traffic.current = initialTraffic()
     scoreRef.current = 0
     setScore(0)
@@ -99,9 +102,11 @@ export function ZebraGame() {
     const n = scoreRef.current + 1
     scoreRef.current = n
     setScore(n)
+    recordStep('answer', { correct: true, crossings: n, score: n }, { score: n })
     if (n >= level.goal) {
       speak('You crossed safely! Wonderful walking!')
       reportScore('zebra', n)
+      finishGame(n)
       setPhase('over')
     } else {
       speak('You crossed safely! Well done!')

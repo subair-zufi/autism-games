@@ -11,6 +11,7 @@ import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { makeRound, rounds, type Option, type Round } from './logic'
 import { RuleFixerScene } from './RuleFixerScene'
+import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'rulefixer')!
 const MAX_LIVES = 3
@@ -20,6 +21,7 @@ export function RuleFixerGame() {
   const best = useScores((s) => s.best.rulefixer)
   const reportScore = useScores((s) => s.reportScore)
   const total = rounds(difficulty)
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('rulefixer')
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [round, setRound] = useState<Round>(() => makeRound(null))
@@ -30,6 +32,7 @@ export function RuleFixerGame() {
   const [outcome, setOutcome] = useState<'good' | 'bad' | null>(null)
 
   function start() {
+    resetSession()
     setRound(makeRound(null))
     setScore(0)
     setLives(MAX_LIVES)
@@ -58,10 +61,12 @@ export function RuleFixerGame() {
       playGentle()
       speak(opt.result)
     }
+    recordStep('answer', { correct: opt.isGood, situationId: round.situation.id, optionId: opt.id, score: nextScore }, { score: nextScore })
 
     setTimeout(() => {
       if (nextLives <= 0 || nextDone >= total) {
         reportScore('rulefixer', nextScore)
+        finishGame(nextScore)
         setPhase('over')
         return
       }

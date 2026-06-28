@@ -437,3 +437,25 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   color: var(--ink);
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
 }
+
+/* --- Auth: login page + Home chip --- */
+.login-page { max-width: 420px; margin: 0 auto; padding: 24px 16px; }
+.login-page h1 { margin: 8px 0; }
+.login-sub { color: #555; margin-bottom: 16px; }
+.login-form { display: flex; flex-direction: column; gap: 12px; }
+.login-form label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.login-form input { padding: 10px; border: 2px solid #ccc; border-radius: 10px; font-size: 16px; }
+.login-error { color: #c0392b; font-weight: 600; }
+.login-submit { padding: 12px; border: none; border-radius: 12px; background: #5aa9e6; color: #fff; font-size: 18px; font-weight: 700; cursor: pointer; }
+.login-submit:disabled { opacity: .6; }
+.login-alt { padding: 10px; border: 2px solid #5aa9e6; border-radius: 12px; background: #fff; color: #5aa9e6; font-weight: 700; cursor: pointer; }
+.auth-chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 2px solid #5aa9e6; background: #fff; color: #2b6cb0; font-weight: 700; cursor: pointer; text-decoration: none; }
+.link-btn { background: none; border: none; color: #2b6cb0; text-decoration: underline; cursor: pointer; font-weight: 700; padding: 0 0 0 4px; }
+
+.player-btn-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.player-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 76px; padding: 10px; border-radius: 14px; border: 2px solid #ddd; background: #f6f6f6; font-weight: 700; }
+.player-emoji { font-size: 26px; }
+.player-btn.peer.active { border-color: #f5c542; background: #fff8e1; box-shadow: 0 0 0 3px #f5c54255; }
+.player-btn.child { cursor: pointer; }
+.player-btn.child.ready { border-color: #7ac74f; background: #eafce0; }
+.player-btn.child.wait { opacity: .7; }

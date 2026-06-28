@@ -9,12 +9,14 @@ import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { emotionMeta, type EmotionId } from '../emotionVocab'
 import { buildQuiz, type VideoQuestion } from './logic'
+import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'identifyemotions')!
 
 export function IdentifyEmotionsGame() {
   const difficulty = useSettings((s) => s.difficulty.identifyemotions)
   const reportScore = useScores((s) => s.reportScore)
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('identifyemotions')
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [quiz, setQuiz] = useState<VideoQuestion[]>(() => buildQuiz(difficulty))
@@ -29,6 +31,7 @@ export function IdentifyEmotionsGame() {
   const q = quiz[idx]
 
   function start() {
+    resetSession()
     setQuiz(buildQuiz(difficulty))
     setIdx(0)
     setScore(0)
@@ -56,10 +59,12 @@ export function IdentifyEmotionsGame() {
       playSuccess()
       speak('Great job!')
       const nextScore = score + (firstTry ? 1 : 0)
+      recordStep('answer', { correct: true, answer: q.answer, picked: id, score: nextScore }, { score: nextScore })
       setTimeout(() => {
         setScore(nextScore)
         if (idx + 1 >= quiz.length) {
           reportScore('identifyemotions', nextScore)
+          finishGame(nextScore)
           setPhase('over')
         } else {
           setIdx(idx + 1)
@@ -67,6 +72,7 @@ export function IdentifyEmotionsGame() {
         }
       }, 1300)
     } else {
+      recordStep('answer', { correct: false, answer: q.answer, picked: id })
       playGentle()
       speak("Let's look again.")
       setFirstTry(false)

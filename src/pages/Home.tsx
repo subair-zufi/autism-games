@@ -1,10 +1,14 @@
 import { Link } from 'react-router-dom'
+import { useAuth } from '../state/auth'
 import { GAME_LIST } from '../types'
 import { useScores } from '../state/scores'
 import { useSettings } from '../state/settings'
 import { playTap } from '../services/sounds'
 
 export function Home() {
+  const isLoggedIn = useAuth((s) => s.isLoggedIn)
+  const user = useAuth((s) => s.user)
+  const logout = useAuth((s) => s.logout)
   const best = useScores((s) => s.best)
   const voiceOn = useSettings((s) => s.voiceOn)
   const soundOn = useSettings((s) => s.soundOn)
@@ -16,6 +20,14 @@ export function Home() {
       <header className="home-header">
         <h1>Autism Games</h1>
         <p>Pick a game to play!</p>
+        {isLoggedIn ? (
+          <span className="auth-chip">
+            👋 {user?.full_name || user?.email}
+            <button className="link-btn" onClick={() => logout()}>Log out</button>
+          </span>
+        ) : (
+          <Link to="/login" className="auth-chip" onClick={() => playTap()}>🔑 Sign in</Link>
+        )}
       </header>
       <div className="card-grid">
         {GAME_LIST.map((g) => (

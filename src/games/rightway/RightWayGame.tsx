@@ -11,6 +11,7 @@ import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { nextScenario, rounds, type Scenario } from './logic'
 import { RightWayScene } from './RightWayScene'
+import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'rightway')!
 const MAX_LIVES = 3
@@ -20,6 +21,7 @@ export function RightWayGame() {
   const best = useScores((s) => s.best.rightway)
   const reportScore = useScores((s) => s.reportScore)
   const total = rounds(difficulty)
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('rightway')
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [scenario, setScenario] = useState<Scenario>(() => nextScenario(null))
@@ -30,6 +32,7 @@ export function RightWayGame() {
   const [celebrate, setCelebrate] = useState(0)
 
   function start() {
+    resetSession()
     setScenario(nextScenario(null))
     setScore(0)
     setLives(MAX_LIVES)
@@ -59,10 +62,12 @@ export function RightWayGame() {
       playGentle()
       speak(`Let's fix it. ${scenario.explain}`)
     }
+    recordStep('answer', { correct, scenarioId: scenario.id, saidFine, isFine: scenario.isFine, score: nextScore }, { score: nextScore })
 
     setTimeout(() => {
       if (nextLives <= 0 || nextDone >= total) {
         reportScore('rightway', nextScore)
+        finishGame(nextScore)
         setPhase('over')
         return
       }

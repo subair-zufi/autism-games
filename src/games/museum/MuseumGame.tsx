@@ -11,6 +11,7 @@ import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { exhibitMeta, makeRound, type ExhibitId, type Round } from './logic'
 import { MuseumScene } from './MuseumScene'
+import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'museum')!
 const MAX_LIVES = 3
@@ -19,6 +20,7 @@ export function MuseumGame() {
   const difficulty = useSettings((s) => s.difficulty.museum)
   const best = useScores((s) => s.best.museum)
   const reportScore = useScores((s) => s.reportScore)
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('museum')
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [round, setRound] = useState<Round>(() => makeRound(difficulty, null))
@@ -29,6 +31,7 @@ export function MuseumGame() {
   const [celebrate, setCelebrate] = useState(0)
 
   function start() {
+    resetSession()
     setScore(0)
     setLives(MAX_LIVES)
     setWrongPicks([])
@@ -47,6 +50,7 @@ export function MuseumGame() {
       playSuccess()
       speak(`Yes! The hand points at the ${meta.label}!`)
       setScore((s) => s + 1)
+      recordStep('answer', { correct: true, target: round.target, score: score + 1 }, { score: score + 1 })
       setTimeout(() => {
         setWrongPicks([])
         setLocked(false)
@@ -59,8 +63,10 @@ export function MuseumGame() {
       setWrongPicks((w) => [...w, id])
       const next = lives - 1
       setLives(next)
+      recordStep('answer', { correct: false, target: round.target, picked: id })
       if (next <= 0) {
         reportScore('museum', score)
+        finishGame(score)
         setPhase('over')
       }
     }
