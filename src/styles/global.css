@@ -450,3 +450,4 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .login-submit:disabled { opacity: .6; }
 .login-alt { padding: 10px; border: 2px solid #5aa9e6; border-radius: 12px; background: #fff; color: #5aa9e6; font-weight: 700; cursor: pointer; }
 .auth-chip { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; border: 2px solid #5aa9e6; background: #fff; color: #2b6cb0; font-weight: 700; cursor: pointer; text-decoration: none; }
+.link-btn { background: none; border: none; color: #2b6cb0; text-decoration: underline; cursor: pointer; font-weight: 700; padding: 0 0 0 4px; }
