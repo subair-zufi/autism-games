@@ -1,41 +1,55 @@
-import { expect, test } from 'vitest'
-import { BLOCK_COLORS, BLOCK_H, blockY, CONFIG, makeSequence } from './logic'
+import { describe, it, expect } from 'vitest'
+import { CONFIG, buildPlayers, makeSequence, blockY, BLOCK_H } from './logic'
 
-const rng = (seq: number[]) => {
-  let i = 0
-  return () => seq[i++ % seq.length]
+function seeded(seed: number) {
+  let s = seed
+  return () => {
+    s = (s * 1664525 + 1013904223) % 4294967296
+    return s / 4294967296
+  }
 }
 
-test('config rounds grow and waiting gets longer with difficulty', () => {
-  expect(CONFIG.easy.rounds).toBeLessThan(CONFIG.hard.rounds)
-  expect(CONFIG.easy.robotTurnMs).toBeLessThan(CONFIG.hard.robotTurnMs)
-})
+describe('blocks logic (multi-peer)', () => {
+  it('buildPlayers puts the child first and fills peers', () => {
+    const players = buildPlayers(4)
+    expect(players).toHaveLength(4)
+    expect(players[0].kind).toBe('child')
+    expect(players.slice(1).every((p) => p.kind === 'peer')).toBe(true)
+  })
 
-test('sequence has two blocks per round and alternates robot-first', () => {
-  for (const d of ['easy', 'medium', 'hard'] as const) {
-    const seq = makeSequence(CONFIG[d].rounds, Math.random)
-    expect(seq).toHaveLength(CONFIG[d].rounds * 2)
-    seq.forEach((b, i) => {
-      expect(b.owner).toBe(i % 2 === 0 ? 'robot' : 'child')
-      expect(BLOCK_COLORS).toContain(b.color)
-    })
-  }
-})
+  it('makeSequence has players*rounds turns', () => {
+    const cfg = CONFIG.medium
+    const seq = makeSequence(cfg, buildPlayers(cfg.players), seeded(1))
+    expect(seq).toHaveLength(cfg.players * cfg.rounds)
+  })
 
-test('child places exactly one block per round', () => {
-  const seq = makeSequence(5, Math.random)
-  expect(seq.filter((b) => b.owner === 'child')).toHaveLength(5)
-  expect(seq.filter((b) => b.owner === 'robot')).toHaveLength(5)
-})
+  it('the child takes exactly one turn per round', () => {
+    const cfg = CONFIG.hard
+    const players = buildPlayers(cfg.players)
+    const seq = makeSequence(cfg, players, seeded(2))
+    for (let r = 0; r < cfg.rounds; r++) {
+      const round = seq.slice(r * cfg.players, (r + 1) * cfg.players)
+      expect(round.filter((t) => t.kind === 'child')).toHaveLength(1)
+      // every player appears exactly once per round
+      const idxs = round.map((t) => t.playerIndex).sort()
+      expect(idxs).toEqual([...Array(cfg.players).keys()])
+    }
+  })
 
-test('deterministic with seeded rng', () => {
-  const a = makeSequence(4, rng([0.1, 0.5, 0.9]))
-  const b = makeSequence(4, rng([0.1, 0.5, 0.9]))
-  expect(a).toEqual(b)
-})
+  it('the child slot varies across rounds (not always first)', () => {
+    const cfg = CONFIG.hard
+    const players = buildPlayers(cfg.players)
+    const seq = makeSequence(cfg, players, seeded(3))
+    const childSlots: number[] = []
+    for (let r = 0; r < cfg.rounds; r++) {
+      const round = seq.slice(r * cfg.players, (r + 1) * cfg.players)
+      childSlots.push(round.findIndex((t) => t.kind === 'child'))
+    }
+    expect(new Set(childSlots).size).toBeGreaterThan(1)
+  })
 
-test('blocks stack without overlap', () => {
-  expect(blockY(0)).toBeCloseTo(BLOCK_H / 2)
-  expect(blockY(1) - blockY(0)).toBeCloseTo(BLOCK_H)
-  expect(blockY(3)).toBeGreaterThan(blockY(2))
+  it('blockY stacks by BLOCK_H', () => {
+    expect(blockY(0)).toBeCloseTo(BLOCK_H / 2)
+    expect(blockY(2)).toBeCloseTo(BLOCK_H / 2 + 2 * BLOCK_H)
+  })
 })
