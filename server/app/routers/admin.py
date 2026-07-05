@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_admin
-from ..models import Admin, GameEvent, GameSession, User
+from ..models import Admin, GameEvent, GameSession, Student, User
 from ..schemas import (
     AdminAuthResponse,
     AdminLoginRequest,
@@ -15,7 +15,9 @@ from ..schemas import (
     EventPublic,
     GameBreakdownItem,
     PaginatedEvents,
+    PaginatedStudents,
     PaginatedUsers,
+    StudentPublic,
     TimeseriesPoint,
     UserPublic,
     UserUpdate,
@@ -135,6 +137,68 @@ def user_events(
 
 
 # ---------------------------------------------------------------------------
+# Student records
+# ---------------------------------------------------------------------------
+@router.get("/students", response_model=PaginatedStudents)
+def list_students(
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+    q: str | None = Query(default=None, description="Search student name"),
+    mentor_id: str | None = Query(default=None, description="Filter by owning mentor"),
+    limit: int = Query(default=50, le=200, ge=1),
+    offset: int = Query(default=0, ge=0),
+) -> PaginatedStudents:
+    stmt = select(Student)
+    count_stmt = select(func.count(Student.id))
+    if q:
+        like = f"%{q.lower()}%"
+        condition = func.lower(Student.full_name).like(like)
+        stmt = stmt.where(condition)
+        count_stmt = count_stmt.where(condition)
+    if mentor_id:
+        stmt = stmt.where(Student.mentor_id == mentor_id)
+        count_stmt = count_stmt.where(Student.mentor_id == mentor_id)
+    total = db.scalar(count_stmt) or 0
+    rows = db.scalars(
+        stmt.order_by(Student.created_at.desc()).limit(limit).offset(offset)
+    ).all()
+    return PaginatedStudents(total=total, items=[StudentPublic.model_validate(s) for s in rows])
+
+
+@router.get("/students/{student_id}", response_model=StudentPublic)
+def get_student(
+    student_id: str, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StudentPublic:
+    student = db.get(Student, student_id)
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found.")
+    return StudentPublic.model_validate(student)
+
+
+@router.get("/students/{student_id}/events", response_model=PaginatedEvents)
+def student_events(
+    student_id: str,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+    limit: int = Query(default=100, le=500, ge=1),
+    offset: int = Query(default=0, ge=0),
+) -> PaginatedEvents:
+    if db.get(Student, student_id) is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found.")
+    total = db.scalar(
+        select(func.count(GameEvent.id)).where(GameEvent.student_id == student_id)
+    ) or 0
+    rows = db.scalars(
+        select(GameEvent)
+        .where(GameEvent.student_id == student_id)
+        .order_by(GameEvent.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    ).all()
+    return PaginatedEvents(total=total, items=[EventPublic.model_validate(e) for e in rows])
+
+
+# ---------------------------------------------------------------------------
 # Events feed
 # ---------------------------------------------------------------------------
 @router.get("/events", response_model=PaginatedEvents)
@@ -143,6 +207,7 @@ def list_events(
     _: Admin = Depends(get_current_admin),
     game_key: str | None = None,
     event_type: str | None = None,
+    student_id: str | None = None,
     limit: int = Query(default=100, le=500, ge=1),
     offset: int = Query(default=0, ge=0),
 ) -> PaginatedEvents:
@@ -154,6 +219,9 @@ def list_events(
     if event_type:
         stmt = stmt.where(GameEvent.event_type == event_type)
         count_stmt = count_stmt.where(GameEvent.event_type == event_type)
+    if student_id:
+        stmt = stmt.where(GameEvent.student_id == student_id)
+        count_stmt = count_stmt.where(GameEvent.student_id == student_id)
     total = db.scalar(count_stmt) or 0
     rows = db.scalars(
         stmt.order_by(GameEvent.created_at.desc()).limit(limit).offset(offset)
@@ -172,6 +240,7 @@ def analytics_summary(
     return AnalyticsSummary(
         total_users=db.scalar(select(func.count(User.id))) or 0,
         active_users=db.scalar(select(func.count(User.id)).where(User.is_active.is_(True))) or 0,
+        total_students=db.scalar(select(func.count(Student.id))) or 0,
         total_events=db.scalar(select(func.count(GameEvent.id))) or 0,
         total_sessions=db.scalar(select(func.count(GameSession.id))) or 0,
         events_last_7_days=db.scalar(

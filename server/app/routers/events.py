@@ -15,6 +15,7 @@ from ..schemas import (
     SessionPublic,
     SessionStartRequest,
 )
+from .students import resolve_owned_student
 
 router = APIRouter(prefix="/api", tags=["events"])
 
@@ -26,8 +27,12 @@ def _persist_event(db: Session, user: User, data: EventCreate) -> GameEvent:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Session not found."
             )
+    if data.student_id is not None:
+        # Ensure the student belongs to this mentor (raises 404 otherwise).
+        resolve_owned_student(db, user, data.student_id)
     event = GameEvent(
         user_id=user.id,
+        student_id=data.student_id,
         session_id=data.session_id,
         game_key=data.game_key,
         event_type=data.event_type,
@@ -47,7 +52,9 @@ def start_session(
     user: User = Depends(get_current_user),
 ) -> SessionPublic:
     """Open a play session so a run of steps can be grouped together (optional)."""
-    session = GameSession(user_id=user.id, game_key=data.game_key)
+    if data.student_id is not None:
+        resolve_owned_student(db, user, data.student_id)
+    session = GameSession(user_id=user.id, student_id=data.student_id, game_key=data.game_key)
     db.add(session)
     db.commit()
     db.refresh(session)

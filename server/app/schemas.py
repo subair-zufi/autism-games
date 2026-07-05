@@ -1,6 +1,6 @@
 """Pydantic request/response schemas."""
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -62,10 +62,42 @@ class AuthResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Students (managed by a mentor)
+# ---------------------------------------------------------------------------
+class StudentCreate(BaseModel):
+    full_name: str = Field(min_length=1, max_length=200)
+    date_of_birth: date | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+    avatar: str | None = Field(default=None, max_length=120)
+
+
+class StudentUpdate(BaseModel):
+    full_name: str | None = Field(default=None, min_length=1, max_length=200)
+    date_of_birth: date | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+    avatar: str | None = Field(default=None, max_length=120)
+    is_active: bool | None = None
+
+
+class StudentPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    mentor_id: uuid.UUID
+    full_name: str
+    date_of_birth: date | None
+    notes: str | None
+    avatar: str | None
+    is_active: bool
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
 # Events
 # ---------------------------------------------------------------------------
 class SessionStartRequest(BaseModel):
     game_key: str = Field(max_length=80)
+    student_id: uuid.UUID | None = None
 
 
 class SessionEndRequest(BaseModel):
@@ -76,6 +108,7 @@ class SessionPublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    student_id: uuid.UUID | None
     game_key: str
     final_score: int | None
     started_at: datetime
@@ -87,6 +120,7 @@ class EventCreate(BaseModel):
     event_type: str = Field(max_length=80)
     step_index: int | None = None
     score: int | None = None
+    student_id: uuid.UUID | None = None
     session_id: uuid.UUID | None = None
     payload: dict[str, Any] | None = None
     client_timestamp: datetime | None = None
@@ -101,6 +135,7 @@ class EventPublic(BaseModel):
 
     id: uuid.UUID
     user_id: uuid.UUID
+    student_id: uuid.UUID | None
     session_id: uuid.UUID | None
     game_key: str
     event_type: str
@@ -138,6 +173,11 @@ class PaginatedUsers(BaseModel):
     items: list[UserPublic]
 
 
+class PaginatedStudents(BaseModel):
+    total: int
+    items: list[StudentPublic]
+
+
 class PaginatedEvents(BaseModel):
     total: int
     items: list[EventPublic]
@@ -146,6 +186,7 @@ class PaginatedEvents(BaseModel):
 class AnalyticsSummary(BaseModel):
     total_users: int
     active_users: int
+    total_students: int
     total_events: int
     total_sessions: int
     events_last_7_days: int
