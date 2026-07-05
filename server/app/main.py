@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .routers import admin, auth, events
+from .routers import admin, auth, events, students
 from .seed import init_db
 
 logger = logging.getLogger("uvicorn.error")
@@ -46,6 +46,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(students.router)
 app.include_router(events.router)
 app.include_router(admin.router)
 

@@ -10,6 +10,12 @@
  *  - Steps are recorded ONLY when a player is logged in. If not logged in,
  *    `recordStep` / `startSession` etc. resolve to no-ops, so you can call them
  *    unconditionally from game code.
+ *  - The logged-in account is a *mentor*. A mentor manages one or more
+ *    *students* (add/edit on the home page) and switches the active student
+ *    during play. Whichever student is active is attached automatically to
+ *    every session and step (`student_id`), so the admin dashboard can break
+ *    analytics down per student. The active student is persisted so it
+ *    survives reloads.
  *
  * Configure the server URL with the Vite env var `VITE_ANALYTICS_API`
  * (e.g. VITE_ANALYTICS_API=http://localhost:8000). Defaults to same-origin "".
@@ -18,6 +24,7 @@
 const API_BASE: string =
   (import.meta as any).env?.VITE_ANALYTICS_API ?? "";
 const TOKEN_KEY = "ag_player_token";
+const STUDENT_KEY = "ag_active_student";
 
 export interface SignupInput {
   email: string;
@@ -50,9 +57,29 @@ interface AuthResponse {
   user: PlayerUser;
 }
 
+export interface Student {
+  id: string;
+  mentor_id: string;
+  full_name: string;
+  date_of_birth: string | null;
+  notes: string | null;
+  avatar: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface StudentInput {
+  full_name: string;
+  date_of_birth?: string | null;
+  notes?: string | null;
+  avatar?: string | null;
+}
+
 class AnalyticsClient {
   private token: string | null =
     typeof localStorage !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+  private studentId: string | null =
+    typeof localStorage !== "undefined" ? localStorage.getItem(STUDENT_KEY) : null;
 
   get isLoggedIn(): boolean {
     return !!this.token;
@@ -66,6 +93,54 @@ class AnalyticsClient {
   logout() {
     this.token = null;
     localStorage.removeItem(TOKEN_KEY);
+    this.setActiveStudent(null);
+  }
+
+  // --- Students -------------------------------------------------------------
+
+  /** The id of the student currently being played for, if any. */
+  get activeStudentId(): string | null {
+    return this.studentId;
+  }
+
+  /** Switch the active student (call from the switch-student control). */
+  setActiveStudent(studentId: string | null) {
+    this.studentId = studentId;
+    if (studentId) localStorage.setItem(STUDENT_KEY, studentId);
+    else localStorage.removeItem(STUDENT_KEY);
+  }
+
+  /** List the mentor's students (for the home page + switch-student picker). */
+  async listStudents(includeInactive = false): Promise<Student[]> {
+    if (!this.token) return [];
+    return this.request<Student[]>(
+      `/api/students?include_inactive=${includeInactive}`,
+    );
+  }
+
+  /** Add a student under the logged-in mentor. */
+  async createStudent(input: StudentInput): Promise<Student> {
+    return this.request<Student>("/api/students", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+  }
+
+  /** Edit a student. */
+  async updateStudent(
+    studentId: string,
+    input: Partial<StudentInput> & { is_active?: boolean },
+  ): Promise<Student> {
+    return this.request<Student>(`/api/students/${studentId}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  }
+
+  /** Delete a student. Their past records are kept but detached. */
+  async deleteStudent(studentId: string): Promise<void> {
+    await this.request(`/api/students/${studentId}`, { method: "DELETE" });
+    if (this.studentId === studentId) this.setActiveStudent(null);
   }
 
   private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -121,12 +196,15 @@ class AnalyticsClient {
     }
   }
 
-  /** Start a play session. Returns the session id, or null if not logged in. */
+  /**
+   * Start a play session. Returns the session id, or null if not logged in.
+   * The active student (if any) is attached automatically.
+   */
   async startSession(gameKey: string): Promise<string | null> {
     if (!this.token) return null;
     const s = await this.request<{ id: string }>("/api/sessions", {
       method: "POST",
-      body: JSON.stringify({ game_key: gameKey }),
+      body: JSON.stringify({ game_key: gameKey, student_id: this.studentId }),
     });
     return s.id;
   }
@@ -158,6 +236,7 @@ class AnalyticsClient {
           event_type: eventType,
           step_index: opts.stepIndex,
           score: opts.score,
+          student_id: this.studentId,
           session_id: opts.sessionId,
           payload: payload ?? null,
           client_timestamp: new Date().toISOString(),

@@ -137,6 +137,109 @@ def test_full_event_flow(client):
     assert client.get("/api/auth/me", headers=h).json()["email"] == "dora@example.com"
 
 
+def test_student_crud_scoped_to_mentor(client):
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("mentor1@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+
+    # create
+    created = client.post(
+        "/api/students",
+        json={"full_name": "Sam", "date_of_birth": "2015-05-01", "avatar": "🦊"},
+        headers=h,
+    )
+    assert created.status_code == 201, created.text
+    student = created.json()
+    assert student["full_name"] == "Sam" and student["mentor_id"]
+
+    # list
+    listed = client.get("/api/students", headers=h)
+    assert listed.status_code == 200 and len(listed.json()) == 1
+
+    # edit
+    edited = client.patch(
+        f"/api/students/{student['id']}", json={"full_name": "Samantha"}, headers=h
+    )
+    assert edited.status_code == 200 and edited.json()["full_name"] == "Samantha"
+
+    # another mentor cannot see or touch this student
+    other = client.post(
+        "/api/auth/signup", json=_signup_payload("mentor2@example.com")
+    ).json()["access_token"]
+    oh = {"Authorization": f"Bearer {other}"}
+    assert client.get("/api/students", headers=oh).json() == []
+    assert client.get(f"/api/students/{student['id']}", headers=oh).status_code == 404
+
+    # delete
+    assert client.delete(f"/api/students/{student['id']}", headers=h).status_code == 204
+    assert client.get("/api/students", headers=h).json() == []
+
+
+def test_events_attach_to_student(client):
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("mentor3@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    student_id = client.post(
+        "/api/students", json={"full_name": "Kai"}, headers=h
+    ).json()["id"]
+
+    # session carries the student
+    s = client.post(
+        "/api/sessions", json={"game_key": "balldrop", "student_id": student_id}, headers=h
+    )
+    assert s.status_code == 201 and s.json()["student_id"] == student_id
+
+    # event carries the student
+    e = client.post(
+        "/api/events",
+        json={"game_key": "balldrop", "event_type": "step", "student_id": student_id},
+        headers=h,
+    )
+    assert e.status_code == 201 and e.json()["student_id"] == student_id
+
+    # a student that isn't yours is rejected
+    bad = client.post(
+        "/api/events",
+        json={"game_key": "balldrop", "event_type": "step", "student_id": str(uuid.uuid4())},
+        headers=h,
+    )
+    assert bad.status_code == 404
+
+
+def test_admin_student_records(client):
+    ah_token = client.post(
+        "/api/admin/login",
+        json={"email": settings.admin_email, "password": settings.admin_password},
+    ).json()["access_token"]
+    ah = {"Authorization": f"Bearer {ah_token}"}
+
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("mentor4@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    student_id = client.post(
+        "/api/students", json={"full_name": "Noa"}, headers=h
+    ).json()["id"]
+    client.post(
+        "/api/events",
+        json={"game_key": "balldrop", "event_type": "step", "student_id": student_id},
+        headers=h,
+    )
+
+    # admin can list students and read a student's events
+    students = client.get("/api/admin/students", headers=ah)
+    assert students.status_code == 200 and students.json()["total"] >= 1
+
+    ev = client.get(f"/api/admin/students/{student_id}/events", headers=ah)
+    assert ev.status_code == 200 and ev.json()["total"] >= 1
+
+    # summary reports total_students
+    summary = client.get("/api/admin/analytics/summary", headers=ah)
+    assert summary.json()["total_students"] >= 1
+
+
 def test_admin_login_and_analytics(client):
     # seed admin from settings
     r = client.post(

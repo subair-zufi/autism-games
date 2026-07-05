@@ -11,12 +11,17 @@ and ships with a built-in admin dashboard.
   - Existing email **with the same password** → treated as a login (idempotent), so a
     user who is already registered and "signs up" again is simply logged back in.
   - Existing email **with a different password** → `409 Conflict`.
+- **Mentors & students.** The logged-in account is a *mentor*. A mentor adds and edits
+  *students* from the client (home page) and switches the active student during play. Each
+  student belongs to the mentor who created them, and endpoints are scoped so a mentor only
+  ever sees their own students.
 - **Step-by-step analytics, only when logged in.** Every game step is stored as a
   `GameEvent` row (flexible `JSONB` payload). All event endpoints require a valid player
-  token, so anonymous play records nothing.
+  token, so anonymous play records nothing. Sessions and events carry an optional
+  `student_id` (nullable) so a run can be attributed to the selected student.
 - **Admin dashboard.** A separate admin login powers a web dashboard at `/admin` to manage
-  players (search / enable / disable / delete) and view analytics (totals, activity over
-  time, per-game breakdown).
+  players (search / enable / disable / delete), browse students and their records, and view
+  analytics (totals, activity over time, per-game breakdown).
 
 ## Quick start (Docker Compose)
 
@@ -74,16 +79,29 @@ Sign-up body fields: `email`, `password`, `full_name`, `address_line1`, `address
 `city`, `state`, `postal_code`, `country`, `education_level`, `institution`,
 `field_of_study`.
 
+### Students — `/api/students` (require a **player/mentor** token; scoped to the caller)
+| Method | Path | Notes |
+|---|---|---|
+| `GET` | `/students` | List the mentor's students (`include_inactive`). Powers the switch-student picker. |
+| `POST` | `/students` | Add a student. |
+| `GET` | `/students/{id}` | Student detail (must be yours). |
+| `PATCH` | `/students/{id}` | Edit a student. |
+| `DELETE` | `/students/{id}` | Delete a student (past records are kept, detached). |
+
+Student body: `full_name` (required), `date_of_birth?`, `notes?`, `avatar?`
+(a small UI hint such as an emoji), plus `is_active?` on update.
+
 ### Analytics — `/api` (all require a **player** token)
 | Method | Path | Notes |
 |---|---|---|
-| `POST` | `/sessions` | Start a play session (optional grouping). |
+| `POST` | `/sessions` | Start a play session (optional grouping; optional `student_id`). |
 | `POST` | `/sessions/{id}/end` | End a session, set `final_score`. |
 | `POST` | `/events` | Record one step. |
 | `POST` | `/events/batch` | Record many steps at once. |
 
-Event body: `game_key`, `event_type`, `step_index?`, `score?`, `session_id?`,
-`payload?` (free-form JSON), `client_timestamp?`.
+Event body: `game_key`, `event_type`, `step_index?`, `score?`, `student_id?`,
+`session_id?`, `payload?` (free-form JSON), `client_timestamp?`. A supplied `student_id`
+must belong to the calling mentor.
 
 ### Admin — `/api/admin` (require an **admin** token; player tokens are rejected)
 | Method | Path | Notes |
@@ -95,7 +113,10 @@ Event body: `game_key`, `event_type`, `step_index?`, `score?`, `session_id?`,
 | `PATCH` | `/users/{id}` | Update (e.g. `is_active`). |
 | `DELETE` | `/users/{id}` | Delete player + their analytics. |
 | `GET` | `/users/{id}/events` | A player's events. |
-| `GET` | `/events` | Events feed (filter by `game_key`, `event_type`). |
+| `GET` | `/students` | List/search students (`q`, `mentor_id`, `limit`, `offset`). |
+| `GET` | `/students/{id}` | Student detail. |
+| `GET` | `/students/{id}/events` | A student's events. |
+| `GET` | `/events` | Events feed (filter by `game_key`, `event_type`, `student_id`). |
 | `GET` | `/analytics/summary` | Totals. |
 | `GET` | `/analytics/games` | Per-game event/player/avg-score breakdown. |
 | `GET` | `/analytics/timeseries?days=30` | Daily events + active players. |
@@ -113,7 +134,14 @@ import { analytics } from "./services/analytics";
 // Optional sign-up (also logs in) on a form submit:
 await analytics.signup({ email, password, full_name, city, education_level /* … */ });
 
-// Later, anywhere a step happens — no-ops silently if the player isn't logged in:
+// Manage students from the home page:
+const student = await analytics.createStudent({ full_name: "Sam", avatar: "🦊" });
+
+// Switch the active student (e.g. from the in-game switch-student control):
+analytics.setActiveStudent(student.id);
+
+// Later, anywhere a step happens — no-ops silently if the player isn't logged in.
+// The active student is attached automatically:
 analytics.recordStep("balldrop", "drop", { lane: 2, hit: true });
 ```
 

@@ -1,8 +1,8 @@
 """SQLAlchemy ORM models."""
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -14,7 +14,12 @@ def _uuid() -> uuid.UUID:
 
 
 class User(Base):
-    """A game player. Created on sign-up (which also logs them in)."""
+    """A mentor / account holder. Created on sign-up (which also logs them in).
+
+    A mentor logs in with their own details and manages one or more
+    :class:`Student` records. Gameplay analytics are attributed to the mentor
+    (``user_id``) and, when a student is selected, to that student too.
+    """
 
     __tablename__ = "users"
 
@@ -49,6 +54,42 @@ class User(Base):
     sessions: Mapped[list["GameSession"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
+    students: Mapped[list["Student"]] = relationship(
+        back_populates="mentor", cascade="all, delete-orphan"
+    )
+
+
+class Student(Base):
+    """A learner managed by a mentor (:class:`User`).
+
+    A mentor adds/edits students from the client and switches between them
+    during gameplay. Sessions and events recorded while a student is selected
+    carry that student's id so the admin dashboard can break analytics down per
+    student.
+    """
+
+    __tablename__ = "students"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    mentor_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    full_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    date_of_birth: Mapped[date | None] = mapped_column(Date)
+    notes: Mapped[str | None] = mapped_column(String(1000))
+    # Small UI hint for the "switch student" picker (e.g. an emoji or colour).
+    avatar: Mapped[str | None] = mapped_column(String(120))
+
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    mentor: Mapped["User"] = relationship(back_populates="students")
+    events: Mapped[list["GameEvent"]] = relationship(back_populates="student")
+    sessions: Mapped[list["GameSession"]] = relationship(back_populates="student")
 
 
 class Admin(Base):
@@ -72,12 +113,18 @@ class GameSession(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
     )
+    # Optional: the student this session was played for. Nullable so legacy rows
+    # and mentor-only play (no student selected) remain valid.
+    student_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("students.id", ondelete="SET NULL"), index=True
+    )
     game_key: Mapped[str] = mapped_column(String(80), index=True, nullable=False)
     final_score: Mapped[int | None] = mapped_column(Integer)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     user: Mapped["User"] = relationship(back_populates="sessions")
+    student: Mapped["Student | None"] = relationship(back_populates="sessions")
     events: Mapped[list["GameEvent"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
@@ -91,6 +138,10 @@ class GameEvent(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    # Optional: the student this event was recorded for (see GameSession above).
+    student_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("students.id", ondelete="SET NULL"), index=True
     )
     session_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("game_sessions.id", ondelete="SET NULL"), index=True
@@ -109,6 +160,7 @@ class GameEvent(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="events")
+    student: Mapped["Student | None"] = relationship(back_populates="events")
     session: Mapped["GameSession | None"] = relationship(back_populates="events")
 
 
