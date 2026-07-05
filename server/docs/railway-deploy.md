@@ -44,8 +44,8 @@ Notes:
   `+psycopg2` suffix is needed.
 - `ACCESS_TOKEN_EXPIRE_MINUTES` / `ADMIN_TOKEN_EXPIRE_MINUTES` are optional (sensible
   defaults exist).
-- Tables are created and the seed admin is inserted automatically on first boot — no
-  migration step.
+- Schema is applied automatically on every deploy — see below. `ADMIN_EMAIL` /
+  `ADMIN_PASSWORD` must be present because the pre-deploy step also seeds the admin.
 
 ### 6. Deploy & get the public URL
 1. Railway auto-deploys on each push to the connected branch.
@@ -69,3 +69,25 @@ VITE_ANALYTICS_API=https://<your-domain>
 ## Redeploys
 Every push to the connected GitHub branch triggers a new build & deploy. You can also
 hit **Deploy** manually from the Railway dashboard.
+
+## Automatic schema migrations
+`railway.json` sets a **`preDeployCommand`** of `python -m app.seed`. Railway runs it
+against the live database **once, before** each new version starts taking traffic:
+
+1. You `git push` → Railway builds the image.
+2. Pre-deploy runs `app.seed.init_db()` → `create_all` (adds any new tables/columns on a
+   fresh DB) + an idempotent Postgres backfill that `ALTER`s already-existing tables
+   (e.g. adding the nullable `student_id` column + FK/index to `game_events` /
+   `game_sessions`) + seeds the admin. All steps use `IF NOT EXISTS`, so re-running is a
+   no-op.
+3. Only if that succeeds does the new version go live; a failed migration fails the deploy
+   and leaves the previous version running.
+
+The app also runs `init_db()` again in its startup lifespan as a safety net, so a brand-new
+database is still initialised even without the pre-deploy step. No manual migration commands
+are ever needed — just push.
+
+> This project intentionally has no Alembic. It relies on `create_all` + the small
+> idempotent backfill in `app/seed.py`. If you later need destructive or data-moving
+> migrations (renames, type changes, backfilling values), introduce Alembic and point the
+> `preDeployCommand` at `alembic upgrade head` instead.
