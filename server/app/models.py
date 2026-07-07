@@ -2,7 +2,18 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, String, func
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -165,3 +176,46 @@ class GameEvent(Base):
 
 
 Index("ix_game_events_game_type", GameEvent.game_key, GameEvent.event_type)
+
+
+class LevelProgress(Base):
+    """Per-student progression through a level-based game (Emotion Recognition).
+
+    One row per (mentor, student, game, level). It records how far a learner has
+    got so play resumes across sessions: which levels are unlocked, their best
+    score/accuracy, how many attempts they have made, and whether they have
+    passed (≥70%) or mastered (≥80%) the level.
+
+    ``student_id`` is nullable so a mentor can also play (and keep progress)
+    without a student selected, mirroring sessions/events.
+    """
+
+    __tablename__ = "level_progress"
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "student_id", "game_key", "level", name="uq_level_progress_scope"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    student_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("students.id", ondelete="SET NULL"), index=True
+    )
+
+    game_key: Mapped[str] = mapped_column(String(80), index=True, nullable=False)
+    level: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    best_score: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    best_accuracy: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    unlocked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    passed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    mastered: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

@@ -358,7 +358,7 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 }
 .toggle.on { color: var(--ink); background: #eaf3ee; }
 
-/* ---- fixed-question quiz games (Know the Emotion / Identify Emotions) ---- */
+/* ---- fixed-question quiz games (Emotion Recognition / Identify Emotions) ---- */
 .quiz-progress {
   position: absolute;
   top: 12px;
@@ -438,6 +438,88 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.1);
 }
 
+/* ---- Emotion Recognition (merged emotion game) ---- */
+/* Level chip, top-left, mirrors the absolute quiz-progress badge. */
+.er-level-chip {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.08);
+  z-index: 2;
+}
+/* Activity counter, top-right (kept clear of the level chip on the left). */
+.er-activity-chip {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--ink-soft);
+  font-size: 1rem;
+  font-weight: 700;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.08);
+  z-index: 2;
+}
+/* Progress bar under the HUD badges. */
+.er-progressbar {
+  height: 12px;
+  margin: 46px 16px 0;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+.er-progressbar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+/* Question shown in every display language, stacked. */
+.er-prompt-lines { display: flex; flex-direction: column; gap: 2px; text-align: center; }
+.er-prompt-line { line-height: 1.3; }
+.er-prompt-en { font-weight: 700; }
+.er-prompt-ml { font-size: 0.95em; color: var(--ink-soft); }
+.er-subtitle { color: var(--ink-soft); }
+/* Bilingual emotion labels on answer buttons. */
+.choice-label { line-height: 1.15; }
+.choice-label-ml { font-size: 0.85em; color: var(--ink-soft); }
+/* Immediate-feedback answer states (override the disabled dimming). */
+.choice-btn.correct { opacity: 1; background: #d8f3dc; box-shadow: 0 5px 0 #40916c; }
+.choice-btn.wrong { opacity: 1; background: #ffd7d7; box-shadow: 0 5px 0 #c1121f; }
+.tap-region.correct { background: rgba(64, 145, 108, 0.25); box-shadow: inset 0 0 0 5px #40916c; }
+.tap-region.wrong { background: rgba(193, 18, 31, 0.22); box-shadow: inset 0 0 0 5px #c1121f; }
+/* Feedback + Next row. */
+.er-feedback-row { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.er-feedback { font-size: 1.2rem; font-weight: 700; }
+.er-feedback.correct { color: #2d6a4f; }
+.er-feedback.wrong { color: #9d0208; }
+.er-next { min-width: 180px; }
+/* Locked level button in the picker. */
+.level-btn.locked { opacity: 0.5; cursor: not-allowed; }
+.level-best { display: block; font-size: 0.85rem; font-weight: 700; margin-top: 2px; }
+/* Result dialog. */
+.big-btn.secondary { background: var(--card); color: var(--ink); box-shadow: 0 5px 0 rgba(0, 0, 0, 0.1); }
+.er-result-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+  width: 100%;
+  margin: 6px 0;
+}
+.er-result-stats > div { display: flex; justify-content: space-between; gap: 12px; font-size: 1.2rem; }
+.er-result-stats .er-correct { color: #2d6a4f; font-weight: 800; }
+.er-result-stats .er-incorrect { color: #9d0208; font-weight: 800; }
+.er-result-msg { font-size: 1.15rem; font-weight: 700; margin: 4px 0; }
+.er-result-msg.pass { color: #2d6a4f; }
+.er-result-msg.retry { color: #9d5200; }
+
 /* --- Auth: login page + Home chip --- */
 .login-page { max-width: 420px; margin: 0 auto; padding: 24px 16px; }
 .login-page h1 { margin: 8px 0; }
@@ -458,4 +540,65 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .player-btn.peer.active { border-color: #f5c542; background: #fff8e1; box-shadow: 0 0 0 3px #f5c54255; }
 .player-btn.child { cursor: pointer; }
 .player-btn.child.ready { border-color: #7ac74f; background: #eafce0; }
+
+/* --- Mentor student manager (home page) --- */
+.students-panel {
+  width: 100%;
+  max-width: 660px;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: 0 10px 24px rgba(63, 58, 85, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+.students-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.students-head h2 { margin: 0; font-size: 1.4rem; }
+.students-active { color: var(--ink-soft); font-size: 1.05rem; }
+.students-active strong { color: var(--ink); }
+.students-picker { display: flex; flex-direction: column; gap: 4px; font-weight: 700; color: var(--ink-soft); }
+.students-picker select {
+  padding: 10px 12px;
+  border: 2px solid #5aa9e6;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  background: #fff;
+  color: var(--ink);
+}
+.students-error { color: #c0392b; font-weight: 600; margin: 0; }
+.students-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.students-empty { color: var(--ink-soft); }
+.student-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 2px solid #eee;
+  border-radius: 14px;
+  flex-wrap: wrap;
+}
+.student-row.active { border-color: #f5c542; background: #fff8e1; }
+.student-name { font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
+.student-badge { font-size: 0.8rem; font-weight: 700; color: #b8860b; background: #fff3cd; padding: 2px 8px; border-radius: 999px; }
+.student-badge.inactive { color: #6b7280; background: #eee; }
+.student-actions { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.students-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.students-add-btn {
+  padding: 10px 18px;
+  background: #5aa9e6;
+  color: #fff;
+  font-weight: 700;
+  border-radius: 12px;
+}
+.students-add-btn:disabled { opacity: .6; cursor: default; }
+.students-toggle-inactive { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); font-weight: 600; }
+.student-form { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.student-form label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; color: var(--ink-soft); }
+.student-form input { padding: 10px; border: 2px solid #ccc; border-radius: 10px; font-size: 16px; }
+.student-form-actions { display: flex; align-items: center; gap: 12px; }
+.link-btn.danger { color: #c0392b; }
+.students-delete-hint { margin: 0; }
 .player-btn.child.wait { opacity: .7; }

@@ -1,5 +1,5 @@
 export type GameId =
-  | 'emotions'
+  | 'emotionrecognition'
   | 'zebra'
   | 'garden'
   | 'balldrop'
@@ -9,7 +9,6 @@ export type GameId =
   | 'rightway'
   | 'rulefixer'
   | 'slider'
-  | 'knowemotion'
   | 'identifyemotions'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -22,7 +21,7 @@ export interface GameMeta {
 }
 
 export const GAME_LIST: GameMeta[] = [
-  { id: 'emotions', title: 'Feelings Faces', icon: '😊', path: '/emotions', color: '#f6c177' },
+  { id: 'emotionrecognition', title: 'Emotion Recognition', icon: '🧠', path: '/emotion-recognition', color: '#7fb6a4' },
   { id: 'zebra', title: 'Cross the Road', icon: '🚦', path: '/zebra', color: '#9ccfd8' },
   { id: 'garden', title: 'Garden Finder', icon: '🦋', path: '/garden', color: '#a3be8c' },
   { id: 'balldrop', title: 'Ball Drop', icon: '🔴', path: '/balldrop', color: '#c4a7e7' },
@@ -32,6 +31,5 @@ export const GAME_LIST: GameMeta[] = [
   { id: 'rightway', title: 'Right or Wrong', icon: '✅', path: '/rightway', color: '#9bd0a0' },
   { id: 'rulefixer', title: 'Good Choice', icon: '💡', path: '/rulefixer', color: '#e8a06f' },
   { id: 'slider', title: 'Slide Queue', icon: '🛝', path: '/slider', color: '#f3a3b5' },
-  { id: 'knowemotion', title: 'Know the Emotion', icon: '🧒', path: '/knowemotion', color: '#7fb6a4' },
   { id: 'identifyemotions', title: 'Emotion Clips', icon: '🎬', path: '/identifyemotions', color: '#c9a0e0' },
 ]

@@ -16,7 +16,7 @@ describe('useGameAnalytics', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('starts a session lazily on the first recordStep, then reuses it', async () => {
-    const { result } = renderHook(() => useGameAnalytics('emotions'))
+    const { result } = renderHook(() => useGameAnalytics('emotionrecognition'))
     await act(async () => { result.current.recordStep('answer', { correct: true }) })
     await act(async () => { result.current.recordStep('answer', { correct: false }) })
     expect(analytics.startSession).toHaveBeenCalledTimes(1)
