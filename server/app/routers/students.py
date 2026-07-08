@@ -5,6 +5,7 @@ on behalf of. All endpoints are scoped to the current mentor — a mentor can
 only ever see or touch their own students.
 """
 import uuid
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
@@ -46,6 +47,15 @@ def list_students(
     return [StudentPublic.model_validate(s) for s in rows]
 
 
+def _next_participant_code(db: Session, user: User) -> str:
+    """Generate a per-mentor sequential code like ``P-2024-001``."""
+    count = db.scalar(
+        select(func.count()).select_from(Student).where(Student.mentor_id == user.id)
+    )
+    year = datetime.now(timezone.utc).year
+    return f"P-{year}-{(count or 0) + 1:03d}"
+
+
 @router.post("", response_model=StudentPublic, status_code=status.HTTP_201_CREATED)
 def create_student(
     data: StudentCreate,
@@ -53,7 +63,11 @@ def create_student(
     user: User = Depends(get_current_user),
 ) -> StudentPublic:
     """Add a student under the current mentor."""
-    student = Student(mentor_id=user.id, **data.model_dump())
+    student = Student(
+        mentor_id=user.id,
+        participant_code=_next_participant_code(db, user),
+        **data.model_dump(),
+    )
     db.add(student)
     db.commit()
     db.refresh(student)

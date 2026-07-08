@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_user
 from ..models import User
-from ..schemas import AuthResponse, LoginRequest, SignupRequest, UserPublic
+from ..schemas import AuthResponse, LoginRequest, ProfileUpdate, SignupRequest, UserPublic
 from ..security import create_player_token, hash_password, verify_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -14,6 +14,10 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 # Fields that may be refreshed on an idempotent sign-up of an existing account.
 _PROFILE_FIELDS = (
     "full_name",
+    "designation",
+    "organisation",
+    "mobile_number",
+    "avatar",
     "address_line1",
     "address_line2",
     "city",
@@ -87,4 +91,18 @@ def login(data: LoginRequest, db: Session = Depends(get_db)) -> AuthResponse:
 
 @router.get("/me", response_model=UserPublic)
 def me(current_user: User = Depends(get_current_user)) -> UserPublic:
+    return UserPublic.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserPublic)
+def update_me(
+    data: ProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UserPublic:
+    """Update the mentor's own profile (Complete Your Profile / Profile screens)."""
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(current_user, field, value)
+    db.commit()
+    db.refresh(current_user)
     return UserPublic.model_validate(current_user)

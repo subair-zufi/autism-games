@@ -366,3 +366,85 @@ def test_level_progress_unlock_flow(client):
     ).json()["access_token"]
     oh = {"Authorization": f"Bearer {other}"}
     assert client.get(f"/api/progress?game_key={game}&student_id={sid}", headers=oh).status_code == 404
+
+
+def test_profile_update(client):
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("prof@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+
+    r = client.patch(
+        "/api/auth/me",
+        json={
+            "full_name": "Dr. Sarah Mitchell",
+            "designation": "Clinical Psychologist",
+            "organisation": "Sunrise Therapy Center",
+            "mobile_number": "+1 (555) 204-8832",
+        },
+        headers=h,
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["designation"] == "Clinical Psychologist"
+    assert body["organisation"] == "Sunrise Therapy Center"
+    # Persisted on subsequent /me.
+    assert client.get("/api/auth/me", headers=h).json()["mobile_number"] == "+1 (555) 204-8832"
+
+
+def test_student_extended_fields_and_code(client):
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("codes@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+
+    a = client.post(
+        "/api/students",
+        json={
+            "full_name": "Aiden Patel",
+            "gender": "Male",
+            "autism_level": "Level 2",
+            "iq_score": 85,
+            "parent_guardian_name": "Priya Patel",
+            "parent_contact": "+1 (555) 000-0000",
+            "rehabilitation_centre": "Sunrise",
+        },
+        headers=h,
+    ).json()
+    assert a["participant_code"] == "P-%d-001" % __import__("datetime").datetime.now().year
+    assert a["autism_level"] == "Level 2" and a["iq_score"] == 85
+
+    # Second student gets the next sequential code.
+    b = client.post("/api/students", json={"full_name": "Zoe Chen"}, headers=h).json()
+    assert b["participant_code"].endswith("-002")
+
+
+def test_student_report_shape(client):
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("report@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Milo"}, headers=h).json()["id"]
+
+    # a played + ended session gives the report something to summarise
+    s = client.post(
+        "/api/sessions", json={"game_key": "balldrop", "student_id": sid}, headers=h
+    ).json()["id"]
+    client.post(f"/api/sessions/{s}/end", json={"final_score": 42}, headers=h)
+
+    r = client.get(f"/api/reports/student/{sid}", headers=h)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["summary"]["sessions"] == 1
+    assert body["summary"]["games_done"] == 1
+    assert len(body["timeseries"]) == 6  # WEEKS
+    assert body["by_game"][0]["game_key"] == "balldrop"
+    assert body["recent"][0]["score"] == 42
+
+    # not your student -> 404
+    other = client.post(
+        "/api/auth/signup", json=_signup_payload("nosy@example.com")
+    ).json()["access_token"]
+    assert client.get(
+        f"/api/reports/student/{sid}", headers={"Authorization": f"Bearer {other}"}
+    ).status_code == 404

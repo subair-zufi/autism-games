@@ -39,6 +39,12 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str | None] = mapped_column(String(200))
 
+    # Professional profile (surfaced in the "Complete Your Profile" / Profile screens)
+    designation: Mapped[str | None] = mapped_column(String(200))
+    organisation: Mapped[str | None] = mapped_column(String(200))
+    mobile_number: Mapped[str | None] = mapped_column(String(40))
+    avatar: Mapped[str | None] = mapped_column(String(1000))
+
     # Address information
     address_line1: Mapped[str | None] = mapped_column(String(255))
     address_line2: Mapped[str | None] = mapped_column(String(255))
@@ -89,7 +95,17 @@ class Student(Base):
     date_of_birth: Mapped[date | None] = mapped_column(Date)
     notes: Mapped[str | None] = mapped_column(String(1000))
     # Small UI hint for the "switch student" picker (e.g. an emoji or colour).
-    avatar: Mapped[str | None] = mapped_column(String(120))
+    avatar: Mapped[str | None] = mapped_column(String(1000))
+
+    # Clinical / demographic profile (from the New Participant form in the design)
+    gender: Mapped[str | None] = mapped_column(String(40))
+    parent_guardian_name: Mapped[str | None] = mapped_column(String(200))
+    parent_contact: Mapped[str | None] = mapped_column(String(80))
+    autism_level: Mapped[str | None] = mapped_column(String(40))
+    iq_score: Mapped[int | None] = mapped_column(Integer)
+    rehabilitation_centre: Mapped[str | None] = mapped_column(String(200))
+    # Human-readable participant code (e.g. "P-2024-001"), unique per mentor.
+    participant_code: Mapped[str | None] = mapped_column(String(40))
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

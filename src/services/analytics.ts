@@ -30,6 +30,10 @@ export interface SignupInput {
   email: string;
   password: string;
   full_name?: string;
+  designation?: string;
+  organisation?: string;
+  mobile_number?: string;
+  avatar?: string;
   address_line1?: string;
   address_line2?: string;
   city?: string;
@@ -41,10 +45,23 @@ export interface SignupInput {
   field_of_study?: string;
 }
 
+/** Editable mentor-profile fields (Complete Your Profile / Profile screens). */
+export interface ProfileInput {
+  full_name?: string | null;
+  designation?: string | null;
+  organisation?: string | null;
+  mobile_number?: string | null;
+  avatar?: string | null;
+}
+
 export interface PlayerUser {
   id: string;
   email: string;
   full_name: string | null;
+  designation: string | null;
+  organisation: string | null;
+  mobile_number: string | null;
+  avatar: string | null;
   city: string | null;
   education_level: string | null;
   [key: string]: unknown;
@@ -64,6 +81,13 @@ export interface Student {
   date_of_birth: string | null;
   notes: string | null;
   avatar: string | null;
+  gender: string | null;
+  parent_guardian_name: string | null;
+  parent_contact: string | null;
+  autism_level: string | null;
+  iq_score: number | null;
+  rehabilitation_centre: string | null;
+  participant_code: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -73,6 +97,26 @@ export interface StudentInput {
   date_of_birth?: string | null;
   notes?: string | null;
   avatar?: string | null;
+  gender?: string | null;
+  parent_guardian_name?: string | null;
+  parent_contact?: string | null;
+  autism_level?: string | null;
+  iq_score?: number | null;
+  rehabilitation_centre?: string | null;
+}
+
+/** Composite progress report for one student (Progress dashboard). */
+export interface StudentReport {
+  student_id: string;
+  summary: {
+    completion_pct: number;
+    games_done: number;
+    total_games: number;
+    sessions: number;
+  };
+  timeseries: { label: string; value: number }[];
+  by_game: { game_key: string; activities: number }[];
+  recent: { game_key: string; label: string; when: string; score: number | null }[];
 }
 
 /** A learner's saved progress on one level of a level-based game. */
@@ -251,6 +295,19 @@ class AnalyticsClient {
     } catch {
       return null;
     }
+  }
+
+  /** Update the mentor's own profile (Complete Your Profile / Profile). */
+  async updateMe(input: ProfileInput): Promise<PlayerUser> {
+    return this.request<PlayerUser>("/api/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  }
+
+  /** Load the composite progress report for a student (Progress dashboard). */
+  async getStudentReport(studentId: string): Promise<StudentReport> {
+    return this.request<StudentReport>(`/api/reports/student/${studentId}`);
   }
 
   /**

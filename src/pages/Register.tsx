@@ -1,36 +1,52 @@
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/auth'
 import { ProfileIcon } from '../components/icons'
 
-export function Login() {
+export function Register() {
   const navigate = useNavigate()
-  const location = useLocation() as { state?: { from?: string } }
-  const login = useAuth((s) => s.login)
+  const signup = useAuth((s) => s.signup)
   const status = useAuth((s) => s.status)
   const error = useAuth((s) => s.error)
 
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [remember, setRemember] = useState(true)
 
   const busy = status === 'loading'
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const ok = await login(email, password)
-    if (ok) navigate(location.state?.from ?? '/', { replace: true })
+    const { ok, created } = await signup({
+      email,
+      password,
+      full_name: fullName || undefined,
+    })
+    if (!ok) return
+    // Brand-new accounts complete their profile; returning accounts go home.
+    navigate(created ? '/complete-profile' : '/', { replace: true })
   }
 
   return (
     <div className="auth-page">
       <header className="auth-hero">
         <span className="auth-hero-avatar"><ProfileIcon /></span>
-        <h1>Welcome back</h1>
-        <p>Sign in to continue your sessions</p>
+        <h1>Create account</h1>
+        <p>Set up your mentor account to get started</p>
       </header>
 
       <form className="auth-form" onSubmit={onSubmit}>
+        <label className="field">
+          <span>Full Name</span>
+          <input
+            type="text"
+            autoComplete="name"
+            placeholder="Dr. Sarah Mitchell"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+        </label>
+
         <label className="field">
           <span>Email Address</span>
           <input
@@ -48,34 +64,22 @@ export function Login() {
           <input
             type="password"
             required
-            autoComplete="current-password"
-            placeholder="••••••••"
+            minLength={6}
+            autoComplete="new-password"
+            placeholder="At least 6 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
         </label>
 
-        <div className="auth-row">
-          <label className="checkbox">
-            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
-            Remember me
-          </label>
-          <button type="button" className="link-accent" onClick={() => { /* static per design */ }}>
-            Forgot password?
-          </button>
-        </div>
-
         {error && <p className="auth-error">{error}</p>}
 
         <button className="btn-primary" type="submit" disabled={busy}>
-          {busy ? 'Signing in…' : 'Sign In'}
+          {busy ? 'Creating…' : 'Create account'}
         </button>
 
         <p className="auth-alt">
-          New here? <Link to="/register" className="link-accent">Create an account</Link>
-        </p>
-        <p className="auth-trouble">
-          Having trouble? <span className="link-accent">Contact your administrator</span>
+          Already have an account? <Link to="/login" className="link-accent">Sign in</Link>
         </p>
       </form>
 

@@ -35,16 +35,16 @@ describe('useAuth', () => {
   })
 
   it('signup sets the user and logged-in state', async () => {
-    const ok = await useAuth.getState().signup({ email: 'a@b.com', password: 'secret123' })
-    expect(ok).toBe(true)
+    const res = await useAuth.getState().signup({ email: 'a@b.com', password: 'secret123' })
+    expect(res).toEqual({ ok: true, created: true })
     expect(useAuth.getState().isLoggedIn).toBe(true)
     expect(useAuth.getState().user?.email).toBe('a@b.com')
   })
 
-  it('signup surfaces an error and returns false on failure', async () => {
+  it('signup surfaces an error and returns not-ok on failure', async () => {
     ;(analytics.signup as any).mockRejectedValueOnce(new Error('That email already exists'))
-    const ok = await useAuth.getState().signup({ email: 'a@b.com', password: 'wrong' })
-    expect(ok).toBe(false)
+    const res = await useAuth.getState().signup({ email: 'a@b.com', password: 'wrong' })
+    expect(res.ok).toBe(false)
     expect(useAuth.getState().isLoggedIn).toBe(false)
     expect(useAuth.getState().error).toMatch(/already exists/)
   })

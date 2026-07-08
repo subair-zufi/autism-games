@@ -49,12 +49,20 @@ def _get_or_create(
     )
     if row is None:
         # Easy is always unlocked; other levels start unlocked only when reached.
+        # Set the numeric/bool fields explicitly: SQLAlchemy column ``default``s
+        # are applied at flush time, so without these the in-memory row holds
+        # ``None`` and the caller's ``row.attempts += 1`` would fail.
         row = LevelProgress(
             user_id=user.id,
             student_id=student_id,
             game_key=game_key,
             level=level,
             unlocked=unlocked or level == LEVEL_ORDER[0],
+            attempts=0,
+            best_score=0,
+            best_accuracy=0.0,
+            passed=False,
+            mastered=False,
         )
         db.add(row)
     elif unlocked:

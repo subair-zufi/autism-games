@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import {
   analytics,
   type PlayerUser,
+  type ProfileInput,
   type SignupInput,
   type Student,
   type StudentInput,
@@ -15,8 +16,11 @@ interface AuthState {
   students: Student[]
   activeStudentId: string | null
   hydrate: () => Promise<void>
-  signup: (input: SignupInput) => Promise<boolean>
+  /** Returns whether it succeeded and whether a brand-new account was created
+   *  (true) versus an idempotent login of an existing account (false). */
+  signup: (input: SignupInput) => Promise<{ ok: boolean; created: boolean }>
   login: (email: string, password: string) => Promise<boolean>
+  updateProfile: (input: ProfileInput) => Promise<boolean>
   logout: () => void
   loadStudents: (includeInactive?: boolean) => Promise<void>
   addStudent: (input: StudentInput) => Promise<Student | null>
@@ -49,10 +53,10 @@ export const useAuth = create<AuthState>()((set, get) => ({
       const res = await analytics.signup(input)
       set({ user: res.user, isLoggedIn: true, status: 'idle' })
       await get().loadStudents()
-      return true
+      return { ok: true, created: res.created }
     } catch (err) {
       set({ status: 'error', error: err instanceof Error ? err.message : 'Sign-in failed' })
-      return false
+      return { ok: false, created: false }
     }
   },
 
@@ -65,6 +69,18 @@ export const useAuth = create<AuthState>()((set, get) => ({
       return true
     } catch (err) {
       set({ status: 'error', error: err instanceof Error ? err.message : 'Login failed' })
+      return false
+    }
+  },
+
+  updateProfile: async (input) => {
+    set({ status: 'loading', error: null })
+    try {
+      const user = await analytics.updateMe(input)
+      set({ user, status: 'idle' })
+      return true
+    } catch (err) {
+      set({ status: 'error', error: err instanceof Error ? err.message : 'Update failed' })
       return false
     }
   },

@@ -14,6 +14,12 @@ class SignupRequest(BaseModel):
     password: str = Field(min_length=6, max_length=128)
     full_name: str | None = Field(default=None, max_length=200)
 
+    # Professional profile
+    designation: str | None = None
+    organisation: str | None = None
+    mobile_number: str | None = None
+    avatar: str | None = None
+
     # Address
     address_line1: str | None = None
     address_line2: str | None = None
@@ -33,12 +39,26 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ProfileUpdate(BaseModel):
+    """Mentor profile edit (Complete Your Profile / Profile screens)."""
+
+    full_name: str | None = Field(default=None, max_length=200)
+    designation: str | None = Field(default=None, max_length=200)
+    organisation: str | None = Field(default=None, max_length=200)
+    mobile_number: str | None = Field(default=None, max_length=40)
+    avatar: str | None = Field(default=None, max_length=1000)
+
+
 class UserPublic(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     email: EmailStr
     full_name: str | None
+    designation: str | None = None
+    organisation: str | None = None
+    mobile_number: str | None = None
+    avatar: str | None = None
     address_line1: str | None
     address_line2: str | None
     city: str | None
@@ -64,30 +84,37 @@ class AuthResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # Students (managed by a mentor)
 # ---------------------------------------------------------------------------
-class StudentCreate(BaseModel):
+class StudentBase(BaseModel):
+    """Extended participant fields shared by create/update, matching the design's
+    New Participant form."""
+
+    date_of_birth: date | None = None
+    notes: str | None = Field(default=None, max_length=1000)
+    avatar: str | None = Field(default=None, max_length=1000)
+    gender: str | None = Field(default=None, max_length=40)
+    parent_guardian_name: str | None = Field(default=None, max_length=200)
+    parent_contact: str | None = Field(default=None, max_length=80)
+    autism_level: str | None = Field(default=None, max_length=40)
+    iq_score: int | None = Field(default=None, ge=0, le=300)
+    rehabilitation_centre: str | None = Field(default=None, max_length=200)
+
+
+class StudentCreate(StudentBase):
     full_name: str = Field(min_length=1, max_length=200)
-    date_of_birth: date | None = None
-    notes: str | None = Field(default=None, max_length=1000)
-    avatar: str | None = Field(default=None, max_length=120)
 
 
-class StudentUpdate(BaseModel):
+class StudentUpdate(StudentBase):
     full_name: str | None = Field(default=None, min_length=1, max_length=200)
-    date_of_birth: date | None = None
-    notes: str | None = Field(default=None, max_length=1000)
-    avatar: str | None = Field(default=None, max_length=120)
     is_active: bool | None = None
 
 
-class StudentPublic(BaseModel):
+class StudentPublic(StudentBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     mentor_id: uuid.UUID
     full_name: str
-    date_of_birth: date | None
-    notes: str | None
-    avatar: str | None
+    participant_code: str | None
     is_active: bool
     created_at: datetime
 
@@ -233,3 +260,38 @@ class TimeseriesPoint(BaseModel):
     date: str
     events: int
     active_users: int
+
+
+# ---------------------------------------------------------------------------
+# Mentor-facing progress reports (per student)
+# ---------------------------------------------------------------------------
+class ReportSummary(BaseModel):
+    completion_pct: int
+    games_done: int
+    total_games: int
+    sessions: int
+
+
+class ReportTimeseriesPoint(BaseModel):
+    label: str  # e.g. "W1"
+    value: int  # average score/accuracy for that week (0-100)
+
+
+class ReportGameBreakdown(BaseModel):
+    game_key: str
+    activities: int  # sessions/events completed for the game
+
+
+class ReportRecentActivity(BaseModel):
+    game_key: str
+    label: str
+    when: datetime
+    score: int | None
+
+
+class StudentReport(BaseModel):
+    student_id: uuid.UUID
+    summary: ReportSummary
+    timeseries: list[ReportTimeseriesPoint]
+    by_game: list[ReportGameBreakdown]
+    recent: list[ReportRecentActivity]
