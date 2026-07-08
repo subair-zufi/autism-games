@@ -139,7 +139,6 @@ export function IdentifyEmotionsGame() {
             className="quiz-video"
             src={q.clip.src}
             autoPlay
-            muted
             playsInline
             onTimeUpdate={freezeAtPeak}
             onEnded={onEnded}
