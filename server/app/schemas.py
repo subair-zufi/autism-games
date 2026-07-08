@@ -147,6 +147,35 @@ class EventPublic(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Level progress (per-student game progression)
+# ---------------------------------------------------------------------------
+class LevelProgressSubmit(BaseModel):
+    """A completed level attempt reported by the client."""
+
+    game_key: str = Field(max_length=80)
+    level: str = Field(max_length=20)
+    student_id: uuid.UUID | None = None
+    score: int = Field(ge=0)
+    total: int = Field(gt=0)
+
+
+class LevelProgressPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    student_id: uuid.UUID | None
+    game_key: str
+    level: str
+    attempts: int
+    best_score: int
+    best_accuracy: float
+    unlocked: bool
+    passed: bool
+    mastered: bool
+    updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
 # Admin
 # ---------------------------------------------------------------------------
 class AdminLoginRequest(BaseModel):

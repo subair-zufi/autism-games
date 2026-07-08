@@ -310,3 +310,59 @@ def test_unknown_session_rejected(client):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert r.status_code == 404
+
+
+def test_level_progress_unlock_flow(client):
+    """Passing a level (≥70%) unlocks the next; failing (<70%) does not."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("hank@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+
+    # attach a student so progress is scoped per-student
+    student = client.post(
+        "/api/students", json={"full_name": "Kid"}, headers=h
+    ).json()
+    sid = student["id"]
+
+    game = "emotionrecognition"
+
+    # No progress saved yet.
+    assert client.get(f"/api/progress?game_key={game}&student_id={sid}", headers=h).json() == []
+
+    # Fail easy (6/10 = 60%) -> easy recorded, medium NOT unlocked.
+    r = client.post(
+        "/api/progress",
+        json={"game_key": game, "level": "easy", "student_id": sid, "score": 6, "total": 10},
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    rows = {row["level"]: row for row in r.json()}
+    assert rows["easy"]["unlocked"] is True
+    assert rows["easy"]["passed"] is False
+    assert rows["easy"]["attempts"] == 1
+    assert "medium" not in rows  # not unlocked yet
+
+    # Pass easy (8/10 = 80%) -> mastered, medium unlocked.
+    r = client.post(
+        "/api/progress",
+        json={"game_key": game, "level": "easy", "student_id": sid, "score": 8, "total": 10},
+        headers=h,
+    )
+    rows = {row["level"]: row for row in r.json()}
+    assert rows["easy"]["attempts"] == 2
+    assert rows["easy"]["passed"] is True and rows["easy"]["mastered"] is True
+    assert rows["easy"]["best_score"] == 8
+    assert abs(rows["easy"]["best_accuracy"] - 0.8) < 1e-6
+    assert rows["medium"]["unlocked"] is True and rows["medium"]["passed"] is False
+
+    # Progress persists and is scoped to the student.
+    saved = client.get(f"/api/progress?game_key={game}&student_id={sid}", headers=h).json()
+    assert {row["level"] for row in saved} == {"easy", "medium"}
+
+    # A different mentor cannot use this student.
+    other = client.post(
+        "/api/auth/signup", json=_signup_payload("iris@example.com")
+    ).json()["access_token"]
+    oh = {"Authorization": f"Bearer {other}"}
+    assert client.get(f"/api/progress?game_key={game}&student_id={sid}", headers=oh).status_code == 404

@@ -1,0 +1,158 @@
+/**
+ * Centralized localization ("string table") for player-facing text.
+ *
+ * Goals (from the product spec):
+ *  - Every question is shown in English AND Malayalam, and the system must make
+ *    adding a third language trivial.
+ *  - No user-facing strings are hardcoded inside game scripts — game/UI code
+ *    only ever references keys through the helpers below.
+ *
+ * To add a language: extend `Lang`, add its entries to every table, and (if it
+ * should be shown alongside the others in prompts) add it to `DISPLAY_LANGS`.
+ */
+import type { EmotionId } from '../games/emotionVocab'
+
+export type Lang = 'en' | 'ml'
+
+/** Whether the child in a picture is a boy or a girl — drives he/she prompts. */
+export type Gender = 'boy' | 'girl'
+
+/** All languages the app knows about (order = display order). */
+export const LANGS: Lang[] = ['en', 'ml']
+
+/**
+ * Languages shown *together* in a question prompt. The spec requires English +
+ * Malayalam side by side; extend this to render more languages at once.
+ */
+export const DISPLAY_LANGS: Lang[] = ['en', 'ml']
+
+type Entry = Record<Lang, string>
+
+/**
+ * UI + question strings. `{placeholder}` tokens are filled by `t(...)`.
+ * Kept flat and key-based so nothing user-facing is inlined in components.
+ */
+const MESSAGES = {
+  // --- Level select / chrome -------------------------------------------------
+  gameTitle: { en: 'Emotion Recognition', ml: 'വികാരം തിരിച്ചറിയൽ' },
+  chooseLevel: { en: 'Choose a level', ml: 'ഒരു ലെവൽ തിരഞ്ഞെടുക്കൂ' },
+  play: { en: '▶ Play', ml: '▶ കളിക്കൂ' },
+  levelEasy: { en: 'Easy', ml: 'എളുപ്പം' },
+  levelMedium: { en: 'Moderate', ml: 'ഇടത്തരം' },
+  levelHard: { en: 'Hard', ml: 'പ്രയാസം' },
+  locked: { en: 'Locked', ml: 'പൂട്ടിയത്' },
+
+  // --- In-game HUD -----------------------------------------------------------
+  level: { en: 'Level', ml: 'ലെവൽ' },
+  activity: { en: 'Activity {n} / {total}', ml: 'പ്രവർത്തനം {n} / {total}' },
+  next: { en: 'Next ▶', ml: 'അടുത്തത് ▶' },
+  finish: { en: 'Finish ▶', ml: 'പൂർത്തിയാക്കുക ▶' },
+
+  // --- Questions -------------------------------------------------------------
+  // Easy: single face. Gendered so the prompt matches the child in the picture
+  // (a boy → "he", a girl → "she") instead of the awkward "he/she".
+  questionSingleBoy: {
+    en: 'How does he feel now?',
+    ml: 'ഇപ്പോൾ അവന് എന്ത് വികാരമാണ് തോന്നുന്നത്?',
+  },
+  questionSingleGirl: {
+    en: 'How does she feel now?',
+    ml: 'ഇപ്പോൾ അവൾക്ക് എന്ത് വികാരമാണ് തോന്നുന്നത്?',
+  },
+  // Moderate/Hard "name the highlighted face" (this boy / this girl).
+  questionNameBoy: {
+    en: 'How does he feel?',
+    ml: 'ഇവന് എന്ത് വികാരമാണ് തോന്നുന്നത്?',
+  },
+  questionNameGirl: {
+    en: 'How does she feel?',
+    ml: 'ഇവൾക്ക് എന്ത് വികാരമാണ് തോന്നുന്നത്?',
+  },
+  // Moderate/Hard "find the person". `{emotion}` is the localized "who" phrase.
+  questionWho: { en: 'Who feels {emotion}?', ml: 'ആരാണ് {emotion}?' },
+
+  // --- Feedback --------------------------------------------------------------
+  feedbackCorrect: { en: 'Correct! 🎉', ml: 'ശരി! 🎉' },
+  feedbackWrong: { en: 'Not quite — try to remember for next time.', ml: 'ശരിയായില്ല — അടുത്ത തവണ ഓർക്കാൻ ശ്രമിക്കൂ.' },
+
+  // --- Result screen ---------------------------------------------------------
+  resultTitle: { en: 'Level complete!', ml: 'ലെവൽ പൂർത്തിയായി!' },
+  score: { en: 'Score', ml: 'സ്കോർ' },
+  accuracy: { en: 'Accuracy', ml: 'കൃത്യത' },
+  numCorrect: { en: 'Correct', ml: 'ശരി' },
+  numIncorrect: { en: 'Incorrect', ml: 'തെറ്റ്' },
+  playAgain: { en: 'Play again', ml: 'വീണ്ടും കളിക്കൂ' },
+  home: { en: '🏠 Home', ml: '🏠 ഹോം' },
+  // Mastery (≥80%): fully complete + next level open.
+  resultMastered: {
+    en: 'Congratulations! Next level unlocked.',
+    ml: 'അഭിനന്ദനങ്ങൾ! അടുത്ത ലെവൽ തുറന്നു.',
+  },
+  // Passed (≥70%, <80%): next level opened, encourage reaching mastery.
+  resultPassed: {
+    en: 'Next level unlocked! Reach 80% to master this level.',
+    ml: 'അടുത്ത ലെവൽ തുറന്നു! ഈ ലെവൽ പൂർത്തിയാക്കാൻ 80% എത്തിക്കൂ.',
+  },
+  // Failed (<70%): stay on this level, retry next session.
+  resultFailed: {
+    en: 'Keep practicing! You need at least 70% to unlock the next level.',
+    ml: 'പരിശീലനം തുടരൂ! അടുത്ത ലെവൽ തുറക്കാൻ കുറഞ്ഞത് 70% വേണം.',
+  },
+} satisfies Record<string, Entry>
+
+export type MessageKey = keyof typeof MESSAGES
+
+/** Emotion names used on the answer buttons. */
+const EMOTION_LABELS: Record<EmotionId, Entry> = {
+  happy: { en: 'Happy', ml: 'സന്തോഷം' },
+  sad: { en: 'Sad', ml: 'ദുഃഖം' },
+  angry: { en: 'Angry', ml: 'കോപം' },
+  surprised: { en: 'Surprised', ml: 'അത്ഭുതം' },
+  scared: { en: 'Scared', ml: 'ഭയം' },
+  disgust: { en: 'Disgust', ml: 'വെറുപ്പ്' },
+}
+
+/**
+ * The "who feels ___" form of each emotion. English reuses the plain label
+ * ("Who feels Happy?"); Malayalam needs the possessive "-ഉള്ളത്" form
+ * ("ആരാണ് സന്തോഷമുള്ളത്?"), so it is stored separately.
+ */
+const EMOTION_WHO: Record<EmotionId, Entry> = {
+  happy: { en: 'happy', ml: 'സന്തോഷമുള്ളത്' },
+  sad: { en: 'sad', ml: 'ദുഃഖമുള്ളത്' },
+  angry: { en: 'angry', ml: 'കോപമുള്ളത്' },
+  surprised: { en: 'surprised', ml: 'അത്ഭുതമുള്ളത്' },
+  scared: { en: 'scared', ml: 'ഭയമുള്ളത്' },
+  disgust: { en: 'disgusted', ml: 'വെറുപ്പുള്ളത്' },
+}
+
+/** Translate a UI/question key, interpolating `{token}` params. */
+export function t(key: MessageKey, lang: Lang, params?: Record<string, string | number>): string {
+  let text = MESSAGES[key][lang]
+  if (params) {
+    for (const [name, value] of Object.entries(params)) {
+      text = text.replace(`{${name}}`, String(value))
+    }
+  }
+  return text
+}
+
+/** Localized emotion name for answer buttons. */
+export function emotionLabel(id: EmotionId, lang: Lang): string {
+  return EMOTION_LABELS[id][lang]
+}
+
+/** Localized "Who feels ___?" prompt for the find-the-person question. */
+export function whoFeelsQuestion(id: EmotionId, lang: Lang): string {
+  return t('questionWho', lang, { emotion: EMOTION_WHO[id][lang] })
+}
+
+/** Easy-level single-face prompt, using the correct pronoun for the child. */
+export function singleFaceQuestion(gender: Gender, lang: Lang): string {
+  return t(gender === 'boy' ? 'questionSingleBoy' : 'questionSingleGirl', lang)
+}
+
+/** Highlighted-face prompt (Moderate/Hard), using the correct pronoun. */
+export function nameFaceQuestion(gender: Gender, lang: Lang): string {
+  return t(gender === 'boy' ? 'questionNameBoy' : 'questionNameGirl', lang)
+}

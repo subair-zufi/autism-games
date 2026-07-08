@@ -5,7 +5,7 @@ import { Home } from './pages/Home'
 import { Login } from './pages/Login'
 import { ComingSoon } from './components/ComingSoon'
 import { GAME_LIST, type GameId } from './types'
-import { EmotionsGame } from './games/emotions/EmotionsGame'
+import { EmotionRecognitionGame } from './games/emotionrecognition/EmotionRecognitionGame'
 import { BallDropGame } from './games/balldrop/BallDropGame'
 import { GardenGame } from './games/garden/GardenGame'
 import { ZebraGame } from './games/zebra/ZebraGame'
@@ -15,12 +15,11 @@ import { MuseumGame } from './games/museum/MuseumGame'
 import { RightWayGame } from './games/rightway/RightWayGame'
 import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
 import { SliderGame } from './games/slider/SliderGame'
-import { KnowEmotionGame } from './games/knowemotion/KnowEmotionGame'
 import { IdentifyEmotionsGame } from './games/identifyemotions/IdentifyEmotionsGame'
 import { useAuth } from './state/auth'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
-  emotions: EmotionsGame,
+  emotionrecognition: EmotionRecognitionGame,
   balldrop: BallDropGame,
   garden: GardenGame,
   zebra: ZebraGame,
@@ -30,7 +29,6 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   rightway: RightWayGame,
   rulefixer: RuleFixerGame,
   slider: SliderGame,
-  knowemotion: KnowEmotionGame,
   identifyemotions: IdentifyEmotionsGame,
 }
 
