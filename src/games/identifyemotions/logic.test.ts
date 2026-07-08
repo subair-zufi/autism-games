@@ -8,13 +8,20 @@ test('there are 12 clips, 2 per emotion', () => {
   expect(Object.values(counts)).toEqual([2, 2, 2, 2, 2, 2])
 })
 
+test('every clip has a gender and a positive peak timestamp', () => {
+  for (const c of VIDEO_CLIPS) {
+    expect(['boy', 'girl']).toContain(c.gender)
+    expect(c.peakTime).toBeGreaterThan(0)
+  }
+})
+
 test('video counts: easy 5, medium 7, hard 10', () => {
   expect(buildQuiz('easy').length).toBe(5)
   expect(buildQuiz('medium').length).toBe(7)
   expect(buildQuiz('hard').length).toBe(10)
 })
 
-test('choice counts: easy 3, medium/hard 4; answer always present and unique', () => {
+test('choice counts: easy 2, medium 3, hard 4; answer always present and unique', () => {
   const check = (d: 'easy' | 'medium' | 'hard', n: number) => {
     for (let i = 0; i < 30; i++) {
       for (const q of buildQuiz(d)) {
@@ -25,7 +32,7 @@ test('choice counts: easy 3, medium/hard 4; answer always present and unique', (
       }
     }
   }
-  check('easy', 3)
-  check('medium', 4)
+  check('easy', 2)
+  check('medium', 3)
   check('hard', 4)
 })

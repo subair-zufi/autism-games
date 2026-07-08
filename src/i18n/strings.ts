@@ -71,9 +71,25 @@ const MESSAGES = {
   // Moderate/Hard "find the person". `{emotion}` is the localized "who" phrase.
   questionWho: { en: 'Who feels {emotion}?', ml: 'ആരാണ് {emotion}?' },
 
+  // Emotion Clips — the clip is frozen on the peak expression and the learner is
+  // asked to name it. Gendered so the pronoun matches the person on screen.
+  questionVideoBoy: {
+    en: 'What is he feeling now?',
+    ml: 'അവൻ ഇപ്പോൾ എന്താണ് അനുഭവിക്കുന്നത്?',
+  },
+  questionVideoGirl: {
+    en: 'What is she feeling now?',
+    ml: 'അവൾ ഇപ്പോൾ എന്താണ് അനുഭവിക്കുന്നത്?',
+  },
+  // Shown while the clip is still playing, before it freezes on the peak frame.
+  watchPrompt: { en: 'Watch carefully…', ml: 'ശ്രദ്ധയോടെ കാണൂ…' },
+
   // --- Feedback --------------------------------------------------------------
   feedbackCorrect: { en: 'Correct! 🎉', ml: 'ശരി! 🎉' },
   feedbackWrong: { en: 'Not quite — try to remember for next time.', ml: 'ശരിയായില്ല — അടുത്ത തവണ ഓർക്കാൻ ശ്രമിക്കൂ.' },
+  // Emotion Clips feedback: warm praise, and a gentle nudge to try again.
+  feedbackGreat: { en: 'Great job! 🎉', ml: 'കൊള്ളാം! 🎉' },
+  feedbackTryAgain: { en: "Let's look again — try again.", ml: 'വീണ്ടും നോക്കാം — ഒന്നുകൂടി ശ്രമിക്കൂ.' },
 
   // --- Result screen ---------------------------------------------------------
   resultTitle: { en: 'Level complete!', ml: 'ലെവൽ പൂർത്തിയായി!' },
@@ -155,4 +171,9 @@ export function singleFaceQuestion(gender: Gender, lang: Lang): string {
 /** Highlighted-face prompt (Moderate/Hard), using the correct pronoun. */
 export function nameFaceQuestion(gender: Gender, lang: Lang): string {
   return t(gender === 'boy' ? 'questionNameBoy' : 'questionNameGirl', lang)
+}
+
+/** Emotion Clips freeze prompt ("What is he/she feeling now?"), gendered. */
+export function videoFreezeQuestion(gender: Gender, lang: Lang): string {
+  return t(gender === 'boy' ? 'questionVideoBoy' : 'questionVideoGirl', lang)
 }
