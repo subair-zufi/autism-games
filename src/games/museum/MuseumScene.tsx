@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { slotPosition, type ExhibitId, type Round } from './logic'
+import { slotPosition, type CueMode, type ExhibitId, type Round } from './logic'
 
 const PEDESTAL_H = 1.2
 const EXHIBIT_Y = PEDESTAL_H + 0.55
@@ -11,7 +11,11 @@ export interface MuseumSceneProps {
   locked: boolean
   disabledIds: ExhibitId[]
   celebrate: number
+  /** joint-attention cue level: pulse = highlighted point, hover = plain point, distal = point from afar */
+  cue: CueMode
   onPick: (id: ExhibitId) => void
+  /** fired once per round, the moment the pointing cue has settled on the target */
+  onCueReady: () => void
 }
 
 export function MuseumScene(props: MuseumSceneProps) {
@@ -304,13 +308,17 @@ function VelvetRope() {
   )
 }
 
-function SceneInner({ round, locked, disabledIds, celebrate, onPick }: MuseumSceneProps) {
+function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueReady }: MuseumSceneProps) {
   const n = round.visible.length
   const targetIdx = round.visible.indexOf(round.target)
   const [tx, tz] = slotPosition(targetIdx, n)
+  const hoverPoint = new THREE.Vector3(tx, EXHIBIT_Y + 1.15, tz)
+  const aimPoint = new THREE.Vector3(tx, EXHIBIT_Y, tz)
 
   return (
     <group>
+      {cue === 'pulse' && <TargetRing x={tx} z={tz} />}
+
       {round.visible.map((id, i) => {
         const [x, z] = slotPosition(i, n)
         return (
@@ -325,8 +333,31 @@ function SceneInner({ round, locked, disabledIds, celebrate, onPick }: MuseumSce
         )
       })}
 
-      <PointingHand target={new THREE.Vector3(tx, EXHIBIT_Y + 1.15, tz)} />
+      <PointingHand
+        mode={cue === 'distal' ? 'distal' : 'hover'}
+        cueKey={round.target}
+        hoverPoint={hoverPoint}
+        aimPoint={aimPoint}
+        onSettled={onCueReady}
+      />
     </group>
+  )
+}
+
+/** Soft pulsing ring around the target pedestal — the extra prompt used on easy. */
+function TargetRing({ x, z }: { x: number; z: number }) {
+  const ref = useRef<THREE.Mesh>(null)
+  useFrame((state) => {
+    const m = ref.current
+    if (!m) return
+    const s = 1 + Math.sin(state.clock.elapsedTime * 3) * 0.12
+    m.scale.setScalar(s)
+  })
+  return (
+    <mesh ref={ref} position={[x, 0.03, z]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[0.62, 0.8, 32]} />
+      <meshBasicMaterial color="#ffd95e" transparent opacity={0.85} side={THREE.DoubleSide} />
+    </mesh>
   )
 }
 
@@ -492,34 +523,90 @@ function ExhibitModel({ id }: { id: ExhibitId }) {
   }
 }
 
-function PointingHand({ target }: { target: THREE.Vector3 }) {
+/** where the distal hand floats: in front of the velvet rope, above and clear of every exhibit */
+const DISTAL_POS = new THREE.Vector3(0, 2.5, 3.4)
+const DOWN = new THREE.Vector3(0, -1, 0)
+const distalBase = new THREE.Vector3()
+
+function PointingHand({
+  mode,
+  cueKey,
+  hoverPoint,
+  aimPoint,
+  onSettled,
+}: {
+  mode: 'hover' | 'distal'
+  cueKey: ExhibitId
+  hoverPoint: THREE.Vector3
+  aimPoint: THREE.Vector3
+  onSettled: () => void
+}) {
   const group = useRef<THREE.Group>(null)
+  const settled = useRef(false)
+  // keep the latest callback without re-subscribing the frame loop
+  const onSettledRef = useRef(onSettled)
+  onSettledRef.current = onSettled
+
+  useEffect(() => {
+    settled.current = false
+  }, [cueKey, mode])
+
   useFrame((state, dt) => {
     const g = group.current
     if (!g) return
-    g.position.lerp(target, Math.min(1, dt * 4))
-    g.position.y += Math.sin(state.clock.elapsedTime * 3) * 0.02
-    g.rotation.z = Math.sin(state.clock.elapsedTime * 1.5) * 0.06
+    const k = Math.min(1, dt * 4)
+    if (mode === 'hover') {
+      g.position.lerp(hoverPoint, k)
+      g.position.y += Math.sin(state.clock.elapsedTime * 3) * 0.02
+      g.rotation.set(0, 0, Math.sin(state.clock.elapsedTime * 1.5) * 0.06)
+      if (!settled.current && g.position.distanceTo(hoverPoint) < 0.25) {
+        settled.current = true
+        onSettledRef.current()
+      }
+    } else {
+      // drift a little toward the target's side, the way a real arm shifts when pointing
+      distalBase.set(aimPoint.x * 0.35, DISTAL_POS.y, DISTAL_POS.z)
+      g.position.lerp(distalBase, k)
+      g.position.y += Math.sin(state.clock.elapsedTime * 3) * 0.012
+      const dir = aimPoint.clone().sub(g.position).normalize()
+      const q = new THREE.Quaternion().setFromUnitVectors(DOWN, dir)
+      g.quaternion.slerp(q, k)
+      if (!settled.current && g.position.distanceTo(distalBase) < 0.25 && g.quaternion.angleTo(q) < 0.12) {
+        settled.current = true
+        onSettledRef.current()
+      }
+    }
   })
+
   const skin = '#f2c89b'
+  const distal = mode === 'distal'
   return (
-    <group ref={group} position={[0, 4, 0]} scale={0.8}>
+    <group
+      ref={group}
+      position={distal ? DISTAL_POS.toArray() : [0, 4, 0]}
+      scale={distal ? 0.6 : 0.8}
+    >
+      {/* palm */}
       <mesh position={[0.05, 0.55, 0]}>
         <boxGeometry args={[0.5, 0.55, 0.22]} />
         <meshStandardMaterial color={skin} />
       </mesh>
+      {/* extended index finger, pointing down (rotated toward the target in distal mode) */}
       <mesh position={[-0.14, 0.12, 0]}>
         <boxGeometry args={[0.16, 0.5, 0.18]} />
         <meshStandardMaterial color={skin} />
       </mesh>
+      {/* folded fingers */}
       <mesh position={[0.13, 0.26, 0]}>
         <boxGeometry args={[0.32, 0.24, 0.23]} />
         <meshStandardMaterial color="#e8b888" />
       </mesh>
+      {/* thumb */}
       <mesh position={[0.34, 0.62, 0]} rotation={[0, 0, 0.55]}>
         <boxGeometry args={[0.14, 0.32, 0.16]} />
         <meshStandardMaterial color={skin} />
       </mesh>
+      {/* cuff */}
       <mesh position={[0.05, 0.92, 0]}>
         <boxGeometry args={[0.56, 0.2, 0.28]} />
         <meshStandardMaterial color="#7f8fb6" />

@@ -58,7 +58,7 @@ export const GAME_LIST: GameMeta[] = [
     path: '/museum',
     color: '#3b82f6',
     description: 'Look where they look',
-    objective: 'Joint attention · step 1: follow a clear point among a few exhibits in a calm room',
+    objective: 'Joint attention · step 1: follow a fading cue (glowing point → point → far point) among a few exhibits in a calm room',
     duration: '5–10 min',
     hasLevels: false,
   },

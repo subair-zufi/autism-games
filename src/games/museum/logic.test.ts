@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { EXHIBITS, exhibitMeta, makeRound, slotPosition } from './logic'
+import { CUE, EXHIBITS, GOAL, errorType, exhibitMeta, makeRound, pointsFor, slotPosition, starsFor } from './logic'
 
 const rng = (seq: number[]) => {
   let i = 0
@@ -47,4 +47,42 @@ test('all 6 exhibits have metadata', () => {
     expect(e.emoji.length).toBeGreaterThan(0)
   }
   expect(exhibitMeta('gem').label).toBe('Gem')
+})
+
+test('cue fades with difficulty: highlighted point -> plain point -> distal point', () => {
+  expect(CUE.easy).toBe('pulse')
+  expect(CUE.medium).toBe('hover')
+  expect(CUE.hard).toBe('distal')
+})
+
+test('goal rises with difficulty', () => {
+  expect(GOAL.easy).toBeLessThan(GOAL.medium)
+  expect(GOAL.medium).toBeLessThan(GOAL.hard)
+})
+
+test('first-attempt finds outscore corrected ones; retries still earn points', () => {
+  expect(pointsFor(true, 1)).toBe(10)
+  expect(pointsFor(false, 0)).toBe(5)
+  expect(pointsFor(false, 0)).toBeGreaterThan(0)
+})
+
+test('streak bonus kicks in after 3 consecutive first-attempt finds', () => {
+  expect(pointsFor(true, 2)).toBe(10)
+  expect(pointsFor(true, 3)).toBe(12)
+  expect(pointsFor(true, 5)).toBe(12)
+})
+
+test('stars reflect lives kept; an unfinished session still earns one', () => {
+  expect(starsFor(true, 3)).toBe(3)
+  expect(starsFor(true, 2)).toBe(2)
+  expect(starsFor(true, 1)).toBe(1)
+  expect(starsFor(false, 0)).toBe(1)
+})
+
+test('errorType splits near-misses from picks far from the point', () => {
+  const visible = ['gem', 'dino', 'rocket', 'vase'] as const
+  expect(errorType([...visible], 'dino', 'gem')).toBe('adjacent')
+  expect(errorType([...visible], 'dino', 'rocket')).toBe('adjacent')
+  expect(errorType([...visible], 'gem', 'rocket')).toBe('far')
+  expect(errorType([...visible], 'gem', 'vase')).toBe('far')
 })
