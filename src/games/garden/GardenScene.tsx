@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import { GARDEN_OBJECTS, type ObjectId } from './logic'
+import { GARDEN_OBJECTS, type CueMode, type ObjectId } from './logic'
+import { GardenObject } from './objects'
 
 /** y the hand hovers at, per object (just above its top) */
 const HOVER_Y: Record<ObjectId, number> = {
@@ -9,32 +10,60 @@ const HOVER_Y: Record<ObjectId, number> = {
   'flower-yellow': 1.55,
   'flower-purple': 1.55,
   butterfly: 2.35,
-  tree: 3.05,
+  tree: 2.85,
   bird: 1.25,
   mushroom: 1.4,
   bee: 2.0,
 }
 
+/** y the distal hand aims at, per object (its visual centre) */
+const AIM_Y: Record<ObjectId, number> = {
+  'flower-red': 0.9,
+  'flower-yellow': 0.9,
+  'flower-purple': 0.9,
+  butterfly: 1.5,
+  tree: 1.9,
+  bird: 0.4,
+  mushroom: 0.5,
+  bee: 1.2,
+}
+
 export interface GardenSceneProps {
   target: ObjectId
   celebrate: number
+  /** joint-attention cue level: pulse = highlighted point, hover = plain point, distal = point from afar */
+  cue: CueMode
+  onPick: (id: ObjectId) => void
+  /** fired once per round, the moment the pointing cue has settled on the target */
+  onCueReady: () => void
 }
 
 export function GardenScene(props: GardenSceneProps) {
   return (
     <Canvas
+      shadows
       camera={{ position: [0, 3.2, 7.5], fov: 42 }}
       onCreated={({ camera }) => camera.lookAt(0, 0.8, 0)}
     >
-      <color attach="background" args={['#d9efff']} />
-      <ambientLight intensity={0.75} />
-      <directionalLight position={[4, 7, 5]} intensity={0.9} />
+      <color attach="background" args={['#bde3ff']} />
+      <fog attach="fog" args={['#cfeaff', 16, 38]} />
+      <ambientLight intensity={0.65} />
+      <directionalLight
+        position={[5, 8, 5]}
+        intensity={1}
+        castShadow
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-left={-9}
+        shadow-camera-right={9}
+        shadow-camera-top={9}
+        shadow-camera-bottom={-9}
+      />
       <SceneInner {...props} />
     </Canvas>
   )
 }
 
-function SceneInner({ target, celebrate }: GardenSceneProps) {
+function SceneInner({ target, celebrate, cue, onPick, onCueReady }: GardenSceneProps) {
   const objectRefs = useRef<Partial<Record<ObjectId, THREE.Group | null>>>({})
   const wiggle = useRef({ t: 99, id: null as ObjectId | null })
 
@@ -62,52 +91,142 @@ function SceneInner({ target, celebrate }: GardenSceneProps) {
   })
 
   const meta = GARDEN_OBJECTS.find((o) => o.id === target)!
-  const handTarget = new THREE.Vector3(meta.position[0], HOVER_Y[target], meta.position[1])
+  const hoverPoint = new THREE.Vector3(meta.position[0], HOVER_Y[target], meta.position[1])
+  const aimPoint = new THREE.Vector3(meta.position[0], AIM_Y[target], meta.position[1])
 
   return (
     <group>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]}>
-        <planeGeometry args={[40, 30]} />
-        <meshStandardMaterial color="#bfdcab" />
-      </mesh>
+      <Environment />
 
-      <Cloud x={-4} y={4.4} z={-6} />
-      <Cloud x={3.5} y={5} z={-7} />
+      {cue === 'pulse' && <TargetRing x={meta.position[0]} z={meta.position[1]} />}
 
       {GARDEN_OBJECTS.map((o) => (
         <group
           key={o.id}
           position={[o.position[0], 0, o.position[1]]}
-          ref={(g) => { objectRefs.current[o.id] = g }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onPick(o.id)
+          }}
+          onPointerOver={(e) => {
+            e.stopPropagation()
+            document.body.style.cursor = 'pointer'
+          }}
+          onPointerOut={() => {
+            document.body.style.cursor = 'default'
+          }}
+          ref={(g) => {
+            objectRefs.current[o.id] = g
+            // every solid part of every object drops a real shadow on the grass
+            g?.traverse((node) => {
+              const mesh = node as THREE.Mesh
+              if (mesh.isMesh && !(mesh.material as THREE.Material).transparent) {
+                mesh.castShadow = true
+              }
+            })
+          }}
         >
           <GardenObject id={o.id} />
         </group>
       ))}
 
-      <PointingHand target={handTarget} />
+      <PointingHand
+        mode={cue === 'distal' ? 'distal' : 'hover'}
+        cueKey={target}
+        hoverPoint={hoverPoint}
+        aimPoint={aimPoint}
+        onSettled={onCueReady}
+      />
     </group>
   )
 }
 
-function PointingHand({ target }: { target: THREE.Vector3 }) {
+/** Soft pulsing ring under the target — the extra prompt used on easy. */
+function TargetRing({ x, z }: { x: number; z: number }) {
+  const ref = useRef<THREE.Mesh>(null)
+  useFrame((state) => {
+    const m = ref.current
+    if (!m) return
+    const s = 1 + Math.sin(state.clock.elapsedTime * 3) * 0.12
+    m.scale.setScalar(s)
+  })
+  return (
+    <mesh ref={ref} position={[x, 0.04, z]} rotation={[-Math.PI / 2, 0, 0]}>
+      <ringGeometry args={[0.55, 0.72, 32]} />
+      <meshBasicMaterial color="#ffd95e" transparent opacity={0.85} side={THREE.DoubleSide} />
+    </mesh>
+  )
+}
+
+/** where the distal hand floats: high above the garden centre, clear of every object */
+const DISTAL_POS = new THREE.Vector3(0, 3.0, 2.0)
+const DOWN = new THREE.Vector3(0, -1, 0)
+const distalBase = new THREE.Vector3()
+
+function PointingHand({
+  mode,
+  cueKey,
+  hoverPoint,
+  aimPoint,
+  onSettled,
+}: {
+  mode: 'hover' | 'distal'
+  cueKey: ObjectId
+  hoverPoint: THREE.Vector3
+  aimPoint: THREE.Vector3
+  onSettled: () => void
+}) {
   const group = useRef<THREE.Group>(null)
+  const settled = useRef(false)
+  // keep the latest callback without re-subscribing the frame loop
+  const onSettledRef = useRef(onSettled)
+  onSettledRef.current = onSettled
+
+  useEffect(() => {
+    settled.current = false
+  }, [cueKey, mode])
+
   useFrame((state, dt) => {
     const g = group.current
     if (!g) return
     const k = Math.min(1, dt * 4)
-    g.position.lerp(target, k)
-    g.position.y += Math.sin(state.clock.elapsedTime * 3) * 0.012
-    g.rotation.z = Math.sin(state.clock.elapsedTime * 1.5) * 0.06
+    if (mode === 'hover') {
+      g.position.lerp(hoverPoint, k)
+      g.position.y += Math.sin(state.clock.elapsedTime * 3) * 0.012
+      g.rotation.set(0, 0, Math.sin(state.clock.elapsedTime * 1.5) * 0.06)
+      if (!settled.current && g.position.distanceTo(hoverPoint) < 0.25) {
+        settled.current = true
+        onSettledRef.current()
+      }
+    } else {
+      // drift a little toward the target's side, the way a real arm shifts when pointing
+      distalBase.set(aimPoint.x * 0.35, DISTAL_POS.y, DISTAL_POS.z)
+      g.position.lerp(distalBase, k)
+      g.position.y += Math.sin(state.clock.elapsedTime * 3) * 0.012
+      const dir = aimPoint.clone().sub(g.position).normalize()
+      const q = new THREE.Quaternion().setFromUnitVectors(DOWN, dir)
+      g.quaternion.slerp(q, k)
+      if (!settled.current && g.position.distanceTo(distalBase) < 0.25 && g.quaternion.angleTo(q) < 0.12) {
+        settled.current = true
+        onSettledRef.current()
+      }
+    }
   })
+
   const skin = '#f2c89b'
+  const distal = mode === 'distal'
   return (
-    <group ref={group} position={[0, 3, 0]} scale={0.85}>
+    <group
+      ref={group}
+      position={distal ? DISTAL_POS.toArray() : [0, 3, 0]}
+      scale={distal ? 0.6 : 0.85}
+    >
       {/* palm */}
       <mesh position={[0.05, 0.55, 0]}>
         <boxGeometry args={[0.5, 0.55, 0.22]} />
         <meshStandardMaterial color={skin} />
       </mesh>
-      {/* extended index finger, pointing down */}
+      {/* extended index finger, pointing down (rotated toward the target in distal mode) */}
       <mesh position={[-0.14, 0.12, 0]}>
         <boxGeometry args={[0.16, 0.5, 0.18]} />
         <meshStandardMaterial color={skin} />
@@ -131,186 +250,141 @@ function PointingHand({ target }: { target: THREE.Vector3 }) {
   )
 }
 
-function GardenObject({ id }: { id: ObjectId }) {
-  switch (id) {
-    case 'flower-red': return <Flower color="#e2554c" />
-    case 'flower-yellow': return <Flower color="#f5c542" />
-    case 'flower-purple': return <Flower color="#9d6fd6" />
-    case 'butterfly': return <Butterfly />
-    case 'tree': return <Tree />
-    case 'bird': return <Bird />
-    case 'mushroom': return <Mushroom />
-    case 'bee': return <Bee />
-  }
-}
+/* ------------------------------------------------------------------ */
+/* Environment: ground, path, fence, bushes, hills, sun, clouds       */
+/* ------------------------------------------------------------------ */
 
-function Flower({ color }: { color: string }) {
-  // petal ring faces the camera so the flower reads as a flower, not a donut
-  const petals = Array.from({ length: 6 }, (_, i) => {
-    const a = (i / 6) * Math.PI * 2
-    return [Math.cos(a) * 0.2, 0.85 + Math.sin(a) * 0.2, 0] as const
-  })
+const GRASS_TUFTS: [number, number][] = [
+  [-3.4, 0.2], [-1.2, 1.6], [0.9, 1.7], [2.2, 1.4], [3.3, 0.3],
+  [-2, -0.2], [2, -1.8], [-3.6, -2.4], [3.6, -2.2], [0.2, -2.1],
+  [-4.5, 1.8], [4.4, 1.6], [-1.5, -2.6], [1.6, 2.6],
+]
+
+const ROCKS: [number, number, number][] = [
+  [-1.3, 2.9, 0.16], [1.5, 3.1, 0.13], [-4.6, -0.6, 0.2], [4.7, -1.2, 0.17],
+]
+
+function Environment() {
   return (
     <group>
-      <mesh position={[0, 0.4, 0]}>
-        <cylinderGeometry args={[0.04, 0.05, 0.8]} />
-        <meshStandardMaterial color="#5d9b53" />
+      {/* meadow ground */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <planeGeometry args={[60, 44]} />
+        <meshStandardMaterial color="#b7d9a2" />
       </mesh>
-      <mesh position={[0.12, 0.35, 0]} scale={[1, 0.4, 0.5]}>
-        <sphereGeometry args={[0.14, 12, 12]} />
-        <meshStandardMaterial color="#5d9b53" />
+      {/* lighter garden bed the objects stand on */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]} receiveShadow>
+        <circleGeometry args={[5.2, 40]} />
+        <meshStandardMaterial color="#c8e6ad" />
       </mesh>
-      {petals.map((p, i) => (
-        <mesh key={i} position={[p[0], p[1], p[2]]} scale={[1, 1, 0.55]}>
-          <sphereGeometry args={[0.13, 12, 12]} />
-          <meshStandardMaterial color={color} />
-        </mesh>
+      {/* sandy path walking into the garden */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 5]}>
+        <planeGeometry args={[1.9, 5.5]} />
+        <meshStandardMaterial color="#e3cda4" />
+      </mesh>
+
+      <Fence />
+
+      {/* bushes tucked behind the fence corners */}
+      <Bush x={-6.5} z={-3.2} s={1.15} />
+      <Bush x={6.3} z={-3} s={1} />
+      <Bush x={-4.9} z={-3.4} s={0.75} />
+      <Bush x={4.7} z={-3.5} s={0.8} />
+
+      {/* rolling hills on the horizon */}
+      <mesh position={[-7, -0.4, -13]} scale={[4.5, 1.4, 1.5]}>
+        <sphereGeometry args={[2, 20, 20]} />
+        <meshStandardMaterial color="#9ccb82" />
+      </mesh>
+      <mesh position={[6, -0.4, -14]} scale={[5, 1.7, 1.5]}>
+        <sphereGeometry args={[2, 20, 20]} />
+        <meshStandardMaterial color="#8fc175" />
+      </mesh>
+      <mesh position={[0, -0.4, -16]} scale={[6, 1.2, 1.5]}>
+        <sphereGeometry args={[2, 20, 20]} />
+        <meshStandardMaterial color="#a5d18c" />
+      </mesh>
+
+      {/* sun, kept out of the fog so it stays bright */}
+      <mesh position={[-6.5, 3.4, -14]}>
+        <sphereGeometry args={[1, 20, 20]} />
+        <meshBasicMaterial color="#ffd95e" fog={false} />
+      </mesh>
+
+      <Cloud x={-3.5} y={3.9} z={-8} />
+      <Cloud x={4} y={4.1} z={-9} />
+      <Cloud x={0.5} y={4.5} z={-11} />
+
+      {GRASS_TUFTS.map(([x, z], i) => (
+        <GrassTuft key={i} x={x} z={z} />
       ))}
-      <mesh position={[0, 0.85, 0.1]} scale={[1, 1, 0.6]}>
-        <sphereGeometry args={[0.13, 12, 12]} />
-        <meshStandardMaterial color="#f7e06b" />
-      </mesh>
-    </group>
-  )
-}
 
-function Tree() {
-  return (
-    <group>
-      <mesh position={[0, 0.6, 0]}>
-        <cylinderGeometry args={[0.16, 0.24, 1.2]} />
-        <meshStandardMaterial color="#8a5a3b" />
-      </mesh>
-      <mesh position={[0, 1.8, 0]}>
-        <sphereGeometry args={[0.75, 16, 16]} />
-        <meshStandardMaterial color="#6aa84f" />
-      </mesh>
-      <mesh position={[0.5, 1.45, 0.15]}>
-        <sphereGeometry args={[0.45, 16, 16]} />
-        <meshStandardMaterial color="#7cb45e" />
-      </mesh>
-      <mesh position={[-0.5, 1.5, -0.1]}>
-        <sphereGeometry args={[0.5, 16, 16]} />
-        <meshStandardMaterial color="#5d9b53" />
-      </mesh>
-    </group>
-  )
-}
-
-function Mushroom() {
-  return (
-    <group>
-      <mesh position={[0, 0.25, 0]}>
-        <cylinderGeometry args={[0.13, 0.17, 0.5]} />
-        <meshStandardMaterial color="#f3e7d3" />
-      </mesh>
-      <mesh position={[0, 0.55, 0]} scale={[1, 0.55, 1]}>
-        <sphereGeometry args={[0.45, 16, 16]} />
-        <meshStandardMaterial color="#d8574a" />
-      </mesh>
-      {[[-0.2, 0.62, 0.25], [0.22, 0.66, 0.1], [0, 0.6, -0.3]].map((p, i) => (
-        <mesh key={i} position={p as [number, number, number]}>
-          <sphereGeometry args={[0.07, 10, 10]} />
-          <meshStandardMaterial color="#fdf6ec" />
+      {ROCKS.map(([x, z, r], i) => (
+        <mesh key={i} position={[x, r * 0.4, z]} scale={[1.3, 0.7, 1]} receiveShadow>
+          <sphereGeometry args={[r, 12, 12]} />
+          <meshStandardMaterial color="#b9b4ab" />
         </mesh>
       ))}
     </group>
   )
 }
 
-function Bird() {
+function Fence() {
+  const pickets = Array.from({ length: 29 }, (_, i) => -8.4 + i * 0.6)
   return (
-    <group>
-      <mesh position={[0, 0.3, 0]} scale={[1, 0.9, 1.25]}>
-        <sphereGeometry args={[0.24, 16, 16]} />
-        <meshStandardMaterial color="#6fa8dc" />
+    <group position={[0, 0, -3.8]}>
+      {pickets.map((x, i) => (
+        <group key={i} position={[x, 0, 0]}>
+          <mesh position={[0, 0.45, 0]} castShadow>
+            <boxGeometry args={[0.13, 0.9, 0.06]} />
+            <meshStandardMaterial color="#f7f3ea" />
+          </mesh>
+          {/* pointed picket top */}
+          <mesh position={[0, 0.94, 0]} rotation={[0, 0, Math.PI / 4]}>
+            <boxGeometry args={[0.1, 0.1, 0.055]} />
+            <meshStandardMaterial color="#f7f3ea" />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[0, 0.64, 0.02]}>
+        <boxGeometry args={[17.4, 0.09, 0.05]} />
+        <meshStandardMaterial color="#efe9dc" />
       </mesh>
-      <mesh position={[0, 0.55, 0.16]}>
-        <sphereGeometry args={[0.15, 16, 16]} />
-        <meshStandardMaterial color="#7eb6e8" />
-      </mesh>
-      <mesh position={[0, 0.54, 0.32]} rotation={[Math.PI / 2, 0, 0]}>
-        <coneGeometry args={[0.05, 0.14, 8]} />
-        <meshStandardMaterial color="#f2a14b" />
-      </mesh>
-      <mesh position={[0.08, 0.6, 0.24]}>
-        <sphereGeometry args={[0.025, 8, 8]} />
-        <meshStandardMaterial color="#2c2a3a" />
-      </mesh>
-      <mesh position={[-0.08, 0.6, 0.24]}>
-        <sphereGeometry args={[0.025, 8, 8]} />
-        <meshStandardMaterial color="#2c2a3a" />
-      </mesh>
-      <mesh position={[0, 0.34, -0.3]} rotation={[0.5, 0, 0]}>
-        <boxGeometry args={[0.1, 0.04, 0.22]} />
-        <meshStandardMaterial color="#5b8fc4" />
+      <mesh position={[0, 0.3, 0.02]}>
+        <boxGeometry args={[17.4, 0.09, 0.05]} />
+        <meshStandardMaterial color="#efe9dc" />
       </mesh>
     </group>
   )
 }
 
-function Butterfly() {
-  const wingL = useRef<THREE.Group>(null)
-  const wingR = useRef<THREE.Group>(null)
-  const body = useRef<THREE.Group>(null)
-  useFrame((state) => {
-    const t = state.clock.elapsedTime
-    const flap = 0.55 + Math.sin(t * 7) * 0.45
-    if (wingL.current) wingL.current.rotation.z = flap
-    if (wingR.current) wingR.current.rotation.z = -flap
-    if (body.current) {
-      body.current.position.y = 1.5 + Math.sin(t * 2.1) * 0.15
-      body.current.position.x = Math.sin(t * 0.9) * 0.2
-    }
-  })
+function Bush({ x, z, s }: { x: number; z: number; s: number }) {
   return (
-    <group ref={body} position={[0, 1.5, 0]}>
-      <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <capsuleGeometry args={[0.05, 0.25, 4, 8]} />
-        <meshStandardMaterial color="#4a4458" />
-      </mesh>
-      <group ref={wingL}>
-        <mesh position={[-0.2, 0.05, 0]} rotation={[-Math.PI / 2.2, 0, 0]}>
-          <circleGeometry args={[0.22, 16]} />
-          <meshStandardMaterial color="#7ec8e3" side={THREE.DoubleSide} />
+    <group position={[x, 0, z]} scale={s}>
+      {[[-0.45, 0.35, 0, 0.5], [0.4, 0.4, 0.1, 0.55], [0, 0.55, -0.1, 0.6]].map((p, i) => (
+        <mesh key={i} position={[p[0], p[1], p[2]]} castShadow>
+          <sphereGeometry args={[p[3], 14, 14]} />
+          <meshStandardMaterial color={i === 1 ? '#4f8747' : '#588f4c'} />
         </mesh>
-      </group>
-      <group ref={wingR}>
-        <mesh position={[0.2, 0.05, 0]} rotation={[-Math.PI / 2.2, 0, 0]}>
-          <circleGeometry args={[0.22, 16]} />
-          <meshStandardMaterial color="#7ec8e3" side={THREE.DoubleSide} />
-        </mesh>
-      </group>
+      ))}
     </group>
   )
 }
 
-function Bee() {
-  const body = useRef<THREE.Group>(null)
-  useFrame((state) => {
-    const t = state.clock.elapsedTime
-    if (body.current) {
-      body.current.position.y = 1.2 + Math.sin(t * 3.3) * 0.1
-      body.current.position.z = Math.sin(t * 1.3) * 0.15
-    }
-  })
+function GrassTuft({ x, z }: { x: number; z: number }) {
   return (
-    <group ref={body} position={[0, 1.2, 0]}>
-      <mesh scale={[1.3, 1, 1]}>
-        <sphereGeometry args={[0.16, 16, 16]} />
-        <meshStandardMaterial color="#f5c542" />
+    <group position={[x, 0, z]}>
+      <mesh position={[-0.05, 0.09, 0]} rotation={[0, 0, 0.15]}>
+        <coneGeometry args={[0.035, 0.22, 6]} />
+        <meshStandardMaterial color="#8fbf6f" />
       </mesh>
-      <mesh position={[0.02, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <torusGeometry args={[0.135, 0.035, 8, 16]} />
-        <meshStandardMaterial color="#3a3548" />
+      <mesh position={[0.05, 0.11, 0.02]} rotation={[0, 0, -0.18]}>
+        <coneGeometry args={[0.035, 0.26, 6]} />
+        <meshStandardMaterial color="#7fb262" />
       </mesh>
-      <mesh position={[-0.1, 0, 0]} rotation={[0, 0, Math.PI / 2]} scale={0.9}>
-        <torusGeometry args={[0.135, 0.035, 8, 16]} />
-        <meshStandardMaterial color="#3a3548" />
-      </mesh>
-      <mesh position={[0, 0.16, 0]} rotation={[-Math.PI / 2.5, 0, 0]}>
-        <circleGeometry args={[0.12, 12]} />
-        <meshStandardMaterial color="#ffffff" transparent opacity={0.7} side={THREE.DoubleSide} />
+      <mesh position={[0, 0.08, -0.03]} rotation={[0.12, 0, 0]}>
+        <coneGeometry args={[0.03, 0.18, 6]} />
+        <meshStandardMaterial color="#9bc97c" />
       </mesh>
     </group>
   )
@@ -322,7 +396,8 @@ function Cloud({ x, y, z }: { x: number; y: number; z: number }) {
       {[[-0.6, 0, 0.5], [0, 0.18, 0.7], [0.65, 0, 0.55]].map((p, i) => (
         <mesh key={i} position={[p[0], p[1], 0]} scale={[1.4, 0.8, 1]}>
           <sphereGeometry args={[p[2], 14, 14]} />
-          <meshStandardMaterial color="#ffffff" />
+          {/* basic material: clouds stay white instead of shading grey underneath */}
+          <meshBasicMaterial color="#ffffff" />
         </mesh>
       ))}
     </group>

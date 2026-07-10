@@ -207,6 +207,11 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 }
 .choice-btn:disabled { opacity: 0.4; }
 .choice-emoji { font-size: 2.2rem; }
+.dialog-stars {
+  font-size: 2.6rem;
+  margin: 4px 0;
+  letter-spacing: 6px;
+}
 .emotion-display-img {
   width: 100%;
   height: 100%;
