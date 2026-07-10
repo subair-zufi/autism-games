@@ -448,3 +448,55 @@ def test_student_report_shape(client):
     assert client.get(
         f"/api/reports/student/{sid}", headers={"Authorization": f"Bearer {other}"}
     ).status_code == 404
+
+
+def test_emotion_report_confusion_and_latency(client):
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("emotions@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Lena"}, headers=h).json()["id"]
+
+    def answer(payload):
+        r = client.post(
+            "/api/events",
+            json={
+                "game_key": "identifyemotions",
+                "event_type": "answer",
+                "student_id": sid,
+                "payload": payload,
+            },
+            headers=h,
+        )
+        assert r.status_code == 201, r.text
+
+    # First attempts: scared→surprised confusion, then two correct happy picks.
+    answer({"answer": "scared", "picked": "surprised", "attempt": 1, "latencyMs": 2000})
+    answer({"answer": "happy", "picked": "happy", "attempt": 1, "latencyMs": 1000})
+    answer({"answer": "happy", "picked": "happy", "latencyMs": 3000})  # no attempt field = first
+    # Retry (attempt 2) must be excluded from the matrix.
+    answer({"answer": "scared", "picked": "scared", "attempt": 2, "latencyMs": 500})
+    # Rows without emotion ids in answer/picked are ignored.
+    answer({"answer": "scared", "picked": 1})
+
+    r = client.get(f"/api/reports/student/{sid}/emotions", headers=h)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["confusion"]["scared"]["surprised"] == 1
+    assert body["confusion"]["scared"]["scared"] == 0  # retry excluded
+    assert body["confusion"]["happy"]["happy"] == 2
+
+    stats = {s["emotion"]: s for s in body["stats"]}
+    assert stats["scared"]["total"] == 1 and stats["scared"]["correct"] == 0
+    assert stats["happy"]["accuracy"] == 1.0
+    assert stats["happy"]["median_latency_ms"] == 2000  # median of 1000, 3000
+    assert stats["sad"]["total"] == 0 and stats["sad"]["median_latency_ms"] is None
+
+    # not your student -> 404
+    other = client.post(
+        "/api/auth/signup", json=_signup_payload("nosy2@example.com")
+    ).json()["access_token"]
+    assert client.get(
+        f"/api/reports/student/{sid}/emotions",
+        headers={"Authorization": f"Bearer {other}"},
+    ).status_code == 404

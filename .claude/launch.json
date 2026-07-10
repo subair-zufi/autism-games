@@ -3,10 +3,16 @@
   "configurations": [
     {
       "name": "autism-games",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeExecutable": "/Users/farhanpeecee/.local/node/bin/node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js"],
       "port": 5173,
       "autoPort": true
+    },
+    {
+      "name": "autism-games-3000",
+      "runtimeExecutable": "/Users/farhanpeecee/.local/node/bin/node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "3000", "--strictPort"],
+      "port": 3000
     }
   ]
 }

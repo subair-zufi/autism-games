@@ -119,6 +119,25 @@ export interface StudentReport {
   recent: { game_key: string; label: string; when: string; score: number | null }[];
 }
 
+/** Per-emotion first-attempt performance (Emotion Recognition + Emotion Clips). */
+export interface EmotionStat {
+  emotion: string;
+  total: number;
+  correct: number;
+  accuracy: number; // 0..1
+  median_latency_ms: number | null;
+}
+
+/** Per-student emotion identification profile: `confusion[shown][picked]`
+ *  counts first attempts — the diagonal is correct, off-diagonal cells show
+ *  which emotion the child confused the shown one with. */
+export interface EmotionReport {
+  student_id: string;
+  emotions: string[];
+  confusion: Record<string, Record<string, number>>;
+  stats: EmotionStat[];
+}
+
 /** A learner's saved progress on one level of a level-based game. */
 export interface LevelProgress {
   id: string;
@@ -308,6 +327,13 @@ class AnalyticsClient {
   /** Load the composite progress report for a student (Progress dashboard). */
   async getStudentReport(studentId: string): Promise<StudentReport> {
     return this.request<StudentReport>(`/api/reports/student/${studentId}`);
+  }
+
+  /** Load the per-emotion confusion/latency profile (Progress dashboard). */
+  async getEmotionReport(studentId: string): Promise<EmotionReport> {
+    return this.request<EmotionReport>(
+      `/api/reports/student/${studentId}/emotions`,
+    );
   }
 
   /**

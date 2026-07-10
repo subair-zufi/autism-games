@@ -295,3 +295,27 @@ class StudentReport(BaseModel):
     timeseries: list[ReportTimeseriesPoint]
     by_game: list[ReportGameBreakdown]
     recent: list[ReportRecentActivity]
+
+
+class EmotionStat(BaseModel):
+    """Per-emotion first-attempt performance across the emotion games."""
+
+    emotion: str
+    total: int
+    correct: int
+    accuracy: float  # 0..1
+    median_latency_ms: int | None
+
+
+class EmotionReport(BaseModel):
+    """Per-student emotion identification profile.
+
+    ``confusion[shown][picked]`` counts first-attempt answers: the diagonal is
+    correct identifications, off-diagonal cells are which emotion the child
+    confused the shown one with (e.g. scared → surprised).
+    """
+
+    student_id: uuid.UUID
+    emotions: list[str]
+    confusion: dict[str, dict[str, int]]
+    stats: list[EmotionStat]

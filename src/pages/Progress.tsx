@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../state/auth'
-import { analytics, type StudentReport } from '../services/analytics'
+import { analytics, type EmotionReport, type StudentReport } from '../services/analytics'
 import { gameById } from '../types'
 import { ageFromDob, initials } from '../lib/participant'
 import { LineChart } from '../components/charts/LineChart'
 import { BarChart } from '../components/charts/BarChart'
 import { StarIcon } from '../components/icons'
+import { emotionMeta, type EmotionId } from '../games/emotionVocab'
 
 const gameTitle = (key: string) => gameById(key)?.title ?? key
 const shortLabel = (key: string) => (gameById(key)?.title ?? key).split(' ')[0]
@@ -17,11 +18,13 @@ export function Progress() {
   const active = students.find((s) => s.id === activeStudentId) ?? null
 
   const [report, setReport] = useState<StudentReport | null>(null)
+  const [emotions, setEmotions] = useState<EmotionReport | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!activeStudentId) {
       setReport(null)
+      setEmotions(null)
       return
     }
     let cancelled = false
@@ -31,6 +34,10 @@ export function Progress() {
       .then((r) => !cancelled && setReport(r))
       .catch(() => !cancelled && setReport(null))
       .finally(() => !cancelled && setLoading(false))
+    void analytics
+      .getEmotionReport(activeStudentId)
+      .then((r) => !cancelled && setEmotions(r))
+      .catch(() => !cancelled && setEmotions(null))
     return () => {
       cancelled = true
     }
@@ -93,6 +100,66 @@ export function Progress() {
           <p className="empty small">No activity yet.</p>
         )}
       </section>
+
+      {emotions && emotions.stats.some((s) => s.total > 0) && (
+        <section className="panel">
+          <h2>Emotion Identification Profile</h2>
+          <p className="empty small">
+            First attempts only, across Emotion Recognition and Emotion Clips.
+          </p>
+          <ul className="emotion-stat-list">
+            {emotions.stats.map((s) => {
+              const m = emotionMeta(s.emotion as EmotionId)
+              return (
+                <li key={s.emotion} className="emotion-stat">
+                  <span className="emotion-stat-label">{m.emoji} {m.label}</span>
+                  <span className="emotion-stat-acc">
+                    {s.total > 0 ? `${Math.round(s.accuracy * 100)}%` : '—'}
+                    <small> ({s.correct}/{s.total})</small>
+                  </span>
+                  <span className="emotion-stat-latency">
+                    {s.median_latency_ms != null ? `${(s.median_latency_ms / 1000).toFixed(1)}s` : '—'}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+          <h3 className="confusion-title">Confusion matrix (shown → picked)</h3>
+          <div className="confusion-scroll">
+            <table className="confusion-matrix">
+              <thead>
+                <tr>
+                  <th aria-label="Shown emotion" />
+                  {emotions.emotions.map((id) => (
+                    <th key={id} title={emotionMeta(id as EmotionId).label}>
+                      {emotionMeta(id as EmotionId).emoji}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {emotions.emotions.map((shown) => (
+                  <tr key={shown}>
+                    <th title={emotionMeta(shown as EmotionId).label}>
+                      {emotionMeta(shown as EmotionId).emoji}
+                    </th>
+                    {emotions.emotions.map((picked) => {
+                      const n = emotions.confusion[shown]?.[picked] ?? 0
+                      const cls =
+                        shown === picked ? 'diag' : n > 0 ? 'confused' : ''
+                      return (
+                        <td key={picked} className={cls}>
+                          {n > 0 ? n : ''}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       <section className="panel">
         <h2>Recent Activities</h2>

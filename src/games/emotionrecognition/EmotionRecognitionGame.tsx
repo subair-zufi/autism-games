@@ -4,10 +4,19 @@
  *
  * This component only orchestrates: it owns the play flow (level select →
  * playing → result) and delegates content generation to `logic.ts`,
- * presentation to `ui.tsx`, localization to `../../i18n`, and progress
- * persistence to `useLevelProgress`.
+ * presentation to `ui.tsx` + `components/LevelScreens`, localization to
+ * `../../i18n`, and progress persistence to `../progression`.
+ *
+ * Two modes:
+ *  - Practice: training stimuli; results count towards level unlocks.
+ *  - Assessment: held-out probe stimuli (generalization test); recorded in
+ *    analytics but never submitted to the unlock ladder.
+ *
+ * Every answer step records the response latency measured from the moment the
+ * stimulus image finished loading (`onReady`), so slow networks don't inflate
+ * the measurement.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Difficulty } from '../../types'
 import { useScores } from '../../state/scores'
 import { useSettings } from '../../state/settings'
@@ -22,17 +31,23 @@ import {
   type Lang,
 } from '../../i18n/strings'
 import type { EmotionId } from '../emotionVocab'
-import { buildLevel, scoreLevel, type Activity, type LevelSummary } from './logic'
-import { GAME_KEY, LEVELS, useLevelProgress } from './useLevelProgress'
+import { buildLevel, levelChance, type Activity } from './logic'
+import {
+  LEVELS,
+  scoreLevel,
+  useLevelProgress,
+  type LevelSummary,
+} from '../progression'
+import { LevelResult, LevelSelect } from '../../components/LevelScreens'
 import {
   BilingualPrompt,
   ChoiceRow,
   GroupPhotoStage,
-  LevelResult,
-  LevelSelect,
   ProgressBar,
   SingleImageStage,
 } from './ui'
+
+export const GAME_KEY = 'emotionrecognition'
 
 const LEVEL_LABEL_KEY: Record<Difficulty, 'levelEasy' | 'levelMedium' | 'levelHard'> = {
   easy: 'levelEasy',
@@ -58,11 +73,12 @@ function correctEmotion(a: Activity): EmotionId | null {
 export function EmotionRecognitionGame() {
   const lang = useSettings((s) => s.language)
   const reportScore = useScores((s) => s.reportScore)
-  const { stateFor, highestUnlocked, submit } = useLevelProgress()
+  const { stateFor, highestUnlocked, submit } = useLevelProgress(GAME_KEY)
   const { recordStep, finishGame, resetSession } = useGameAnalytics(GAME_KEY)
 
   const [phase, setPhase] = useState<'select' | 'playing' | 'result'>('select')
   const [selectedLevel, setSelectedLevel] = useState<Difficulty>('easy')
+  const [assessment, setAssessment] = useState(false)
   const [level, setLevel] = useState<Difficulty>('easy')
   const [activities, setActivities] = useState<Activity[]>([])
   const [idx, setIdx] = useState(0)
@@ -72,6 +88,9 @@ export function EmotionRecognitionGame() {
   const [pickedEmotion, setPickedEmotion] = useState<EmotionId | null>(null)
   const [pickedIndex, setPickedIndex] = useState<number | null>(null)
   const [summary, setSummary] = useState<LevelSummary | null>(null)
+  // When the current stimulus image became visible — response latency runs
+  // from here to the answer tap.
+  const readyAtRef = useRef<number | null>(null)
 
   // While choosing, keep the selection on the highest unlocked level so a
   // returning learner resumes where they left off.
@@ -84,17 +103,23 @@ export function EmotionRecognitionGame() {
     setAnswered(false)
     setPickedEmotion(null)
     setPickedIndex(null)
+    readyAtRef.current = null
   }
 
   function start(lvl: Difficulty) {
     resetSession()
     setLevel(lvl)
-    setActivities(buildLevel(lvl))
+    setActivities(buildLevel(lvl, Math.random, assessment ? 'probe' : 'training'))
     setIdx(0)
     setCorrectCount(0)
     setSummary(null)
     resetAnswer()
     setPhase('playing')
+  }
+
+  /** The stimulus image finished loading — latency measurement starts now. */
+  function markReady() {
+    if (readyAtRef.current === null) readyAtRef.current = performance.now()
   }
 
   // Record an answer and show immediate feedback (no auto-advance — the learner
@@ -108,7 +133,16 @@ export function EmotionRecognitionGame() {
     } else {
       playGentle()
     }
-    recordStep('answer', { ...payload, correct, level, kind: activities[idx].kind })
+    const latencyMs =
+      readyAtRef.current !== null ? Math.round(performance.now() - readyAtRef.current) : null
+    recordStep('answer', {
+      ...payload,
+      correct,
+      level,
+      kind: activities[idx].kind,
+      latencyMs,
+      mode: assessment ? 'assessment' : 'practice',
+    })
   }
 
   function answerEmotion(id: EmotionId) {
@@ -122,17 +156,37 @@ export function EmotionRecognitionGame() {
     const a = activities[idx]
     if (answered || a.kind !== 'whoFeels') return
     setPickedIndex(i)
-    grade(i === a.answerIndex, { picked: i, answerIndex: a.answerIndex, targetEmotion: a.targetEmotion })
+    // Record the picked *emotion* too (not just the position), so wrong taps
+    // feed the per-emotion confusion matrix like every other question type.
+    grade(i === a.answerIndex, {
+      picked: a.photo.emotions[i],
+      answer: a.targetEmotion,
+      pickedIndex: i,
+      answerIndex: a.answerIndex,
+    })
   }
 
   function next() {
     if (idx + 1 >= activities.length) {
-      const result = scoreLevel(correctCount, activities.length)
+      const chance = levelChance(activities)
+      const result = scoreLevel(correctCount, activities.length, chance)
       setSummary(result)
       reportScore(GAME_KEY, result.correct)
+      // Chance-corrected accuracy goes to analytics (levels have different
+      // guessing baselines, so raw accuracy is not comparable across them).
+      recordStep('level_result', {
+        level,
+        mode: assessment ? 'assessment' : 'practice',
+        accuracy: result.accuracy,
+        chance: result.chance,
+        adjustedAccuracy: result.adjustedAccuracy,
+        passed: result.passed,
+        mastered: result.mastered,
+      })
       finishGame(result.correct)
-      // Persist the attempt + unlock the next level server-side.
-      void submit(level, result.correct, result.total)
+      // Persist the attempt + unlock the next level server-side — but never
+      // from an assessment run: probes measure, they don't teach or unlock.
+      if (!assessment) void submit(level, result.correct, result.total)
       setPhase('result')
     } else {
       setIdx(idx + 1)
@@ -143,12 +197,16 @@ export function EmotionRecognitionGame() {
   if (phase === 'select') {
     return (
       <LevelSelect
+        title={t('gameTitle', lang)}
+        icon="🧠"
         levels={LEVELS}
         selected={selectedLevel}
         stateFor={stateFor}
         lang={lang}
         onSelect={setSelectedLevel}
         onStart={() => start(selectedLevel)}
+        assessment={assessment}
+        onAssessmentChange={setAssessment}
       />
     )
   }
@@ -165,7 +223,7 @@ export function EmotionRecognitionGame() {
       <ProgressBar current={idx + (answered ? 1 : 0)} total={activities.length} />
 
       {a.kind === 'single' ? (
-        <SingleImageStage src={a.imageSrc} />
+        <SingleImageStage src={a.imageSrc} onReady={markReady} />
       ) : (
         <GroupPhotoStage
           photo={a.photo}
@@ -175,6 +233,7 @@ export function EmotionRecognitionGame() {
           correctIndex={a.kind === 'whoFeels' ? a.answerIndex : undefined}
           pickedIndex={pickedIndex}
           onPick={answerRegion}
+          onReady={markReady}
         />
       )}
 
@@ -209,6 +268,7 @@ export function EmotionRecognitionGame() {
           lang={lang}
           onReplay={() => start(level)}
           onChooseLevel={() => setPhase('select')}
+          countsTowardsUnlock={!assessment}
         />
       )}
     </div>

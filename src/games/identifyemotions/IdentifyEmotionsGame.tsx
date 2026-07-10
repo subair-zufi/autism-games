@@ -1,9 +1,22 @@
+/**
+ * Emotion Clips — name the emotion in a short video, frozen on its expressive
+ * frame. Levels share the unlock ladder (`../progression`) with Emotion
+ * Recognition: pass ≥70% unlocks the next level, ≥80% masters it. Scoring is
+ * first-try only; after a wrong pick the clip automatically replays (the
+ * "let's look again" scaffold) and the learner keeps trying — those retries
+ * are recorded but don't score.
+ *
+ * Analytics per answer: response latency from the freeze frame appearing
+ * (`cue_ready`-style anchor), the attempt number, and which freeze
+ * manipulation was active (peak vs. early/low-intensity on Hard).
+ *
+ * Clips with an authored `cause` get a follow-up "Why does she feel …?"
+ * question after the emotion is named — emotion *understanding*, not just
+ * labeling. Author causes in `logic.ts` by watching the footage.
+ */
 import { useEffect, useRef, useState } from 'react'
-import { GAME_LIST } from '../../types'
 import { useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
-import { StartScreen } from '../../components/StartScreen'
-import { QuizResult } from '../../components/QuizResult'
 import { speak, speechAvailable } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { emotionMeta, type EmotionId } from '../emotionVocab'
@@ -12,72 +25,113 @@ import {
   emotionLabel,
   t,
   videoFreezeQuestion,
+  whyQuestion,
 } from '../../i18n/strings'
-import { buildQuiz, type VideoQuestion } from './logic'
+import type { Difficulty } from '../../types'
+import { buildQuiz, CHOICE_COUNT, type VideoQuestion } from './logic'
+import {
+  LEVELS,
+  scoreLevel,
+  useLevelProgress,
+  type LevelSummary,
+} from '../progression'
+import { LevelResult, LevelSelect } from '../../components/LevelScreens'
 import { useGameAnalytics } from '../useGameAnalytics'
 
-const META = GAME_LIST.find((g) => g.id === 'identifyemotions')!
+export const GAME_KEY = 'identifyemotions'
+
+/** How long the ⭐ celebration shows before moving on. */
+const CELEBRATE_MS = 1300
+/** Pause before the automatic "let's look again" replay after a wrong pick. */
+const REPLAY_DELAY_MS = 900
 
 export function IdentifyEmotionsGame() {
-  const difficulty = useSettings((s) => s.difficulty.identifyemotions)
+  const lang = useSettings((s) => s.language)
   const reportScore = useScores((s) => s.reportScore)
-  const { recordStep, finishGame, resetSession } = useGameAnalytics('identifyemotions')
+  const { stateFor, highestUnlocked, submit } = useLevelProgress(GAME_KEY)
+  const { recordStep, finishGame, resetSession } = useGameAnalytics(GAME_KEY)
 
-  const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
-  const [quiz, setQuiz] = useState<VideoQuestion[]>(() => buildQuiz(difficulty))
+  const [phase, setPhase] = useState<'select' | 'playing' | 'result'>('select')
+  const [selectedLevel, setSelectedLevel] = useState<Difficulty>('easy')
+  const [level, setLevel] = useState<Difficulty>('easy')
+  const [quiz, setQuiz] = useState<VideoQuestion[]>([])
   const [idx, setIdx] = useState(0)
   const [score, setScore] = useState(0)
-  const [firstTry, setFirstTry] = useState(true)
+  const [summary, setSummary] = useState<LevelSummary | null>(null)
   const [locked, setLocked] = useState(false)
   const [celebrating, setCelebrating] = useState(false)
   const [wrong, setWrong] = useState<EmotionId[]>([])
-  // The clip pauses on its "peak emotion" frame and the question + answers only
-  // become active once it is frozen. Guard so we pause exactly once per clip.
+  // The current question's sub-stage: naming the emotion, or (for clips with
+  // an authored cause) the "why" follow-up.
+  const [stage, setStage] = useState<'emotion' | 'cause'>('emotion')
+  const [causePicked, setCausePicked] = useState<number | null>(null)
+  // The clip pauses on its freeze frame and the question + answers only
+  // become active once it is frozen. Guard so we pause exactly once per play.
   const [frozen, setFrozen] = useState(false)
   const pausedRef = useRef(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  // Latency anchors: when the freeze frame / cause question appeared.
+  const frozenAtRef = useRef<number | null>(null)
+  const causeAtRef = useRef<number | null>(null)
+  const attemptRef = useRef(0)
+  const firstTryRef = useRef(true)
 
-  const q = quiz[idx]
+  const q: VideoQuestion | undefined = quiz[idx]
 
-  function start() {
+  // While choosing, keep the selection on the highest unlocked level.
+  const highest = highestUnlocked()
+  useEffect(() => {
+    if (phase === 'select') setSelectedLevel(highest)
+  }, [highest, phase])
+
+  function start(lvl: Difficulty) {
     resetSession()
-    setQuiz(buildQuiz(difficulty))
+    setLevel(lvl)
+    setQuiz(buildQuiz(lvl))
     setIdx(0)
     setScore(0)
+    setSummary(null)
     resetQuestion()
     setPhase('playing')
   }
 
   function resetQuestion() {
-    setFirstTry(true)
     setLocked(false)
     setCelebrating(false)
     setWrong([])
+    setStage('emotion')
+    setCausePicked(null)
     setFrozen(false)
     pausedRef.current = false
+    frozenAtRef.current = null
+    causeAtRef.current = null
+    attemptRef.current = 0
+    firstTryRef.current = true
   }
 
-  /** Pause on the peak-emotion frame once the clip reaches its timestamp. */
-  function freezeAtPeak() {
+  /** Pause on the freeze frame once the clip reaches its timestamp. */
+  function freezeAtTarget() {
     const v = videoRef.current
-    if (!v || pausedRef.current) return
+    if (!v || pausedRef.current || !q) return
     // Clamp the metadata timestamp to the clip so an over-estimate still pauses.
-    const peak = Math.min(q.clip.peakTime, (v.duration || q.clip.peakTime) - 0.1)
-    if (v.currentTime >= peak) {
+    const target = Math.min(q.freezeTime, (v.duration || q.freezeTime) - 0.1)
+    if (v.currentTime >= target) {
       v.pause()
       pausedRef.current = true
       setFrozen(true)
+      frozenAtRef.current = performance.now()
     }
   }
 
-  /** Fallback: if the clip ends before the peak timestamp, freeze on the last frame. */
+  /** Fallback: if the clip ends before the freeze timestamp, freeze on the last frame. */
   function onEnded() {
     if (pausedRef.current) return
     pausedRef.current = true
     setFrozen(true)
+    frozenAtRef.current = performance.now()
   }
 
-  /** "Watch again" — rewind and replay up to the peak freeze. */
+  /** "Watch again" — rewind and replay up to the freeze. */
   function replay() {
     if (locked) return
     const v = videoRef.current
@@ -88,9 +142,44 @@ export function IdentifyEmotionsGame() {
     void v.play()
   }
 
+  function advance(nextScore: number) {
+    if (idx + 1 >= quiz.length) {
+      const chance = 1 / CHOICE_COUNT[level]
+      const result = scoreLevel(nextScore, quiz.length, chance)
+      setSummary(result)
+      reportScore(GAME_KEY, result.correct)
+      recordStep('level_result', {
+        level,
+        accuracy: result.accuracy,
+        chance: result.chance,
+        adjustedAccuracy: result.adjustedAccuracy,
+        passed: result.passed,
+        mastered: result.mastered,
+      })
+      finishGame(result.correct)
+      void submit(level, result.correct, result.total)
+      setPhase('result')
+    } else {
+      setIdx(idx + 1)
+      resetQuestion()
+    }
+  }
+
   function pick(id: EmotionId) {
-    // Only answerable once frozen on the peak frame; ignore repeats/locked.
-    if (!frozen || locked || wrong.includes(id)) return
+    // Only answerable once frozen on the freeze frame; ignore repeats/locked.
+    if (!frozen || locked || stage !== 'emotion' || wrong.includes(id) || !q) return
+    attemptRef.current += 1
+    const latencyMs =
+      frozenAtRef.current !== null ? Math.round(performance.now() - frozenAtRef.current) : null
+    const base = {
+      clip: q.clip.slug,
+      level,
+      answer: q.answer,
+      picked: id,
+      attempt: attemptRef.current,
+      latencyMs,
+      freezeKind: q.freezeKind,
+    }
     if (id === q.answer) {
       setLocked(true)
       setCelebrating(true)
@@ -98,35 +187,81 @@ export function IdentifyEmotionsGame() {
       speak('Great job!')
       // Positive reinforcement, then resume the clip before moving on.
       void videoRef.current?.play()
-      const nextScore = score + (firstTry ? 1 : 0)
-      recordStep('answer', { correct: true, answer: q.answer, picked: id, score: nextScore }, { score: nextScore })
+      const nextScore = score + (firstTryRef.current ? 1 : 0)
+      recordStep('answer', { ...base, correct: true, score: nextScore }, { score: nextScore })
       setTimeout(() => {
         setScore(nextScore)
-        if (idx + 1 >= quiz.length) {
-          reportScore('identifyemotions', nextScore)
-          finishGame(nextScore)
-          setPhase('over')
+        setCelebrating(false)
+        if (q.cause) {
+          // Emotion named — now probe the cause ("why" question).
+          setStage('cause')
+          causeAtRef.current = performance.now()
+          speak(whyQuestion(q.clip.gender, q.answer, DISPLAY_LANGS[0]))
         } else {
-          setIdx(idx + 1)
-          resetQuestion()
+          advance(nextScore)
         }
-      }, 1300)
+      }, CELEBRATE_MS)
     } else {
-      recordStep('answer', { correct: false, answer: q.answer, picked: id })
+      recordStep('answer', { ...base, correct: false })
       playGentle()
       speak("Let's look again.")
-      setFirstTry(false)
+      firstTryRef.current = false
       setWrong((w) => [...w, id])
+      // Make "let's look again" literal: automatically replay the clip up to
+      // the freeze frame so the learner re-inspects the expression.
+      setTimeout(replay, REPLAY_DELAY_MS)
     }
   }
 
-  // Read the freeze prompt aloud (in the primary language) once frozen.
-  const freezeSpeak = videoFreezeQuestion(q.clip.gender, DISPLAY_LANGS[0])
-  useEffect(() => {
-    if (frozen && !celebrating) speak(freezeSpeak)
-  }, [frozen, celebrating, freezeSpeak])
+  function pickCause(i: number) {
+    if (stage !== 'cause' || causePicked !== null || !q?.cause) return
+    const correct = i === q.cause.answerIndex
+    const latencyMs =
+      causeAtRef.current !== null ? Math.round(performance.now() - causeAtRef.current) : null
+    setCausePicked(i)
+    recordStep('cause_answer', {
+      clip: q.clip.slug,
+      level,
+      correct,
+      picked: q.cause.options[i].en,
+      answer: q.cause.options[q.cause.answerIndex].en,
+      latencyMs,
+    })
+    if (correct) playSuccess()
+    else playGentle()
+    // One attempt only — show the correct cause, then move on.
+    setTimeout(() => advance(score), 1500)
+  }
 
-  if (phase === 'start') return <StartScreen game={META} onStart={start} />
+  // Read the freeze prompt aloud (in the primary language) once frozen.
+  const freezeSpeak = q ? videoFreezeQuestion(q.clip.gender, DISPLAY_LANGS[0]) : ''
+  useEffect(() => {
+    if (frozen && !celebrating && stage === 'emotion') speak(freezeSpeak)
+  }, [frozen, celebrating, stage, freezeSpeak])
+
+  if (phase === 'select' || !q) {
+    return (
+      <LevelSelect
+        title={t('clipsTitle', lang)}
+        icon="🎬"
+        levels={LEVELS}
+        selected={selectedLevel}
+        stateFor={stateFor}
+        lang={lang}
+        onSelect={setSelectedLevel}
+        onStart={() => start(selectedLevel)}
+      />
+    )
+  }
+
+  const promptLines =
+    stage === 'cause'
+      ? DISPLAY_LANGS.map((l) => whyQuestion(q.clip.gender, q.answer, l))
+      : frozen
+        ? DISPLAY_LANGS.map((l) => videoFreezeQuestion(q.clip.gender, l))
+        : DISPLAY_LANGS.map((l) => t('watchPrompt', l))
+  const promptSpeak =
+    stage === 'cause' ? whyQuestion(q.clip.gender, q.answer, DISPLAY_LANGS[0]) : freezeSpeak
 
   return (
     <div className="game-page">
@@ -140,59 +275,71 @@ export function IdentifyEmotionsGame() {
             src={q.clip.src}
             autoPlay
             playsInline
-            onTimeUpdate={freezeAtPeak}
+            onTimeUpdate={freezeAtTarget}
             onEnded={onEnded}
           />
-          <button className="replay-btn" onClick={replay} disabled={locked}>↻ Watch again</button>
+          {stage === 'emotion' && (
+            <button className="replay-btn" onClick={replay} disabled={locked}>↻ Watch again</button>
+          )}
         </div>
         {celebrating && <div className="celebrate">⭐</div>}
       </div>
       <div className="game-bottom">
-        {frozen ? (
-          <div className="prompt-banner er-prompt">
-            <div className="er-prompt-lines">
-              {DISPLAY_LANGS.map((lang) => (
-                <span key={lang} className={`er-prompt-line er-prompt-${lang}`}>
-                  {videoFreezeQuestion(q.clip.gender, lang)}
-                </span>
-              ))}
-            </div>
-            {speechAvailable() && (
-              <button aria-label="Say it again" onClick={() => speak(freezeSpeak)}>🔊</button>
-            )}
+        <div className="prompt-banner er-prompt">
+          <div className="er-prompt-lines">
+            {promptLines.map((text, i) => (
+              <span key={DISPLAY_LANGS[i]} className={`er-prompt-line er-prompt-${DISPLAY_LANGS[i]}`}>
+                {text}
+              </span>
+            ))}
+          </div>
+          {(frozen || stage === 'cause') && speechAvailable() && (
+            <button aria-label="Say it again" onClick={() => speak(promptSpeak)}>🔊</button>
+          )}
+        </div>
+        {stage === 'cause' && q.cause ? (
+          <div className="choice-row">
+            {q.cause.options.map((opt, i) => {
+              let cls = 'choice-btn'
+              if (causePicked !== null && i === q.cause!.answerIndex) cls += ' correct'
+              else if (causePicked === i) cls += ' wrong'
+              return (
+                <button key={i} className={cls} disabled={causePicked !== null} onClick={() => pickCause(i)}>
+                  {DISPLAY_LANGS.map((l) => (
+                    <span key={l} className={`choice-label choice-label-${l}`}>{opt[l]}</span>
+                  ))}
+                </button>
+              )
+            })}
           </div>
         ) : (
-          <div className="prompt-banner er-prompt">
-            <div className="er-prompt-lines">
-              {DISPLAY_LANGS.map((lang) => (
-                <span key={lang} className={`er-prompt-line er-prompt-${lang}`}>
-                  {t('watchPrompt', lang)}
-                </span>
-              ))}
-            </div>
+          <div className="choice-row">
+            {q.choices.map((id) => {
+              const m = emotionMeta(id)
+              return (
+                <button
+                  key={id}
+                  className="choice-btn"
+                  disabled={!frozen || locked || wrong.includes(id)}
+                  onClick={() => pick(id)}
+                >
+                  <span className="choice-emoji">{m.emoji}</span>
+                  {DISPLAY_LANGS.map((l) => (
+                    <span key={l} className={`choice-label choice-label-${l}`}>{emotionLabel(id, l)}</span>
+                  ))}
+                </button>
+              )
+            })}
           </div>
         )}
-        <div className="choice-row">
-          {q.choices.map((id) => {
-            const m = emotionMeta(id)
-            return (
-              <button
-                key={id}
-                className="choice-btn"
-                disabled={!frozen || locked || wrong.includes(id)}
-                onClick={() => pick(id)}
-              >
-                <span className="choice-emoji">{m.emoji}</span>
-                {DISPLAY_LANGS.map((lang) => (
-                  <span key={lang} className={`choice-label choice-label-${lang}`}>{emotionLabel(id, lang)}</span>
-                ))}
-              </button>
-            )
-          })}
-        </div>
       </div>
-      {phase === 'over' && (
-        <QuizResult score={score} total={quiz.length} onRestart={start} />
+      {phase === 'result' && summary && (
+        <LevelResult
+          summary={summary}
+          lang={lang}
+          onReplay={() => start(level)}
+          onChooseLevel={() => setPhase('select')}
+        />
       )}
     </div>
   )

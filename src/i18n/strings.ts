@@ -41,6 +41,11 @@ const MESSAGES = {
   levelMedium: { en: 'Moderate', ml: 'ഇടത്തരം' },
   levelHard: { en: 'Hard', ml: 'പ്രയാസം' },
   locked: { en: 'Locked', ml: 'പൂട്ടിയത്' },
+  clipsTitle: { en: 'Emotion Clips', ml: 'വികാര ക്ലിപ്പുകൾ' },
+  // Practice = training stimuli, counts towards unlocks. Assessment = held-out
+  // (untrained) stimuli to probe generalization; does not affect unlocks.
+  modePractice: { en: 'Practice', ml: 'പരിശീലനം' },
+  modeAssessment: { en: 'Assessment', ml: 'വിലയിരുത്തൽ' },
 
   // --- In-game HUD -----------------------------------------------------------
   level: { en: 'Level', ml: 'ലെവൽ' },
@@ -83,6 +88,18 @@ const MESSAGES = {
   },
   // Shown while the clip is still playing, before it freezes on the peak frame.
   watchPrompt: { en: 'Watch carefully…', ml: 'ശ്രദ്ധയോടെ കാണൂ…' },
+
+  // Emotion Clips follow-up: after the emotion is named correctly, ask for the
+  // cause ("emotion understanding", not just labeling). `{emotion}` is the
+  // localized emotion word.
+  questionWhyBoy: {
+    en: 'Why does he feel {emotion}?',
+    ml: 'എന്തുകൊണ്ടാണ് അവന് {emotion} തോന്നുന്നത്?',
+  },
+  questionWhyGirl: {
+    en: 'Why does she feel {emotion}?',
+    ml: 'എന്തുകൊണ്ടാണ് അവൾക്ക് {emotion} തോന്നുന്നത്?',
+  },
 
   // --- Feedback --------------------------------------------------------------
   feedbackCorrect: { en: 'Correct! 🎉', ml: 'ശരി! 🎉' },
@@ -176,4 +193,14 @@ export function nameFaceQuestion(gender: Gender, lang: Lang): string {
 /** Emotion Clips freeze prompt ("What is he/she feeling now?"), gendered. */
 export function videoFreezeQuestion(gender: Gender, lang: Lang): string {
   return t(gender === 'boy' ? 'questionVideoBoy' : 'questionVideoGirl', lang)
+}
+
+/** A piece of authored bilingual text (e.g. cause options for why-questions). */
+export type LocalizedText = Entry
+
+/** Emotion Clips "why" follow-up ("Why does he/she feel happy?"), gendered. */
+export function whyQuestion(gender: Gender, emotion: EmotionId, lang: Lang): string {
+  const label = EMOTION_LABELS[emotion][lang]
+  const word = lang === 'en' ? label.toLowerCase() : label
+  return t(gender === 'boy' ? 'questionWhyBoy' : 'questionWhyGirl', lang, { emotion: word })
 }

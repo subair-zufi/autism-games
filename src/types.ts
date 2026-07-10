@@ -146,9 +146,9 @@ export const GAME_LIST: GameMeta[] = [
     path: '/identifyemotions',
     color: '#8b5cf6',
     description: 'Read emotions in motion',
-    objective: 'Identify emotions from short video clips',
+    objective: 'Identify emotions from dynamic video clips, from full-intensity to partially-formed expressions',
     duration: '5–10 min',
-    hasLevels: false,
+    hasLevels: true,
   },
 ]
 
