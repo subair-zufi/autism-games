@@ -5,6 +5,7 @@ export type GameId =
   | 'balldrop'
   | 'mirror'
   | 'blocks'
+  | 'rollback'
   | 'museum'
   | 'rightway'
   | 'rulefixer'
@@ -103,6 +104,17 @@ export const GAME_LIST: GameMeta[] = [
     color: '#f97316',
     description: 'Take turns building',
     objective: 'Share and wait during a cooperative activity',
+    duration: '5–10 min',
+    hasLevels: false,
+  },
+  {
+    id: 'rollback',
+    title: 'Roll-Back Buddy',
+    icon: '⚽',
+    path: '/rollback',
+    color: '#14b8a6',
+    description: 'Roll the ball back · പന്ത് ഉരുട്ടിക്കൊടുക്കൂ',
+    objective: 'Turn-taking · reciprocity: read who is ready for the ball (voice → gesture → body cue) and roll it back · ആരാ റെഡി എന്ന് നോക്കി പന്ത് ഉരുട്ടിക്കൊടുക്കൂ',
     duration: '5–10 min',
     hasLevels: false,
   },

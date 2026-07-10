@@ -19,6 +19,7 @@ import { GardenGame } from './games/garden/GardenGame'
 import { ZebraGame } from './games/zebra/ZebraGame'
 import { MirrorGame } from './games/mirror/MirrorGame'
 import { BlockGame } from './games/blocks/BlockGame'
+import { RollBackGame } from './games/rollback/RollBackGame'
 import { MuseumGame } from './games/museum/MuseumGame'
 import { RightWayGame } from './games/rightway/RightWayGame'
 import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
@@ -33,6 +34,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   zebra: ZebraGame,
   mirror: MirrorGame,
   blocks: BlockGame,
+  rollback: RollBackGame,
   museum: MuseumGame,
   rightway: RightWayGame,
   rulefixer: RuleFixerGame,
