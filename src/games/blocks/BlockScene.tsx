@@ -1,14 +1,28 @@
-import { useRef } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useEffect, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import * as THREE from 'three'
-import { blockY, BLOCK_H, type TurnSpec, type Player } from './logic'
+import { blockY, BLOCK_H, TOWER_MAX, type TurnSpec, type Player } from './logic'
+
+/** Hard mode: the child places blocks by physically grabbing them. */
+export interface GrabControls {
+  /** the child's upcoming block (color/offset); null once the game is over */
+  spec: TurnSpec | null
+  /** true only on the child's own turn (not while waiting or handing off) */
+  canGrab: boolean
+  onPlace: () => void
+  onIllegal: () => void
+}
 
 export interface BlockSceneProps {
   placed: TurnSpec[]
   players: Player[]
   activeIndex: number
   reaching: boolean
+  /** true while a peer builds and the child is up next — pulse the child avatar */
+  childNext?: boolean
+  /** present on hard difficulty: place by grab-and-drop instead of a button */
+  grab?: GrabControls | null
 }
 
 export function BlockScene(props: BlockSceneProps) {
@@ -17,16 +31,46 @@ export function BlockScene(props: BlockSceneProps) {
       <color attach="background" args={['#fff3e2']} />
       <ambientLight intensity={0.85} />
       <directionalLight position={[3, 6, 4]} intensity={0.9} />
+      {/* soft fill from the front so the kids' faces read clearly */}
+      <directionalLight position={[0, 3, 7]} intensity={0.35} />
       <SceneInner {...props} />
     </Canvas>
   )
 }
 
-function SceneInner({ placed, players, activeIndex, reaching }: BlockSceneProps) {
-  const towerTop = blockY(placed.length - 1) + BLOCK_H / 2
+/**
+ * Where the peers stand, by peer count. Slots keep everyone clear of the
+ * occlusion shadow directly behind the tower (|x| < ~1) so no kid ever
+ * disappears behind the stack: back row first, then the table corners.
+ */
+const PEER_SLOTS: Record<number, ReadonlyArray<readonly [number, number]>> = {
+  1: [[1.5, -2.0]],
+  2: [[-1.5, -2.0], [1.5, -2.0]],
+  3: [[-1.5, -2.0], [1.5, -2.0], [2.6, -1.2]],
+  4: [[-1.4, -2.0], [1.4, -2.0], [-2.6, -1.2], [2.6, -1.2]],
+}
+
+function SceneInner({ placed, players, activeIndex, reaching, childNext, grab }: BlockSceneProps) {
+  // Completed towers are set aside as minis so the active stack stays short
+  // and the camera never has to leave the other children out of frame.
+  const doneCount = Math.floor(placed.length / TOWER_MAX)
+  const current = placed.slice(doneCount * TOWER_MAX)
+  const finished: TurnSpec[][] = []
+  for (let k = 0; k < doneCount; k++) finished.push(placed.slice(k * TOWER_MAX, (k + 1) * TOWER_MAX))
+
+  const towerTop = current.length ? blockY(current.length - 1) + BLOCK_H / 2 : 0
+  // child stands front-left of the tower (never occluding it, always in frame)
+  const childX = -1.5
+
   return (
     <group>
-      <CameraRig towerTop={Math.max(towerTop, 0)} />
+      <CameraRig towerTop={towerTop} />
+
+      {/* floor */}
+      <mesh rotation-x={-Math.PI / 2} position={[0, -0.6, 0]}>
+        <circleGeometry args={[9, 48]} />
+        <meshStandardMaterial color="#f6e6cd" />
+      </mesh>
 
       {/* table */}
       <mesh position={[0, -0.35, 0]}>
@@ -38,25 +82,44 @@ function SceneInner({ placed, players, activeIndex, reaching }: BlockSceneProps)
         <meshStandardMaterial color="#e8c79c" />
       </mesh>
 
-      {/* stacked tower */}
-      {placed.map((spec, i) => (
-        <Block key={i} spec={spec} index={i} fresh={i === placed.length - 1} />
+      {/* active tower */}
+      {current.map((spec, i) => (
+        <Block key={i} spec={spec} index={i} fresh={i === current.length - 1} />
       ))}
 
-      {/* player avatars spread along the front of the table */}
+      {/* completed towers, shrunk and lined up along the right edge */}
+      {finished.map((specs, k) => (
+        <MiniTower key={k} specs={specs} slot={k} />
+      ))}
+
+      {/* hard mode: the grabbable block resting beside the child */}
+      {grab?.spec && (
+        <GrabBlock
+          spec={grab.spec}
+          canGrab={grab.canGrab}
+          targetY={blockY(current.length)}
+          homeX={childX + 1.0}
+          onPlace={grab.onPlace}
+          onIllegal={grab.onIllegal}
+        />
+      )}
+
+      {/* kid players standing around the table */}
       {players.map((player, i) => {
         const isActive = i === activeIndex
-        const isReaching = isActive && reaching
-        // spread avatars symmetrically around x=0, spaced ~1.4 units apart
-        const spread = (players.length - 1) * 0.7
-        const x = players.length > 1 ? -spread + i * (spread * 2) / (players.length - 1) : 0
+        const [x, z] =
+          player.kind === 'child'
+            ? [childX, 2.0]
+            : PEER_SLOTS[Math.min(players.length - 1, 4)][i - 1]
         return (
-          <PlayerAvatar
+          <HumanKid
             key={player.id}
             player={player}
             x={x}
+            z={z}
             active={isActive}
-            reaching={isReaching}
+            reaching={isActive && reaching}
+            anticipating={player.kind === 'child' && !!childNext}
           />
         )
       })}
@@ -64,14 +127,20 @@ function SceneInner({ placed, players, activeIndex, reaching }: BlockSceneProps)
   )
 }
 
+/**
+ * Frames the active stack while keeping the kids in view: rises with the
+ * tower but also pulls back, instead of climbing away from the table.
+ */
 function CameraRig({ towerTop }: { towerTop: number }) {
   const { camera } = useThree()
   const look = useRef(new THREE.Vector3(0, 1, 0))
   useFrame(() => {
-    const focusY = Math.max(1, towerTop - 0.6)
+    const focusY = Math.max(0.9, towerTop * 0.5)
     look.current.lerp(new THREE.Vector3(0, focusY, 0), 0.06)
-    const camY = focusY + 1.6
+    const camY = Math.max(2.4, towerTop * 0.6 + 1.6)
+    const camZ = 8 + Math.max(0, towerTop - 1.2) * 0.5
     camera.position.y += (camY - camera.position.y) * 0.06
+    camera.position.z += (camZ - camera.position.z) * 0.06
     camera.lookAt(look.current)
   })
   return null
@@ -102,76 +171,259 @@ function Block({ spec, index, fresh }: { spec: TurnSpec; index: number; fresh: b
   )
 }
 
+/** A finished tower parked along the right edge of the table. */
+function MiniTower({ specs, slot }: { specs: TurnSpec[]; slot: number }) {
+  return (
+    <group position={[2.35, -0.1, 1.1 - slot * 0.4]} scale={0.16}>
+      {specs.map((s, i) => (
+        <mesh key={i} position={[s.offset, blockY(i), 0]}>
+          <boxGeometry args={[1.3, BLOCK_H, 1.3]} />
+          <meshStandardMaterial color={s.color} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+const REST_Y = -0.1 + BLOCK_H / 2 // sitting on the table top
+
 /**
- * A simple avatar: a sphere body with an emoji label above it.
- * Active player is scaled up and gets an emissive glow.
- * Reaching pose tilts the body forward slightly.
+ * Hard mode's block: rests on the table beside the child, bounces gently on
+ * their turn, and is dragged onto the ghost slot at the top of the tower.
+ * Grabbing it out of turn shakes it and reports an impatient grab.
  */
-function PlayerAvatar({
-  player,
-  x,
-  active,
-  reaching,
+function GrabBlock({
+  spec,
+  canGrab,
+  targetY,
+  homeX,
+  onPlace,
+  onIllegal,
 }: {
-  player: Player
-  x: number
-  active: boolean
-  reaching: boolean
+  spec: TurnSpec
+  canGrab: boolean
+  targetY: number
+  homeX: number
+  onPlace: () => void
+  onIllegal: () => void
 }) {
-  const groupRef = useRef<THREE.Group>(null)
-  // child sits at z=1.4 (front of table), peers are behind the tower at z=-1.4
-  const z = player.kind === 'child' ? 1.4 : -1.4
-  const baseY = 0.05
+  const ref = useRef<THREE.Mesh>(null)
+  const [dragging, setDragging] = useState(false)
+  const pos = useRef(new THREE.Vector3(homeX, REST_Y, 1.05))
+  const shake = useRef(0)
+  const target = useRef(new THREE.Vector3())
+  target.current.set(spec.offset, targetY, 0)
+  const home = useRef(new THREE.Vector3())
+  home.current.set(homeX, REST_Y, 1.05)
 
-  useFrame((state) => {
-    const g = groupRef.current
-    if (!g) return
-    const targetScale = active ? 1.25 : 1.0
-    const currentScale = g.scale.x
-    const newScale = currentScale + (targetScale - currentScale) * 0.1
-    g.scale.setScalar(newScale)
-
-    // gentle bob when active
-    if (active) {
-      g.position.y = baseY + Math.sin(state.clock.elapsedTime * 3) * 0.04
-    } else {
-      g.position.y += (baseY - g.position.y) * 0.1
+  // Resolve the drop wherever the pointer is released.
+  useEffect(() => {
+    if (!dragging) return
+    const up = () => {
+      setDragging(false)
+      if (pos.current.distanceTo(target.current) < 0.85) onPlace()
     }
+    window.addEventListener('pointerup', up)
+    return () => window.removeEventListener('pointerup', up)
+  }, [dragging]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    // lean forward when reaching
-    const targetRot = reaching ? -0.45 : 0
-    g.rotation.x += (targetRot - g.rotation.x) * 0.1
+  useFrame((state, dt) => {
+    const m = ref.current
+    if (!m) return
+    if (dragging) {
+      m.position.copy(pos.current)
+    } else {
+      pos.current.lerp(home.current, 0.12)
+      const bounce = canGrab ? Math.abs(Math.sin(state.clock.elapsedTime * 2.5)) * 0.12 : 0
+      m.position.set(pos.current.x, pos.current.y + bounce, pos.current.z)
+    }
+    if (shake.current > 0) {
+      shake.current = Math.max(0, shake.current - dt * 3)
+      m.position.x += Math.sin(state.clock.elapsedTime * 40) * shake.current * 0.08
+    }
+    const mat = m.material as THREE.MeshStandardMaterial
+    mat.emissiveIntensity = canGrab ? 0.3 + Math.sin(state.clock.elapsedTime * 4) * 0.15 : 0
   })
 
   return (
-    <group ref={groupRef} position={[x, baseY, z]}>
-      {/* body sphere */}
-      <mesh>
-        <sphereGeometry args={[0.28, 16, 16]} />
-        <meshStandardMaterial
-          color={player.kind === 'child' ? '#f9a84d' : '#7ac9f1'}
-          emissive={active ? (player.kind === 'child' ? '#f9a84d' : '#7ac9f1') : '#000000'}
-          emissiveIntensity={active ? 0.35 : 0}
-        />
-      </mesh>
-      {/* small head */}
-      <mesh position={[0, 0.38, 0]}>
-        <sphereGeometry args={[0.16, 12, 12]} />
-        <meshStandardMaterial
-          color={player.kind === 'child' ? '#fbd29a' : '#b8e4f9'}
-          emissive={active ? (player.kind === 'child' ? '#fbd29a' : '#b8e4f9') : '#000000'}
-          emissiveIntensity={active ? 0.25 : 0}
-        />
-      </mesh>
-      {/* emoji + name label */}
-      <Text
-        position={[0, 0.72, 0]}
-        fontSize={0.22}
-        anchorX="center"
-        anchorY="bottom"
-        color="#333333"
+    <>
+      <mesh
+        ref={ref}
+        position={[homeX, REST_Y, 1.05]}
+        onPointerDown={(e: ThreeEvent<PointerEvent>) => {
+          e.stopPropagation()
+          if (!canGrab) {
+            shake.current = 1
+            onIllegal()
+            return
+          }
+          pos.current.set(e.point.x, Math.max(REST_Y, e.point.y), 0)
+          setDragging(true)
+        }}
       >
-        {player.emoji} {player.name}
+        <boxGeometry args={[1.3, BLOCK_H, 1.3]} />
+        <meshStandardMaterial color={spec.color} emissive={spec.color} emissiveIntensity={0} />
+      </mesh>
+
+      {/* ghost slot showing where the block belongs */}
+      {canGrab && (
+        <mesh position={[spec.offset, targetY, 0]}>
+          <boxGeometry args={[1.32, BLOCK_H, 1.32]} />
+          <meshBasicMaterial color={spec.color} transparent opacity={0.22} />
+        </mesh>
+      )}
+
+      {/* invisible drag plane through the tower (z=0) */}
+      {dragging && (
+        <mesh
+          position={[0, 2, 0]}
+          onPointerMove={(e: ThreeEvent<PointerEvent>) => {
+            pos.current.set(e.point.x, Math.max(0.15, e.point.y), 0)
+          }}
+        >
+          <planeGeometry args={[40, 40]} />
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+        </mesh>
+      )}
+    </>
+  )
+}
+
+/**
+ * A stylized child (~10–15 y/o): legs, shirt, arms, head with hair and a
+ * face. Peers stand behind the table facing the child; the child stands in
+ * front with their back to the camera. The active kid bobs, glows, and
+ * reaches an arm out over the tower to set their block.
+ */
+function HumanKid({
+  player,
+  x,
+  z,
+  active,
+  reaching,
+  anticipating,
+}: {
+  player: Player
+  x: number
+  z: number
+  active: boolean
+  reaching: boolean
+  anticipating: boolean
+}) {
+  const g = useRef<THREE.Group>(null)
+  const body = useRef<THREE.Group>(null)
+  const arm = useRef<THREE.Group>(null)
+  const shirtMat = useRef<THREE.MeshStandardMaterial>(null)
+  const look = player.look
+  // everyone turns toward the tower at the center of the table
+  const facing = Math.atan2(-x, -z)
+  const baseY = -0.6 // feet on the floor
+  const phase = x * 1.7
+
+  useFrame((state) => {
+    const grp = g.current
+    if (!grp) return
+    const t = state.clock.elapsedTime
+    const targetScale = active ? 1.08 : anticipating ? 1.05 : 1
+    grp.scale.setScalar(grp.scale.x + (targetScale - grp.scale.x) * 0.1)
+    // gentle bob when it's this kid's turn
+    const bob = active ? Math.abs(Math.sin(t * 3)) * 0.05 : 0
+    grp.position.y += (baseY + bob - grp.position.y) * 0.1
+
+    const b = body.current
+    if (b) {
+      // idle sway + lean in over the table while placing
+      b.rotation.y = facing + Math.sin(t * 0.9 + phase) * 0.04
+      const lean = reaching ? -0.28 : 0
+      b.rotation.x += (lean - b.rotation.x) * 0.1
+    }
+    if (arm.current) {
+      const raise = reaching ? -1.45 : Math.sin(t * 1.1 + phase) * 0.06
+      arm.current.rotation.x += (raise - arm.current.rotation.x) * 0.12
+    }
+    if (shirtMat.current) {
+      const glow = active ? 0.35 : anticipating ? 0.25 + Math.abs(Math.sin(t * 4)) * 0.3 : 0
+      shirtMat.current.emissiveIntensity += (glow - shirtMat.current.emissiveIntensity) * 0.2
+    }
+  })
+
+  return (
+    <group ref={g} position={[x, baseY, z]}>
+      <group ref={body}>
+        {/* legs + shoes */}
+        {[-0.09, 0.09].map((lx) => (
+          <group key={lx}>
+            <mesh position={[lx, 0.28, 0]}>
+              <cylinderGeometry args={[0.065, 0.075, 0.56, 10]} />
+              <meshStandardMaterial color={look.pants} />
+            </mesh>
+            <mesh position={[lx, 0.03, 0.03]}>
+              <boxGeometry args={[0.14, 0.07, 0.24]} />
+              <meshStandardMaterial color="#494d52" />
+            </mesh>
+          </group>
+        ))}
+        {/* torso */}
+        <mesh position={[0, 0.85, 0]}>
+          <capsuleGeometry args={[0.175, 0.34, 6, 14]} />
+          <meshStandardMaterial
+            ref={shirtMat}
+            color={look.shirt}
+            emissive={look.shirt}
+            emissiveIntensity={0}
+          />
+        </mesh>
+        {/* left arm (resting) */}
+        <group position={[-0.25, 1.03, 0]}>
+          <mesh position={[0, -0.19, 0]}>
+            <cylinderGeometry args={[0.05, 0.045, 0.4, 8]} />
+            <meshStandardMaterial color={look.shirt} />
+          </mesh>
+          <mesh position={[0, -0.42, 0]}>
+            <sphereGeometry args={[0.055, 10, 10]} />
+            <meshStandardMaterial color={look.skin} />
+          </mesh>
+        </group>
+        {/* right arm (reaches toward the tower on their turn) */}
+        <group ref={arm} position={[0.25, 1.03, 0]}>
+          <mesh position={[0, -0.19, 0]}>
+            <cylinderGeometry args={[0.05, 0.045, 0.4, 8]} />
+            <meshStandardMaterial color={look.shirt} />
+          </mesh>
+          <mesh position={[0, -0.42, 0]}>
+            <sphereGeometry args={[0.055, 10, 10]} />
+            <meshStandardMaterial color={look.skin} />
+          </mesh>
+        </group>
+        {/* head, hair, face */}
+        <mesh position={[0, 1.38, 0]}>
+          <sphereGeometry args={[0.165, 18, 18]} />
+          <meshStandardMaterial color={look.skin} />
+        </mesh>
+        <mesh position={[0, 1.45, -0.03]} scale={[1, 0.72, 1]}>
+          <sphereGeometry args={[0.175, 18, 18]} />
+          <meshStandardMaterial color={look.hair} />
+        </mesh>
+        {look.longHair && (
+          <mesh position={[0, 1.27, -0.12]}>
+            <boxGeometry args={[0.26, 0.34, 0.1]} />
+            <meshStandardMaterial color={look.hair} />
+          </mesh>
+        )}
+        {[-0.06, 0.06].map((ex) => (
+          <mesh key={ex} position={[ex, 1.4, 0.145]}>
+            <sphereGeometry args={[0.021, 8, 8]} />
+            <meshStandardMaterial color="#2b2620" />
+          </mesh>
+        ))}
+        <mesh position={[0, 1.315, 0.152]}>
+          <boxGeometry args={[0.07, 0.016, 0.02]} />
+          <meshStandardMaterial color="#9a5b4a" />
+        </mesh>
+      </group>
+      {/* name label (kept outside the rotated body so it never mirrors) */}
+      <Text position={[0, 1.72, 0]} fontSize={0.19} anchorX="center" anchorY="bottom" color="#333333">
+        {player.name}
       </Text>
     </group>
   )

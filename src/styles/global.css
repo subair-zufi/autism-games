@@ -731,6 +731,12 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .player-btn.peer.active { border-color: #f5c542; background: #fff8e1; box-shadow: 0 0 0 3px #f5c54255; }
 .player-btn.child { cursor: pointer; }
 .player-btn.child.ready { border-color: #7ac74f; background: #eafce0; }
+.player-btn.child.next { border-color: #f5a623; background: #fff2d6; animation: child-next-pulse 0.9s ease-in-out infinite; }
+.player-btn.child.handoff { border-color: #5aa9e6; background: #e3f1fc; }
+@keyframes child-next-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 #f5a62355; }
+  50% { box-shadow: 0 0 0 6px #f5a62322; }
+}
 
 /* (legacy student-manager panel removed — participants now live on their own page) */
 .player-btn.child.wait { opacity: .7; }

@@ -48,6 +48,27 @@ describe('blocks logic (multi-peer)', () => {
     expect(new Set(childSlots).size).toBeGreaterThan(1)
   })
 
+  it('non-shuffle configs use the same fixed rotation every round', () => {
+    const cfg = CONFIG.easy
+    expect(cfg.shuffle).toBe(false)
+    const players = buildPlayers(cfg.players)
+    const seq = makeSequence(cfg, players, seeded(4))
+    const firstRound = seq.slice(0, cfg.players).map((t) => t.playerIndex)
+    // child leads a predictable cycle the child can anticipate
+    expect(firstRound).toEqual([...Array(cfg.players).keys()])
+    for (let r = 1; r < cfg.rounds; r++) {
+      const round = seq.slice(r * cfg.players, (r + 1) * cfg.players).map((t) => t.playerIndex)
+      expect(round).toEqual(firstRound)
+    }
+  })
+
+  it('hard mode enables shuffling and grab-and-place; easier modes do not', () => {
+    expect(CONFIG.hard.shuffle).toBe(true)
+    expect(CONFIG.hard.grab).toBe(true)
+    expect(CONFIG.easy.grab).toBe(false)
+    expect(CONFIG.medium.grab).toBe(false)
+  })
+
   it('blockY stacks by BLOCK_H', () => {
     expect(blockY(0)).toBeCloseTo(BLOCK_H / 2)
     expect(blockY(2)).toBeCloseTo(BLOCK_H / 2 + 2 * BLOCK_H)
