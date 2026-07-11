@@ -1,15 +1,11 @@
 export type GameId =
   | 'emotionrecognition'
-  | 'zebra'
   | 'garden'
-  | 'balldrop'
-  | 'mirror'
   | 'blocks'
   | 'rollback'
   | 'museum'
   | 'rightway'
   | 'rulefixer'
-  | 'slider'
   | 'identifyemotions'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
@@ -42,17 +38,6 @@ export const GAME_LIST: GameMeta[] = [
     hasLevels: true,
   },
   {
-    id: 'zebra',
-    title: 'Cross the Road',
-    icon: '🚦',
-    path: '/zebra',
-    color: '#38bdf8',
-    description: 'Wait, look, then cross safely',
-    objective: 'Practise stop-and-go impulse control at a crossing',
-    duration: '5–10 min',
-    hasLevels: false,
-  },
-  {
     id: 'museum',
     title: 'Museum Look',
     icon: '🖼️',
@@ -71,28 +56,6 @@ export const GAME_LIST: GameMeta[] = [
     color: '#22c55e',
     description: 'Follow the point in the garden',
     objective: 'Joint attention · step 2: follow a fading cue (glowing point → point → far point) in a busy garden',
-    duration: '5–10 min',
-    hasLevels: false,
-  },
-  {
-    id: 'balldrop',
-    title: 'Ball Drop',
-    icon: '🔴',
-    path: '/balldrop',
-    color: '#a855f7',
-    description: 'Time your taps',
-    objective: 'Build cause-and-effect timing and attention',
-    duration: '5 min',
-    hasLevels: false,
-  },
-  {
-    id: 'mirror',
-    title: 'Emotion Mirror',
-    icon: '🪞',
-    path: '/mirror',
-    color: '#ec4899',
-    description: 'Copy the expression',
-    objective: 'Imitate and respond to emotional expressions',
     duration: '5–10 min',
     hasLevels: false,
   },
@@ -140,17 +103,6 @@ export const GAME_LIST: GameMeta[] = [
     objective:
       'Social norms: choose the kind response across helping, comforting, inclusion, politeness and fairness situations — harder levels drop the obvious wrong option',
     duration: '5–10 min',
-    hasLevels: false,
-  },
-  {
-    id: 'slider',
-    title: 'Slide Queue',
-    icon: '🛝',
-    path: '/slider',
-    color: '#f43f5e',
-    description: 'Wait your turn',
-    objective: 'Practise turn-taking and patience in a queue',
-    duration: '5 min',
     hasLevels: false,
   },
   {

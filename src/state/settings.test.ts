@@ -14,8 +14,8 @@ test('defaults: voice on, sound on, easy difficulty everywhere', () => {
 })
 
 test('setDifficulty updates one game only', () => {
-  useSettings.getState().setDifficulty('zebra', 'hard')
-  expect(useSettings.getState().difficulty.zebra).toBe('hard')
+  useSettings.getState().setDifficulty('museum', 'hard')
+  expect(useSettings.getState().difficulty.museum).toBe('hard')
   expect(useSettings.getState().difficulty.garden).toBe('easy')
 })
 
@@ -28,11 +28,11 @@ test('stale saved state (missing newer game keys) still gets defaults', async ()
   // simulate a store saved before the emotionrecognition game existed
   localStorage.setItem(
     'autism-settings',
-    JSON.stringify({ state: { voiceOn: false, soundOn: true, difficulty: { zebra: 'hard' } }, version: 0 }),
+    JSON.stringify({ state: { voiceOn: false, soundOn: true, difficulty: { museum: 'hard' } }, version: 0 }),
   )
   await useSettings.persist.rehydrate()
   const s = useSettings.getState()
   expect(s.voiceOn).toBe(false) // saved value kept
-  expect(s.difficulty.zebra).toBe('hard') // saved value kept
+  expect(s.difficulty.museum).toBe('hard') // saved value kept
   expect(s.difficulty.emotionrecognition).toBe('easy') // new key filled from defaults
 })

@@ -22,7 +22,7 @@ export const useSettings = create<SettingsState>()(
       voiceOn: true,
       soundOn: true,
       language: 'en',
-      difficulty: { emotionrecognition: 'easy', zebra: 'easy', garden: 'easy', balldrop: 'easy', mirror: 'easy', blocks: 'easy', rollback: 'easy', museum: 'easy', rightway: 'easy', rulefixer: 'easy', slider: 'easy', identifyemotions: 'easy' },
+      difficulty: { emotionrecognition: 'easy', garden: 'easy', blocks: 'easy', rollback: 'easy', museum: 'easy', rightway: 'easy', rulefixer: 'easy', identifyemotions: 'easy' },
       setVoiceOn: (voiceOn) => set({ voiceOn }),
       setSoundOn: (soundOn) => set({ soundOn }),
       setLanguage: (language) => set({ language }),
@@ -33,7 +33,7 @@ export const useSettings = create<SettingsState>()(
       name: 'autism-settings',
       // Deep-merge so saved state from an older version (missing newer game
       // keys) still gets defaults for every game — otherwise a stale store
-      // would leave e.g. difficulty.slider undefined and crash that game.
+      // would leave e.g. difficulty.museum undefined and crash that game.
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<SettingsState>
         return {
