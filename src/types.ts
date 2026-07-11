@@ -135,8 +135,9 @@ export const GAME_LIST: GameMeta[] = [
     icon: '💡',
     path: '/rulefixer',
     color: '#f59e0b',
-    description: 'Pick the better option',
-    objective: 'Learn social rules through better-choice decisions',
+    description: 'Pick the kind choice · നല്ലത് തിരഞ്ഞെടുക്കൂ',
+    objective:
+      'Social norms: choose the kind response across helping, comforting, inclusion, politeness and fairness situations — harder levels drop the obvious wrong option',
     duration: '5–10 min',
     hasLevels: false,
   },

@@ -1,58 +1,130 @@
 import { expect, test } from 'vitest'
-import { makeRound, rounds, SITUATIONS } from './logic'
+import type { Difficulty } from '../../types'
+import {
+  ACTIVITY_COUNT,
+  buildLevel,
+  levelChance,
+  OPTION_ROLES,
+  tallyByConstruct,
+  trialChance,
+  CONSTRUCTS,
+  SITUATIONS,
+} from './logic'
+import { situationsFor, type StimulusPool } from './content'
 
 const rng = (seq: number[]) => {
   let i = 0
   return () => seq[i++ % seq.length]
 }
 
-test('round counts grow with difficulty', () => {
-  expect(rounds('easy')).toBeLessThan(rounds('hard'))
-  expect(rounds('easy')).toBeGreaterThan(0)
+const POOLS: StimulusPool[] = ['training', 'probe']
+const DIFFS: Difficulty[] = ['easy', 'medium', 'hard']
+
+// --- item bank ---------------------------------------------------------------
+
+test('situation and option ids are unique', () => {
+  expect(new Set(SITUATIONS.map((s) => s.id)).size).toBe(SITUATIONS.length)
+  const optionIds = SITUATIONS.flatMap((s) => s.options.map((o) => o.id))
+  expect(new Set(optionIds).size).toBe(optionIds.length)
 })
 
-test('every situation has exactly one kind (good) option of three', () => {
+test('every situation has exactly one option of each graded role', () => {
   for (const s of SITUATIONS) {
     expect(s.options).toHaveLength(3)
-    expect(s.options.filter((o) => o.isGood)).toHaveLength(1)
-  }
-})
-
-test('every option has label, emoji and a spoken result', () => {
-  for (const s of SITUATIONS) {
-    for (const o of s.options) {
-      expect(o.label.length).toBeGreaterThan(0)
-      expect(o.emoji.length).toBeGreaterThan(0)
-      expect(o.result.length).toBeGreaterThan(0)
+    for (const role of ['kind', 'passive', 'wrong'] as const) {
+      expect(s.options.filter((o) => o.role === role)).toHaveLength(1)
     }
   }
 })
 
-test('situation and option ids are unique', () => {
-  expect(new Set(SITUATIONS.map((s) => s.id)).size).toBe(SITUATIONS.length)
+test('every construct has exactly 2 training and 2 probe situations', () => {
+  for (const construct of CONSTRUCTS) {
+    for (const pool of POOLS) {
+      expect(situationsFor(construct, pool)).toHaveLength(2)
+    }
+  }
+})
+
+test('all child-facing text is present in both languages', () => {
   for (const s of SITUATIONS) {
-    expect(new Set(s.options.map((o) => o.id)).size).toBe(3)
+    expect(s.text.en.length).toBeGreaterThan(0)
+    expect(s.text.ml.length).toBeGreaterThan(0)
+    for (const o of s.options) {
+      expect(o.emoji.length).toBeGreaterThan(0)
+      for (const lang of ['en', 'ml'] as const) {
+        expect(o.label[lang].length).toBeGreaterThan(0)
+        expect(o.result[lang].length).toBeGreaterThan(0)
+      }
+    }
   }
 })
 
-test('makeRound returns all three options including the good one', () => {
-  for (let i = 0; i < 40; i++) {
-    const r = makeRound(null, Math.random)
-    expect(r.choices).toHaveLength(3)
-    expect(r.choices.filter((o) => o.isGood)).toHaveLength(1)
-    expect(new Set(r.choices.map((o) => o.id))).toEqual(new Set(r.situation.options.map((o) => o.id)))
+// --- level construction --------------------------------------------------------
+
+test('a level contains every situation of its pool exactly once', () => {
+  for (const pool of POOLS) {
+    const trials = buildLevel('medium', Math.random, pool)
+    expect(trials).toHaveLength(ACTIVITY_COUNT)
+    const ids = trials.map((t) => t.situation.id)
+    expect(new Set(ids).size).toBe(ACTIVITY_COUNT)
+    for (const t of trials) expect(t.situation.pool).toBe(pool)
   }
 })
 
-test('makeRound never repeats the previous situation', () => {
-  for (let i = 0; i < 50; i++) {
-    expect(makeRound('books', Math.random).situation.id).not.toBe('books')
+test('constructs are stratified: each appears once per half', () => {
+  for (let i = 0; i < 20; i++) {
+    const trials = buildLevel('easy')
+    const half = CONSTRUCTS.length
+    const firstHalf = trials.slice(0, half).map((t) => t.situation.construct)
+    const secondHalf = trials.slice(half).map((t) => t.situation.construct)
+    expect(new Set(firstHalf).size).toBe(half)
+    expect(new Set(secondHalf).size).toBe(half)
+  }
+})
+
+test('each level shows exactly its role subset, always including kind', () => {
+  for (const d of DIFFS) {
+    const trials = buildLevel(d)
+    for (const t of trials) {
+      expect(t.choices).toHaveLength(OPTION_ROLES[d].length)
+      expect(new Set(t.choices.map((o) => o.role))).toEqual(new Set(OPTION_ROLES[d]))
+    }
+  }
+})
+
+test('hard forces the kind-vs-passive discrimination (no obvious wrong)', () => {
+  for (const t of buildLevel('hard')) {
+    expect(t.choices.some((o) => o.role === 'wrong')).toBe(false)
   }
 })
 
 test('deterministic with a seeded rng', () => {
-  const a = makeRound(null, rng([0.3, 0.6, 0.1]))
-  const b = makeRound(null, rng([0.3, 0.6, 0.1]))
-  expect(a.situation.id).toBe(b.situation.id)
-  expect(a.choices.map((o) => o.id)).toEqual(b.choices.map((o) => o.id))
+  const a = buildLevel('medium', rng([0.3, 0.6, 0.1, 0.9, 0.42]))
+  const b = buildLevel('medium', rng([0.3, 0.6, 0.1, 0.9, 0.42]))
+  expect(a.map((t) => t.situation.id)).toEqual(b.map((t) => t.situation.id))
+  expect(a.map((t) => t.choices.map((o) => o.id))).toEqual(
+    b.map((t) => t.choices.map((o) => o.id)),
+  )
+})
+
+// --- chance levels --------------------------------------------------------------
+
+test('chance is 1/2 on easy and hard, 1/3 on medium', () => {
+  expect(levelChance(buildLevel('easy'))).toBeCloseTo(1 / 2)
+  expect(levelChance(buildLevel('medium'))).toBeCloseTo(1 / 3)
+  expect(levelChance(buildLevel('hard'))).toBeCloseTo(1 / 2)
+  for (const t of buildLevel('medium')) expect(trialChance(t)).toBeCloseTo(1 / 3)
+})
+
+// --- per-construct tally ---------------------------------------------------------
+
+test('tallyByConstruct counts correct/total per construct', () => {
+  const tally = tallyByConstruct([
+    { construct: 'helping', correct: true },
+    { construct: 'helping', correct: false },
+    { construct: 'fairness', correct: true },
+  ])
+  expect(tally.helping).toEqual({ correct: 1, total: 2 })
+  expect(tally.fairness).toEqual({ correct: 1, total: 1 })
+  expect(tally.inclusion).toEqual({ correct: 0, total: 0 })
 })

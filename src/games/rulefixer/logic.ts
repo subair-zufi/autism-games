@@ -1,130 +1,116 @@
+/**
+ * Pure game logic for Good Choice — no React, no I/O, fully testable.
+ *
+ * Level design (mirrors the emotion battery, so attempts are psychometrically
+ * comparable):
+ *  - Difficulty = discrimination required, not round count. The level decides
+ *    which option roles are shown: Easy contrasts kind vs. clearly wrong,
+ *    Moderate adds the plausible-passive distractor, Hard drops the obvious
+ *    wrong option and forces the sensitive kind-vs-passive discrimination.
+ *  - Fixed composition: a level always contains every situation of the pool
+ *    (2 per construct × 5 constructs = 10 trials), so item difficulty is a
+ *    property of the level, not of a random draw. Only order varies.
+ *  - Stratified order: constructs are dealt in shuffled cycles — each of the
+ *    5 constructs appears once in the first half and once in the second.
+ *  - Chance level: 1/2 on Easy and Hard, 1/3 on Moderate; `levelChance` feeds
+ *    `scoreLevel` so recorded accuracy is chance-corrected and comparable.
+ */
 import type { Difficulty } from '../../types'
+import { shuffle } from '../emotionVocab'
+import {
+  CONSTRUCTS,
+  situationsFor,
+  type Construct,
+  type Option,
+  type Role,
+  type Situation,
+  type StimulusPool,
+} from './content'
 
-export type PeerMood = 'sad' | 'cry' | 'hurt' | 'neutral'
+// Re-exported so the 3D scene and UI import everything from one module.
+export type { Construct, Option, PeerMood, Role, Situation, StimulusPool } from './content'
+export { CONSTRUCTS, SITUATIONS } from './content'
 
-export interface Option {
-  id: string
-  label: string
-  emoji: string
-  isGood: boolean
-  /** spoken consequence after the child picks this */
-  result: string
+// Scoring is shared across level games; re-exported so imports stay uniform.
+export {
+  PASS_THRESHOLD,
+  MASTERY_THRESHOLD,
+  scoreLevel,
+  type LevelSummary,
+} from '../progression'
+
+/** Trials per level: every situation of the pool, once (5 constructs × 2). */
+export const ACTIVITY_COUNT = 10
+
+/** Which graded option roles a level shows (order here is pre-shuffle). */
+export const OPTION_ROLES: Record<Difficulty, Role[]> = {
+  easy: ['kind', 'wrong'],
+  medium: ['kind', 'passive', 'wrong'],
+  hard: ['kind', 'passive'],
 }
 
-export interface Situation {
-  id: string
-  /** what the narrator describes about the frozen moment */
-  text: string
-  /** emoji cue shown in the bubble */
-  bubble: string
-  scene: {
-    mood: PeerMood
-    books?: boolean
-    tall?: boolean
-    /** show a playground swing the peer is standing beside, waiting */
-    swing?: boolean
-    /** peer is lying fallen on the ground */
-    fallen?: boolean
-    /** peer stands off to the side watching a game (ball cue) */
-    watching?: boolean
-  }
-  options: Option[]
-}
-
-export const SITUATIONS: Situation[] = [
-  {
-    id: 'books',
-    text: 'Aisha dropped all her books on the floor.',
-    bubble: '📚',
-    scene: { mood: 'sad', books: true },
-    options: [
-      { id: 'help', label: 'Help pick them up', emoji: '🤝', isGood: true, result: 'You helped! Aisha feels happy and says thank you.' },
-      { id: 'walk', label: 'Walk past', emoji: '🚶', isGood: false, result: 'Aisha is left struggling alone. Helping would be kinder.' },
-      { id: 'laugh', label: 'Laugh at her', emoji: '😂', isGood: false, result: 'That hurts Aisha\'s feelings. Helping is the kind choice.' },
-    ],
-  },
-  {
-    id: 'crying',
-    text: 'A new boy is crying all by himself at break.',
-    bubble: '😢',
-    scene: { mood: 'cry' },
-    options: [
-      { id: 'ask', label: 'Ask if he is okay', emoji: '💬', isGood: true, result: 'He feels cared for and stops crying. Well done.' },
-      { id: 'ignore', label: 'Ignore him', emoji: '🙈', isGood: false, result: 'He stays sad and alone. Checking in would help.' },
-      { id: 'stare', label: 'Point and stare', emoji: '👉', isGood: false, result: 'That makes him feel worse. A kind word helps more.' },
-    ],
-  },
-  {
-    id: 'teacher',
-    text: 'Your teacher walks in to start the class.',
-    bubble: '🧑‍🏫',
-    scene: { mood: 'neutral', tall: true },
-    options: [
-      { id: 'greet', label: 'Say good morning', emoji: '🙂', isGood: true, result: 'A friendly greeting! Your teacher smiles back.' },
-      { id: 'shout', label: 'Keep talking loudly', emoji: '📢', isGood: false, result: 'It is hard to start class. Greeting calmly is better.' },
-      { id: 'turn', label: 'Turn away', emoji: '🙅', isGood: false, result: 'That seems unfriendly. A hello is the kind choice.' },
-    ],
-  },
-  {
-    id: 'fell',
-    text: 'A friend trips and falls in the playground.',
-    bubble: '🤕',
-    scene: { mood: 'hurt', fallen: true },
-    options: [
-      { id: 'helpup', label: 'Help them up', emoji: '🤝', isGood: true, result: 'You helped them up. They feel safe and thankful.' },
-      { id: 'run', label: 'Run away', emoji: '🏃', isGood: false, result: 'They are left hurt. Stopping to help is kinder.' },
-      { id: 'laugh2', label: 'Laugh at them', emoji: '😂', isGood: false, result: 'That is unkind when they are hurt. Help them instead.' },
-    ],
-  },
-  {
-    id: 'lonely',
-    text: 'A child stands alone, watching your game.',
-    bubble: '🧍',
-    scene: { mood: 'sad', watching: true },
-    options: [
-      { id: 'invite', label: 'Invite them to play', emoji: '👋', isGood: true, result: 'They join in and have fun. That was very kind.' },
-      { id: 'ignore2', label: 'Ignore them', emoji: '🙈', isGood: false, result: 'They keep feeling left out. Inviting them is kind.' },
-      { id: 'shoo', label: 'Tell them to go away', emoji: '🙅', isGood: false, result: 'That hurts their feelings. Including them is better.' },
-    ],
-  },
-  {
-    id: 'swing',
-    text: 'Your friend has waited a long time for the swing.',
-    bubble: '⏳',
-    scene: { mood: 'sad', swing: true },
-    options: [
-      { id: 'turnit', label: 'Give them a turn', emoji: '🤝', isGood: true, result: 'You took turns! Your friend is happy and grateful.' },
-      { id: 'keep', label: 'Keep swinging', emoji: '🙃', isGood: false, result: 'Your friend keeps waiting. Taking turns is fair.' },
-      { id: 'push', label: 'Push them away', emoji: '😠', isGood: false, result: 'That is not safe or kind. Take turns instead.' },
-    ],
-  },
-]
-
-const ROUNDS: Record<Difficulty, number> = { easy: 3, medium: 5, hard: 7 }
-export function rounds(difficulty: Difficulty): number {
-  return ROUNDS[difficulty]
-}
-
-export interface Round {
+export interface Trial {
   situation: Situation
-  /** options in the order they should be shown (shuffled) */
+  /** the level's option subset, in shuffled display order */
   choices: Option[]
 }
 
-export function makeRound(
-  prevId: string | null,
+/**
+ * Build one level's trials from the given pool ('training' for practice,
+ * 'probe' for Assessment mode — held-out situations only).
+ */
+export function buildLevel(
+  difficulty: Difficulty,
   rng: () => number = Math.random,
-): Round {
-  const pool = SITUATIONS.filter((s) => s.id !== prevId)
-  const situation = pool[Math.floor(rng() * pool.length)]
-  return { situation, choices: shuffle(situation.options, rng) }
+  pool: StimulusPool = 'training',
+): Trial[] {
+  const roles = OPTION_ROLES[difficulty]
+  // Two stratified cycles: every construct once per cycle, then repeat with
+  // each construct's remaining situation.
+  const remaining = new Map<Construct, Situation[]>(
+    CONSTRUCTS.map((c) => [c, shuffle(situationsFor(c, pool), rng)]),
+  )
+  const trials: Trial[] = []
+  const cycles = Math.ceil(ACTIVITY_COUNT / CONSTRUCTS.length)
+  for (let cycle = 0; cycle < cycles; cycle++) {
+    for (const construct of shuffle(CONSTRUCTS, rng)) {
+      const pile = remaining.get(construct)!
+      const situation = pile.pop()
+      if (!situation) continue
+      trials.push({
+        situation,
+        choices: shuffle(
+          situation.options.filter((o) => roles.includes(o.role)),
+          rng,
+        ),
+      })
+    }
+  }
+  return trials
 }
 
-function shuffle<T>(arr: T[], rng: () => number): T[] {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
+/** Guessing probability of one trial (1/2 on Easy and Hard, 1/3 on Moderate). */
+export function trialChance(t: Trial): number {
+  return 1 / t.choices.length
+}
+
+/** Mean guessing probability across a level — feed into `scoreLevel` so the
+ *  recorded adjusted accuracy is comparable across levels. */
+export function levelChance(trials: Trial[]): number {
+  if (trials.length === 0) return 0
+  return trials.reduce((sum, t) => sum + trialChance(t), 0) / trials.length
+}
+
+/** Per-construct correct/total tallies for the level_result analytics payload. */
+export function tallyByConstruct(
+  answers: Array<{ construct: Construct; correct: boolean }>,
+): Record<Construct, { correct: number; total: number }> {
+  const tally = Object.fromEntries(
+    CONSTRUCTS.map((c) => [c, { correct: 0, total: 0 }]),
+  ) as Record<Construct, { correct: number; total: number }>
+  for (const a of answers) {
+    tally[a.construct].total += 1
+    if (a.correct) tally[a.construct].correct += 1
   }
-  return a
+  return tally
 }
