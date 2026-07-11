@@ -7,22 +7,29 @@ only ever read reports for their own students.
 """
 import uuid
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .. import scoring
 from ..database import get_db
 from ..deps import get_current_user
-from ..models import GameEvent, GameSession, LevelProgress, User
+from ..models import GameEvent, GameSession, LevelProgress, Student, User
 from ..schemas import (
     EmotionReport,
     EmotionStat,
+    GameScoreOut,
+    GroupBreakdown,
+    GroupReport,
+    GroupStatOut,
+    ParticipantSkillReport,
     ReportGameBreakdown,
     ReportRecentActivity,
     ReportSummary,
     ReportTimeseriesPoint,
+    SkillScoreOut,
     StudentReport,
 )
 from .students import resolve_owned_student
@@ -31,7 +38,7 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 
 # Number of playable games in the client GAME_LIST. Kept here so the summary can
 # show "N / TOTAL games done"; keep in sync with src/types.ts GAME_LIST.
-TOTAL_GAMES = 11
+TOTAL_GAMES = len(scoring.GAMES)
 
 # The games whose "answer" events carry emotion ids, and the emotion vocabulary.
 # Keep in sync with src/games/emotionVocab.ts.
@@ -207,4 +214,123 @@ def emotion_report(
         emotions=list(EMOTION_IDS),
         confusion=confusion,
         stats=stats,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Standardised skill scores (research analytics)
+# ---------------------------------------------------------------------------
+def _game_out(g: scoring.GameScore) -> GameScoreOut:
+    return GameScoreOut(**g.as_dict())
+
+
+def _skill_out(s: scoring.SkillScore) -> SkillScoreOut:
+    return SkillScoreOut(
+        skill=s.skill,
+        label=s.label,
+        score=s.score,
+        delta=s.delta,
+        n_games=s.n_games,
+        games=[_game_out(g) for g in s.games],
+    )
+
+
+def _score_student(db: Session, user: User, student_id: uuid.UUID) -> scoring.ParticipantScores:
+    """Load a student's whole event stream and reduce it to standardised scores."""
+    events = db.scalars(
+        select(GameEvent)
+        .where(GameEvent.user_id == user.id, GameEvent.student_id == student_id)
+        .order_by(GameEvent.created_at.asc())
+    ).all()
+    return scoring.score_participant(events)
+
+
+@router.get("/student/{student_id}/skills", response_model=ParticipantSkillReport)
+def student_skill_report(
+    student_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> ParticipantSkillReport:
+    """Per-participant standardised profile: a 0-100 Social-Emotional composite,
+    the four skill scores, the eight game scores, and pre/post improvement at
+    every level. All scores are chance-corrected first-attempt accuracy so they
+    are directly comparable across games and skills (see app/scoring.py)."""
+    resolve_owned_student(db, user, student_id)
+    ps = _score_student(db, user, student_id)
+    return ParticipantSkillReport(
+        student_id=student_id,
+        composite=ps.composite,
+        composite_delta=ps.composite_delta,
+        n_sessions=ps.n_sessions,
+        n_trials=ps.n_trials,
+        skills=[_skill_out(s) for s in ps.skills],
+    )
+
+
+# Which Student attribute (or derived band) each grouping dimension reads.
+_GROUP_DIMS = ("overall", "gender", "autism_level", "age_band", "iq_band")
+
+
+def _bucket_of(student: Student, group_by: str) -> str:
+    if group_by == "gender":
+        return student.gender or "unknown"
+    if group_by == "autism_level":
+        return student.autism_level or "unknown"
+    if group_by == "age_band":
+        return scoring.age_band(student.date_of_birth, date.today())
+    if group_by == "iq_band":
+        return scoring.iq_band(student.iq_score)
+    return "all"
+
+
+@router.get("/groups", response_model=GroupReport)
+def group_report(
+    group_by: str = Query(default="overall", description="overall|gender|autism_level|age_band|iq_band"),
+    gender: str | None = Query(default=None, description="Filter cohort by gender"),
+    autism_level: str | None = Query(default=None, description="Filter cohort by autism level"),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> GroupReport:
+    """Cohort-level scores across the mentor's students, optionally split by a
+    demographic dimension (gender / autism level / age band / IQ band).
+
+    Returns mean, SD and mean-improvement of the composite and each skill per
+    bucket, so a researcher can compare group-wise and demographic differences.
+    Only the requesting mentor's own students are ever included.
+    """
+    if group_by not in _GROUP_DIMS:
+        group_by = "overall"
+
+    stmt = select(Student).where(Student.mentor_id == user.id)
+    if gender:
+        stmt = stmt.where(Student.gender == gender)
+    if autism_level:
+        stmt = stmt.where(Student.autism_level == autism_level)
+    students = list(db.scalars(stmt).all())
+
+    # Score every student once, then bucket them for aggregation.
+    scored: list[tuple[Student, scoring.ParticipantScores]] = [
+        (s, _score_student(db, user, s.id)) for s in students
+    ]
+    # Only students with at least one scorable trial contribute.
+    scored = [(s, ps) for (s, ps) in scored if ps.n_trials > 0]
+
+    buckets: dict[str, list[scoring.ParticipantScores]] = defaultdict(list)
+    for student, ps in scored:
+        buckets[_bucket_of(student, group_by)].append(ps)
+
+    breakdowns = [
+        GroupBreakdown(
+            group=name,
+            n_participants=len(group),
+            stats=[GroupStatOut(**gs.as_dict()) for gs in scoring.aggregate_group(group)],
+        )
+        for name in sorted(buckets)
+        for group in [buckets[name]]
+    ]
+
+    return GroupReport(
+        group_by=group_by,
+        total_participants=len(scored),
+        breakdowns=breakdowns,
     )

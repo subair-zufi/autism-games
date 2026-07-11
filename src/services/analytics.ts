@@ -138,6 +138,69 @@ export interface EmotionReport {
   stats: EmotionStat[];
 }
 
+/** Standardised 0–100 score for one game (chance-corrected first-attempt
+ *  accuracy) plus secondary metrics and pre/post improvement. See the server's
+ *  `app/scoring.py` for the exact definition. */
+export interface GameScore {
+  game_key: string;
+  skill: string;
+  score: number | null; // 0–100, chance-corrected
+  raw_accuracy: number | null; // 0–1, uncorrected
+  n_trials: number;
+  n_sessions: number;
+  median_latency_ms: number | null;
+  baseline_score: number | null; // first session (pre)
+  latest_score: number | null; // most recent session (post)
+  delta: number | null; // latest − baseline (improvement)
+}
+
+/** Mean 0–100 score across the games that train one target skill. */
+export interface SkillScore {
+  skill: string;
+  label: string;
+  score: number | null;
+  delta: number | null;
+  n_games: number;
+  games: GameScore[];
+}
+
+/** Per-participant standardised profile: composite social-emotional score, the
+ *  four skill scores, per-game scores, and improvement at every level. */
+export interface ParticipantSkillReport {
+  student_id: string;
+  composite: number | null;
+  composite_delta: number | null;
+  n_sessions: number;
+  n_trials: number;
+  skills: SkillScore[];
+}
+
+/** Mean / SD / mean-improvement of one metric across a cohort. */
+export interface GroupStat {
+  metric: string; // "composite" or a skill id
+  label: string;
+  mean: number | null;
+  sd: number | null;
+  mean_delta: number | null;
+  n: number;
+}
+
+export interface GroupBreakdown {
+  group: string; // demographic bucket, or "all"
+  n_participants: number;
+  stats: GroupStat[];
+}
+
+/** Cohort-level scores, optionally split by a demographic dimension. */
+export interface GroupReport {
+  group_by: string; // overall | gender | autism_level | age_band | iq_band
+  total_participants: number;
+  breakdowns: GroupBreakdown[];
+}
+
+/** How a group report may be sliced. */
+export type GroupBy = "overall" | "gender" | "autism_level" | "age_band" | "iq_band";
+
 /** A learner's saved progress on one level of a level-based game. */
 export interface LevelProgress {
   id: string;
@@ -334,6 +397,26 @@ class AnalyticsClient {
     return this.request<EmotionReport>(
       `/api/reports/student/${studentId}/emotions`,
     );
+  }
+
+  /** Standardised per-participant skill profile: composite social-emotional
+   *  score, the four skill scores, per-game scores and pre/post improvement. */
+  async getSkillReport(studentId: string): Promise<ParticipantSkillReport> {
+    return this.request<ParticipantSkillReport>(
+      `/api/reports/student/${studentId}/skills`,
+    );
+  }
+
+  /** Cohort scores across the mentor's students, optionally split by a
+   *  demographic dimension (gender / autism level / age band / IQ band). */
+  async getGroupReport(
+    groupBy: GroupBy = "overall",
+    filters: { gender?: string; autism_level?: string } = {},
+  ): Promise<GroupReport> {
+    const q = new URLSearchParams({ group_by: groupBy });
+    if (filters.gender) q.set("gender", filters.gender);
+    if (filters.autism_level) q.set("autism_level", filters.autism_level);
+    return this.request<GroupReport>(`/api/reports/groups?${q.toString()}`);
   }
 
   /**

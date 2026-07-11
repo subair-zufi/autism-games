@@ -500,3 +500,93 @@ def test_emotion_report_confusion_and_latency(client):
         f"/api/reports/student/{sid}/emotions",
         headers={"Authorization": f"Bearer {other}"},
     ).status_code == 404
+
+
+def test_skill_report_standardised_scores(client):
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("skills@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post(
+        "/api/students",
+        json={"full_name": "Ravi", "gender": "male", "autism_level": "Level 1"},
+        headers=h,
+    ).json()["id"]
+
+    def answer(game, payload):
+        r = client.post(
+            "/api/events",
+            json={"game_key": game, "event_type": "answer", "student_id": sid, "payload": payload},
+            headers=h,
+        )
+        assert r.status_code == 201, r.text
+
+    # Emotion Recognition: 8/10 correct at Easy (chance .5) -> 60.
+    for i in range(10):
+        answer("emotionrecognition", {"correct": i < 8, "level": "easy"})
+    # Right or Wrong: 4/4 correct (chance .5) -> 100.
+    for _ in range(4):
+        answer("rightway", {"correct": True, "chance": 0.5})
+
+    r = client.get(f"/api/reports/student/{sid}/skills", headers=h)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    skills = {s["skill"]: s for s in body["skills"]}
+    assert skills["emotion"]["score"] == 60.0
+    assert skills["socialnorms"]["score"] == 100.0
+    assert skills["turntaking"]["score"] is None  # no data
+    assert body["composite"] == 80.0  # mean of the two skills with data
+    assert body["n_trials"] == 14
+
+    # not your student -> 404
+    other = client.post(
+        "/api/auth/signup", json=_signup_payload("nosy3@example.com")
+    ).json()["access_token"]
+    assert client.get(
+        f"/api/reports/student/{sid}/skills",
+        headers={"Authorization": f"Bearer {other}"},
+    ).status_code == 404
+
+
+def test_group_report_demographic_breakdown(client):
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("cohort@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+
+    def make_student(name, gender, correct):
+        sid = client.post(
+            "/api/students", json={"full_name": name, "gender": gender}, headers=h
+        ).json()["id"]
+        for i in range(10):
+            client.post(
+                "/api/events",
+                json={
+                    "game_key": "emotionrecognition",
+                    "event_type": "answer",
+                    "student_id": sid,
+                    "payload": {"correct": i < correct, "level": "easy"},
+                },
+                headers=h,
+            )
+        return sid
+
+    make_student("Boy A", "male", 10)  # emotion 100 -> composite 100
+    make_student("Girl B", "female", 8)  # emotion 60 -> composite 60
+
+    # Overall cohort
+    overall = client.get("/api/reports/groups?group_by=overall", headers=h)
+    assert overall.status_code == 200, overall.text
+    ob = overall.json()
+    assert ob["total_participants"] == 2
+    all_bucket = ob["breakdowns"][0]
+    comp = next(s for s in all_bucket["stats"] if s["metric"] == "composite")
+    assert comp["mean"] == 80.0 and comp["n"] == 2
+
+    # Split by gender
+    by_gender = client.get("/api/reports/groups?group_by=gender", headers=h).json()
+    buckets = {b["group"]: b for b in by_gender["breakdowns"]}
+    male_comp = next(s for s in buckets["male"]["stats"] if s["metric"] == "composite")
+    female_comp = next(s for s in buckets["female"]["stats"] if s["metric"] == "composite")
+    assert male_comp["mean"] == 100.0
+    assert female_comp["mean"] == 60.0

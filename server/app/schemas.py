@@ -319,3 +319,72 @@ class EmotionReport(BaseModel):
     emotions: list[str]
     confusion: dict[str, dict[str, int]]
     stats: list[EmotionStat]
+
+
+# ---------------------------------------------------------------------------
+# Standardised skill scores (research analytics — see app/scoring.py)
+# ---------------------------------------------------------------------------
+class GameScoreOut(BaseModel):
+    """Standardised 0-100 score for one game (chance-corrected first-attempt
+    accuracy), plus its secondary metrics and pre/post improvement."""
+
+    game_key: str
+    skill: str
+    score: float | None
+    raw_accuracy: float | None
+    n_trials: int
+    n_sessions: int
+    median_latency_ms: int | None
+    baseline_score: float | None
+    latest_score: float | None
+    delta: float | None
+
+
+class SkillScoreOut(BaseModel):
+    """Mean 0-100 score across the games that train one target skill."""
+
+    skill: str
+    label: str
+    score: float | None
+    delta: float | None
+    n_games: int
+    games: list[GameScoreOut]
+
+
+class ParticipantSkillReport(BaseModel):
+    """Full per-participant profile: composite social-emotional score, the four
+    skill scores, per-game scores, and improvement (pre/post) at every level."""
+
+    student_id: uuid.UUID
+    composite: float | None
+    composite_delta: float | None
+    n_sessions: int
+    n_trials: int
+    skills: list[SkillScoreOut]
+
+
+class GroupStatOut(BaseModel):
+    """Mean / SD / mean-improvement of one metric across a cohort of students."""
+
+    metric: str  # "composite" or a skill id
+    label: str
+    mean: float | None
+    sd: float | None
+    mean_delta: float | None
+    n: int
+
+
+class GroupBreakdown(BaseModel):
+    """One demographic bucket (e.g. gender = 'male') and its aggregate stats."""
+
+    group: str  # the bucket value, or "all" for the ungrouped cohort
+    n_participants: int
+    stats: list[GroupStatOut]
+
+
+class GroupReport(BaseModel):
+    """Cohort-level scores, optionally split by a demographic dimension."""
+
+    group_by: str  # overall | gender | autism_level | age_band | iq_band
+    total_participants: int
+    breakdowns: list[GroupBreakdown]
