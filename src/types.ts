@@ -16,14 +16,16 @@ export interface SkillMeta {
   id: Skill
   label: string
   icon: string
+  /** Accent colour used across the Home sections and Progress dashboard. */
+  color: string
 }
 
 /** Display order for the skill sections on the Home page. */
 export const SKILLS: SkillMeta[] = [
-  { id: 'emotion', label: 'Emotional Identification', icon: '🙂' },
-  { id: 'turntaking', label: 'Turn-Taking', icon: '🔄' },
-  { id: 'socialnorms', label: 'Social Norms', icon: '⚖️' },
-  { id: 'jointattention', label: 'Joint Attention', icon: '👀' },
+  { id: 'emotion', label: 'Emotional Identification', icon: '🙂', color: '#f59e0b' },
+  { id: 'turntaking', label: 'Turn-Taking', icon: '🔄', color: '#14b8a6' },
+  { id: 'socialnorms', label: 'Social Norms', icon: '⚖️', color: '#16a34a' },
+  { id: 'jointattention', label: 'Joint Attention', icon: '👀', color: '#3b82f6' },
 ]
 
 export function skillMeta(id: Skill): SkillMeta {

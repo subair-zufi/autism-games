@@ -760,3 +760,44 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .confusion-matrix thead th, .confusion-matrix tbody th { background: #fafafa; }
 .confusion-matrix td.diag { background: #dcfce7; font-weight: 700; }
 .confusion-matrix td.confused { background: #fee2e2; }
+
+/* --- Standardised skill dashboard ---------------------------------------- */
+.delta-chip { font-size: 0.7rem; font-weight: 700; margin-left: 6px; padding: 1px 6px; border-radius: 999px; vertical-align: middle; }
+.delta-chip.up { color: #0f7a3d; background: #dcfce7; }
+.delta-chip.down { color: #b42318; background: #fee2e2; }
+
+.composite-panel { text-align: center; }
+.composite-hero { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; margin-bottom: 6px; }
+.composite-score { display: flex; align-items: baseline; gap: 2px; }
+.composite-value { font-size: 3rem; font-weight: 800; line-height: 1; color: var(--m-accent); }
+.composite-max { font-size: 1rem; color: var(--m-muted); font-weight: 700; }
+.composite-caption { display: flex; flex-direction: column; text-align: left; gap: 2px; }
+.composite-caption strong { font-size: 1rem; }
+.composite-caption span { font-size: 0.8rem; color: var(--m-muted); }
+.composite-caption small { font-size: 0.72rem; color: #9aa6bd; }
+
+.radar { max-width: 300px; margin: 0 auto; }
+.radar-grid { fill: none; stroke: #e6eaf2; stroke-width: 1; }
+.radar-label { fill: var(--m-ink); font-size: 13px; }
+.radar-label.muted { fill: #b7bfce; }
+.radar-value { fill: var(--m-muted); font-size: 10px; font-weight: 700; }
+.radar-area { stroke-width: 2; stroke-linejoin: round; }
+.radar-legend { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; margin-top: 8px; }
+.radar-legend-item { font-size: 0.8rem; color: var(--m-muted); display: flex; align-items: center; gap: 6px; }
+.radar-legend-item strong { color: var(--m-ink); }
+.radar-legend-dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+.skill-card-list { display: flex; flex-direction: column; gap: 12px; }
+.skill-card { border: 1px solid var(--m-line); border-left: 4px solid var(--card-accent, var(--m-accent)); border-radius: 12px; padding: 12px; }
+.skill-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.skill-card-title { font-weight: 700; font-size: 0.95rem; }
+.skill-card-score { font-weight: 800; font-size: 1.2rem; color: var(--card-accent, var(--m-accent)); }
+.skill-card-games { display: flex; flex-direction: column; gap: 10px; }
+
+.score-bar-row.empty { opacity: 0.5; }
+.score-bar-head { display: flex; justify-content: space-between; align-items: baseline; }
+.score-bar-label { font-size: 0.85rem; }
+.score-bar-value { font-size: 0.85rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.score-bar-track { height: 8px; background: #eef1f7; border-radius: 999px; overflow: hidden; margin: 3px 0; }
+.score-bar-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
+.score-bar-sub { font-size: 0.7rem; color: #9aa6bd; }
