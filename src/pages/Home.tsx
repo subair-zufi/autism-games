@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/auth'
-import { GAME_LIST } from '../types'
+import { GAMES_BY_SKILL, type GameMeta } from '../types'
 import { useScores } from '../state/scores'
 import { playTap } from '../services/sounds'
 import { analytics } from '../services/analytics'
@@ -66,36 +66,54 @@ export function Home() {
         )}
       </header>
 
-      <div className="section-head">
-        <h2>Game Library</h2>
-        <span className="section-count">{GAME_LIST.length} MODULES</span>
-      </div>
-
-      <div className="game-grid">
-        {GAME_LIST.map((g) => (
-          <button
-            key={g.id}
-            className="game-card"
-            style={{ '--card-accent': g.color } as React.CSSProperties}
-            onClick={() => {
-              playTap()
-              navigate(`/game/${g.id}`)
-            }}
-          >
-            <span className="game-icon" aria-hidden>{g.icon}</span>
-            <span className="game-name">{g.title}</span>
-            <span className="game-desc">{g.description}</span>
-            {g.hasLevels ? (
-              <div className="game-progress">
-                <span className="game-progress-pct">{erPercent}%</span>
-                <ProgressBar value={erPercent} />
-              </div>
-            ) : (
-              <span className="game-best">⭐ Best {best[g.id] ?? 0}</span>
-            )}
-          </button>
-        ))}
-      </div>
+      {GAMES_BY_SKILL.map(({ skill, games }) => (
+        <section key={skill.id}>
+          <div className="section-head">
+            <h2>{skill.icon} {skill.label}</h2>
+            <span className="section-count">{games.length} MODULES</span>
+          </div>
+          <div className="game-grid">
+            {games.map((g) => (
+              <GameCard key={g.id} game={g} erPercent={erPercent} best={best[g.id] ?? 0} onOpen={navigate} />
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
+  )
+}
+
+function GameCard({
+  game,
+  erPercent,
+  best,
+  onOpen,
+}: {
+  game: GameMeta
+  erPercent: number
+  best: number
+  onOpen: (path: string) => void
+}) {
+  return (
+    <button
+      className="game-card"
+      style={{ '--card-accent': game.color } as React.CSSProperties}
+      onClick={() => {
+        playTap()
+        onOpen(`/game/${game.id}`)
+      }}
+    >
+      <span className="game-icon" aria-hidden>{game.icon}</span>
+      <span className="game-name">{game.title}</span>
+      <span className="game-desc">{game.description}</span>
+      {game.hasLevels ? (
+        <div className="game-progress">
+          <span className="game-progress-pct">{erPercent}%</span>
+          <ProgressBar value={erPercent} />
+        </div>
+      ) : (
+        <span className="game-best">⭐ Best {best}</span>
+      )}
+    </button>
   )
 }
