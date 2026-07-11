@@ -1,69 +1,136 @@
+/**
+ * Pure game logic for Right or Wrong — no React, no I/O, fully testable.
+ *
+ * Level design (mirrors Good Choice, so attempts are psychometrically
+ * comparable):
+ *  - The response set is always the same two buttons (okay / not okay), so
+ *    guessing chance is 1/2 at every level. Difficulty is a property of the
+ *    stimulus tier instead: Easy shows only `clear` behaviours, Hard only
+ *    `subtle` ones (passive omissions and looks-odd-but-fine behaviours),
+ *    Moderate mixes one clear and one subtle behaviour per construct.
+ *  - Fixed composition: Easy and Hard always contain every behaviour of their
+ *    tier in the pool (5 constructs × 2 = 10 trials, 5 okay / 5 not-okay).
+ *    Moderate keeps the same invariants (1 clear + 1 subtle per construct,
+ *    5/5 valence balance); only which valence pairs with which tier varies.
+ *  - Stratified order: constructs are dealt in shuffled cycles — each of the
+ *    5 constructs appears once in the first half and once in the second.
+ *  - Chance level: constant 1/2; `CHANCE` feeds `scoreLevel` so recorded
+ *    accuracy is chance-corrected and comparable with the 2-choice levels of
+ *    the other games.
+ */
 import type { Difficulty } from '../../types'
+import { shuffle } from '../emotionVocab'
+import {
+  behaviorsFor,
+  CONSTRUCTS,
+  type Behavior,
+  type Construct,
+  type StimulusPool,
+  type Tier,
+} from './content'
 
-export type Category = 'greetings' | 'sharing' | 'queue' | 'space' | 'polite' | 'apology'
+// Re-exported so the 3D scene and UI import everything from one module.
+export type { Behavior, BiText, Construct, Pose, SceneCue, StimulusPool, Tier } from './content'
+export { BEHAVIORS, CONSTRUCTS } from './content'
 
-export interface Pose {
-  /** actor raises one arm (waving / reaching) */
-  armUp?: boolean
-  /** actor leans toward the other character (grabbing / pushing) */
-  lean?: number
-  /** actor crowds the other character's personal space */
-  close?: boolean
+// Scoring is shared across level games; re-exported so imports stay uniform.
+export {
+  PASS_THRESHOLD,
+  MASTERY_THRESHOLD,
+  scoreLevel,
+  type LevelSummary,
+} from '../progression'
+
+/** Trials per level: two behaviours per construct (5 constructs × 2). */
+export const ACTIVITY_COUNT = 10
+
+/** Guessing probability: always a 2-button judgment, at every level. */
+export const CHANCE = 1 / 2
+
+/** Which stimulus tiers a level draws from. */
+export const LEVEL_TIERS: Record<Difficulty, Tier[]> = {
+  easy: ['clear'],
+  medium: ['clear', 'subtle'],
+  hard: ['subtle'],
 }
 
-/** Concrete props the 3D scene draws so the picture matches the sentence. */
-export interface SceneCue {
-  /** actor is turned away from the friend (ignoring) */
-  turnAway?: boolean
-  /** a toy/blocks held out kindly ('offer') or snatched away ('grab') */
-  toy?: 'offer' | 'grab'
-  /** a queue of waiting kids (the actor cuts / waits in it) */
-  line?: boolean
-  /** a little bump star between the two characters */
-  bump?: boolean
-  /** a polite "please" heart cue */
-  polite?: boolean
-  /** the friend is happy and waving back (kind greeting) */
-  waveBack?: boolean
+/**
+ * The two behaviours one construct contributes to a level — always one okay
+ * and one not-okay. Easy takes the clear pair, Hard the subtle pair; Moderate
+ * takes one of each tier, coin-flipping which valence is the subtle one so
+ * "subtle = not okay" never becomes a learnable rule.
+ */
+function constructPair(
+  construct: Construct,
+  pool: StimulusPool,
+  difficulty: Difficulty,
+  rng: () => number,
+): Behavior[] {
+  const items = behaviorsFor(construct, pool)
+  const pick = (tier: Tier, isFine: boolean) =>
+    items.find((b) => b.tier === tier && b.isFine === isFine)!
+  if (difficulty === 'easy') return [pick('clear', true), pick('clear', false)]
+  if (difficulty === 'hard') return [pick('subtle', true), pick('subtle', false)]
+  return rng() < 0.5
+    ? [pick('clear', true), pick('subtle', false)]
+    : [pick('subtle', true), pick('clear', false)]
 }
 
-export interface Scenario {
-  id: string
-  /** what the narrator describes while the scene plays */
-  text: string
-  /** emoji shown in the action bubble above the scene */
-  bubble: string
-  /** true when the behaviour is already kind/correct */
-  isFine: boolean
-  category: Category
-  /** spoken after the child answers */
-  explain: string
-  pose: Pose
-  /** extra objects the scene draws to match the sentence */
-  scene: SceneCue
-}
-
-export const SCENARIOS: Scenario[] = [
-  { id: 'wave', text: 'Maya sees her friend and waves hello.', bubble: '👋', isFine: true, category: 'greetings', explain: 'Waving hello is a friendly greeting.', pose: { armUp: true }, scene: { waveBack: true } },
-  { id: 'ignore', text: 'Ben turns away when his friend says hi.', bubble: '🙈', isFine: false, category: 'greetings', explain: 'It is kinder to say hi back.', pose: {}, scene: { turnAway: true } },
-  { id: 'share', text: 'Leo shares his blocks with a friend.', bubble: '🧸', isFine: true, category: 'sharing', explain: 'Sharing helps everyone have fun.', pose: { armUp: true }, scene: { toy: 'offer' } },
-  { id: 'grab', text: 'Ravi grabs a toy from someone’s hands.', bubble: '✋', isFine: false, category: 'sharing', explain: 'Better to ask, "Can I have a turn?"', pose: { lean: 0.4 }, scene: { toy: 'grab' } },
-  { id: 'sorry', text: 'Ada bumps someone and says sorry.', bubble: '🙏', isFine: true, category: 'apology', explain: 'Saying sorry shows you care.', pose: { armUp: true }, scene: { bump: true } },
-  { id: 'close', text: 'Tom stands very close to someone’s face.', bubble: '😬', isFine: false, category: 'space', explain: 'Give friends a little more space.', pose: { close: true, lean: 0.2 }, scene: {} },
-  { id: 'please', text: 'Nina says please when she asks for help.', bubble: '🙂', isFine: true, category: 'polite', explain: 'Polite words make people feel good.', pose: {}, scene: { polite: true } },
-  { id: 'push', text: 'Sam pushes to the front of the line.', bubble: '😠', isFine: false, category: 'queue', explain: 'Wait your turn in the line.', pose: { lean: 0.4 }, scene: { line: true } },
-]
-
-const ROUNDS: Record<Difficulty, number> = { easy: 3, medium: 5, hard: 7 }
-export function rounds(difficulty: Difficulty): number {
-  return ROUNDS[difficulty]
-}
-
-/** Pick the next scenario, never repeating the previous one. */
-export function nextScenario(
-  prevId: string | null,
+/**
+ * Build one level's trials from the given pool ('training' for practice,
+ * 'probe' for Assessment mode — held-out behaviours only).
+ */
+export function buildLevel(
+  difficulty: Difficulty,
   rng: () => number = Math.random,
-): Scenario {
-  const pool = SCENARIOS.filter((s) => s.id !== prevId)
-  return pool[Math.floor(rng() * pool.length)]
+  pool: StimulusPool = 'training',
+): Behavior[] {
+  // Two stratified cycles: every construct once per cycle, then repeat with
+  // each construct's remaining behaviour.
+  const remaining = new Map<Construct, Behavior[]>(
+    CONSTRUCTS.map((c) => [c, shuffle(constructPair(c, pool, difficulty, rng), rng)]),
+  )
+  const trials: Behavior[] = []
+  const cycles = Math.ceil(ACTIVITY_COUNT / CONSTRUCTS.length)
+  for (let cycle = 0; cycle < cycles; cycle++) {
+    for (const construct of shuffle(CONSTRUCTS, rng)) {
+      const behavior = remaining.get(construct)!.pop()
+      if (behavior) trials.push(behavior)
+    }
+  }
+  return trials
+}
+
+/** Per-construct correct/total tallies for the level_result analytics payload. */
+export function tallyByConstruct(
+  answers: Array<{ construct: Construct; correct: boolean }>,
+): Record<Construct, { correct: number; total: number }> {
+  const tally = Object.fromEntries(
+    CONSTRUCTS.map((c) => [c, { correct: 0, total: 0 }]),
+  ) as Record<Construct, { correct: number; total: number }>
+  for (const a of answers) {
+    tally[a.construct].total += 1
+    if (a.correct) tally[a.construct].correct += 1
+  }
+  return tally
+}
+
+/**
+ * Correct/total split by item valence (okay vs not-okay behaviours) — the
+ * response-bias readout: a child who answers "okay" to everything scores 100%
+ * on `fine` and 0% on `needsFixing`.
+ */
+export function tallyByValence(
+  answers: Array<{ isFine: boolean; correct: boolean }>,
+): { fine: { correct: number; total: number }; needsFixing: { correct: number; total: number } } {
+  const tally = {
+    fine: { correct: 0, total: 0 },
+    needsFixing: { correct: 0, total: 0 },
+  }
+  for (const a of answers) {
+    const bucket = a.isFine ? tally.fine : tally.needsFixing
+    bucket.total += 1
+    if (a.correct) bucket.correct += 1
+  }
+  return tally
 }

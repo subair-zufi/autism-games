@@ -1,16 +1,16 @@
 import { useEffect, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
-import type { Scenario } from './logic'
+import type { Behavior } from './logic'
 
 export interface RightWaySceneProps {
-  scenario: Scenario
+  behavior: Behavior
   /** increments on a correct answer to make the characters cheer */
   celebrate: number
 }
 
-export function RightWayScene({ scenario, celebrate }: RightWaySceneProps) {
-  const { scene, pose } = scenario
+export function RightWayScene({ behavior, celebrate }: RightWaySceneProps) {
+  const { scene, pose } = behavior
   // the actor crowds in (close), or stands back at the left
   const actorX = scene.turnAway ? -1.1 : pose.close ? 0.35 : -1.3
   const actorYaw = scene.turnAway ? -2.6 : 0.4
@@ -47,6 +47,8 @@ export function RightWayScene({ scenario, celebrate }: RightWaySceneProps) {
       {/* objects that make the picture match the sentence */}
       {scene.toy === 'offer' && <Blocks position={[0.1, 1.15, 0.5]} />}
       {scene.toy === 'grab' && <Blocks position={[0.75, 1.0, 0.4]} grabbed />}
+      {/* kept close to the actor's chest (passive keep-it-to-yourself items) */}
+      {scene.toy === 'hold' && <Blocks position={[actorX + 0.45, 1.0, 0.45]} />}
       {scene.bump && <Bump position={[0, 1.25, 0.5]} />}
       {scene.polite && <Heart position={[-1.3, 2.35, 0.2]} />}
     </Canvas>

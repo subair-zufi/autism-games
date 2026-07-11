@@ -121,11 +121,12 @@ export const GAME_LIST: GameMeta[] = [
   {
     id: 'rightway',
     title: 'Right or Wrong',
-    icon: '✅',
+    icon: '⚖️',
     path: '/rightway',
     color: '#16a34a',
-    description: 'Judge the situation',
-    objective: 'Navigate social norms and appropriate responses',
+    description: 'Judge the situation · ശരിയോ തെറ്റോ പറയൂ',
+    objective:
+      'Social norms: judge whether a behaviour is okay across greetings, sharing, turns, space and politeness — harder levels use subtle behaviours (quiet omissions, polite refusals)',
     duration: '5–10 min',
     hasLevels: false,
   },
