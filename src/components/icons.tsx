@@ -42,6 +42,13 @@ export const ProfileIcon = (p: SVGProps<SVGSVGElement>) => (
   </svg>
 )
 
+export const CohortIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M4 20V9M10 20V4M16 20v-8M20 20V7" />
+    <path d="M3 20h18" />
+  </svg>
+)
+
 export const BackIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}>
     <path d="M15 5l-7 7 7 7" />

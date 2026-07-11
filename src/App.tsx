@@ -9,6 +9,7 @@ import { CompleteProfile } from './pages/CompleteProfile'
 import { Participants } from './pages/Participants'
 import { ParticipantForm } from './pages/ParticipantForm'
 import { Progress } from './pages/Progress'
+import { Cohort } from './pages/Cohort'
 import { Profile } from './pages/Profile'
 import { GameDetail } from './pages/GameDetail'
 import { ComingSoon } from './components/ComingSoon'
@@ -64,6 +65,7 @@ export default function App() {
         <Route path="/participants/new" element={<ParticipantForm />} />
         <Route path="/participants/:id/edit" element={<ParticipantForm />} />
         <Route path="/progress" element={<Progress />} />
+        <Route path="/cohort" element={<Cohort />} />
         <Route path="/profile" element={<Profile />} />
       </Route>
 

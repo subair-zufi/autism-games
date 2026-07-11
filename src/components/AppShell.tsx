@@ -4,12 +4,13 @@
  * routes render through <Outlet/>.
  */
 import { NavLink, Outlet } from 'react-router-dom'
-import { ChartIcon, HomeIcon, PeopleIcon, ProfileIcon } from './icons'
+import { ChartIcon, CohortIcon, HomeIcon, PeopleIcon, ProfileIcon } from './icons'
 
 const TABS = [
   { to: '/', label: 'Home', Icon: HomeIcon, end: true },
   { to: '/participants', label: 'Participants', Icon: PeopleIcon, end: false },
   { to: '/progress', label: 'Progress', Icon: ChartIcon, end: false },
+  { to: '/cohort', label: 'Cohort', Icon: CohortIcon, end: false },
   { to: '/profile', label: 'Profile', Icon: ProfileIcon, end: false },
 ] as const
 

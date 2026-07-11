@@ -801,3 +801,22 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .score-bar-track { height: 8px; background: #eef1f7; border-radius: 999px; overflow: hidden; margin: 3px 0; }
 .score-bar-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease; }
 .score-bar-sub { font-size: 0.7rem; color: #9aa6bd; }
+
+/* --- Cohort comparison --------------------------------------------------- */
+.cohort-controls { margin-bottom: 14px; }
+.cohort-controls-label { display: block; font-size: 0.75rem; color: var(--m-muted); font-weight: 700; margin-bottom: 6px; }
+.cohort-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.cohort-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
+.cohort-legend-item { font-size: 0.8rem; color: var(--m-ink); display: flex; align-items: center; gap: 6px; }
+.cohort-legend-item small { color: var(--m-muted); }
+.cohort-legend-dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+.cohort-table-scroll { overflow-x: auto; }
+.cohort-table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+.cohort-table th, .cohort-table td { padding: 8px 10px; text-align: center; border-bottom: 1px solid var(--m-line); white-space: nowrap; }
+.cohort-table thead th { font-size: 0.72rem; color: var(--m-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.cohort-table .cohort-row-head { text-align: left; font-weight: 700; }
+.cohort-table .cohort-row-head small { display: block; font-weight: 400; color: var(--m-muted); font-size: 0.7rem; }
+.cohort-mean { font-weight: 700; font-variant-numeric: tabular-nums; }
+.cohort-sd { color: var(--m-muted); margin-left: 3px; }
+.cohort-table td.composite-cell { background: #f5f8fe; }
