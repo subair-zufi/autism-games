@@ -21,7 +21,7 @@ import { speak, speechAvailable } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { emotionMeta, type EmotionId } from '../emotionVocab'
 import {
-  DISPLAY_LANGS,
+  displayLangs,
   emotionLabel,
   t,
   videoFreezeQuestion,
@@ -196,7 +196,7 @@ export function IdentifyEmotionsGame() {
           // Emotion named — now probe the cause ("why" question).
           setStage('cause')
           causeAtRef.current = performance.now()
-          speak(whyQuestion(q.clip.gender, q.answer, DISPLAY_LANGS[0]))
+          speak(whyQuestion(q.clip.gender, q.answer, lang), lang)
         } else {
           advance(nextScore)
         }
@@ -233,11 +233,11 @@ export function IdentifyEmotionsGame() {
     setTimeout(() => advance(score), 1500)
   }
 
-  // Read the freeze prompt aloud (in the primary language) once frozen.
-  const freezeSpeak = q ? videoFreezeQuestion(q.clip.gender, DISPLAY_LANGS[0]) : ''
+  // Read the freeze prompt aloud (in the chosen language) once frozen.
+  const freezeSpeak = q ? videoFreezeQuestion(q.clip.gender, lang) : ''
   useEffect(() => {
-    if (frozen && !celebrating && stage === 'emotion') speak(freezeSpeak)
-  }, [frozen, celebrating, stage, freezeSpeak])
+    if (frozen && !celebrating && stage === 'emotion') speak(freezeSpeak, lang)
+  }, [frozen, celebrating, stage, freezeSpeak, lang])
 
   if (phase === 'select' || !q) {
     return (
@@ -254,14 +254,15 @@ export function IdentifyEmotionsGame() {
     )
   }
 
+  const langs = displayLangs(lang)
   const promptLines =
     stage === 'cause'
-      ? DISPLAY_LANGS.map((l) => whyQuestion(q.clip.gender, q.answer, l))
+      ? langs.map((l) => ({ lang: l, text: whyQuestion(q.clip.gender, q.answer, l) }))
       : frozen
-        ? DISPLAY_LANGS.map((l) => videoFreezeQuestion(q.clip.gender, l))
-        : DISPLAY_LANGS.map((l) => t('watchPrompt', l))
+        ? langs.map((l) => ({ lang: l, text: videoFreezeQuestion(q.clip.gender, l) }))
+        : langs.map((l) => ({ lang: l, text: t('watchPrompt', l) }))
   const promptSpeak =
-    stage === 'cause' ? whyQuestion(q.clip.gender, q.answer, DISPLAY_LANGS[0]) : freezeSpeak
+    stage === 'cause' ? whyQuestion(q.clip.gender, q.answer, lang) : freezeSpeak
 
   return (
     <div className="game-page">
@@ -287,14 +288,14 @@ export function IdentifyEmotionsGame() {
       <div className="game-bottom">
         <div className="prompt-banner er-prompt">
           <div className="er-prompt-lines">
-            {promptLines.map((text, i) => (
-              <span key={DISPLAY_LANGS[i]} className={`er-prompt-line er-prompt-${DISPLAY_LANGS[i]}`}>
+            {promptLines.map(({ lang: l, text }) => (
+              <span key={l} className={`er-prompt-line er-prompt-${l}`}>
                 {text}
               </span>
             ))}
           </div>
           {(frozen || stage === 'cause') && speechAvailable() && (
-            <button aria-label="Say it again" onClick={() => speak(promptSpeak)}>🔊</button>
+            <button aria-label="Say it again" onClick={() => speak(promptSpeak, lang)}>🔊</button>
           )}
         </div>
         {stage === 'cause' && q.cause ? (
@@ -305,7 +306,7 @@ export function IdentifyEmotionsGame() {
               else if (causePicked === i) cls += ' wrong'
               return (
                 <button key={i} className={cls} disabled={causePicked !== null} onClick={() => pickCause(i)}>
-                  {DISPLAY_LANGS.map((l) => (
+                  {displayLangs(lang).map((l) => (
                     <span key={l} className={`choice-label choice-label-${l}`}>{opt[l]}</span>
                   ))}
                 </button>
@@ -324,7 +325,7 @@ export function IdentifyEmotionsGame() {
                   onClick={() => pick(id)}
                 >
                   <span className="choice-emoji">{m.emoji}</span>
-                  {DISPLAY_LANGS.map((l) => (
+                  {displayLangs(lang).map((l) => (
                     <span key={l} className={`choice-label choice-label-${l}`}>{emotionLabel(id, l)}</span>
                   ))}
                 </button>

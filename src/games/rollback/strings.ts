@@ -1,18 +1,16 @@
 import type { Lang } from '../../i18n/strings'
-import { DISPLAY_LANGS } from '../../i18n/strings'
+import { displayLangs } from '../../i18n/strings'
 
 /**
  * Roll-Back Buddy is bilingual (Kerala deployment): every child-facing line is
- * shown in English and Malayalam and spoken in both.
+ * authored in English and Malayalam. Each play renders and speaks a single
+ * chosen language (Profile → Language), not both at once.
  *
  * The Malayalam is written the way people actually talk to a small child — warm
  * and colloquial ("ആരാ റെഡി?", "ഒന്നൂടെ നോക്ക്", "കൊള്ളാം!"), not a stiff
  * word-for-word rendering of the English. Names stay in the nominative so no
  * template ever has to decline them; the English line uses the romanized name.
  */
-
-/** Voice reads Malayalam first (primary audience), then English. */
-export const VOICE_ORDER: Lang[] = ['ml', 'en']
 
 /** A parameter that differs by language (e.g. a name: Malayalam vs romanized). */
 type BiValue = string | Record<Lang, string>
@@ -120,12 +118,20 @@ export function rbLine(key: RollBackMessageKey, lang: Lang, params?: Params): st
   return text
 }
 
-/** Both display languages of a message, for a stacked bilingual banner/label. */
-export function rbLines(key: RollBackMessageKey, params?: Params): Array<{ lang: Lang; text: string }> {
-  return DISPLAY_LANGS.map((lang) => ({ lang, text: rbLine(key, lang, params) }))
+/** The message in the chosen language, ready for a banner/label. */
+export function rbLines(
+  key: RollBackMessageKey,
+  lang: Lang,
+  params?: Params,
+): Array<{ lang: Lang; text: string }> {
+  return displayLangs(lang).map((l) => ({ lang: l, text: rbLine(key, l, params) }))
 }
 
-/** Voice-order (Malayalam then English) parts, ready for `speakAll`. */
-export function rbSpeak(key: RollBackMessageKey, params?: Params): Array<{ lang: Lang; text: string }> {
-  return VOICE_ORDER.map((lang) => ({ lang, text: rbLine(key, lang, params) }))
+/** The message in the chosen language, ready for `speakAll`. */
+export function rbSpeak(
+  key: RollBackMessageKey,
+  lang: Lang,
+  params?: Params,
+): Array<{ lang: Lang; text: string }> {
+  return displayLangs(lang).map((l) => ({ lang: l, text: rbLine(key, l, params) }))
 }

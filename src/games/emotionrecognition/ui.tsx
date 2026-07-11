@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react'
 import { emotionMeta, type EmotionId } from '../emotionVocab'
 import { speak, speechAvailable } from '../../services/speech'
-import { emotionLabel, type Lang, DISPLAY_LANGS } from '../../i18n/strings'
+import { emotionLabel, type Lang, displayLangs } from '../../i18n/strings'
 import type { GroupPhoto } from './content'
 
 /** <img> that shows a spinner until the (possibly slow) photo has loaded.
@@ -48,10 +48,18 @@ function LoadingImage({
   )
 }
 
-/** The question, rendered in every display language, with a speak button. */
-export function BilingualPrompt({ lines, speakText }: { lines: { lang: Lang; text: string }[]; speakText: string }) {
-  // Speak the primary-language prompt when it changes (matches PromptBanner).
-  useEffect(() => { speak(speakText) }, [speakText])
+/** The question, rendered in the chosen language, with a speak button. */
+export function BilingualPrompt({
+  lines,
+  speakText,
+  speakLang = 'en',
+}: {
+  lines: { lang: Lang; text: string }[]
+  speakText: string
+  speakLang?: Lang
+}) {
+  // Speak the prompt (in the chosen language) when it changes.
+  useEffect(() => { speak(speakText, speakLang) }, [speakText, speakLang])
   return (
     <div className="prompt-banner er-prompt">
       <div className="er-prompt-lines">
@@ -60,24 +68,27 @@ export function BilingualPrompt({ lines, speakText }: { lines: { lang: Lang; tex
         ))}
       </div>
       {speechAvailable() && (
-        <button aria-label="Say it again" onClick={() => speak(speakText)}>🔊</button>
+        <button aria-label="Say it again" onClick={() => speak(speakText, speakLang)}>🔊</button>
       )}
     </div>
   )
 }
 
-/** Emotion answer buttons (emoji + bilingual labels) with correct/wrong states. */
+/** Emotion answer buttons (emoji + label in the chosen language) with
+ *  correct/wrong states. */
 export function ChoiceRow({
   choices,
   answer,
   picked,
   answered,
+  lang,
   onPick,
 }: {
   choices: EmotionId[]
   answer: EmotionId
   picked: EmotionId | null
   answered: boolean
+  lang: Lang
   onPick: (id: EmotionId) => void
 }) {
   return (
@@ -91,8 +102,8 @@ export function ChoiceRow({
         return (
           <button key={id} className={cls} disabled={answered} onClick={() => onPick(id)}>
             <span className="choice-emoji">{m.emoji}</span>
-            {DISPLAY_LANGS.map((lang) => (
-              <span key={lang} className={`choice-label choice-label-${lang}`}>{emotionLabel(id, lang)}</span>
+            {displayLangs(lang).map((l) => (
+              <span key={l} className={`choice-label choice-label-${l}`}>{emotionLabel(id, l)}</span>
             ))}
           </button>
         )

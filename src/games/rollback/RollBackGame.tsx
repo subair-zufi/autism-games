@@ -39,18 +39,19 @@ function biName(p: Player | undefined): { en: string; ml: string } {
  */
 type Stage = 'incoming' | 'hold' | 'reject' | 'rolling'
 
-type Params = Parameters<typeof rbSpeak>[1]
+type Params = Parameters<typeof rbSpeak>[2]
 
 export function RollBackGame() {
   const difficulty = useSettings((s) => s.difficulty.rollback)
+  const lang = useSettings((s) => s.language)
   const best = useScores((s) => s.best.rollback)
   const reportScore = useScores((s) => s.reportScore)
   const config = CONFIG[difficulty]
   const goal = GOAL[difficulty]
   const { recordStep, finishGame, resetSession } = useGameAnalytics('rollback')
 
-  // Speak a line in both languages, Malayalam first (Kerala audience).
-  const say = (key: RollBackMessageKey, params?: Params) => speakAll(rbSpeak(key, params))
+  // Speak a line in the chosen language.
+  const say = (key: RollBackMessageKey, params?: Params) => speakAll(rbSpeak(key, lang, params))
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [players, setPlayers] = useState<Player[]>([])
@@ -301,8 +302,8 @@ export function RollBackGame() {
         <div className="game-bottom">
           <div className="prompt-banner er-prompt">
             <div className="er-prompt-lines">
-              {rbLines(promptKey, promptParams).map(({ lang, text }) => (
-                <span key={lang} className={`er-prompt-line er-prompt-${lang}`}>
+              {rbLines(promptKey, lang, promptParams).map(({ lang: l, text }) => (
+                <span key={l} className={`er-prompt-line er-prompt-${l}`}>
                   {text}
                 </span>
               ))}
@@ -329,8 +330,8 @@ export function RollBackGame() {
                 return (
                   <div key={p.id} className={cls}>
                     <span className="player-emoji">{p.emoji}</span>
-                    {rbLines(labelKey).map(({ lang, text }) => (
-                      <span key={lang} className={`choice-label choice-label-${lang}`}>
+                    {rbLines(labelKey, lang).map(({ lang: l, text }) => (
+                      <span key={l} className={`choice-label choice-label-${l}`}>
                         {text}
                       </span>
                     ))}
@@ -345,8 +346,7 @@ export function RollBackGame() {
                   onClick={() => pick(i)}
                 >
                   <span className="player-emoji">{p.emoji}</span>
-                  <span className="choice-label">{p.name}</span>
-                  <span className="choice-label choice-label-ml">{p.nameEn}</span>
+                  <span className="choice-label">{lang === 'ml' ? p.name : p.nameEn}</span>
                 </button>
               )
             })}
@@ -358,9 +358,7 @@ export function RollBackGame() {
             best={Math.max(best, score)}
             stars={stars}
             message={
-              completed
-                ? `${rbLine('overWin', 'en')} · ${rbLine('overWin', 'ml')} 🎉`
-                : `${rbLine('overTry', 'en')} · ${rbLine('overTry', 'ml')} 🌟`
+              completed ? `${rbLine('overWin', lang)} 🎉` : `${rbLine('overTry', lang)} 🌟`
             }
             onRestart={start}
           />

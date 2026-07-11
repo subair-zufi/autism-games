@@ -6,8 +6,9 @@ import type { Lang } from '../i18n/strings'
 interface SettingsState {
   voiceOn: boolean
   soundOn: boolean
-  // UI-chrome language. Questions are always shown in every DISPLAY_LANGS, but
-  // this drives single-language chrome and lets us add a language switcher later.
+  // The single language every prompt, option and spoken line is shown in
+  // (English or Malayalam), chosen in Profile → Language. Prompts used to show
+  // both languages at once; now only this one is rendered and spoken.
   language: Lang
   difficulty: Record<GameId, Difficulty>
   setVoiceOn: (v: boolean) => void

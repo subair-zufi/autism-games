@@ -13,8 +13,10 @@ export function Profile() {
 
   const voiceOn = useSettings((s) => s.voiceOn)
   const soundOn = useSettings((s) => s.soundOn)
+  const language = useSettings((s) => s.language)
   const setVoiceOn = useSettings((s) => s.setVoiceOn)
   const setSoundOn = useSettings((s) => s.setSoundOn)
+  const setLanguage = useSettings((s) => s.setLanguage)
 
   const [editing, setEditing] = useState(false)
   const [fullName, setFullName] = useState(user?.full_name ?? '')
@@ -80,6 +82,28 @@ export function Profile() {
 
       <section className="panel">
         <h2>Settings</h2>
+
+        <div className="settings-row">
+          <div className="settings-label">
+            <span className="settings-label-title">Language · ഭാഷ</span>
+            <span className="settings-label-sub">Prompts and voice use this language only</span>
+          </div>
+          <div className="settings-toggles">
+            <button
+              className={language === 'en' ? 'toggle-pill on' : 'toggle-pill'}
+              onClick={() => setLanguage('en')}
+            >
+              English
+            </button>
+            <button
+              className={language === 'ml' ? 'toggle-pill on' : 'toggle-pill'}
+              onClick={() => setLanguage('ml')}
+            >
+              മലയാളം
+            </button>
+          </div>
+        </div>
+
         <div className="settings-toggles">
           <button className={voiceOn ? 'toggle-pill on' : 'toggle-pill'} onClick={() => setVoiceOn(!voiceOn)}>
             🔊 Voice {voiceOn ? 'On' : 'Off'}

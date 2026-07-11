@@ -28,9 +28,9 @@ import { useSettings } from '../../state/settings'
 import { ProgressBar } from '../../components/ProgressBar'
 import { WebGLGate } from '../../components/WebGLGate'
 import { LevelResult, LevelSelect } from '../../components/LevelScreens'
-import { speakAll, speechAvailable } from '../../services/speech'
+import { speak, speechAvailable } from '../../services/speech'
 import { playGentle, playSuccess, playTap } from '../../services/sounds'
-import { t, DISPLAY_LANGS, type Lang } from '../../i18n/strings'
+import { t, type Lang } from '../../i18n/strings'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { LEVELS, useLevelProgress } from '../progression'
 import {
@@ -46,9 +46,6 @@ import {
 import { RightWayScene } from './RightWayScene'
 
 export const GAME_KEY = 'rightway'
-
-/** Voice reads Malayalam first (primary audience), then English. */
-const VOICE_ORDER: Lang[] = ['ml', 'en']
 
 const IS_IT_OKAY: Record<Lang, string> = {
   en: 'Is that okay?',
@@ -109,13 +106,13 @@ export function RightWayGame() {
 
   const trial = trials[idx] as Behavior | undefined
 
-  // Speak the behaviour (Malayalam first) and start the latency clock whenever
-  // a new trial is presented.
+  // Speak the behaviour (in the chosen language) and start the latency clock
+  // whenever a new trial is presented.
   useEffect(() => {
     if (phase !== 'playing' || !trial) return
-    speakAll(promptSpeech(trial))
+    speak(promptFor(trial, lang), lang)
     readyAtRef.current = performance.now()
-  }, [phase, trial])
+  }, [phase, trial, lang])
 
   function start(lvl: Difficulty) {
     resetSession()
@@ -142,10 +139,10 @@ export function RightWayGame() {
     } else if (correct) {
       setCelebrate((c) => c + 1)
       playSuccess()
-      speakAll(VOICE_ORDER.map((l) => ({ lang: l, text: trial.explain[l] })))
+      speak(trial.explain[lang], lang)
     } else {
       playGentle()
-      speakAll(VOICE_ORDER.map((l) => ({ lang: l, text: trial.explain[l] })))
+      speak(trial.explain[lang], lang)
     }
 
     const latencyMs =
@@ -233,7 +230,7 @@ export function RightWayGame() {
           {!assessment && wasCorrect && <div className="celebrate">⭐</div>}
         </div>
         <div className="game-bottom">
-          <BilingualBanner trial={trial} />
+          <PromptBanner trial={trial} lang={lang} />
           <div className="choice-row">
             {JUDGMENTS.map((j) => (
               <button
@@ -246,17 +243,14 @@ export function RightWayGame() {
                 onClick={() => choose(j.saidFine)}
               >
                 <span className="choice-emoji">{j.emoji}</span>
-                <span>{j.label.en}</span>
-                <span className="er-prompt-ml">{j.label.ml}</span>
+                <span>{j.label[lang]}</span>
               </button>
             ))}
           </div>
           {answered && (
             <div className="er-feedback-row">
               <span className={`er-feedback ${assessment || wasCorrect ? 'correct' : 'wrong'}`}>
-                {assessment
-                  ? RECORDED[lang]
-                  : DISPLAY_LANGS.map((l) => trial.explain[l]).join(' · ')}
+                {assessment ? RECORDED[lang] : trial.explain[lang]}
               </span>
               <button className="big-btn er-next" onClick={next}>
                 {t(isLast ? 'finish' : 'next', lang)}
@@ -278,34 +272,22 @@ export function RightWayGame() {
   )
 }
 
-/** Behaviour text + "Is that okay?" in both languages (banner + voice). */
-function promptLines(trial: Behavior): Array<{ lang: Lang; text: string }> {
-  return DISPLAY_LANGS.map((lang) => ({
-    lang,
-    text: `${trial.text[lang]} ${IS_IT_OKAY[lang]}`,
-  }))
+/** Behaviour text + "Is that okay?" in the chosen language (banner + voice). */
+function promptFor(trial: Behavior, lang: Lang): string {
+  return `${trial.text[lang]} ${IS_IT_OKAY[lang]}`
 }
 
-function promptSpeech(trial: Behavior): Array<{ lang: Lang; text: string }> {
-  return VOICE_ORDER.map((lang) => ({
-    lang,
-    text: `${trial.text[lang]} ${IS_IT_OKAY[lang]}`,
-  }))
-}
-
-/** Bilingual prompt banner with a say-it-again button (same layout as the
- *  emotion games' prompt). */
-function BilingualBanner({ trial }: { trial: Behavior }) {
-  const lines = promptLines(trial)
+/** Prompt banner (chosen language) with a say-it-again button (same layout as
+ *  the emotion games' prompt). */
+function PromptBanner({ trial, lang }: { trial: Behavior; lang: Lang }) {
+  const text = promptFor(trial, lang)
   return (
     <div className="prompt-banner er-prompt">
       <div className="er-prompt-lines">
-        {lines.map(({ lang, text }) => (
-          <span key={lang} className={`er-prompt-line er-prompt-${lang}`}>{text}</span>
-        ))}
+        <span className={`er-prompt-line er-prompt-${lang}`}>{text}</span>
       </div>
       {speechAvailable() && (
-        <button aria-label="Say it again" onClick={() => speakAll(promptSpeech(trial))}>🔊</button>
+        <button aria-label="Say it again" onClick={() => speak(text, lang)}>🔊</button>
       )}
     </div>
   )

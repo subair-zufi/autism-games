@@ -27,7 +27,7 @@ import {
   whoFeelsQuestion,
   singleFaceQuestion,
   nameFaceQuestion,
-  DISPLAY_LANGS,
+  displayLangs,
   type Lang,
 } from '../../i18n/strings'
 import type { EmotionId } from '../emotionVocab'
@@ -213,7 +213,7 @@ export function EmotionRecognitionGame() {
 
   const a = activities[idx]
   const answerId = correctEmotion(a)
-  const lines = DISPLAY_LANGS.map((l) => ({ lang: l, text: questionText(a, l) }))
+  const lines = displayLangs(lang).map((l) => ({ lang: l, text: questionText(a, l) }))
   const isLast = idx + 1 >= activities.length
 
   return (
@@ -238,7 +238,7 @@ export function EmotionRecognitionGame() {
       )}
 
       <div className="game-bottom">
-        <BilingualPrompt lines={lines} speakText={questionText(a, 'en')} />
+        <BilingualPrompt lines={lines} speakText={questionText(a, lang)} speakLang={lang} />
 
         {(a.kind === 'single' || a.kind === 'nameFace') && answerId && (
           <ChoiceRow
@@ -246,6 +246,7 @@ export function EmotionRecognitionGame() {
             answer={answerId}
             picked={pickedEmotion}
             answered={answered}
+            lang={lang}
             onPick={answerEmotion}
           />
         )}

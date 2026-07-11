@@ -25,9 +25,9 @@ import { useSettings } from '../../state/settings'
 import { ProgressBar } from '../../components/ProgressBar'
 import { WebGLGate } from '../../components/WebGLGate'
 import { LevelResult, LevelSelect } from '../../components/LevelScreens'
-import { speakAll, speechAvailable } from '../../services/speech'
+import { speak, speechAvailable } from '../../services/speech'
 import { playGentle, playSuccess, playTap } from '../../services/sounds'
-import { t, DISPLAY_LANGS, type Lang } from '../../i18n/strings'
+import { t, type Lang } from '../../i18n/strings'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { LEVELS, useLevelProgress } from '../progression'
 import {
@@ -44,9 +44,6 @@ import {
 import { RuleFixerScene } from './RuleFixerScene'
 
 export const GAME_KEY = 'rulefixer'
-
-/** Voice reads Malayalam first (primary audience), then English. */
-const VOICE_ORDER: Lang[] = ['ml', 'en']
 
 const WHAT_NOW: Record<Lang, string> = {
   en: 'What should you do?',
@@ -93,13 +90,13 @@ export function RuleFixerGame() {
 
   const trial = trials[idx] as Trial | undefined
 
-  // Speak the situation (Malayalam first) and start the latency clock whenever
-  // a new trial is presented.
+  // Speak the situation (in the chosen language) and start the latency clock
+  // whenever a new trial is presented.
   useEffect(() => {
     if (phase !== 'playing' || !trial) return
-    speakAll(promptSpeech(trial))
+    speak(promptFor(trial, lang), lang)
     readyAtRef.current = performance.now()
-  }, [phase, trial])
+  }, [phase, trial, lang])
 
   function start(lvl: Difficulty) {
     resetSession()
@@ -124,10 +121,10 @@ export function RuleFixerGame() {
       playTap()
     } else if (correct) {
       playSuccess()
-      speakAll(VOICE_ORDER.map((l) => ({ lang: l, text: opt.result[l] })))
+      speak(opt.result[lang], lang)
     } else {
       playGentle()
-      speakAll(VOICE_ORDER.map((l) => ({ lang: l, text: opt.result[l] })))
+      speak(opt.result[lang], lang)
     }
 
     const latencyMs =
@@ -213,7 +210,7 @@ export function RuleFixerGame() {
           {outcome === 'good' && <div className="celebrate">⭐</div>}
         </div>
         <div className="game-bottom">
-          <BilingualBanner trial={trial} />
+          <PromptBanner trial={trial} lang={lang} />
           <div className="choice-row">
             {trial.choices.map((opt) => (
               <button
@@ -226,17 +223,14 @@ export function RuleFixerGame() {
                 onClick={() => choose(opt)}
               >
                 <span className="choice-emoji">{opt.emoji}</span>
-                <span>{opt.label.en}</span>
-                <span className="er-prompt-ml">{opt.label.ml}</span>
+                <span>{opt.label[lang]}</span>
               </button>
             ))}
           </div>
           {picked && (
             <div className="er-feedback-row">
               <span className={`er-feedback ${assessment || picked.role === 'kind' ? 'correct' : 'wrong'}`}>
-                {assessment
-                  ? RECORDED[lang]
-                  : DISPLAY_LANGS.map((l) => picked.result[l]).join(' · ')}
+                {assessment ? RECORDED[lang] : picked.result[lang]}
               </span>
               <button className="big-btn er-next" onClick={next}>
                 {t(isLast ? 'finish' : 'next', lang)}
@@ -258,34 +252,22 @@ export function RuleFixerGame() {
   )
 }
 
-/** Situation text + "What should you do?" in both languages (banner + voice). */
-function promptLines(trial: Trial): Array<{ lang: Lang; text: string }> {
-  return DISPLAY_LANGS.map((lang) => ({
-    lang,
-    text: `${trial.situation.text[lang]} ${WHAT_NOW[lang]}`,
-  }))
+/** Situation text + "What should you do?" in the chosen language (banner + voice). */
+function promptFor(trial: Trial, lang: Lang): string {
+  return `${trial.situation.text[lang]} ${WHAT_NOW[lang]}`
 }
 
-function promptSpeech(trial: Trial): Array<{ lang: Lang; text: string }> {
-  return VOICE_ORDER.map((lang) => ({
-    lang,
-    text: `${trial.situation.text[lang]} ${WHAT_NOW[lang]}`,
-  }))
-}
-
-/** Bilingual prompt banner with a say-it-again button (same layout as the
- *  emotion games' prompt). */
-function BilingualBanner({ trial }: { trial: Trial }) {
-  const lines = promptLines(trial)
+/** Prompt banner (chosen language) with a say-it-again button (same layout as
+ *  the emotion games' prompt). */
+function PromptBanner({ trial, lang }: { trial: Trial; lang: Lang }) {
+  const text = promptFor(trial, lang)
   return (
     <div className="prompt-banner er-prompt">
       <div className="er-prompt-lines">
-        {lines.map(({ lang, text }) => (
-          <span key={lang} className={`er-prompt-line er-prompt-${lang}`}>{text}</span>
-        ))}
+        <span className={`er-prompt-line er-prompt-${lang}`}>{text}</span>
       </div>
       {speechAvailable() && (
-        <button aria-label="Say it again" onClick={() => speakAll(promptSpeech(trial))}>🔊</button>
+        <button aria-label="Say it again" onClick={() => speak(text, lang)}>🔊</button>
       )}
     </div>
   )

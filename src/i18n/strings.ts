@@ -21,10 +21,22 @@ export type Gender = 'boy' | 'girl'
 export const LANGS: Lang[] = ['en', 'ml']
 
 /**
- * Languages shown *together* in a question prompt. The spec requires English +
- * Malayalam side by side; extend this to render more languages at once.
+ * Every language the app can render a prompt in. Kept as the canonical list
+ * (used by tests and by the language switcher). Prompts are now shown in a
+ * single chosen language, not side by side — see `displayLangs`.
  */
 export const DISPLAY_LANGS: Lang[] = ['en', 'ml']
+
+/**
+ * The language(s) a prompt is actually shown/spoken in. The learner picks one
+ * language in Settings (Profile → Language), and prompts render only in that
+ * language — showing English and Malayalam together was visually busy. Returns
+ * a single-element array so callers can keep mapping over it (and so a future
+ * "show both" option is a one-line change here).
+ */
+export function displayLangs(lang: Lang): Lang[] {
+  return [lang]
+}
 
 type Entry = Record<Lang, string>
 
