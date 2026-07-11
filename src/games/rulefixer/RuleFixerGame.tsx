@@ -6,10 +6,8 @@
  * construction to `logic.ts`, and progress persistence to `../progression`.
  *
  * Research-mode behaviour (matches the emotion battery):
- *  - Two modes. Practice: training situations, spoken consequence feedback,
- *    results count towards level unlocks. Assessment: held-out probe
- *    situations, corrective feedback withheld (neutral acknowledgement only),
- *    recorded in analytics but never submitted to the unlock ladder.
+ *  - Training situations, spoken consequence feedback; results count towards
+ *    level unlocks.
  *  - No lives / failure state: every child completes all trials, so struggling
  *    participants still produce a full item set.
  *  - Every answer records decision latency from the moment the trial was
@@ -26,7 +24,7 @@ import { ProgressBar } from '../../components/ProgressBar'
 import { WebGLGate } from '../../components/WebGLGate'
 import { LevelResult, LevelSelect } from '../../components/LevelScreens'
 import { speak, speechAvailable } from '../../services/speech'
-import { playGentle, playSuccess, playTap } from '../../services/sounds'
+import { playGentle, playSuccess } from '../../services/sounds'
 import { t, type Lang } from '../../i18n/strings'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { LEVELS, useLevelProgress } from '../progression'
@@ -50,12 +48,6 @@ const WHAT_NOW: Record<Lang, string> = {
   ml: 'നീ എന്ത് ചെയ്യും?',
 }
 
-/** Neutral acknowledgement shown in Assessment mode instead of feedback. */
-const RECORDED: Record<Lang, string> = {
-  en: 'Answer saved.',
-  ml: 'ഉത്തരം സേവ് ആയി.',
-}
-
 const LEVEL_LABEL_KEY: Record<Difficulty, 'levelEasy' | 'levelMedium' | 'levelHard'> = {
   easy: 'levelEasy',
   medium: 'levelMedium',
@@ -70,7 +62,6 @@ export function RuleFixerGame() {
 
   const [phase, setPhase] = useState<'select' | 'playing' | 'result'>('select')
   const [selectedLevel, setSelectedLevel] = useState<Difficulty>('easy')
-  const [assessment, setAssessment] = useState(false)
   const [level, setLevel] = useState<Difficulty>('easy')
   const [trials, setTrials] = useState<Trial[]>([])
   const [idx, setIdx] = useState(0)
@@ -101,7 +92,7 @@ export function RuleFixerGame() {
   function start(lvl: Difficulty) {
     resetSession()
     setLevel(lvl)
-    setTrials(buildLevel(lvl, Math.random, assessment ? 'probe' : 'training'))
+    setTrials(buildLevel(lvl, Math.random))
     setIdx(0)
     setPicked(null)
     setAnswers([])
@@ -116,10 +107,7 @@ export function RuleFixerGame() {
     setPicked(opt)
     setAnswers((a) => [...a, { construct: trial.situation.construct, correct }])
 
-    if (assessment) {
-      // Probe trials measure — they don't teach. Neutral acknowledgement only.
-      playTap()
-    } else if (correct) {
+    if (correct) {
       playSuccess()
       speak(opt.result[lang], lang)
     } else {
@@ -136,7 +124,7 @@ export function RuleFixerGame() {
       pickedRole: opt.role,
       correct,
       level,
-      mode: assessment ? 'assessment' : 'practice',
+      mode: 'practice',
       latencyMs,
       chance: trialChance(trial),
       voiceOn: useSettings.getState().voiceOn,
@@ -154,7 +142,7 @@ export function RuleFixerGame() {
       // guessing baselines, so raw accuracy is not comparable across them).
       recordStep('level_result', {
         level,
-        mode: assessment ? 'assessment' : 'practice',
+        mode: 'practice',
         accuracy: result.accuracy,
         chance: result.chance,
         adjustedAccuracy: result.adjustedAccuracy,
@@ -163,9 +151,8 @@ export function RuleFixerGame() {
         byConstruct: tallyByConstruct(answers),
       })
       finishGame(result.correct)
-      // Persist the attempt + unlock the next level server-side — but never
-      // from an assessment run: probes measure, they don't teach or unlock.
-      if (!assessment) void submit(level, result.correct, result.total)
+      // Persist the attempt + unlock the next level server-side.
+      void submit(level, result.correct, result.total)
       setPhase('result')
     } else {
       setIdx(idx + 1)
@@ -185,15 +172,13 @@ export function RuleFixerGame() {
         lang={lang}
         onSelect={setSelectedLevel}
         onStart={() => start(selectedLevel)}
-        assessment={assessment}
-        onAssessmentChange={setAssessment}
       />
     )
   }
 
   if (!trial) return null
   const isLast = idx + 1 >= trials.length
-  const outcome = picked && !assessment ? (picked.role === 'kind' ? 'good' : 'bad') : null
+  const outcome = picked ? (picked.role === 'kind' ? 'good' : 'bad') : null
 
   return (
     <WebGLGate>
@@ -215,11 +200,8 @@ export function RuleFixerGame() {
             {trial.choices.map((opt) => (
               <button
                 key={opt.id}
-                className={`choice-btn${feedbackClass(opt, picked, assessment)}`}
+                className={`choice-btn${feedbackClass(opt, picked)}`}
                 disabled={picked !== null}
-                // In assessment the picked button keeps full opacity (a neutral
-                // "registered" cue) without revealing correct/wrong colours.
-                style={assessment && picked?.id === opt.id ? { opacity: 1 } : undefined}
                 onClick={() => choose(opt)}
               >
                 <span className="choice-emoji">{opt.emoji}</span>
@@ -229,8 +211,8 @@ export function RuleFixerGame() {
           </div>
           {picked && (
             <div className="er-feedback-row">
-              <span className={`er-feedback ${assessment || picked.role === 'kind' ? 'correct' : 'wrong'}`}>
-                {assessment ? RECORDED[lang] : picked.result[lang]}
+              <span className={`er-feedback ${picked.role === 'kind' ? 'correct' : 'wrong'}`}>
+                {picked.result[lang]}
               </span>
               <button className="big-btn er-next" onClick={next}>
                 {t(isLast ? 'finish' : 'next', lang)}
@@ -244,7 +226,6 @@ export function RuleFixerGame() {
             lang={lang}
             onReplay={() => start(level)}
             onChooseLevel={() => setPhase('select')}
-            countsTowardsUnlock={!assessment}
           />
         )}
       </div>
@@ -273,10 +254,9 @@ function PromptBanner({ trial, lang }: { trial: Trial; lang: Lang }) {
   )
 }
 
-/** Reveal correct/wrong colouring after answering — but only in practice mode;
- *  assessment withholds all corrective feedback. */
-function feedbackClass(opt: Option, picked: Option | null, assessment: boolean): string {
-  if (!picked || assessment) return ''
+/** Reveal correct/wrong colouring after answering. */
+function feedbackClass(opt: Option, picked: Option | null): string {
+  if (!picked) return ''
   if (opt.role === 'kind') return ' correct'
   if (picked.id === opt.id) return ' wrong'
   return ''

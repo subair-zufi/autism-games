@@ -14,12 +14,7 @@ const LEVEL_KEY: Record<Difficulty, 'levelEasy' | 'levelMedium' | 'levelHard'> =
   hard: 'levelHard',
 }
 
-/**
- * Level picker that locks levels the learner has not unlocked yet. When
- * `onAssessmentChange` is given, a practice/assessment toggle is shown:
- * assessment runs the same level on held-out (untrained) stimuli and does not
- * count towards unlocks — it exists to probe generalization.
- */
+/** Level picker that locks levels the learner has not unlocked yet. */
 export function LevelSelect({
   title,
   icon,
@@ -29,8 +24,6 @@ export function LevelSelect({
   lang,
   onSelect,
   onStart,
-  assessment,
-  onAssessmentChange,
 }: {
   title: string
   icon: string
@@ -40,8 +33,6 @@ export function LevelSelect({
   lang: Lang
   onSelect: (l: Difficulty) => void
   onStart: () => void
-  assessment?: boolean
-  onAssessmentChange?: (on: boolean) => void
 }) {
   return (
     <div className="start-screen">
@@ -70,22 +61,6 @@ export function LevelSelect({
           )
         })}
       </div>
-      {onAssessmentChange && (
-        <div className="level-row mode-row">
-          <button
-            className={`level-btn${assessment ? '' : ' selected'}`}
-            onClick={() => onAssessmentChange(false)}
-          >
-            {t('modePractice', lang)}
-          </button>
-          <button
-            className={`level-btn${assessment ? ' selected' : ''}`}
-            onClick={() => onAssessmentChange(true)}
-          >
-            {t('modeAssessment', lang)}
-          </button>
-        </div>
-      )}
       <button className="big-btn" onClick={onStart} disabled={!stateFor(selected).unlocked}>
         {t('play', lang)}
       </button>
@@ -100,14 +75,11 @@ export function LevelResult({
   lang,
   onReplay,
   onChooseLevel,
-  countsTowardsUnlock = true,
 }: {
   summary: LevelSummary
   lang: Lang
   onReplay: () => void
   onChooseLevel: () => void
-  /** False for assessment runs: hide the unlock/retry messaging. */
-  countsTowardsUnlock?: boolean
 }) {
   const messageKey = summary.mastered ? 'resultMastered' : summary.passed ? 'resultPassed' : 'resultFailed'
   return (
@@ -120,9 +92,7 @@ export function LevelResult({
           <div><strong>{t('numCorrect', lang)}</strong><span className="er-correct">{summary.correct}</span></div>
           <div><strong>{t('numIncorrect', lang)}</strong><span className="er-incorrect">{summary.incorrect}</span></div>
         </div>
-        {countsTowardsUnlock && (
-          <p className={`er-result-msg ${summary.passed ? 'pass' : 'retry'}`}>{t(messageKey, lang)}</p>
-        )}
+        <p className={`er-result-msg ${summary.passed ? 'pass' : 'retry'}`}>{t(messageKey, lang)}</p>
         <button className="big-btn" onClick={onReplay}>{t('playAgain', lang)}</button>
         <button className="big-btn secondary" onClick={onChooseLevel}>{t('chooseLevel', lang)}</button>
         <Link to="/" className="big-btn home-link">{t('home', lang)}</Link>

@@ -54,10 +54,6 @@ const MESSAGES = {
   levelHard: { en: 'Hard', ml: 'പ്രയാസം' },
   locked: { en: 'Locked', ml: 'പൂട്ടിയത്' },
   clipsTitle: { en: 'Emotion Clips', ml: 'വികാര ക്ലിപ്പുകൾ' },
-  // Practice = training stimuli, counts towards unlocks. Assessment = held-out
-  // (untrained) stimuli to probe generalization; does not affect unlocks.
-  modePractice: { en: 'Practice', ml: 'പരിശീലനം' },
-  modeAssessment: { en: 'Assessment', ml: 'വിലയിരുത്തൽ' },
 
   // --- In-game HUD -----------------------------------------------------------
   level: { en: 'Level', ml: 'ലെവൽ' },

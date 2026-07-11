@@ -747,10 +747,6 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 /* (legacy student-manager panel removed — participants now live on their own page) */
 .player-btn.child.wait { opacity: .7; }
 
-/* --- Practice/Assessment toggle on the level select ----------------------- */
-.mode-row { margin-top: 4px; }
-.mode-row .level-btn { font-size: 0.9rem; padding: 8px 14px; }
-
 /* --- Emotion identification profile (Progress dashboard) ------------------ */
 .emotion-stat-list { list-style: none; margin: 0 0 14px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .emotion-stat { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; align-items: baseline; padding: 6px 8px; border-radius: 10px; background: #fafafa; }

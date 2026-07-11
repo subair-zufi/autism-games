@@ -6,10 +6,8 @@
  * construction to `logic.ts`, and progress persistence to `../progression`.
  *
  * Research-mode behaviour (matches Good Choice and the emotion battery):
- *  - Two modes. Practice: training behaviours, spoken explanation feedback,
- *    results count towards level unlocks. Assessment: held-out probe
- *    behaviours, corrective feedback withheld (neutral acknowledgement only),
- *    recorded in analytics but never submitted to the unlock ladder.
+ *  - Training behaviours, spoken explanation feedback; results count towards
+ *    level unlocks.
  *  - No lives / failure state: every child completes all trials, so struggling
  *    participants still produce a full item set.
  *  - Difficulty = stimulus subtlety (clear vs subtle tier), not round count;
@@ -29,7 +27,7 @@ import { ProgressBar } from '../../components/ProgressBar'
 import { WebGLGate } from '../../components/WebGLGate'
 import { LevelResult, LevelSelect } from '../../components/LevelScreens'
 import { speak, speechAvailable } from '../../services/speech'
-import { playGentle, playSuccess, playTap } from '../../services/sounds'
+import { playGentle, playSuccess } from '../../services/sounds'
 import { t, type Lang } from '../../i18n/strings'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { LEVELS, useLevelProgress } from '../progression'
@@ -59,12 +57,6 @@ const JUDGMENTS: Array<{ saidFine: boolean; emoji: string; label: Record<Lang, s
   { saidFine: false, emoji: '👎', label: { en: 'Not okay', ml: 'അത് ശരിയല്ല' } },
 ]
 
-/** Neutral acknowledgement shown in Assessment mode instead of feedback. */
-const RECORDED: Record<Lang, string> = {
-  en: 'Answer saved.',
-  ml: 'ഉത്തരം സേവ് ആയി.',
-}
-
 const LEVEL_LABEL_KEY: Record<Difficulty, 'levelEasy' | 'levelMedium' | 'levelHard'> = {
   easy: 'levelEasy',
   medium: 'levelMedium',
@@ -85,7 +77,6 @@ export function RightWayGame() {
 
   const [phase, setPhase] = useState<'select' | 'playing' | 'result'>('select')
   const [selectedLevel, setSelectedLevel] = useState<Difficulty>('easy')
-  const [assessment, setAssessment] = useState(false)
   const [level, setLevel] = useState<Difficulty>('easy')
   const [trials, setTrials] = useState<Behavior[]>([])
   const [idx, setIdx] = useState(0)
@@ -117,7 +108,7 @@ export function RightWayGame() {
   function start(lvl: Difficulty) {
     resetSession()
     setLevel(lvl)
-    setTrials(buildLevel(lvl, Math.random, assessment ? 'probe' : 'training'))
+    setTrials(buildLevel(lvl, Math.random))
     setIdx(0)
     setPicked(null)
     setAnswers([])
@@ -133,10 +124,7 @@ export function RightWayGame() {
     setPicked(saidFine)
     setAnswers((a) => [...a, { construct: trial.construct, isFine: trial.isFine, correct }])
 
-    if (assessment) {
-      // Probe trials measure — they don't teach. Neutral acknowledgement only.
-      playTap()
-    } else if (correct) {
+    if (correct) {
       setCelebrate((c) => c + 1)
       playSuccess()
       speak(trial.explain[lang], lang)
@@ -155,7 +143,7 @@ export function RightWayGame() {
       saidFine,
       correct,
       level,
-      mode: assessment ? 'assessment' : 'practice',
+      mode: 'practice',
       latencyMs,
       chance: CHANCE,
       voiceOn: useSettings.getState().voiceOn,
@@ -172,7 +160,7 @@ export function RightWayGame() {
       // response bias (always answering "okay" scores at chance overall).
       recordStep('level_result', {
         level,
-        mode: assessment ? 'assessment' : 'practice',
+        mode: 'practice',
         accuracy: result.accuracy,
         chance: result.chance,
         adjustedAccuracy: result.adjustedAccuracy,
@@ -182,9 +170,8 @@ export function RightWayGame() {
         byValence: tallyByValence(answers),
       })
       finishGame(result.correct)
-      // Persist the attempt + unlock the next level server-side — but never
-      // from an assessment run: probes measure, they don't teach or unlock.
-      if (!assessment) void submit(level, result.correct, result.total)
+      // Persist the attempt + unlock the next level server-side.
+      void submit(level, result.correct, result.total)
       setPhase('result')
     } else {
       setIdx(idx + 1)
@@ -204,8 +191,6 @@ export function RightWayGame() {
         lang={lang}
         onSelect={setSelectedLevel}
         onStart={() => start(selectedLevel)}
-        assessment={assessment}
-        onAssessmentChange={setAssessment}
       />
     )
   }
@@ -221,13 +206,12 @@ export function RightWayGame() {
         <span className="er-level-chip">{t('level', lang)}: {t(LEVEL_LABEL_KEY[level], lang)}</span>
         <span className="er-activity-chip">{t('activity', lang, { n: idx + 1, total: trials.length })}</span>
         {/* Trial progress only — no running score on screen: seeing the tally
-            move is itself corrective feedback, which assessment must withhold
-            and practice already gives through the spoken explanation. */}
+            move is itself corrective feedback beyond the spoken explanation. */}
         <ProgressBar value={Math.round(((idx + (answered ? 1 : 0)) / trials.length) * 100)} />
         <div className="game-canvas">
-          <RightWayScene behavior={trial} celebrate={assessment ? 0 : celebrate} />
+          <RightWayScene behavior={trial} celebrate={celebrate} />
           <div className="action-bubble">{trial.bubble}</div>
-          {!assessment && wasCorrect && <div className="celebrate">⭐</div>}
+          {wasCorrect && <div className="celebrate">⭐</div>}
         </div>
         <div className="game-bottom">
           <PromptBanner trial={trial} lang={lang} />
@@ -235,11 +219,8 @@ export function RightWayGame() {
             {JUDGMENTS.map((j) => (
               <button
                 key={String(j.saidFine)}
-                className={`choice-btn${feedbackClass(j.saidFine, picked, trial.isFine, assessment)}`}
+                className={`choice-btn${feedbackClass(j.saidFine, picked, trial.isFine)}`}
                 disabled={answered}
-                // In assessment the picked button keeps full opacity (a neutral
-                // "registered" cue) without revealing correct/wrong colours.
-                style={assessment && picked === j.saidFine ? { opacity: 1 } : undefined}
                 onClick={() => choose(j.saidFine)}
               >
                 <span className="choice-emoji">{j.emoji}</span>
@@ -249,8 +230,8 @@ export function RightWayGame() {
           </div>
           {answered && (
             <div className="er-feedback-row">
-              <span className={`er-feedback ${assessment || wasCorrect ? 'correct' : 'wrong'}`}>
-                {assessment ? RECORDED[lang] : trial.explain[lang]}
+              <span className={`er-feedback ${wasCorrect ? 'correct' : 'wrong'}`}>
+                {trial.explain[lang]}
               </span>
               <button className="big-btn er-next" onClick={next}>
                 {t(isLast ? 'finish' : 'next', lang)}
@@ -264,7 +245,6 @@ export function RightWayGame() {
             lang={lang}
             onReplay={() => start(level)}
             onChooseLevel={() => setPhase('select')}
-            countsTowardsUnlock={!assessment}
           />
         )}
       </div>
@@ -293,15 +273,9 @@ function PromptBanner({ trial, lang }: { trial: Behavior; lang: Lang }) {
   )
 }
 
-/** Reveal correct/wrong colouring after answering — but only in practice mode;
- *  assessment withholds all corrective feedback. */
-function feedbackClass(
-  saidFine: boolean,
-  picked: boolean | null,
-  isFine: boolean,
-  assessment: boolean,
-): string {
-  if (picked === null || assessment) return ''
+/** Reveal correct/wrong colouring after answering. */
+function feedbackClass(saidFine: boolean, picked: boolean | null, isFine: boolean): string {
+  if (picked === null) return ''
   if (saidFine === isFine) return ' correct'
   if (picked === saidFine) return ' wrong'
   return ''
