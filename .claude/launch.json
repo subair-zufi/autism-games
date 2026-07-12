@@ -19,6 +19,12 @@
       "runtimeExecutable": "/Users/farhanpeecee/.local/node/bin/node",
       "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "4173", "--strictPort"],
       "port": 4173
+    },
+    {
+      "name": "autism-games-api",
+      "runtimeExecutable": "/Users/farhanpeecee/autism-games/server/.venv/bin/python",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--app-dir", "/Users/farhanpeecee/autism-games/server", "--port", "8000"],
+      "port": 8000
     }
   ]
 }

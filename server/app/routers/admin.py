@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from .. import reporting
 from ..database import get_db
 from ..deps import get_current_admin
 from ..models import Admin, GameEvent, GameSession, Student, User
@@ -12,12 +13,17 @@ from ..schemas import (
     AdminAuthResponse,
     AdminLoginRequest,
     AnalyticsSummary,
+    EmotionReport,
     EventPublic,
     GameBreakdownItem,
+    GroupReport,
     PaginatedEvents,
     PaginatedStudents,
     PaginatedUsers,
+    ParticipantSkillReport,
+    SocialNormsReport,
     StudentPublic,
+    StudentReport,
     TimeseriesPoint,
     UserPublic,
     UserUpdate,
@@ -25,6 +31,15 @@ from ..schemas import (
 from ..security import create_admin_token, verify_password
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
+
+
+def _resolve_student(db: Session, student_id: str) -> Student:
+    """Admin equivalent of the mentor-scoped ``resolve_owned_student`` — an
+    admin may read any student, so this only checks existence."""
+    student = db.get(Student, student_id)
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found.")
+    return student
 
 
 # ---------------------------------------------------------------------------
@@ -199,6 +214,54 @@ def student_events(
 
 
 # ---------------------------------------------------------------------------
+# Scoring & analytics reports (mirrors the mentor-facing /api/reports/* — same
+# computation from app/reporting.py, just without the mentor-ownership check,
+# so an admin can pull any student's report across every mentor).
+# ---------------------------------------------------------------------------
+@router.get("/students/{student_id}/report", response_model=StudentReport)
+def student_report(
+    student_id: str, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StudentReport:
+    _resolve_student(db, student_id)
+    return reporting.build_student_report(db, student_id)
+
+
+@router.get("/students/{student_id}/emotions", response_model=EmotionReport)
+def student_emotion_report(
+    student_id: str,
+    game_key: str | None = None,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+) -> EmotionReport:
+    _resolve_student(db, student_id)
+    return reporting.build_emotion_report(db, student_id, game_key)
+
+
+@router.get("/students/{student_id}/skills", response_model=ParticipantSkillReport)
+def student_skill_report(
+    student_id: str, db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> ParticipantSkillReport:
+    """Standardised 0-100 Social-Emotional composite, the four skill scores and
+    per-game breakdown, chance-corrected first-attempt accuracy (see
+    app/scoring.py)."""
+    _resolve_student(db, student_id)
+    return reporting.build_skill_report(db, student_id)
+
+
+@router.get("/students/{student_id}/social-norms", response_model=SocialNormsReport)
+def student_social_norms_report(
+    student_id: str,
+    sessions: int = Query(default=5, ge=1, le=20, description="Recent sessions per game to pool"),
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+) -> SocialNormsReport:
+    """Per-construct accuracy for Right or Wrong / Good Choice, pooled across
+    the student's most recent sessions of each game."""
+    _resolve_student(db, student_id)
+    return reporting.build_social_norms_report(db, student_id, session_window=sessions)
+
+
+# ---------------------------------------------------------------------------
 # Events feed
 # ---------------------------------------------------------------------------
 @router.get("/events", response_model=PaginatedEvents)
@@ -305,3 +368,26 @@ def analytics_timeseries(
         )
         for row in rows
     ]
+
+
+@router.get("/analytics/groups", response_model=GroupReport)
+def analytics_groups(
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+    group_by: str = Query(default="overall", description="overall|gender|autism_level|age_band|iq_band"),
+    mentor_id: str | None = Query(default=None, description="Restrict to one mentor's students"),
+    gender: str | None = Query(default=None, description="Filter cohort by gender"),
+    autism_level: str | None = Query(default=None, description="Filter cohort by autism level"),
+) -> GroupReport:
+    """Cohort-level scores across every mentor's students (or one mentor's, via
+    ``mentor_id``), optionally split by a demographic dimension. Mirrors the
+    mentor-facing ``/api/reports/groups`` but is not scoped to one mentor."""
+    stmt = select(Student)
+    if mentor_id:
+        stmt = stmt.where(Student.mentor_id == mentor_id)
+    if gender:
+        stmt = stmt.where(Student.gender == gender)
+    if autism_level:
+        stmt = stmt.where(Student.autism_level == autism_level)
+    students = list(db.scalars(stmt).all())
+    return reporting.build_group_report(db, students, group_by)

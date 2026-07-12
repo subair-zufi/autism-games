@@ -34,6 +34,7 @@
     .stat .l { color:var(--muted); font-size:13px; margin-top:4px; }
     .panel { background:var(--card); border-radius:14px; padding:20px; margin-bottom:24px; }
     .panel h2 { font-size:15px; margin:0 0 16px; }
+    .panel .hint { color:var(--muted); font-size:12px; margin:-10px 0 16px; }
     .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
     @media (max-width:880px){ .grid2{ grid-template-columns:1fr; } }
     table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -42,10 +43,37 @@
     .pill { padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600; }
     .pill.on { background:rgba(34,197,94,.15); color:var(--ok); }
     .pill.off { background:rgba(239,68,68,.15); color:var(--danger); }
-    .toolbar { display:flex; gap:10px; margin-bottom:14px; }
+    .toolbar { display:flex; gap:10px; margin-bottom:14px; align-items:center; flex-wrap:wrap; }
     .toolbar input { max-width:280px; }
     .act { background:transparent; border:1px solid #334155; color:var(--muted); padding:4px 9px; font-size:12px; margin-right:6px; }
     .act.danger { color:var(--danger); border-color:rgba(239,68,68,.4); }
+    /* Pills used as toggle buttons (cohort group-by) */
+    .pill-btn { background:transparent; border:1px solid #334155; color:var(--muted); padding:6px 14px; border-radius:999px; font-size:13px; }
+    .pill-btn.on { background:var(--accent); border-color:var(--accent); color:#fff; }
+    /* Score bars (skill / construct breakdown) */
+    .score-row { margin-bottom:12px; }
+    .score-row-head { display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px; }
+    .score-row-head .lbl { color:var(--text); }
+    .score-row-head .val { color:var(--muted); font-weight:700; }
+    .score-row-head .val .delta { margin-left:6px; font-size:11px; }
+    .delta.up { color:var(--ok); } .delta.down { color:var(--danger); }
+    .score-track { height:8px; border-radius:5px; background:#0b1220; overflow:hidden; }
+    .score-fill { height:100%; border-radius:5px; }
+    .score-sub { display:block; color:#64748b; font-size:11px; margin-top:3px; }
+    .skill-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+    .skill-box { background:#0b1220; border-radius:12px; padding:14px; }
+    .skill-box h3 { font-size:13px; margin:0 0 10px; display:flex; justify-content:space-between; }
+    /* Confusion matrix */
+    .confusion-scroll { overflow-x:auto; }
+    .confusion-matrix td, .confusion-matrix th { text-align:center; padding:6px 8px; }
+    .confusion-matrix td.diag { background:rgba(34,197,94,.12); color:var(--ok); font-weight:700; }
+    .confusion-matrix td.confused { background:rgba(239,68,68,.1); color:var(--danger); }
+    /* Student detail view */
+    #student-detail-view { display:none; }
+    #student-detail-view.show { display:block; }
+    .detail-head { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+    .detail-head .name { font-size:18px; font-weight:700; }
+    .detail-head .meta { color:var(--muted); font-size:13px; }
   </style>
 </head>
 <body>
@@ -73,36 +101,109 @@
       </div>
     </header>
     <main>
-      <div class="cards" id="stat-cards"></div>
+      <!-- ===== Overview (event-volume analytics) ===== -->
+      <div id="overview-view">
+        <div class="cards" id="stat-cards"></div>
 
-      <div class="grid2">
-        <div class="panel">
-          <h2>Activity (last 30 days)</h2>
-          <canvas id="timeChart" height="160"></canvas>
+        <div class="grid2">
+          <div class="panel">
+            <h2>Activity (last 30 days)</h2>
+            <canvas id="timeChart" height="160"></canvas>
+          </div>
+          <div class="panel">
+            <h2>Events by game</h2>
+            <canvas id="gameChart" height="160"></canvas>
+          </div>
         </div>
+
         <div class="panel">
-          <h2>Events by game</h2>
-          <canvas id="gameChart" height="160"></canvas>
+          <h2>Per-game breakdown</h2>
+          <table id="games-table">
+            <thead><tr><th>Game</th><th>Events</th><th>Players</th><th>Avg score</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <!-- ===== Cohort comparison (standardised skill scores) ===== -->
+        <div class="panel">
+          <h2>Cohort Comparison</h2>
+          <p class="hint">Mean 0-100 chance-corrected skill score across every participant, grouped by a demographic dimension. Higher is better.</p>
+          <div class="toolbar" id="cohort-pills"></div>
+          <canvas id="cohortChart" height="140"></canvas>
+          <div class="confusion-scroll" style="margin-top:16px">
+            <table id="cohort-table">
+              <thead><tr id="cohort-thead"></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Players</h2>
+          <div class="toolbar">
+            <input type="search" id="user-search" placeholder="Search email or name…" />
+          </div>
+          <table id="users-table">
+            <thead><tr><th>Email</th><th>Name</th><th>City</th><th>Education</th><th>Status</th><th>Joined</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="panel">
+          <h2>Participants (students)</h2>
+          <p class="hint">Click a row to open that participant's full scoring report — skill scores, social-norms profile and emotion confusion matrix.</p>
+          <div class="toolbar">
+            <input type="search" id="student-search" placeholder="Search participant name…" />
+          </div>
+          <table id="students-table">
+            <thead><tr><th>Name</th><th>Code</th><th>Autism level</th><th>Gender</th><th>Status</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
         </div>
       </div>
 
-      <div class="panel">
-        <h2>Per-game breakdown</h2>
-        <table id="games-table">
-          <thead><tr><th>Game</th><th>Events</th><th>Players</th><th>Avg score</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </div>
+      <!-- ===== Student detail (one participant's full report) ===== -->
+      <div id="student-detail-view">
+        <button class="btn-ghost" id="back-to-overview">← Back to overview</button>
 
-      <div class="panel">
-        <h2>Players</h2>
-        <div class="toolbar">
-          <input type="search" id="user-search" placeholder="Search email or name…" />
+        <div class="panel" style="margin-top:16px">
+          <div class="detail-head">
+            <div>
+              <div class="name" id="detail-name">—</div>
+              <div class="meta" id="detail-meta"></div>
+            </div>
+          </div>
+          <div class="cards" id="detail-summary-cards"></div>
         </div>
-        <table id="users-table">
-          <thead><tr><th>Email</th><th>Name</th><th>City</th><th>Education</th><th>Status</th><th>Joined</th><th></th></tr></thead>
-          <tbody></tbody>
-        </table>
+
+        <div class="panel" id="detail-skills-panel">
+          <h2>Skill Scores</h2>
+          <p class="hint">0-100 chance-corrected first-attempt accuracy. ▲/▼ = change from first to most recent session.</p>
+          <canvas id="skillRadar" height="160"></canvas>
+          <div class="skill-grid" id="skill-grid" style="margin-top:16px"></div>
+        </div>
+
+        <div class="panel" id="detail-social-panel">
+          <h2>Social Norms Profile</h2>
+          <p class="hint">Per-construct accuracy, pooled across each game's most recent sessions.</p>
+          <div class="skill-grid" id="social-grid"></div>
+        </div>
+
+        <div class="panel" id="detail-emotion-panel">
+          <h2>Emotion Identification Profile</h2>
+          <p class="hint">First attempts only, across Emotion Recognition and Emotion Clips.</p>
+          <div class="confusion-scroll">
+            <table id="emotion-matrix"></table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>Recent Activity</h2>
+          <table id="recent-table">
+            <thead><tr><th>Game</th><th>When</th><th>Score</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
     </main>
   </div>
@@ -110,7 +211,7 @@
   <script>
     const API = ""; // same origin
     const TOKEN_KEY = "ag_admin_token";
-    let timeChart, gameChart;
+    let timeChart, gameChart, cohortChart, skillRadar;
 
     const token = () => localStorage.getItem(TOKEN_KEY);
     const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
@@ -162,7 +263,7 @@
       } catch (_) { return; }
       document.getElementById("login-view").classList.add("hidden");
       document.getElementById("dash-view").classList.remove("hidden");
-      loadSummary(); loadTimeseries(); loadGames(); loadUsers();
+      loadSummary(); loadTimeseries(); loadGames(); loadUsers(); loadStudents(); loadCohort();
     }
 
     async function loadSummary() {
@@ -243,6 +344,234 @@
         });
       });
     }
+
+    // ---- Participants (students) ----
+    let studentSearchTimer;
+    document.getElementById("student-search").addEventListener("input", (e) => {
+      clearTimeout(studentSearchTimer);
+      studentSearchTimer = setTimeout(() => loadStudents(e.target.value), 300);
+    });
+
+    async function loadStudents(q = "") {
+      const data = await api("/api/admin/students?limit=100" + (q ? "&q=" + encodeURIComponent(q) : ""));
+      const tbody = document.querySelector("#students-table tbody");
+      tbody.innerHTML = data.items.map((s) => `
+        <tr data-id="${s.id}" data-name="${s.full_name}" style="cursor:pointer">
+          <td>${s.full_name}</td>
+          <td>${s.participant_code || "—"}</td>
+          <td>${s.autism_level || "—"}</td>
+          <td>${s.gender || "—"}</td>
+          <td><span class="pill ${s.is_active ? "on" : "off"}">${s.is_active ? "active" : "inactive"}</span></td>
+          <td><button class="act" data-act="view">View report</button></td>
+        </tr>`).join("") || `<tr><td colspan="6" style="color:#64748b">No participants yet</td></tr>`;
+
+      tbody.querySelectorAll("tr[data-id]").forEach((tr) => {
+        const open = () => openStudentDetail(tr.dataset.id, tr.dataset.name);
+        tr.addEventListener("click", (e) => { if (!e.target.closest("button")) open(); });
+        tr.querySelector("button[data-act='view']")?.addEventListener("click", open);
+      });
+    }
+
+    // ---- Cohort comparison ----
+    const GROUP_OPTIONS = [
+      ["overall", "Overall"], ["gender", "Gender"], ["autism_level", "Autism Level"],
+      ["age_band", "Age"], ["iq_band", "IQ"],
+    ];
+    const METRIC_SHORT = { composite: "Overall", emotion: "Emotion", turntaking: "Turns", socialnorms: "Social", jointattention: "Joint Att." };
+    const GROUP_COLORS = ["#4a76d4", "#e8833a", "#2fa36b", "#b5539c", "#d64550", "#6d5ac0", "#c9a227"];
+    let currentGroupBy = "gender";
+
+    function renderCohortPills() {
+      document.getElementById("cohort-pills").innerHTML = GROUP_OPTIONS.map(([id, label]) =>
+        `<button class="pill-btn${id === currentGroupBy ? " on" : ""}" data-group="${id}">${label}</button>`
+      ).join("");
+      document.querySelectorAll("#cohort-pills .pill-btn").forEach((btn) => {
+        btn.addEventListener("click", () => { currentGroupBy = btn.dataset.group; renderCohortPills(); loadCohort(); });
+      });
+    }
+
+    async function loadCohort() {
+      renderCohortPills();
+      const report = await api("/api/admin/analytics/groups?group_by=" + currentGroupBy);
+      const metricIds = report.breakdowns[0]?.stats.map((s) => s.metric) ?? [];
+      const metricLabels = metricIds.map((m) => METRIC_SHORT[m] || m);
+
+      const ctx = document.getElementById("cohortChart");
+      if (cohortChart) cohortChart.destroy();
+      if (!report.breakdowns.length) {
+        ctx.getContext("2d").clearRect(0, 0, ctx.width, ctx.height);
+        document.getElementById("cohort-thead").innerHTML = "";
+        document.querySelector("#cohort-table tbody").innerHTML =
+          `<tr><td style="color:#64748b">No scored gameplay yet.</td></tr>`;
+        return;
+      }
+      cohortChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: metricLabels,
+          datasets: report.breakdowns.map((b, i) => ({
+            label: `${b.group} (n=${b.n_participants})`,
+            data: b.stats.map((s) => s.mean),
+            backgroundColor: GROUP_COLORS[i % GROUP_COLORS.length],
+          })),
+        },
+        options: {
+          plugins: { legend: { labels: { color: "#94a3b8" } } },
+          scales: { x: { ticks: { color: "#64748b" } }, y: { beginAtZero: true, max: 100, ticks: { color: "#64748b" } } },
+        },
+      });
+
+      document.getElementById("cohort-thead").innerHTML =
+        "<th>Group</th>" + metricIds.map((m) => `<th>${METRIC_SHORT[m] || m}</th>`).join("");
+      document.querySelector("#cohort-table tbody").innerHTML = report.breakdowns.map((b) => `
+        <tr>
+          <th>${b.group} <small style="color:#64748b">n=${b.n_participants}</small></th>
+          ${b.stats.map((s) => `<td>${fmt(s.mean)}${s.sd != null && s.mean != null ? ` <small style="color:#64748b">±${Math.round(s.sd)}</small>` : ""}${deltaHtml(s.mean_delta)}</td>`).join("")}
+        </tr>`).join("");
+    }
+
+    // ---- Student detail ----
+    const fmt = (v) => (v == null ? "—" : Math.round(v).toString());
+    function deltaHtml(delta) {
+      if (delta == null || Math.abs(delta) < 0.5) return "";
+      const up = delta > 0;
+      return ` <span class="delta ${up ? "up" : "down"}">${up ? "▲" : "▼"} ${Math.abs(Math.round(delta))}</span>`;
+    }
+    function scoreRow(label, score, color, delta, sub) {
+      const played = score != null;
+      const pct = played ? Math.max(2, Math.min(100, score)) : 0;
+      return `<div class="score-row">
+        <div class="score-row-head"><span class="lbl">${label}</span><span class="val">${fmt(score)}${delta !== undefined ? deltaHtml(delta) : ""}</span></div>
+        <div class="score-track"><div class="score-fill" style="width:${pct}%;background:${color}"></div></div>
+        ${sub ? `<span class="score-sub">${sub}</span>` : ""}
+      </div>`;
+    }
+
+    const SKILL_META = {
+      emotion: { icon: "🙂", color: "#4a76d4" },
+      turntaking: { icon: "🔄", color: "#e8833a" },
+      socialnorms: { icon: "⚖️", color: "#2fa36b" },
+      jointattention: { icon: "👀", color: "#b5539c" },
+    };
+    const CONSTRUCT_LABELS = {
+      greetings: "Greetings", sharing: "Sharing", turns: "Turn-Taking", space: "Personal Space", politeness: "Politeness",
+      helping: "Helping", comforting: "Comforting", inclusion: "Inclusion", fairness: "Fairness",
+    };
+    const GAME_LABELS = {
+      emotionrecognition: "Emotion Recognition", identifyemotions: "Emotion Clips",
+      blocks: "Block Buddies", rollback: "Roll-Back Buddy",
+      rightway: "Right or Wrong", rulefixer: "Good Choice",
+      museum: "Museum Look", garden: "Garden Finder", discovery: "Look What I Found!",
+    };
+    const EMOTION_META = {
+      happy: "😊", sad: "😢", angry: "😠", surprised: "😮", scared: "😨", disgust: "🤢",
+    };
+
+    async function openStudentDetail(studentId, name) {
+      document.getElementById("overview-view").classList.add("hidden");
+      const detail = document.getElementById("student-detail-view");
+      detail.classList.add("show");
+      document.getElementById("detail-name").textContent = name;
+      document.getElementById("detail-meta").textContent = "Loading…";
+
+      const [report, skills, social, emotions] = await Promise.all([
+        api(`/api/admin/students/${studentId}/report`).catch(() => null),
+        api(`/api/admin/students/${studentId}/skills`).catch(() => null),
+        api(`/api/admin/students/${studentId}/social-norms`).catch(() => null),
+        api(`/api/admin/students/${studentId}/emotions`).catch(() => null),
+      ]);
+
+      // Summary cards
+      if (report) {
+        document.getElementById("detail-meta").textContent =
+          `${report.summary.games_done}/${report.summary.total_games} games played · ${report.summary.sessions} sessions`;
+        document.getElementById("detail-summary-cards").innerHTML = [
+          ["Composite score", fmt(skills?.composite)],
+          ["Sessions", skills?.n_sessions ?? report.summary.sessions],
+          ["Scored trials", skills?.n_trials ?? 0],
+          ["Games completed", `${report.summary.games_done}/${report.summary.total_games}`],
+        ].map(([l, v]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
+
+        document.querySelector("#recent-table tbody").innerHTML = report.recent.map((r) => `
+          <tr><td>${GAME_LABELS[r.game_key] || r.game_key}</td><td>${new Date(r.when).toLocaleString()}</td><td>${r.score ?? "—"}</td></tr>
+        `).join("") || `<tr><td colspan="3" style="color:#64748b">No sessions yet</td></tr>`;
+      }
+
+      // Skill scores + radar
+      const skillsPanel = document.getElementById("detail-skills-panel");
+      if (skills && skills.n_trials > 0) {
+        skillsPanel.classList.remove("hidden");
+        const ctx = document.getElementById("skillRadar");
+        if (skillRadar) skillRadar.destroy();
+        skillRadar = new Chart(ctx, {
+          type: "radar",
+          data: {
+            labels: skills.skills.map((s) => SKILL_META[s.skill]?.icon + " " + s.label),
+            datasets: [{
+              label: "Skill score", data: skills.skills.map((s) => s.score ?? 0),
+              borderColor: "#6366f1", backgroundColor: "rgba(99,102,241,.25)", pointBackgroundColor: "#6366f1",
+            }],
+          },
+          options: {
+            scales: { r: { min: 0, max: 100, ticks: { color: "#64748b", backdropColor: "transparent" }, grid: { color: "#334155" }, angleLines: { color: "#334155" }, pointLabels: { color: "#e2e8f0" } } },
+            plugins: { legend: { display: false } },
+          },
+        });
+        document.getElementById("skill-grid").innerHTML = skills.skills.map((s) => {
+          const meta = SKILL_META[s.skill] || { color: "#6366f1" };
+          const games = s.games.map((g) => scoreRow(
+            GAME_LABELS[g.game_key] || g.game_key, g.score, meta.color, g.delta,
+            g.n_trials > 0 ? `${g.n_trials} trials · ${g.n_sessions} session${g.n_sessions === 1 ? "" : "s"}` + (g.median_latency_ms != null ? ` · ${(g.median_latency_ms / 1000).toFixed(1)}s` : "") : "Not played yet"
+          )).join("");
+          return `<div class="skill-box"><h3><span>${meta.icon} ${s.label}</span><span>${fmt(s.score)}${deltaHtml(s.delta)}</span></h3>${games}</div>`;
+        }).join("");
+      } else {
+        skillsPanel.classList.add("hidden");
+      }
+
+      // Social norms
+      const socialPanel = document.getElementById("detail-social-panel");
+      const hasSocial = social && social.games.some((g) => g.constructs.some((c) => c.n_trials > 0));
+      if (hasSocial) {
+        socialPanel.classList.remove("hidden");
+        const color = SKILL_META.socialnorms.color;
+        document.getElementById("social-grid").innerHTML = social.games.map((g) => {
+          const rows = g.constructs.map((c) => scoreRow(
+            CONSTRUCT_LABELS[c.construct] || c.construct, c.score, color, undefined,
+            c.n_trials > 0 ? `${c.n_trials} trials` + (c.median_latency_ms != null ? ` · ${(c.median_latency_ms / 1000).toFixed(1)}s` : "") : "Not enough recent data"
+          )).join("");
+          return `<div class="skill-box"><h3><span>${GAME_LABELS[g.game_key] || g.game_key}</span><span style="color:#64748b;font-weight:400;font-size:11px">last ${g.n_sessions_pooled}/${g.session_window} sessions</span></h3>${rows}</div>`;
+        }).join("");
+      } else {
+        socialPanel.classList.add("hidden");
+      }
+
+      // Emotion confusion matrix
+      const emotionPanel = document.getElementById("detail-emotion-panel");
+      const hasEmotions = emotions && emotions.stats.some((s) => s.total > 0);
+      if (hasEmotions) {
+        emotionPanel.classList.remove("hidden");
+        const ids = emotions.emotions;
+        const head = "<tr><th></th>" + ids.map((id) => `<th title="${id}">${EMOTION_META[id] || id}</th>`).join("") + "</tr>";
+        const body = ids.map((shown) => {
+          const cells = ids.map((picked) => {
+            const n = emotions.confusion[shown]?.[picked] ?? 0;
+            const cls = shown === picked ? "diag" : n > 0 ? "confused" : "";
+            return `<td class="${cls}">${n > 0 ? n : ""}</td>`;
+          }).join("");
+          return `<tr><th title="${shown}">${EMOTION_META[shown] || shown}</th>${cells}</tr>`;
+        }).join("");
+        document.getElementById("emotion-matrix").className = "confusion-matrix";
+        document.getElementById("emotion-matrix").innerHTML = `<thead>${head}</thead><tbody>${body}</tbody>`;
+      } else {
+        emotionPanel.classList.add("hidden");
+      }
+    }
+
+    document.getElementById("back-to-overview").addEventListener("click", () => {
+      document.getElementById("student-detail-view").classList.remove("show");
+      document.getElementById("overview-view").classList.remove("hidden");
+    });
 
     // ---- Boot ----
     if (token()) showDashboard();
