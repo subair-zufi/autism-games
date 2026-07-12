@@ -34,15 +34,26 @@ export function objectMeta(id: ObjectId): ObjectMeta {
 }
 
 /**
- * The joint-attention cue fades as difficulty rises (prompt-fading
- * hierarchy: responding to a highlighted proximal point -> plain
- * proximal point -> distal point from across the garden).
+ * The joint-attention cue fades *within a session* (JASPER-style prompt
+ * fading): highlighted proximal point -> plain proximal point -> distal point
+ * from across the garden -> gaze only (a face turning toward the target, no
+ * hand at all). Difficulty sets the *entry* rung; every `FADE_STREAK`
+ * consecutive first-attempt finds thins the prompt one rung, and a wrong pick
+ * brings one rung of support back (least-to-most), never below the entry
+ * rung. Same ladder as the museum game so step-1 vs step-2 data lines up.
  */
-export type CueMode = 'pulse' | 'hover' | 'distal'
-export const CUE: Record<Difficulty, CueMode> = {
-  easy: 'pulse',
-  medium: 'hover',
-  hard: 'distal',
+export type CueMode = 'pulse' | 'hover' | 'distal' | 'gaze'
+export const CUE_LADDER: CueMode[] = ['pulse', 'hover', 'distal', 'gaze']
+export const START_TIER: Record<Difficulty, number> = { easy: 0, medium: 1, hard: 2 }
+/** consecutive first-attempt finds needed to fade the cue one rung */
+export const FADE_STREAK = 3
+
+export function fadedTier(tier: number): number {
+  return Math.min(tier + 1, CUE_LADDER.length - 1)
+}
+
+export function supportedTier(tier: number, difficulty: Difficulty): number {
+  return Math.max(tier - 1, START_TIER[difficulty])
 }
 
 /** correct finds needed to win a session */

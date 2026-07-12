@@ -9,10 +9,13 @@ import type { ObjectId } from './logic'
  */
 type Entry = Record<Lang, string>
 
+// Lines stay cue-agnostic ("what they show you", not "the hand") because the
+// prompt fades within a session and the top rung has no hand at all — only a
+// face turning to look at the target.
 const MESSAGES = {
   prompt: {
-    en: 'Tap what the hand is pointing at!',
-    ml: 'കൈ ചൂണ്ടുന്നത് തൊട്ടോളൂ!',
+    en: 'Tap what they show you — a point, or just a look!',
+    ml: 'ചൂണ്ടിയോ നോക്കിയോ കാണിക്കുന്നത് തൊട്ടോളൂ!',
   },
   sayWin: {
     en: 'You found them all! Wonderful looking!',
@@ -23,13 +26,13 @@ const MESSAGES = {
     ml: 'ശരി! {label}!',
   },
   sayWrong: {
-    en: "Let's look again. Where is the hand pointing?",
-    ml: 'ഒന്നൂടെ നോക്കാം. കൈ എവിടെ ചൂണ്ടുന്നു?',
+    en: "Let's look again. What are they showing you?",
+    ml: 'ഒന്നൂടെ നോക്കാം. എന്താ കാണിക്കുന്നത്?',
   },
-  // Level-picker captions — surface the cue-fading manipulation.
-  noteEasy: { en: 'Glowing point, up close', ml: 'അടുത്ത് തിളങ്ങുന്ന ചൂണ്ടൽ' },
-  noteMedium: { en: 'Plain point, up close', ml: 'അടുത്ത് സാധാരണ ചൂണ്ടൽ' },
-  noteHard: { en: 'Point from across the garden', ml: 'തോട്ടത്തിന് അപ്പുറത്തുനിന്ന് ചൂണ്ടൽ' },
+  // Level-picker captions — surface where the fading ladder starts.
+  noteEasy: { en: 'Glowing point to start', ml: 'തുടക്കം തിളങ്ങുന്ന ചൂണ്ടൽ' },
+  noteMedium: { en: 'Plain point to start', ml: 'തുടക്കം സാധാരണ ചൂണ്ടൽ' },
+  noteHard: { en: 'Far point, fading to just a look', ml: 'ദൂരെ ചൂണ്ടൽ, പിന്നെ നോട്ടം മാത്രം' },
 } satisfies Record<string, Entry>
 
 export type GardenKey = keyof typeof MESSAGES

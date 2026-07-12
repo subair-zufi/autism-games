@@ -333,13 +333,108 @@ function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueR
         )
       })}
 
-      <PointingHand
-        mode={cue === 'distal' ? 'distal' : 'hover'}
-        cueKey={round.target}
-        hoverPoint={hoverPoint}
-        aimPoint={aimPoint}
-        onSettled={onCueReady}
-      />
+      {cue === 'gaze' ? (
+        <GazingHead cueKey={round.target} aimPoint={aimPoint} onSettled={onCueReady} />
+      ) : (
+        <PointingHand
+          mode={cue === 'distal' ? 'distal' : 'hover'}
+          cueKey={round.target}
+          hoverPoint={hoverPoint}
+          aimPoint={aimPoint}
+          onSettled={onCueReady}
+        />
+      )}
+    </group>
+  )
+}
+
+/** where the gazing helper stands: behind the exhibit row, facing the child */
+const GAZE_POS = new THREE.Vector3(0, 2.55, -3.4)
+const GAZE_UP = new THREE.Vector3(0, 1, 0)
+const gazeM = new THREE.Matrix4()
+const gazeQ = new THREE.Quaternion()
+
+/**
+ * The thinnest rung of the prompt ladder: no hand, no point — just a friendly
+ * face across the room turning to *look* at the target. The child must follow
+ * head/gaze orientation alone, the way real-world cue fading ends at gaze.
+ * Fires `onSettled` once the head's turn has landed on the target.
+ */
+function GazingHead({
+  cueKey,
+  aimPoint,
+  onSettled,
+}: {
+  cueKey: ExhibitId
+  aimPoint: THREE.Vector3
+  onSettled: () => void
+}) {
+  const head = useRef<THREE.Group>(null)
+  const settled = useRef(false)
+  // keep the latest callback without re-subscribing the frame loop
+  const onSettledRef = useRef(onSettled)
+  onSettledRef.current = onSettled
+
+  useEffect(() => {
+    settled.current = false
+  }, [cueKey])
+
+  useFrame((state, dt) => {
+    const g = head.current
+    if (!g) return
+    const k = Math.min(1, dt * 3)
+    // face model is built looking down +z (toward the camera/child), so this
+    // orients the face toward whichever pedestal holds the target
+    gazeM.lookAt(aimPoint, GAZE_POS, GAZE_UP)
+    gazeQ.setFromRotationMatrix(gazeM)
+    g.quaternion.slerp(gazeQ, k)
+    // local bob around the parent's anchor, not an absolute height
+    g.position.y = Math.sin(state.clock.elapsedTime * 1.6) * 0.03
+    if (!settled.current && g.quaternion.angleTo(gazeQ) < 0.1) {
+      settled.current = true
+      onSettledRef.current()
+    }
+  })
+
+  const skin = '#f2c89b'
+  return (
+    <group position={GAZE_POS.toArray()}>
+      <group ref={head}>
+        {/* head */}
+        <mesh>
+          <sphereGeometry args={[0.42, 20, 20]} />
+          <meshStandardMaterial color={skin} />
+        </mesh>
+        {/* hair cap */}
+        <mesh position={[0, 0.16, -0.06]} scale={[1, 0.75, 1]}>
+          <sphereGeometry args={[0.45, 20, 20]} />
+          <meshStandardMaterial color="#4a3320" />
+        </mesh>
+        {/* eyes: whites + pupils on the +z face — they travel with the turn */}
+        {[-0.15, 0.15].map((ex) => (
+          <group key={ex} position={[ex, 0.04, 0.36]}>
+            <mesh scale={[1, 1.25, 0.5]}>
+              <sphereGeometry args={[0.085, 12, 12]} />
+              <meshStandardMaterial color="#ffffff" />
+            </mesh>
+            <mesh position={[0, 0, 0.05]}>
+              <sphereGeometry args={[0.042, 10, 10]} />
+              <meshStandardMaterial color="#2b2620" />
+            </mesh>
+          </group>
+        ))}
+        {/* smile (arc flipped downward) */}
+        <mesh position={[0, -0.13, 0.38]} rotation={[0.25, 0, Math.PI]}>
+          <torusGeometry args={[0.09, 0.022, 8, 16, Math.PI]} />
+          <meshStandardMaterial color="#9a5b4a" />
+        </mesh>
+      </group>
+      {/* shoulders — same cuff colour as the pointing hand, so the gaze tier
+          reads as the same helper with the pointing faded away */}
+      <mesh position={[0, -0.55, 0]} scale={[1.5, 0.8, 0.9]}>
+        <sphereGeometry args={[0.42, 16, 16]} />
+        <meshStandardMaterial color="#7f8fb6" />
+      </mesh>
     </group>
   )
 }

@@ -10,27 +10,30 @@ import type { ExhibitId } from './logic'
  */
 type Entry = Record<Lang, string>
 
+// Lines stay cue-agnostic ("what they show you", not "the hand") because the
+// prompt fades within a session and the top rung has no hand at all — only a
+// face turning to look at the target.
 const MESSAGES = {
   prompt: {
-    en: 'Tap the exhibit the hand is pointing at.',
-    ml: 'കൈ ചൂണ്ടുന്ന സാധനം തൊട്ടോളൂ.',
+    en: 'Tap what they show you — a point, or just a look!',
+    ml: 'ചൂണ്ടിയോ നോക്കിയോ കാണിക്കുന്നത് തൊട്ടോളൂ!',
   },
   sayWin: {
-    en: 'You followed every point! Wonderful looking!',
-    ml: 'എല്ലാ ചൂണ്ടലും നന്നായി പിന്തുടർന്നു! കൊള്ളാം!',
+    en: 'You followed every cue! Wonderful looking!',
+    ml: 'എല്ലാം നന്നായി പിന്തുടർന്നു! കൊള്ളാം!',
   },
   sayCorrect: {
-    en: 'Yes! The hand points at the {label}!',
-    ml: 'ശരി! കൈ {label} ചൂണ്ടുന്നു!',
+    en: 'Yes! The {label}!',
+    ml: 'ശരി! {label}!',
   },
   sayWrong: {
-    en: 'Look again. Follow where the hand is pointing.',
-    ml: 'ഒന്നൂടെ നോക്ക്. കൈ എവിടെ ചൂണ്ടുന്നു എന്ന് നോക്ക്.',
+    en: 'Look again. What are they showing you?',
+    ml: 'ഒന്നൂടെ നോക്ക്. എന്താ കാണിക്കുന്നത്?',
   },
-  // Level-picker captions — surface the cue-fading manipulation.
-  noteEasy: { en: 'Glowing point, up close', ml: 'അടുത്ത് തിളങ്ങുന്ന ചൂണ്ടൽ' },
-  noteMedium: { en: 'Plain point, up close', ml: 'അടുത്ത് സാധാരണ ചൂണ്ടൽ' },
-  noteHard: { en: 'Point from across the room', ml: 'മുറിക്ക് അപ്പുറത്തുനിന്ന് ചൂണ്ടൽ' },
+  // Level-picker captions — surface where the fading ladder starts.
+  noteEasy: { en: 'Glowing point to start', ml: 'തുടക്കം തിളങ്ങുന്ന ചൂണ്ടൽ' },
+  noteMedium: { en: 'Plain point to start', ml: 'തുടക്കം സാധാരണ ചൂണ്ടൽ' },
+  noteHard: { en: 'Far point, fading to just a look', ml: 'ദൂരെ ചൂണ്ടൽ, പിന്നെ നോട്ടം മാത്രം' },
 } satisfies Record<string, Entry>
 
 export type MuseumKey = keyof typeof MESSAGES

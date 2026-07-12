@@ -1,5 +1,19 @@
 import { expect, test } from 'vitest'
-import { CUE, EXHIBITS, GOAL, errorType, exhibitMeta, makeRound, pointsFor, slotPosition, starsFor } from './logic'
+import {
+  CUE_LADDER,
+  EXHIBITS,
+  FADE_STREAK,
+  GOAL,
+  START_TIER,
+  errorType,
+  exhibitMeta,
+  fadedTier,
+  makeRound,
+  pointsFor,
+  slotPosition,
+  starsFor,
+  supportedTier,
+} from './logic'
 
 const rng = (seq: number[]) => {
   let i = 0
@@ -49,10 +63,28 @@ test('all 6 exhibits have metadata', () => {
   expect(exhibitMeta('gem').label).toBe('Gem')
 })
 
-test('cue fades with difficulty: highlighted point -> plain point -> distal point', () => {
-  expect(CUE.easy).toBe('pulse')
-  expect(CUE.medium).toBe('hover')
-  expect(CUE.hard).toBe('distal')
+test('cue ladder runs highlighted point -> plain point -> distal point -> gaze', () => {
+  expect(CUE_LADDER).toEqual(['pulse', 'hover', 'distal', 'gaze'])
+})
+
+test('difficulty sets the entry rung: pulse / hover / distal', () => {
+  expect(CUE_LADDER[START_TIER.easy]).toBe('pulse')
+  expect(CUE_LADDER[START_TIER.medium]).toBe('hover')
+  expect(CUE_LADDER[START_TIER.hard]).toBe('distal')
+})
+
+test('fading thins the prompt one rung at a time, capped at gaze', () => {
+  expect(fadedTier(START_TIER.easy)).toBe(1)
+  expect(fadedTier(2)).toBe(3)
+  expect(fadedTier(3)).toBe(3) // gaze is the thinnest prompt — no further fade
+  expect(FADE_STREAK).toBeGreaterThan(1) // fading requires a run of successes
+})
+
+test('errors bring support back, but never below the entry rung', () => {
+  expect(supportedTier(3, 'hard')).toBe(2)
+  expect(supportedTier(2, 'hard')).toBe(2) // hard never regains the pulse ring
+  expect(supportedTier(2, 'easy')).toBe(1)
+  expect(supportedTier(0, 'easy')).toBe(0)
 })
 
 test('goal rises with difficulty', () => {

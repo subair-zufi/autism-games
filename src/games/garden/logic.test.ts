@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import {
-  CUE,
+  CUE_LADDER,
+  FADE_STREAK,
   GARDEN_OBJECTS,
   GOAL,
   POINTS,
+  START_TIER,
   STREAK_LEN,
   errorType,
+  fadedTier,
   makeRound,
   objectMeta,
   pointsFor,
   starsFor,
+  supportedTier,
 } from './logic'
 
 function seededRng(seed: number) {
@@ -56,11 +60,28 @@ describe('makeRound', () => {
   })
 })
 
-describe('cue fading by difficulty', () => {
-  it('fades the prompt: highlighted point -> plain point -> distal point', () => {
-    expect(CUE.easy).toBe('pulse')
-    expect(CUE.medium).toBe('hover')
-    expect(CUE.hard).toBe('distal')
+describe('cue fading within a session', () => {
+  it('runs the ladder highlighted point -> plain point -> distal point -> gaze', () => {
+    expect(CUE_LADDER).toEqual(['pulse', 'hover', 'distal', 'gaze'])
+  })
+
+  it('difficulty sets the entry rung: pulse / hover / distal', () => {
+    expect(CUE_LADDER[START_TIER.easy]).toBe('pulse')
+    expect(CUE_LADDER[START_TIER.medium]).toBe('hover')
+    expect(CUE_LADDER[START_TIER.hard]).toBe('distal')
+  })
+
+  it('success thins the prompt one rung at a time, capped at gaze', () => {
+    expect(fadedTier(0)).toBe(1)
+    expect(fadedTier(2)).toBe(3)
+    expect(fadedTier(3)).toBe(3)
+    expect(FADE_STREAK).toBeGreaterThan(1)
+  })
+
+  it('errors bring support back, never below the entry rung', () => {
+    expect(supportedTier(3, 'medium')).toBe(2)
+    expect(supportedTier(1, 'medium')).toBe(1)
+    expect(supportedTier(1, 'easy')).toBe(0)
   })
 
   it('needs more finds on higher levels', () => {

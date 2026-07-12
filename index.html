@@ -7,6 +7,16 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Headless-test hook (no effect without the query param): hidden tabs
+         never fire rAF, which freezes the 3D scenes; opening the app with
+         ?rafshim reroutes rAF through timers so automated checks can drive
+         the games in a backgrounded preview browser. -->
+    <script>
+      if (new URLSearchParams(location.search).has('rafshim')) {
+        window.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), 33)
+        window.cancelAnimationFrame = (id) => clearTimeout(id)
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

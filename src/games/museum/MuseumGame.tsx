@@ -10,7 +10,20 @@ import { WebGLGate } from '../../components/WebGLGate'
 import { speak } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
-import { CUE, GOAL, errorType, makeRound, pointsFor, starsFor, type ExhibitId, type Round } from './logic'
+import {
+  CUE_LADDER,
+  FADE_STREAK,
+  GOAL,
+  START_TIER,
+  errorType,
+  fadedTier,
+  makeRound,
+  pointsFor,
+  starsFor,
+  supportedTier,
+  type ExhibitId,
+  type Round,
+} from './logic'
 import { museumLine, exhibitLabel } from './strings'
 import { MuseumScene } from './MuseumScene'
 import { useGameAnalytics } from '../useGameAnalytics'
@@ -24,9 +37,12 @@ export function MuseumGame() {
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('museum')
   const goal = GOAL[difficulty]
-  const cue = CUE[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
+  /** rung on the prompt-fading ladder — starts at the difficulty's entry rung,
+   * thins with success streaks, regains one rung of support after an error */
+  const [tier, setTier] = useState(() => START_TIER[difficulty])
+  const cue = CUE_LADDER[tier]
   const [round, setRound] = useState<Round>(() => makeRound(difficulty, null))
   const [score, setScore] = useState(0) // child-facing points
   const [found, setFound] = useState(0) // correct finds this session
@@ -50,6 +66,7 @@ export function MuseumGame() {
 
   function start() {
     resetSession()
+    setTier(START_TIER[difficulty])
     setScore(0)
     setFound(0)
     setFirstTries(0)
@@ -89,7 +106,9 @@ export function MuseumGame() {
       setStreak(nextStreak)
       recordStep(
         'answer',
-        { correct: true, target: round.target, picked: id, cue, firstAttempt, latencyMs, points, score: nextScore, found: nextFound },
+        // visibleCount drives the guessing baseline server-side (1/n) now that
+        // the cue no longer identifies the difficulty
+        { correct: true, target: round.target, picked: id, cue, visibleCount: round.visible.length, firstAttempt, latencyMs, points, score: nextScore, found: nextFound },
         { score: nextScore },
       )
       if (nextFound >= goal) {
@@ -106,6 +125,9 @@ export function MuseumGame() {
         setWrongPicks([])
         setLocked(false)
         setCelebrate(0)
+        // prompt fading: every FADE_STREAK-th consecutive independent find
+        // thins the cue one rung (pulse -> hover -> distal -> gaze)
+        if (nextStreak > 0 && nextStreak % FADE_STREAK === 0) setTier((t) => fadedTier(t))
         setRound((r) => makeRound(difficulty, r.target))
       }, 1400)
     } else {
@@ -120,9 +142,13 @@ export function MuseumGame() {
         target: round.target,
         picked: id,
         cue,
+        visibleCount: round.visible.length,
         latencyMs,
         errorType: errorType(round.visible, round.target, id),
       })
+      // least-to-most: an error immediately brings one rung of support back
+      // (the retry happens under the easier cue, recorded as such)
+      setTier((t) => supportedTier(t, difficulty))
     }
   }
 
