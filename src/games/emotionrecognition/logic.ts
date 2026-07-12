@@ -26,13 +26,7 @@ import {
   type DistractorTier,
   type EmotionId,
 } from '../emotionVocab'
-import {
-  SINGLE_IMAGES,
-  groupPhotosFor,
-  singleImagesFor,
-  type GroupPhoto,
-  type StimulusPool,
-} from './content'
+import { SINGLE_IMAGES, groupPhotosFor, singleImagesFor, type GroupPhoto } from './content'
 
 // Scoring is shared across level games; re-exported so existing imports and
 // tests keep working.
@@ -123,10 +117,9 @@ function makeSingle(
   emotion: EmotionId,
   choiceCount: number,
   tier: DistractorTier,
-  pool: StimulusPool,
   rng: () => number,
 ): SingleActivity {
-  const images = singleImagesFor(emotion, pool)
+  const images = singleImagesFor(emotion)
   const img = pick(images, rng)
   return {
     kind: 'single',
@@ -172,14 +165,14 @@ function makeGroupActivity(
 
 // --- Level construction ------------------------------------------------------
 
-/** Emotions that have at least one stimulus for the given category + pool. */
-function emotionsAvailable(cat: Category, pool: StimulusPool): EmotionId[] {
+/** Emotions that have at least one stimulus for the given category. */
+function emotionsAvailable(cat: Category): EmotionId[] {
   if (cat === 'single') {
     return (Object.keys(SINGLE_IMAGES) as EmotionId[]).filter(
-      (id) => singleImagesFor(id, pool).length > 0,
+      (id) => singleImagesFor(id).length > 0,
     )
   }
-  const photos = groupPhotosFor(cat === 'two' ? 2 : 3, pool)
+  const photos = groupPhotosFor(cat === 'two' ? 2 : 3)
   return [...new Set(photos.flatMap((p) => p.emotions))]
 }
 
@@ -187,19 +180,11 @@ function emotionsAvailable(cat: Category, pool: StimulusPool): EmotionId[] {
  * Build one level's activities.
  *
  * Categories come from the fixed COMPOSITION quota (shuffled). Target emotions
- * are dealt in stratified cycles: every emotion available in this level's pool
- * is used once before any repeats, so a 10-item level always covers the full
- * vocabulary (in the training pool: all 6 emotions).
- *
- * `pool` selects the stimuli: 'training' for practice, 'probe' for Assessment
- * mode (held-out images only — emotions with no probe stimulus for a category
- * are skipped there rather than silently reusing trained images).
+ * are dealt in stratified cycles: every emotion available in this level is
+ * used once before any repeats, so a 10-item level always covers the full
+ * vocabulary (all 6 emotions).
  */
-export function buildLevel(
-  difficulty: Difficulty,
-  rng: () => number = Math.random,
-  pool: StimulusPool = 'training',
-): Activity[] {
+export function buildLevel(difficulty: Difficulty, rng: () => number = Math.random): Activity[] {
   const tier = DISTRACTOR_TIER[difficulty]
   const choiceCount = difficulty === 'easy' ? EASY_CHOICES : NAME_CHOICES
   const cats = shuffle(
@@ -209,13 +194,13 @@ export function buildLevel(
     rng,
   )
   // All emotions reachable in this level (union over its categories).
-  const levelEmotions = [...new Set(cats.flatMap((c) => emotionsAvailable(c, pool)))]
+  const levelEmotions = [...new Set(cats.flatMap((c) => emotionsAvailable(c)))]
 
   // Deal emotions in shuffled cycles: take the first queued emotion that has a
   // stimulus for this slot's category, refilling the queue when it runs out.
   let queue: EmotionId[] = []
   const nextEmotionFor = (cat: Category): EmotionId => {
-    const avail = emotionsAvailable(cat, pool)
+    const avail = emotionsAvailable(cat)
     if (queue.length === 0) queue = shuffle(levelEmotions, rng)
     const i = queue.findIndex((e) => avail.includes(e))
     if (i >= 0) return queue.splice(i, 1)[0]
@@ -224,15 +209,11 @@ export function buildLevel(
 
   const activities: Activity[] = []
   for (const cat of cats) {
-    // In the probe pool a whole category can be empty (no held-out stimuli
-    // yet) — skip the slot rather than contaminating assessment with trained
-    // images. Practice pools are never empty.
-    if (emotionsAvailable(cat, pool).length === 0) continue
     const emotion = nextEmotionFor(cat)
     if (cat === 'single') {
-      activities.push(makeSingle(emotion, choiceCount, tier, pool, rng))
+      activities.push(makeSingle(emotion, choiceCount, tier, rng))
     } else {
-      const photos = groupPhotosFor(cat === 'two' ? 2 : 3, pool).filter((p) =>
+      const photos = groupPhotosFor(cat === 'two' ? 2 : 3).filter((p) =>
         p.emotions.includes(emotion),
       )
       activities.push(makeGroupActivity(pick(photos, rng), emotion, tier, rng))
