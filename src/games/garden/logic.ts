@@ -72,11 +72,16 @@ export function errorType(target: ObjectId, picked: ObjectId): 'same-category' |
     : 'different-category'
 }
 
-/** 3 stars = all lives kept, 2 = one slip, 1 = finished (or kept trying) */
-export function starsFor(completed: boolean, livesLeft: number): number {
-  if (!completed) return 1
-  if (livesLeft >= 3) return 3
-  if (livesLeft === 2) return 2
+/**
+ * Stars reward *first-try* finds (the game never fails — wrong taps are only
+ * gently corrected, per the joint-attention "errors are never punished"
+ * principle). 3 stars ≥80% of finds were first-attempt, 2 ≥50%, else 1 — every
+ * finished session earns at least one.
+ */
+export function starsFor(firstAttemptFinds: number, goal: number): number {
+  const ratio = goal > 0 ? firstAttemptFinds / goal : 0
+  if (ratio >= 0.8) return 3
+  if (ratio >= 0.5) return 2
   return 1
 }
 

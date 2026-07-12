@@ -8,16 +8,18 @@ import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
 import { speak } from '../../services/speech'
+import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
-import { CUE, GOAL, errorType, exhibitMeta, makeRound, pointsFor, starsFor, type ExhibitId, type Round } from './logic'
+import { CUE, GOAL, errorType, makeRound, pointsFor, starsFor, type ExhibitId, type Round } from './logic'
+import { museumLine, exhibitLabel } from './strings'
 import { MuseumScene } from './MuseumScene'
 import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'museum')!
-const MAX_LIVES = 3
 
 export function MuseumGame() {
   const difficulty = useSettings((s) => s.difficulty.museum)
+  const lang = useSettings((s) => s.language)
   const best = useScores((s) => s.best.museum)
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('museum')
@@ -28,27 +30,34 @@ export function MuseumGame() {
   const [round, setRound] = useState<Round>(() => makeRound(difficulty, null))
   const [score, setScore] = useState(0) // child-facing points
   const [found, setFound] = useState(0) // correct finds this session
+  const [firstTries, setFirstTries] = useState(0) // finds made on the first attempt
   const [streak, setStreak] = useState(0) // consecutive first-attempt finds
-  const [lives, setLives] = useState(MAX_LIVES)
   const [locked, setLocked] = useState(false)
   const [wrongPicks, setWrongPicks] = useState<ExhibitId[]>([])
   const [celebrate, setCelebrate] = useState(0)
   const [stars, setStars] = useState(0)
-  const [completed, setCompleted] = useState(false)
   /** timestamp of the moment the pointing cue settled on the target (latency zero-point) */
   const cueReadyAt = useRef<number | null>(null)
+
+  // Malayalam-aware speech + level captions (surface the cue-fading ladder).
+  const say = (key: Parameters<typeof museumLine>[0], params?: Record<string, string>) =>
+    speak(museumLine(key, lang, params), lang)
+  const levelNotes = {
+    easy: museumLine('noteEasy', lang),
+    medium: museumLine('noteMedium', lang),
+    hard: museumLine('noteHard', lang),
+  }
 
   function start() {
     resetSession()
     setScore(0)
     setFound(0)
+    setFirstTries(0)
     setStreak(0)
-    setLives(MAX_LIVES)
     setWrongPicks([])
     setLocked(false)
     setCelebrate(0)
     setStars(0)
-    setCompleted(false)
     cueReadyAt.current = null
     setRound(makeRound(difficulty, null))
     setPhase('playing')
@@ -70,11 +79,13 @@ export function MuseumGame() {
       const points = pointsFor(firstAttempt, nextStreak)
       const nextScore = score + points
       const nextFound = found + 1
+      const nextFirstTries = firstTries + (firstAttempt ? 1 : 0)
       setLocked(true)
       setCelebrate((c) => c + 1)
       playSuccess()
       setScore(nextScore)
       setFound(nextFound)
+      setFirstTries(nextFirstTries)
       setStreak(nextStreak)
       recordStep(
         'answer',
@@ -82,15 +93,14 @@ export function MuseumGame() {
         { score: nextScore },
       )
       if (nextFound >= goal) {
-        setCompleted(true)
-        setStars(starsFor(true, lives))
-        speak('You followed every point! Wonderful looking!')
+        setStars(starsFor(nextFirstTries, goal))
+        say('sayWin')
         reportScore('museum', nextScore)
         finishGame(nextScore)
         setTimeout(() => setPhase('over'), 1200)
         return
       }
-      speak(`Yes! The hand points at the ${exhibitMeta(id).label}!`)
+      say('sayCorrect', { label: exhibitLabel(id, lang) })
       setTimeout(() => {
         cueReadyAt.current = null
         setWrongPicks([])
@@ -99,8 +109,10 @@ export function MuseumGame() {
         setRound((r) => makeRound(difficulty, r.target))
       }, 1400)
     } else {
+      // No-fail: a wrong tap is gently corrected and the child keeps trying —
+      // the session never ends on a mistake.
       playGentle()
-      speak('Look again. Follow where the hand is pointing.')
+      say('sayWrong')
       setWrongPicks((w) => [...w, id])
       setStreak(0)
       recordStep('answer', {
@@ -111,25 +123,15 @@ export function MuseumGame() {
         latencyMs,
         errorType: errorType(round.visible, round.target, id),
       })
-      const next = lives - 1
-      setLives(next)
-      if (next <= 0) {
-        setCompleted(false)
-        setStars(starsFor(false, 0))
-        speak('Great trying! You looked so well.')
-        reportScore('museum', score)
-        finishGame(score)
-        setPhase('over')
-      }
     }
   }
 
-  if (phase === 'start') return <StartScreen game={META} onStart={start} />
+  if (phase === 'start') return <StartScreen game={META} onStart={start} levelNotes={levelNotes} />
 
   return (
     <WebGLGate>
       <div className="game-page">
-        <ScoreBar score={score} lives={lives} maxLives={MAX_LIVES} progress={`${found} / ${goal}`} />
+        <ScoreBar score={score} progress={`${found} / ${goal}`} />
         <div className="game-canvas">
           <MuseumScene
             round={round}
@@ -143,14 +145,15 @@ export function MuseumGame() {
           {celebrate > 0 && locked && <div className="celebrate">⭐</div>}
         </div>
         <div className="game-bottom">
-          <PromptBanner text="Tap the exhibit the hand is pointing at." />
+          <PromptBanner text={museumLine('prompt', lang)} lang={lang} />
         </div>
         {phase === 'over' && (
           <GameOverDialog
             score={score}
             best={Math.max(best, score)}
             stars={stars}
-            message={completed ? 'Great playing! 🎉' : 'Great trying! 🌟'}
+            message={t('greatPlaying', lang)}
+            lang={lang}
             onRestart={start}
           />
         )}

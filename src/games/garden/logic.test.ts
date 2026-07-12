@@ -86,11 +86,12 @@ describe('scoring', () => {
     expect(pointsFor(false, STREAK_LEN)).toBe(POINTS.retry)
   })
 
-  it('gives stars by lives kept, never below one', () => {
-    expect(starsFor(true, 3)).toBe(3)
-    expect(starsFor(true, 2)).toBe(2)
-    expect(starsFor(true, 1)).toBe(1)
-    expect(starsFor(false, 0)).toBe(1)
+  it('gives stars by first-try finds, never below one', () => {
+    expect(starsFor(5, 5)).toBe(3) // 100% first-try
+    expect(starsFor(4, 5)).toBe(3) // 80%
+    expect(starsFor(3, 5)).toBe(2) // 60%
+    expect(starsFor(2, 5)).toBe(1) // 40%
+    expect(starsFor(0, 5)).toBe(1) // never below one
   })
 })
 

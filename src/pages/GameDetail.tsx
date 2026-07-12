@@ -45,7 +45,17 @@ export function GameDetail() {
     ? Math.round((rows.reduce((a, r) => a + r.best_accuracy, 0) / rows.length) * 100)
     : 0
 
+  // With no participant selected, sessions/steps are recorded without a
+  // student_id and the data is effectively lost for the study. Block play until
+  // the facilitator either selects a participant or explicitly opts to play
+  // unrecorded — otherwise a whole session can be lost invisibly.
+  const [dismissedGuard, setDismissedGuard] = useState(false)
+
   const play = () => {
+    if (!active && !dismissedGuard) {
+      setDismissedGuard(true) // reveal the explicit "play unrecorded" escape
+      return
+    }
     playTap()
     navigate(game.path)
   }
@@ -60,6 +70,22 @@ export function GameDetail() {
           <Link to="/" className="icon-btn" aria-label="Home"><HomeIcon /></Link>
         </div>
       </header>
+
+      {!active && (
+        <div className="detail-guard" role="alert">
+          <span className="detail-guard-icon" aria-hidden>⚠️</span>
+          <div className="detail-guard-body">
+            <strong>No participant selected</strong>
+            <p>This session will not be recorded — no progress or research data will be saved.</p>
+            <div className="detail-guard-actions">
+              <Link to="/participants" className="detail-guard-select">Select participant</Link>
+              {dismissedGuard && (
+                <button className="detail-guard-anyway" onClick={play}>Play without recording</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <section className="detail-hero" style={{ '--card-accent': game.color } as React.CSSProperties}>
         <span className="detail-hero-icon" aria-hidden>{game.icon}</span>

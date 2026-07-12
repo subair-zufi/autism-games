@@ -8,26 +8,31 @@ import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
 import { speak } from '../../services/speech'
+import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { CONFIG, buildPlayers, makeSequence, type Player, type TurnSpec } from './logic'
+import { blockLine } from './strings'
 import { BlockScene } from './BlockScene'
 import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'blocks')!
-const MAX_LIVES = 3
 
 export function BlockGame() {
   const difficulty = useSettings((s) => s.difficulty.blocks)
+  const lang = useSettings((s) => s.language)
   const best = useScores((s) => s.best.blocks)
   const reportScore = useScores((s) => s.reportScore)
   const config = CONFIG[difficulty]
   const { recordStep, finishGame, resetSession } = useGameAnalytics('blocks')
 
+  // Speak a line in the chosen language.
+  const say = (key: Parameters<typeof blockLine>[0], params?: Record<string, string>) =>
+    speak(blockLine(key, lang, params), lang)
+
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [players, setPlayers] = useState<Player[]>([])
   const [sequence, setSequence] = useState<TurnSpec[]>([])
   const [index, setIndex] = useState(0) // turns completed
-  const [lives, setLives] = useState(MAX_LIVES)
   const [reaching, setReaching] = useState(false)
   // After the child places, they must actively pass the turn to the next
   // player ("Your turn, Leo!") — training the reciprocal hand-off.
@@ -58,7 +63,6 @@ export function BlockGame() {
     setPlayers(ps)
     setSequence(makeSequence(config, ps))
     setIndex(0)
-    setLives(MAX_LIVES)
     setReaching(false)
     setHandoffTo(null)
     setPhase('playing')
@@ -71,7 +75,7 @@ export function BlockGame() {
       const finalScore = sequence.filter((t) => t.kind === 'child').length
       reportScore('blocks', finalScore)
       finishGame(finalScore)
-      speak('You built the whole tower together! Great team work!')
+      say('sayWin')
       playSuccess()
       setPhase('over')
       return
@@ -81,11 +85,7 @@ export function BlockGame() {
       if (handoffTo) return
       const peer = players[turn.playerIndex]
       const childIsNext = sequence[index + 1]?.kind === 'child'
-      speak(
-        childIsNext
-          ? `${peer.name} is building. Get ready — you are next!`
-          : `${peer.name} is building. Wait for your turn.`,
-      )
+      say(childIsNext ? 'sayPeerNext' : 'sayPeerWait', { name: peer.name })
       const t1 = setTimeout(() => setReaching(true), config.peerTurnMs * 0.55)
       const t2 = setTimeout(() => {
         setReaching(false)
@@ -107,7 +107,7 @@ export function BlockGame() {
   function succeedPlace(method: 'button' | 'grab') {
     if (phase !== 'playing' || turn === null || turn.kind !== 'child' || handoffTo) return
     playSuccess()
-    speak('Nice block!')
+    say('sayNiceBlock')
     recordStep('place_block', { round, slot: index % config.players, method }, { score: score + 1 })
     // Drop the block now (it appears), then require an explicit hand-off to
     // the next player before their turn begins — unless this was the last turn.
@@ -116,28 +116,22 @@ export function BlockGame() {
     if (nextTurn) setHandoffTo(players[nextTurn.playerIndex])
   }
 
-  // Acted out of turn — gently coach patience.
+  // Acted out of turn — gently coach patience. No-fail: an impatient tap is
+  // only redirected, it never ends the session.
   function impatient(source: 'button' | 'grab') {
     playGentle()
     if (handoffTo) {
-      // grabbed mid hand-off: remind them to pass first, no life lost
-      speak(`First pass the turn to ${handoffTo.name}!`)
+      // grabbed mid hand-off: remind them to pass first
+      say('sayPassFirst', { name: handoffTo.name })
       recordStep('impatient_tap', { round, during: 'handoff', source })
       return
     }
-    speak('Almost! Wait a moment for your turn.')
+    say('sayWaitTurn')
     recordStep('impatient_tap', {
       round,
       activePlayer: turn ? players[turn.playerIndex]?.id : undefined,
       source,
     })
-    const next = lives - 1
-    setLives(next)
-    if (next <= 0) {
-      reportScore('blocks', score)
-      finishGame(score)
-      setPhase('over')
-    }
   }
 
   function place() {
@@ -145,7 +139,7 @@ export function BlockGame() {
     if (turn.kind === 'child' && !handoffTo) {
       if (grabMode) {
         // hard mode: the button is only a hint — the real action is the grab
-        speak('Use your hand — grab the block and put it on the tower!')
+        say('sayGrabHint')
         return
       }
       succeedPlace('button')
@@ -158,7 +152,7 @@ export function BlockGame() {
   function passHandoff() {
     if (phase !== 'playing' || !handoffTo) return
     playGentle()
-    speak(`Your turn, ${handoffTo.name}!`)
+    say('sayHandoff', { name: handoffTo.name })
     recordStep('hand_off', { round, to: handoffTo.id })
     setHandoffTo(null)
   }
@@ -166,19 +160,19 @@ export function BlockGame() {
   if (phase === 'start') return <StartScreen game={META} onStart={start} />
 
   const promptText = handoffTo
-    ? `Pass the turn — tap “Your turn, ${handoffTo.name}!”`
+    ? blockLine('promptHandoff', lang, { name: handoffTo.name })
     : isChildTurn
       ? grabMode
-        ? 'Your turn — grab the block and place it on the tower!'
-        : 'Your turn — place a block!'
+        ? blockLine('promptGrab', lang)
+        : blockLine('promptPlace', lang)
       : anticipating
-        ? 'Get ready — you are next!'
-        : `${players[activeIndex]?.name ?? 'A friend'} is building. Wait for your turn.`
+        ? blockLine('promptGetReady', lang)
+        : blockLine('promptWaitPeer', lang, { name: players[activeIndex]?.name ?? blockLine('friend', lang) })
 
   return (
     <WebGLGate>
       <div className="game-page">
-        <ScoreBar score={score} goal={config.rounds} lives={lives} maxLives={MAX_LIVES} />
+        <ScoreBar score={score} goal={config.rounds} />
         <div className="game-canvas">
           <BlockScene
             placed={sequence.slice(0, index)}
@@ -199,7 +193,7 @@ export function BlockGame() {
           />
         </div>
         <div className="game-bottom">
-          <PromptBanner text={promptText} />
+          <PromptBanner text={promptText} lang={lang} />
           <div className="player-btn-row">
             {players.map((p, i) => {
               const active = i === activeIndex
@@ -208,7 +202,7 @@ export function BlockGame() {
                   return (
                     <button key={p.id} className="player-btn child handoff" onClick={passHandoff}>
                       <span className="player-emoji">➡️</span>
-                      <span>Your turn, {handoffTo.name}!</span>
+                      <span>{blockLine('btnHandoff', lang, { name: handoffTo.name })}</span>
                     </button>
                   )
                 }
@@ -219,11 +213,11 @@ export function BlockGame() {
                     : 'player-btn child wait'
                 const label = isChildTurn
                   ? grabMode
-                    ? '🖐 Grab & place'
-                    : '🧱 Place'
+                    ? blockLine('btnGrab', lang)
+                    : blockLine('btnPlace', lang)
                   : anticipating
-                    ? '⏳ You’re next!'
-                    : '⏳ Wait'
+                    ? blockLine('btnNext', lang)
+                    : blockLine('btnWait', lang)
                 return (
                   <button key={p.id} className={cls} onClick={place}>
                     <span className="player-emoji">{p.emoji}</span>
@@ -241,7 +235,7 @@ export function BlockGame() {
           </div>
         </div>
         {phase === 'over' && (
-          <GameOverDialog score={score} best={Math.max(best, score)} onRestart={start} />
+          <GameOverDialog score={score} best={Math.max(best, score)} message={t('greatPlaying', lang)} lang={lang} onRestart={start} />
         )}
       </div>
     </WebGLGate>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/auth'
-import { GAMES_BY_SKILL, type GameMeta } from '../types'
+import { GAMES_BY_SKILL, GAME_LIST, type GameId, type GameMeta } from '../types'
 import { useScores } from '../state/scores'
 import { playTap } from '../services/sounds'
 import { analytics } from '../services/analytics'
@@ -17,20 +17,27 @@ export function Home() {
 
   const active = students.find((s) => s.id === activeStudentId) ?? null
 
-  // Emotion Recognition is the only level-tracked game; show its real % on the
-  // card. Recomputed when the active student changes.
-  const [erPercent, setErPercent] = useState(0)
+  // Level-progress % shown on each level-tracked card, keyed by game id. Every
+  // hasLevels game is fetched independently; reusing one game's % for all of
+  // them silently mis-reports the others. Recomputed per active student.
+  const [percents, setPercents] = useState<Partial<Record<GameId, number>>>({})
   useEffect(() => {
     void loadStudents().catch(() => {})
   }, [loadStudents])
   useEffect(() => {
     let cancelled = false
-    void analytics.getProgress('emotionrecognition').then((rows) => {
+    const levelGames = GAME_LIST.filter((g) => g.hasLevels)
+    void Promise.all(
+      levelGames.map(async (g) => {
+        const rows = await analytics.getProgress(g.id)
+        const pct = rows.length
+          ? Math.round((rows.reduce((a, r) => a + r.best_accuracy, 0) / rows.length) * 100)
+          : 0
+        return [g.id, pct] as const
+      }),
+    ).then((entries) => {
       if (cancelled) return
-      const pct = rows.length
-        ? Math.round((rows.reduce((a, r) => a + r.best_accuracy, 0) / rows.length) * 100)
-        : 0
-      setErPercent(pct)
+      setPercents(Object.fromEntries(entries))
     })
     return () => {
       cancelled = true
@@ -74,7 +81,7 @@ export function Home() {
           </div>
           <div className="game-grid">
             {games.map((g) => (
-              <GameCard key={g.id} game={g} erPercent={erPercent} best={best[g.id] ?? 0} onOpen={navigate} />
+              <GameCard key={g.id} game={g} percent={percents[g.id] ?? 0} best={best[g.id] ?? 0} onOpen={navigate} />
             ))}
           </div>
         </section>
@@ -85,12 +92,12 @@ export function Home() {
 
 function GameCard({
   game,
-  erPercent,
+  percent,
   best,
   onOpen,
 }: {
   game: GameMeta
-  erPercent: number
+  percent: number
   best: number
   onOpen: (path: string) => void
 }) {
@@ -108,8 +115,8 @@ function GameCard({
       <span className="game-desc">{game.description}</span>
       {game.hasLevels ? (
         <div className="game-progress">
-          <span className="game-progress-pct">{erPercent}%</span>
-          <ProgressBar value={erPercent} />
+          <span className="game-progress-pct">{percent}%</span>
+          <ProgressBar value={percent} />
         </div>
       ) : (
         <span className="game-best">⭐ Best {best}</span>

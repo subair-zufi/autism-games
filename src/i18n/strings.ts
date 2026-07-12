@@ -116,6 +116,12 @@ const MESSAGES = {
   feedbackGreat: { en: 'Great job! 🎉', ml: 'കൊള്ളാം! 🎉' },
   feedbackTryAgain: { en: "Let's look again — try again.", ml: 'വീണ്ടും നോക്കാം — ഒന്നുകൂടി ശ്രമിക്കൂ.' },
 
+  // --- Game-over dialog (shared across the arcade-style games) ---------------
+  greatPlaying: { en: 'Great playing! 🎉', ml: 'നന്നായി കളിച്ചു! 🎉' },
+  greatTrying: { en: 'Great trying! 🌟', ml: 'നല്ല ശ്രമം! 🌟' },
+  dialogEarned: { en: 'You earned ⭐ {score}', ml: 'നിനക്ക് ⭐ {score} കിട്ടി' },
+  dialogBest: { en: 'Your best: {best}', ml: 'നിന്റെ ബെസ്റ്റ്: {best}' },
+
   // --- Result screen ---------------------------------------------------------
   resultTitle: { en: 'Level complete!', ml: 'ലെവൽ പൂർത്തിയായി!' },
   score: { en: 'Score', ml: 'സ്കോർ' },

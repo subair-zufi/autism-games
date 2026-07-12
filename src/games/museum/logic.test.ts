@@ -72,11 +72,12 @@ test('streak bonus kicks in after 3 consecutive first-attempt finds', () => {
   expect(pointsFor(true, 5)).toBe(12)
 })
 
-test('stars reflect lives kept; an unfinished session still earns one', () => {
-  expect(starsFor(true, 3)).toBe(3)
-  expect(starsFor(true, 2)).toBe(2)
-  expect(starsFor(true, 1)).toBe(1)
-  expect(starsFor(false, 0)).toBe(1)
+test('stars reward first-try finds; every finished session earns at least one', () => {
+  expect(starsFor(5, 5)).toBe(3) // 100% first-try
+  expect(starsFor(4, 5)).toBe(3) // 80%
+  expect(starsFor(3, 5)).toBe(2) // 60%
+  expect(starsFor(2, 5)).toBe(1) // 40%
+  expect(starsFor(0, 5)).toBe(1) // never below one
 })
 
 test('errorType splits near-misses from picks far from the point', () => {

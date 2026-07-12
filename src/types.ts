@@ -115,7 +115,7 @@ export const GAME_LIST: GameMeta[] = [
     objective:
       'Social norms: judge whether a behaviour is okay across greetings, sharing, turns, space and politeness — harder levels use subtle behaviours (quiet omissions, polite refusals)',
     duration: '5–10 min',
-    hasLevels: false,
+    hasLevels: true,
   },
   {
     id: 'rulefixer',
@@ -128,7 +128,7 @@ export const GAME_LIST: GameMeta[] = [
     objective:
       'Social norms: choose the kind response across helping, comforting, inclusion, politeness and fairness situations — harder levels drop the obvious wrong option',
     duration: '5–10 min',
-    hasLevels: false,
+    hasLevels: true,
   },
   // --- Joint Attention ------------------------------------------------------
   {
