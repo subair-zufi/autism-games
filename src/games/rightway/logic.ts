@@ -8,10 +8,13 @@
  *    stimulus tier instead: Easy shows only `clear` behaviours, Hard only
  *    `subtle` ones (passive omissions and looks-odd-but-fine behaviours),
  *    Moderate mixes one clear and one subtle behaviour per construct.
- *  - Fixed composition: Easy and Hard always contain every behaviour of their
- *    tier in the pool (5 constructs × 2 = 10 trials, 5 okay / 5 not-okay).
- *    Moderate keeps the same invariants (1 clear + 1 subtle per construct,
- *    5/5 valence balance); only which valence pairs with which tier varies.
+ *  - Sampled composition: a level is 5 constructs × 2 = 10 trials (5 okay /
+ *    5 not-okay), but each tier×valence cell of the bank holds two authored
+ *    exemplars and the builder samples one per build. Sessions therefore
+ *    rotate through the enlarged bank — repeated sessions accumulate
+ *    per-construct evidence across different items without lengthening any
+ *    single session (fatigue) — while every level keeps the same composition
+ *    invariants (per-construct quota, 5/5 valence balance, tier recipe).
  *  - Stratified order: constructs are dealt in shuffled cycles — each of the
  *    5 constructs appears once in the first half and once in the second.
  *  - Chance level: constant 1/2; `CHANCE` feeds `scoreLevel` so recorded
@@ -56,9 +59,11 @@ export const LEVEL_TIERS: Record<Difficulty, Tier[]> = {
 
 /**
  * The two behaviours one construct contributes to a level — always one okay
- * and one not-okay. Easy takes the clear pair, Hard the subtle pair; Moderate
- * takes one of each tier, coin-flipping which valence is the subtle one so
- * "subtle = not okay" never becomes a learnable rule.
+ * and one not-okay. Easy draws from the clear cells, Hard from the subtle
+ * cells; Moderate takes one of each tier, coin-flipping which valence is the
+ * subtle one so "subtle = not okay" never becomes a learnable rule. Each cell
+ * holds two authored exemplars and the concrete item is sampled per build, so
+ * repeated sessions rotate through the bank instead of replaying a fixed set.
  */
 function constructPair(
   construct: Construct,
@@ -67,8 +72,10 @@ function constructPair(
   rng: () => number,
 ): Behavior[] {
   const items = behaviorsFor(construct, pool)
-  const pick = (tier: Tier, isFine: boolean) =>
-    items.find((b) => b.tier === tier && b.isFine === isFine)!
+  const pick = (tier: Tier, isFine: boolean) => {
+    const cell = items.filter((b) => b.tier === tier && b.isFine === isFine)
+    return cell[Math.floor(rng() * cell.length)]
+  }
   if (difficulty === 'easy') return [pick('clear', true), pick('clear', false)]
   if (difficulty === 'hard') return [pick('subtle', true), pick('subtle', false)]
   return rng() < 0.5

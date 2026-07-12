@@ -10,6 +10,7 @@ import uuid
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from sqlalchemy.engine import make_url
 
 # Run against a dedicated test database when provided, so the dev DB is never
 # dropped by the schema reset in the `client` fixture below.
@@ -35,8 +36,35 @@ def _db_reachable() -> bool:
         return False
 
 
+def _looks_like_test_db(db_url: str) -> bool:
+    """The `client` fixture below runs `Base.metadata.drop_all` at setup AND
+    teardown. If DATABASE_URL happens to point at the shared dev database
+    (the default in this project, and true of any concurrently-running dev
+    `uvicorn`), that call silently wipes every table with no way to recover
+    the data — this actually happened twice in one session on 2026-07-12
+    because TEST_DATABASE_URL wasn't set. Only run against a database whose
+    name makes the intent unambiguous."""
+    try:
+        name = (make_url(db_url).database or "").lower()
+    except Exception:
+        return False
+    return "test" in name
+
+
+_safe_db = bool(os.environ.get("TEST_DATABASE_URL")) or _looks_like_test_db(settings.database_url)
+
 pytestmark = pytest.mark.skipif(
-    not _db_reachable(), reason=f"No database reachable at {settings.database_url}"
+    not _db_reachable() or not _safe_db,
+    reason=(
+        f"No database reachable at {settings.database_url}"
+        if not _db_reachable()
+        else (
+            f"Refusing to run: DATABASE_URL ({settings.database_url}) doesn't look like a "
+            "test database and TEST_DATABASE_URL isn't set. This module's fixture drops "
+            "all tables at setup/teardown — point TEST_DATABASE_URL at an isolated "
+            "database (e.g. .../autism_games_test) to run these tests."
+        )
+    ),
 )
 
 
@@ -544,6 +572,76 @@ def test_skill_report_standardised_scores(client):
     ).json()["access_token"]
     assert client.get(
         f"/api/reports/student/{sid}/skills",
+        headers={"Authorization": f"Bearer {other}"},
+    ).status_code == 404
+
+
+def test_social_norms_report_pools_recent_sessions(client):
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("socialnorms@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post(
+        "/api/students", json={"full_name": "Meera"}, headers=h
+    ).json()["id"]
+
+    def play_session(game, construct, n_correct, n_total):
+        session_id = client.post(
+            "/api/sessions", json={"game_key": game, "student_id": sid}, headers=h
+        ).json()["id"]
+        for i in range(n_total):
+            r = client.post(
+                "/api/events",
+                json={
+                    "game_key": game,
+                    "event_type": "answer",
+                    "student_id": sid,
+                    "session_id": session_id,
+                    "payload": {"correct": i < n_correct, "construct": construct, "chance": 0.5},
+                },
+                headers=h,
+            )
+            assert r.status_code == 201, r.text
+        client.post(f"/api/sessions/{session_id}/end", json={}, headers=h)
+
+    # Earliest "greetings" session is all-wrong; two later ones are all-right.
+    play_session("rightway", "greetings", 0, 2)
+    play_session("rightway", "greetings", 2, 2)
+    play_session("rightway", "greetings", 2, 2)
+
+    # A window of 2 (default is 5, but request a tighter one) must exclude
+    # the earliest all-wrong session.
+    r = client.get(
+        f"/api/reports/student/{sid}/social-norms?sessions=2", headers=h
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    rightway = next(g for g in body["games"] if g["game_key"] == "rightway")
+    assert rightway["n_sessions_pooled"] == 2
+    greetings = next(c for c in rightway["constructs"] if c["construct"] == "greetings")
+    assert greetings["n_trials"] == 4
+    assert greetings["raw_accuracy"] == 1.0
+    assert greetings["score"] == 100.0
+    # Every construct is present even without data.
+    assert {c["construct"] for c in rightway["constructs"]} == {
+        "greetings", "sharing", "turns", "space", "politeness",
+    }
+
+    # Pooling everything (default window) must include the all-wrong session too.
+    all_body = client.get(
+        f"/api/reports/student/{sid}/social-norms", headers=h
+    ).json()
+    all_rightway = next(g for g in all_body["games"] if g["game_key"] == "rightway")
+    all_greetings = next(c for c in all_rightway["constructs"] if c["construct"] == "greetings")
+    assert all_greetings["n_trials"] == 6
+    assert all_greetings["raw_accuracy"] == pytest.approx(4 / 6, abs=1e-3)
+
+    # not your student -> 404
+    other = client.post(
+        "/api/auth/signup", json=_signup_payload("nosy4@example.com")
+    ).json()["access_token"]
+    assert client.get(
+        f"/api/reports/student/{sid}/social-norms",
         headers={"Authorization": f"Bearer {other}"},
     ).status_code == 404
 

@@ -146,6 +146,70 @@ def test_group_aggregate_mean_sd():
     assert comp.sd is not None and comp.sd > 0
 
 
+# --- per-construct scores (social-norms games) --------------------------------
+
+
+def construct_answers(game, construct, n_correct, n_total, session, chance=0.5, offset=0):
+    out = []
+    for i in range(n_total):
+        p = {"correct": i < n_correct, "construct": construct, "chance": chance}
+        out.append(ev(game, "answer", p, session=session, offset=offset + i))
+    return out
+
+
+def test_score_constructs_pools_trials_across_sessions():
+    # Two sessions of "greetings": 1/2 correct each -> pooled 2/4 at chance 0.5.
+    evs = (
+        construct_answers("rightway", "greetings", 1, 2, session="s1", offset=0)
+        + construct_answers("rightway", "greetings", 1, 2, session="s2", offset=10)
+    )
+    profile = scoring.score_constructs("rightway", evs)
+    greetings = next(c for c in profile.constructs if c.construct == "greetings")
+    assert greetings.n_trials == 4
+    assert greetings.raw_accuracy == 0.5
+    assert greetings.score == 0.0  # exactly at chance
+    assert profile.n_sessions_pooled == 2
+
+
+def test_score_constructs_covers_every_construct_even_without_data():
+    profile = scoring.score_constructs("rulefixer", [])
+    assert {c.construct for c in profile.constructs} == set(
+        scoring.SOCIAL_NORMS_CONSTRUCTS["rulefixer"]
+    )
+    assert all(c.n_trials == 0 and c.score is None for c in profile.constructs)
+
+
+def test_score_constructs_session_window_keeps_only_most_recent():
+    # 4 sessions of "sharing", each all-correct except the earliest which is
+    # all-wrong. A window of 2 must exclude the earliest (all-wrong) session.
+    evs = (
+        construct_answers("rightway", "sharing", 0, 2, session="old", offset=0)
+        + construct_answers("rightway", "sharing", 2, 2, session="s2", offset=10)
+        + construct_answers("rightway", "sharing", 2, 2, session="s3", offset=20)
+        + construct_answers("rightway", "sharing", 2, 2, session="s4", offset=30)
+    )
+    profile = scoring.score_constructs("rightway", evs, session_window=2)
+    sharing = next(c for c in profile.constructs if c.construct == "sharing")
+    assert profile.n_sessions_pooled == 2
+    assert sharing.n_trials == 4  # only s3 + s4
+    assert sharing.raw_accuracy == 1.0
+
+
+def test_score_social_norms_splits_by_game():
+    evs = construct_answers("rightway", "turns", 2, 2, session="s1") + construct_answers(
+        "rulefixer", "fairness", 1, 2, session="s1", offset=10
+    )
+    profiles = scoring.score_social_norms(evs)
+    by_game = {p.game_key: p for p in profiles}
+    assert set(by_game) == set(scoring.SOCIAL_NORMS_GAMES)
+    turns = next(c for c in by_game["rightway"].constructs if c.construct == "turns")
+    fairness = next(c for c in by_game["rulefixer"].constructs if c.construct == "fairness")
+    assert turns.n_trials == 2
+    assert fairness.n_trials == 2
+    # rightway trials never leak into rulefixer's profile and vice versa
+    assert all(c.n_trials == 0 for c in by_game["rulefixer"].constructs if c.construct != "fairness")
+
+
 def test_age_and_iq_bands():
     today = date(2026, 1, 1)
     assert scoring.age_band(date(2015, 1, 1), today) == "11-12"

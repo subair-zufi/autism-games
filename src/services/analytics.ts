@@ -201,6 +201,32 @@ export interface GroupReport {
 /** How a group report may be sliced. */
 export type GroupBy = "overall" | "gender" | "autism_level" | "age_band" | "iq_band";
 
+/** 0–100 chance-corrected accuracy for one construct (e.g. "sharing"), pooled
+ *  across a student's recent sessions of that game — a single session only
+ *  carries ~2 trials per construct, too few to read alone. */
+export interface ConstructScore {
+  construct: string;
+  score: number | null;
+  raw_accuracy: number | null;
+  n_trials: number;
+  median_latency_ms: number | null;
+}
+
+/** Per-construct profile for one social-norms game (Right or Wrong or Good
+ *  Choice), pooled across the student's most recent sessions. */
+export interface GameConstructReport {
+  game_key: string;
+  constructs: ConstructScore[];
+  n_sessions_pooled: number;
+  session_window: number;
+}
+
+/** Per-construct profiles for both social-norms games. */
+export interface SocialNormsReport {
+  student_id: string;
+  games: GameConstructReport[];
+}
+
 /** A learner's saved progress on one level of a level-based game. */
 export interface LevelProgress {
   id: string;
@@ -404,6 +430,17 @@ class AnalyticsClient {
   async getSkillReport(studentId: string): Promise<ParticipantSkillReport> {
     return this.request<ParticipantSkillReport>(
       `/api/reports/student/${studentId}/skills`,
+    );
+  }
+
+  /** Per-construct profile for the social-norms games (Right or Wrong, Good
+   *  Choice), pooled across the student's most recent `sessions` of each
+   *  game so a single short session's ~2 trials per construct aren't read
+   *  alone (Progress dashboard). */
+  async getSocialNormsReport(studentId: string, sessions?: number): Promise<SocialNormsReport> {
+    const q = sessions != null ? `?sessions=${sessions}` : "";
+    return this.request<SocialNormsReport>(
+      `/api/reports/student/${studentId}/social-norms${q}`,
     );
   }
 

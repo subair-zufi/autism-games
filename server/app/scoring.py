@@ -547,3 +547,149 @@ def _int_or_none(v: object) -> int | None:
 
 def _float_or(v: object, default: float) -> float:
     return float(v) if isinstance(v, (int, float)) else default
+
+
+# --- Per-construct scores (social-norms games) --------------------------------
+# Right or Wrong and Good Choice both tag every answer with a `construct` (see
+# their tallyByConstruct helpers), but a single session only carries ~2 trials
+# per construct — a deliberate fatigue guard (see their content.ts headers).
+# That is too few to read one child's strength/weakness on one construct, so
+# the dashboard pools several recent sessions instead of reading one alone.
+
+SOCIAL_NORMS_GAMES = ("rightway", "rulefixer")
+
+SOCIAL_NORMS_CONSTRUCTS: dict[str, tuple[str, ...]] = {
+    "rightway": ("greetings", "sharing", "turns", "space", "politeness"),
+    "rulefixer": ("helping", "comforting", "inclusion", "politeness", "fairness"),
+}
+
+# How many of a student's most recent sessions of a game to pool by default.
+# Each session samples ~2 of the ~4 banked items per construct, so 5 sessions
+# comfortably cover the bank at least once while staying weighted toward
+# current ability rather than a child's very first attempts.
+DEFAULT_CONSTRUCT_SESSION_WINDOW = 5
+
+
+@dataclass
+class ConstructTrial:
+    """One scored opportunity tagged with the construct it measures."""
+
+    correct: bool
+    chance: float
+    latency_ms: int | None
+    session_id: str | None
+    ts: datetime
+    construct: str
+
+
+def _construct_trials(events: Iterable[EventLike]) -> list[ConstructTrial]:
+    """Right or Wrong / Good Choice: `construct` and `chance` are recorded on
+    every answer event (see tallyByConstruct in each game's logic.ts)."""
+    out: list[ConstructTrial] = []
+    for e in events:
+        if e.event_type != "answer":
+            continue
+        p = _p(e)
+        construct = p.get("construct")
+        if "correct" not in p or not isinstance(construct, str):
+            continue
+        out.append(
+            ConstructTrial(
+                correct=_is_true(p["correct"]),
+                chance=_float_or(p.get("chance"), 0.5),
+                latency_ms=_int_or_none(p.get("latencyMs")),
+                session_id=_sid(e),
+                ts=e.created_at,
+                construct=construct,
+            )
+        )
+    return out
+
+
+@dataclass
+class ConstructScore:
+    construct: str
+    score: float | None  # 0-100 chance-corrected, pooled across recent sessions
+    raw_accuracy: float | None  # 0-1, uncorrected
+    n_trials: int
+    median_latency_ms: int | None
+
+    def as_dict(self) -> dict:
+        return {
+            "construct": self.construct,
+            "score": self.score,
+            "raw_accuracy": self.raw_accuracy,
+            "n_trials": self.n_trials,
+            "median_latency_ms": self.median_latency_ms,
+        }
+
+
+@dataclass
+class GameConstructProfile:
+    game_key: str
+    constructs: list[ConstructScore]
+    n_sessions_pooled: int
+    session_window: int
+
+    def as_dict(self) -> dict:
+        return {
+            "game_key": self.game_key,
+            "constructs": [c.as_dict() for c in self.constructs],
+            "n_sessions_pooled": self.n_sessions_pooled,
+            "session_window": self.session_window,
+        }
+
+
+def score_constructs(
+    game_key: str,
+    events: Iterable[EventLike],
+    session_window: int = DEFAULT_CONSTRUCT_SESSION_WINDOW,
+) -> GameConstructProfile:
+    """Per-construct accuracy for one social-norms game, pooled across the
+    student's most recent ``session_window`` sessions of that game (oldest of
+    the window first, so a still-shorter play history just pools everything
+    it has)."""
+    trials = _construct_trials(events)
+    sessions = _sessions_ordered(trials)
+    recent = sessions[-session_window:] if session_window > 0 else sessions
+    pooled = [t for sess in recent for t in sess]
+
+    constructs = SOCIAL_NORMS_CONSTRUCTS.get(game_key, ())
+    by_construct: dict[str, list[ConstructTrial]] = {c: [] for c in constructs}
+    for t in pooled:
+        if t.construct in by_construct:
+            by_construct[t.construct].append(t)
+
+    scores = []
+    for c in constructs:
+        ts = by_construct[c]
+        latencies = [t.latency_ms for t in ts if t.latency_ms is not None]
+        scores.append(
+            ConstructScore(
+                construct=c,
+                score=corrected_score(ts),
+                raw_accuracy=_raw_accuracy(ts),
+                n_trials=len(ts),
+                median_latency_ms=_median([int(x) for x in latencies]),
+            )
+        )
+
+    return GameConstructProfile(
+        game_key=game_key,
+        constructs=scores,
+        n_sessions_pooled=len(recent),
+        session_window=session_window,
+    )
+
+
+def score_social_norms(
+    events: Iterable[EventLike],
+    session_window: int = DEFAULT_CONSTRUCT_SESSION_WINDOW,
+) -> list[GameConstructProfile]:
+    """Per-construct profiles for both social-norms games from one student's
+    event stream (mirrors :func:`score_participant`'s per-game bucketing)."""
+    by_game: dict[str, list[EventLike]] = {g: [] for g in SOCIAL_NORMS_GAMES}
+    for e in events:
+        if e.game_key in by_game:  # type: ignore[attr-defined]
+            by_game[e.game_key].append(e)  # type: ignore[attr-defined]
+    return [score_constructs(g, by_game[g], session_window) for g in SOCIAL_NORMS_GAMES]

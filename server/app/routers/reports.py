@@ -18,8 +18,10 @@ from ..database import get_db
 from ..deps import get_current_user
 from ..models import GameEvent, GameSession, LevelProgress, Student, User
 from ..schemas import (
+    ConstructScoreOut,
     EmotionReport,
     EmotionStat,
+    GameConstructReport,
     GameScoreOut,
     GroupBreakdown,
     GroupReport,
@@ -30,6 +32,7 @@ from ..schemas import (
     ReportSummary,
     ReportTimeseriesPoint,
     SkillScoreOut,
+    SocialNormsReport,
     StudentReport,
 )
 from .students import resolve_owned_student
@@ -264,6 +267,53 @@ def student_skill_report(
         n_sessions=ps.n_sessions,
         n_trials=ps.n_trials,
         skills=[_skill_out(s) for s in ps.skills],
+    )
+
+
+@router.get("/student/{student_id}/social-norms", response_model=SocialNormsReport)
+def social_norms_report(
+    student_id: uuid.UUID,
+    sessions: int = Query(
+        default=scoring.DEFAULT_CONSTRUCT_SESSION_WINDOW,
+        ge=1,
+        le=20,
+        description="How many of the student's most recent sessions per game to pool",
+    ),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> SocialNormsReport:
+    """Per-construct accuracy for the social-norms games (Right or Wrong, Good
+    Choice), pooled across the student's most recent sessions of each game.
+
+    A single session only carries ~2 trials per construct — a deliberate
+    fatigue guard, not a data gap — so reading one session's per-construct
+    tally alone is too noisy to judge a child's strength on e.g. "sharing"
+    vs "personal space". Pooling the last few sessions accumulates enough
+    trials per construct while staying weighted toward current ability.
+    """
+    resolve_owned_student(db, user, student_id)
+    events = db.scalars(
+        select(GameEvent)
+        .where(
+            GameEvent.user_id == user.id,
+            GameEvent.student_id == student_id,
+            GameEvent.game_key.in_(scoring.SOCIAL_NORMS_GAMES),
+            GameEvent.event_type == "answer",
+        )
+        .order_by(GameEvent.created_at.asc())
+    ).all()
+    profiles = scoring.score_social_norms(events, session_window=sessions)
+    return SocialNormsReport(
+        student_id=student_id,
+        games=[
+            GameConstructReport(
+                game_key=p.game_key,
+                constructs=[ConstructScoreOut(**c.as_dict()) for c in p.constructs],
+                n_sessions_pooled=p.n_sessions_pooled,
+                session_window=p.session_window,
+            )
+            for p in profiles
+        ],
     )
 
 

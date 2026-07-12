@@ -13,7 +13,11 @@
  *    round count.
  *  - Training vs probe pools: probe situations are held out of practice and
  *    only appear in Assessment mode, so generalization can be measured on
- *    unseen items. Each construct has 2 training + 2 probe situations.
+ *    unseen items. Each construct has 4 training + 4 probe situations; a
+ *    level samples 2 of the 4, so sessions stay 10 trials (no fatigue) while
+ *    repeated sessions rotate through different items — accumulating enough
+ *    per-construct evidence to read one child's strength on a single
+ *    construct, not only group means.
  *  - Bilingual (Kerala deployment): every child-facing line carries English
  *    and Malayalam, written colloquially the way adults actually talk to a
  *    small child (same convention as Roll-Back Buddy).
@@ -815,6 +819,757 @@ export const SITUATIONS: Situation[] = [
         result: {
           en: 'That is not fair to Meera. Friends take turns choosing.',
           ml: 'അത് മീരയോട് ന്യായമല്ല. കൂട്ടുകാർ മാറിമാറി തിരഞ്ഞെടുക്കണം.',
+        },
+      },
+    ],
+  },
+
+  // === second situation pair per construct (per-construct reliability) ==========
+  // --- helping ---------------------------------------------------------------
+  {
+    id: 'spilledbag',
+    construct: 'helping',
+    pool: 'training',
+    text: {
+      en: "Ravi's bag tips over and his things spill in the corridor.",
+      ml: 'രവിയുടെ ബാഗ് മറിഞ്ഞ് സാധനങ്ങളെല്ലാം ഇടനാഴിയിൽ ചിതറി.',
+    },
+    bubble: '🎒',
+    scene: { mood: 'sad', books: true },
+    options: [
+      {
+        id: 'pickup', role: 'kind', emoji: '🤝',
+        label: { en: 'Help gather his things', ml: 'സാധനങ്ങൾ പെറുക്കാൻ സഹായിക്കുക' },
+        result: {
+          en: 'You helped and Ravi says thank you.',
+          ml: 'നീ സഹായിച്ചു, രവി നന്ദി പറഞ്ഞു.',
+        },
+      },
+      {
+        id: 'stepover', role: 'passive', emoji: '🚶',
+        label: { en: 'Step over them and go', ml: 'ചവിട്ടിക്കടന്ന് പോകുക' },
+        result: {
+          en: 'Ravi gathers it all alone. Stopping to help is kinder.',
+          ml: 'രവി ഒറ്റയ്ക്ക് എല്ലാം പെറുക്കി. നിന്ന് സഹായിക്കുന്നതാ നല്ലത്.',
+        },
+      },
+      {
+        id: 'kick', role: 'wrong', emoji: '🦶',
+        label: { en: 'Kick his things away', ml: 'സാധനങ്ങൾ തട്ടിത്തെറിപ്പിക്കുക' },
+        result: {
+          en: 'That is unkind and makes it worse. Help him instead.',
+          ml: 'അത് മോശമാ, കൂടുതൽ കുഴപ്പമാകും. പകരം സഹായിക്ക്.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'cantopen',
+    construct: 'helping',
+    pool: 'training',
+    text: {
+      en: 'A small boy cannot open his water bottle.',
+      ml: 'ഒരു ചെറിയ കുട്ടിക്ക് വെള്ളക്കുപ്പി തുറക്കാൻ പറ്റുന്നില്ല.',
+    },
+    bubble: '🍶',
+    scene: { mood: 'sad' },
+    options: [
+      {
+        id: 'openit', role: 'kind', emoji: '🤝',
+        label: { en: 'Open it for him', ml: 'അവന് തുറന്നുകൊടുക്കുക' },
+        result: {
+          en: 'You opened it. He drinks happily and thanks you.',
+          ml: 'നീ തുറന്നുകൊടുത്തു. അവൻ സന്തോഷത്തോടെ കുടിച്ചു, നന്ദി പറഞ്ഞു.',
+        },
+      },
+      {
+        id: 'ignoreit', role: 'passive', emoji: '🚶',
+        label: { en: 'Leave him to try alone', ml: 'ഒറ്റയ്ക്ക് ശ്രമിക്കാൻ വിടുക' },
+        result: {
+          en: 'He struggles for a long time. Helping would be kind.',
+          ml: 'അവൻ കുറേ നേരം കഷ്ടപ്പെട്ടു. സഹായിച്ചിരുന്നെങ്കിൽ നന്നായേനെ.',
+        },
+      },
+      {
+        id: 'shake', role: 'wrong', emoji: '😆',
+        label: { en: 'Shake it so it sprays him', ml: 'കുലുക്കി അവന്റെ മേൽ തെറിപ്പിക്കുക' },
+        result: {
+          en: 'That is mean. Helping him open it is better.',
+          ml: 'അത് മോശമാ. തുറക്കാൻ സഹായിക്കുന്നതാ നല്ലത്.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'droppedcoins',
+    construct: 'helping',
+    pool: 'probe',
+    text: {
+      en: 'A shopkeeper drops coins that roll near your feet.',
+      ml: 'കടക്കാരന്റെ കയ്യിൽ നിന്ന് നാണയങ്ങൾ വീണ് നിന്റെ കാലിനടുത്തേക്ക് ഉരുണ്ടു.',
+    },
+    bubble: '🪙',
+    scene: { mood: 'neutral', tall: true },
+    options: [
+      {
+        id: 'coinsback', role: 'kind', emoji: '🙋',
+        label: { en: 'Pick them up and give them back', ml: 'പെറുക്കി തിരിച്ചുകൊടുക്കുക' },
+        result: {
+          en: 'The shopkeeper smiles and thanks you.',
+          ml: 'കടക്കാരൻ ചിരിച്ച് നന്ദി പറഞ്ഞു.',
+        },
+      },
+      {
+        id: 'coinaway', role: 'passive', emoji: '🚶',
+        label: { en: 'Walk on without stopping', ml: 'നിൽക്കാതെ നടന്നുപോകുക' },
+        result: {
+          en: 'He picks them up slowly alone. Helping would be kind.',
+          ml: 'അയാൾ ഒറ്റയ്ക്ക് പതിയെ പെറുക്കി. സഹായിക്കുന്നതായിരുന്നു നല്ലത്.',
+        },
+      },
+      {
+        id: 'pocket', role: 'wrong', emoji: '🤫',
+        label: { en: 'Keep a coin for yourself', ml: 'ഒരു നാണയം സ്വന്തമാക്കുക' },
+        result: {
+          en: 'That coin is not yours. Giving it back is honest and kind.',
+          ml: 'ആ നാണയം നിന്റേതല്ല. തിരിച്ചുകൊടുക്കുന്നതാ സത്യസന്ധത.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'stucklace',
+    construct: 'helping',
+    pool: 'probe',
+    text: {
+      en: "Anu's shoelace is stuck in a knot and the bell is ringing.",
+      ml: 'അനുവിന്റെ ഷൂലേസ് കുരുങ്ങിപ്പോയി, ബെല്ലടിക്കുകയും ചെയ്യുന്നു.',
+    },
+    bubble: '👟',
+    scene: { mood: 'sad' },
+    options: [
+      {
+        id: 'untie', role: 'kind', emoji: '🤝',
+        label: { en: 'Help untie the knot', ml: 'കുരുക്ക് അഴിക്കാൻ സഹായിക്കുക' },
+        result: {
+          en: 'You freed it together and reach class in time.',
+          ml: 'രണ്ടുപേരും കൂടി അഴിച്ചു, സമയത്ത് ക്ലാസ്സിലെത്തി.',
+        },
+      },
+      {
+        id: 'runoff', role: 'passive', emoji: '🏃',
+        label: { en: 'Run to class and leave her', ml: 'അവളെ വിട്ട് ക്ലാസ്സിലേക്ക് ഓടുക' },
+        result: {
+          en: 'Anu is left behind struggling. Helping would be kind.',
+          ml: 'അനു കഷ്ടപ്പെട്ട് പിന്നിലായി. സഹായിക്കുന്നതായിരുന്നു നല്ലത്.',
+        },
+      },
+      {
+        id: 'rushlaugh', role: 'wrong', emoji: '😆',
+        label: { en: 'Tell her to hurry and laugh', ml: 'വേഗം വാ എന്ന് പറഞ്ഞ് ചിരിക്കുക' },
+        result: {
+          en: 'Rushing and laughing does not help. Untie it with her.',
+          ml: 'ധൃതി കൂട്ടിയും ചിരിച്ചും കാര്യമില്ല. കൂടെനിന്ന് അഴിക്ക്.',
+        },
+      },
+    ],
+  },
+
+  // --- comforting -------------------------------------------------------------
+  {
+    id: 'brokemodel',
+    construct: 'comforting',
+    pool: 'training',
+    text: {
+      en: "Sam's clay model broke and he looks very upset.",
+      ml: 'സാമിന്റെ കളിമൺ രൂപം പൊട്ടിപ്പോയി, അവന് വലിയ സങ്കടം.',
+    },
+    bubble: '😢',
+    scene: { mood: 'sad' },
+    options: [
+      {
+        id: 'cheer', role: 'kind', emoji: '💬',
+        label: { en: "Say, 'We can make it again together'", ml: "'നമുക്ക് ഒരുമിച്ച് വീണ്ടും ഉണ്ടാക്കാം' എന്ന് പറയുക" },
+        result: {
+          en: 'Sam feels better and you rebuild it together.',
+          ml: 'സാമിന് ആശ്വാസമായി, രണ്ടുപേരും കൂടി വീണ്ടും ഉണ്ടാക്കി.',
+        },
+      },
+      {
+        id: 'shrug', role: 'passive', emoji: '🤷',
+        label: { en: "Say, 'It doesn't matter'", ml: "'അതൊന്നും സാരമില്ല' എന്ന് പറയുക" },
+        result: {
+          en: 'Sam feels his sadness is ignored. A kind word helps more.',
+          ml: 'അവന്റെ സങ്കടം ആരും ശ്രദ്ധിച്ചില്ലെന്ന് സാമിന് തോന്നി. നല്ല വാക്കാ സഹായിക്കുക.',
+        },
+      },
+      {
+        id: 'laughbroke', role: 'wrong', emoji: '😆',
+        label: { en: "Laugh and say, 'It looks funny now'", ml: "ചിരിച്ച് 'ഇപ്പോ അത് തമാശയായി' എന്ന് പറയുക" },
+        result: {
+          en: 'That hurts Sam more. A kind word is better.',
+          ml: 'അത് സാമിനെ കൂടുതൽ വിഷമിപ്പിച്ചു. നല്ല വാക്കാ വേണ്ടത്.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'scaredark',
+    construct: 'comforting',
+    pool: 'training',
+    text: {
+      en: 'The lights go out and a younger boy looks frightened.',
+      ml: 'ലൈറ്റ് പോയപ്പോൾ ഒരു ചെറിയ കുട്ടി പേടിച്ചുനിൽക്കുന്നു.',
+    },
+    bubble: '😨',
+    scene: { mood: 'sad' },
+    options: [
+      {
+        id: 'holdhand', role: 'kind', emoji: '🤝',
+        label: { en: "Hold his hand and say, 'It's okay'", ml: "കൈ പിടിച്ച് 'സാരമില്ല' എന്ന് പറയുക" },
+        result: {
+          en: 'He feels safe with you beside him.',
+          ml: 'നീ കൂടെയുള്ളപ്പോൾ അവന് ധൈര്യമായി.',
+        },
+      },
+      {
+        id: 'moveaway', role: 'passive', emoji: '🚶',
+        label: { en: 'Move away and wait for the lights', ml: 'മാറിനിന്ന് ലൈറ്റ് വരാൻ കാത്തിരിക്കുക' },
+        result: {
+          en: 'He stays scared and alone. A kind word would help.',
+          ml: 'അവൻ പേടിച്ച് ഒറ്റയ്ക്കായി. ഒരു നല്ല വാക്ക് സഹായിച്ചേനെ.',
+        },
+      },
+      {
+        id: 'scareboo', role: 'wrong', emoji: '👻',
+        label: { en: "Jump out and shout 'Boo!'", ml: "ചാടിവന്ന് 'ബൂ!' എന്ന് പേടിപ്പിക്കുക" },
+        result: {
+          en: 'That frightens him even more. Comfort him instead.',
+          ml: 'അത് അവനെ കൂടുതൽ പേടിപ്പിച്ചു. പകരം ആശ്വസിപ്പിക്ക്.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'lostrace',
+    construct: 'comforting',
+    pool: 'probe',
+    text: {
+      en: 'Meera came last in the race and is close to tears.',
+      ml: 'മീര ഓട്ടമത്സരത്തിൽ ഏറ്റവും പിന്നിലായി, കരയാറായി നിൽക്കുന്നു.',
+    },
+    bubble: '😢',
+    scene: { mood: 'sad' },
+    options: [
+      {
+        id: 'welltried', role: 'kind', emoji: '💬',
+        label: { en: "Say, 'You tried so hard, well done'", ml: "'നീ നന്നായി ശ്രമിച്ചല്ലോ, കൊള്ളാം' എന്ന് പറയുക" },
+        result: {
+          en: 'Meera smiles — she feels proud she tried.',
+          ml: 'മീര ചിരിച്ചു — ശ്രമിച്ചതിൽ അഭിമാനം തോന്നി.',
+        },
+      },
+      {
+        id: 'sayrules', role: 'passive', emoji: '🤷',
+        label: { en: "Say, 'Someone has to come last'", ml: "'ആരെങ്കിലും പിന്നിലാകുമല്ലോ' എന്ന് പറയുക" },
+        result: {
+          en: 'Meera still feels bad. Kind words would comfort her.',
+          ml: 'മീരയ്ക്ക് അപ്പോഴും വിഷമം. നല്ല വാക്ക് ആശ്വാസമായേനെ.',
+        },
+      },
+      {
+        id: 'teaseslow', role: 'wrong', emoji: '😆',
+        label: { en: "Say, 'You're so slow!'", ml: "'നീ എന്ത് പതുക്കെയാ!' എന്ന് കളിയാക്കുക" },
+        result: {
+          en: 'That makes her cry. Comfort her instead.',
+          ml: 'അത് അവളെ കരയിച്ചു. പകരം ആശ്വസിപ്പിക്ക്.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'sickfriend',
+    construct: 'comforting',
+    pool: 'probe',
+    text: {
+      en: 'Aisha feels sick and is resting her head on the desk.',
+      ml: 'ആയിഷയ്ക്ക് സുഖമില്ല, തല മേശയിൽ ചായ്ച്ചു കിടക്കുന്നു.',
+    },
+    bubble: '🤒',
+    scene: { mood: 'sad' },
+    options: [
+      {
+        id: 'telladult', role: 'kind', emoji: '🧑‍🏫',
+        label: { en: 'Tell the teacher she is unwell', ml: 'അവൾക്ക് സുഖമില്ലെന്ന് ടീച്ചറോട് പറയുക' },
+        result: {
+          en: 'The teacher helps Aisha. She feels cared for.',
+          ml: 'ടീച്ചർ ആയിഷയെ സഹായിച്ചു. ആരോ ശ്രദ്ധിക്കുന്നെന്ന് അവൾക്ക് തോന്നി.',
+        },
+      },
+      {
+        id: 'saynothing', role: 'passive', emoji: '🧍',
+        label: { en: 'Say nothing and keep working', ml: 'ഒന്നും പറയാതെ പണി തുടരുക' },
+        result: {
+          en: 'Aisha stays unwell and unnoticed. Telling someone helps.',
+          ml: 'ആയിഷ അസുഖത്തോടെ ഒറ്റയ്ക്കിരുന്നു. ആരോടെങ്കിലും പറയുന്നതാ നല്ലത്.',
+        },
+      },
+      {
+        id: 'poke', role: 'wrong', emoji: '👉',
+        label: { en: 'Poke her to wake her up', ml: 'കുത്തി അവളെ ഉണർത്തുക' },
+        result: {
+          en: 'Poking a sick friend is unkind. Get help instead.',
+          ml: 'അസുഖമുള്ള കൂട്ടുകാരിയെ കുത്തുന്നത് മോശമാ. പകരം സഹായം കൊണ്ടുവാ.',
+        },
+      },
+    ],
+  },
+
+  // --- inclusion ---------------------------------------------------------------
+  {
+    id: 'nopartner',
+    construct: 'inclusion',
+    pool: 'training',
+    text: {
+      en: 'The class makes pairs and one boy has no partner.',
+      ml: 'ക്ലാസ്സിൽ ജോഡികളാക്കുമ്പോൾ ഒരു കുട്ടിക്ക് ജോഡിയില്ല.',
+    },
+    bubble: '🧍',
+    scene: { mood: 'sad', watching: true },
+    options: [
+      {
+        id: 'bepartner', role: 'kind', emoji: '🤝',
+        label: { en: "Say, 'Be my partner!'", ml: "'നീ എന്റെ ജോഡിയാകാം!' എന്ന് പറയുക" },
+        result: {
+          en: 'He grins and joins you happily.',
+          ml: 'അവൻ ചിരിച്ച് സന്തോഷത്തോടെ കൂടെക്കൂടി.',
+        },
+      },
+      {
+        id: 'pairfast', role: 'passive', emoji: '🙊',
+        label: { en: 'Say nothing and pair up fast', ml: 'ഒന്നും പറയാതെ വേഗം ജോഡിയാകുക' },
+        result: {
+          en: 'He is left with no partner. Inviting him is kinder.',
+          ml: 'അവന് ജോഡിയില്ലാതെ പോയി. അവനെ കൂട്ടുന്നതായിരുന്നു നല്ലത്.',
+        },
+      },
+      {
+        id: 'nothim', role: 'wrong', emoji: '🙅',
+        label: { en: "Say, 'Not with him'", ml: "'അവന്റെ കൂടെ വേണ്ട' എന്ന് പറയുക" },
+        result: {
+          en: 'That hurts him. Everyone can have a partner.',
+          ml: 'അത് അവനെ വേദനിപ്പിച്ചു. എല്ലാവർക്കും ജോഡിയാകാലോ.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'newtable',
+    construct: 'inclusion',
+    pool: 'training',
+    text: {
+      en: 'A new boy stands holding his tray, with nowhere to sit.',
+      ml: 'പുതിയ കുട്ടി ട്രേ പിടിച്ച് നിൽക്കുന്നു, ഇരിക്കാൻ സ്ഥലമില്ല.',
+    },
+    bubble: '🍽️',
+    scene: { mood: 'sad' },
+    options: [
+      {
+        id: 'makeroom', role: 'kind', emoji: '🪑',
+        label: { en: 'Make room and wave him over', ml: 'സ്ഥലം ഒഴിച്ച് അവനെ വിളിക്കുക' },
+        result: {
+          en: 'He sits with you and feels welcome.',
+          ml: 'അവൻ കൂടെയിരുന്നു, സ്വാഗതം കിട്ടിയെന്ന് തോന്നി.',
+        },
+      },
+      {
+        id: 'keepeat', role: 'passive', emoji: '🍚',
+        label: { en: 'Keep eating and look away', ml: 'നോക്കാതെ കഴിക്കുന്നത് തുടരുക' },
+        result: {
+          en: 'He wanders off alone. Making room would be kind.',
+          ml: 'അവൻ ഒറ്റയ്ക്ക് അലഞ്ഞു. സ്ഥലം കൊടുക്കുന്നതായിരുന്നു നല്ലത്.',
+        },
+      },
+      {
+        id: 'taken', role: 'wrong', emoji: '🙅',
+        label: { en: "Say, 'These seats are taken'", ml: "'ഇവിടെ ആളുണ്ട്' എന്ന് പറയുക" },
+        result: {
+          en: 'That is unfriendly. Sharing a seat is kind.',
+          ml: 'അത് മോശമാ. ഒരു സീറ്റ് പങ്കുവെക്കുന്നതാ നല്ലത്.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'grouptalk',
+    construct: 'inclusion',
+    pool: 'probe',
+    text: {
+      en: 'Two friends are chatting and a lonely girl edges closer, wanting to join.',
+      ml: 'രണ്ട് കൂട്ടുകാർ സംസാരിക്കുന്നു, ഒറ്റയ്ക്കുള്ള ഒരു കുട്ടി കൂടാൻ ആഗ്രഹിച്ച് അടുത്തേക്ക് നീങ്ങുന്നു.',
+    },
+    bubble: '💬',
+    scene: { mood: 'sad', watching: true },
+    options: [
+      {
+        id: 'turnin', role: 'kind', emoji: '👋',
+        label: { en: "Turn to her and say, 'Come join us'", ml: "അവളുടെ നേരെ തിരിഞ്ഞ് 'വാ, കൂടെക്കൂടാം' എന്ന് പറയുക" },
+        result: {
+          en: 'She joins the chat and feels included.',
+          ml: 'അവൾ സംസാരത്തിൽ കൂടി, കൂട്ടത്തിലായെന്ന് തോന്നി.',
+        },
+      },
+      {
+        id: 'keeptalk', role: 'passive', emoji: '🗣️',
+        label: { en: 'Keep talking, backs to her', ml: 'അവൾക്ക് പുറംതിരിഞ്ഞ് സംസാരം തുടരുക' },
+        result: {
+          en: 'She stays outside the circle. Inviting her is kinder.',
+          ml: 'അവൾ പുറത്തുതന്നെ നിന്നു. അവളെ കൂട്ടുന്നതായിരുന്നു നല്ലത്.',
+        },
+      },
+      {
+        id: 'secret', role: 'wrong', emoji: '🤫',
+        label: { en: "Whisper, 'This is private'", ml: "'ഇത് ഞങ്ങളുടെ കാര്യമാ' എന്ന് അടക്കം പറയുക" },
+        result: {
+          en: 'That leaves her out on purpose. Including her is kind.',
+          ml: 'അത് അവളെ മനഃപൂർവം ഒഴിവാക്കലാ. കൂട്ടുന്നതാ നല്ലത്.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'wheelchair',
+    construct: 'inclusion',
+    pool: 'probe',
+    text: {
+      en: 'A boy in a wheelchair watches the others play tag.',
+      ml: 'വീൽചെയറിലിരിക്കുന്ന ഒരു കുട്ടി മറ്റുള്ളവർ പിടിത്തക്കളി കളിക്കുന്നത് നോക്കുന്നു.',
+    },
+    bubble: '👦',
+    scene: { mood: 'sad', watching: true },
+    options: [
+      {
+        id: 'changegame', role: 'kind', emoji: '⚽',
+        label: { en: "Say, 'Let's play a game he can join'", ml: "'അവനും കളിക്കാവുന്ന കളി കളിക്കാം' എന്ന് പറയുക" },
+        result: {
+          en: 'Everyone plays together and he has fun.',
+          ml: 'എല്ലാവരും ഒരുമിച്ച് കളിച്ചു, അവനും രസിച്ചു.',
+        },
+      },
+      {
+        id: 'playon', role: 'passive', emoji: '🏃',
+        label: { en: 'Keep playing tag without him', ml: 'അവനില്ലാതെ കളി തുടരുക' },
+        result: {
+          en: 'He only watches. Choosing a game he can join is kinder.',
+          ml: 'അവൻ നോക്കിനിന്നതേയുള്ളൂ. അവനും കൂടാവുന്ന കളി തിരഞ്ഞെടുക്കുന്നതാ നല്ലത്.',
+        },
+      },
+      {
+        id: 'cantplay', role: 'wrong', emoji: '🙅',
+        label: { en: "Say, 'You can't play'", ml: "'നിനക്ക് കളിക്കാൻ പറ്റില്ല' എന്ന് പറയുക" },
+        result: {
+          en: 'That hurts him. There is always a way to include a friend.',
+          ml: 'അത് അവനെ വേദനിപ്പിച്ചു. കൂട്ടുകാരനെ കൂട്ടാൻ എപ്പോഴും വഴിയുണ്ട്.',
+        },
+      },
+    ],
+  },
+
+  // --- politeness ----------------------------------------------------------------
+  {
+    id: 'gotgift',
+    construct: 'politeness',
+    pool: 'training',
+    text: {
+      en: 'Your aunt gives you a present.',
+      ml: 'നിന്റെ ആന്റി നിനക്കൊരു സമ്മാനം തന്നു.',
+    },
+    bubble: '🎁',
+    scene: { mood: 'neutral', tall: true },
+    options: [
+      {
+        id: 'thankaunt', role: 'kind', emoji: '🙏',
+        label: { en: "Say, 'Thank you, Aunty!'", ml: "'നന്ദി, ആന്റി!' എന്ന് പറയുക" },
+        result: {
+          en: 'Your aunt is delighted you thanked her.',
+          ml: 'നന്ദി പറഞ്ഞപ്പോൾ ആന്റിക്ക് സന്തോഷമായി.',
+        },
+      },
+      {
+        id: 'justtake', role: 'passive', emoji: '🤐',
+        label: { en: 'Take it and say nothing', ml: 'ഒന്നും പറയാതെ വാങ്ങുക' },
+        result: {
+          en: 'She feels unnoticed. A thank you shows you care.',
+          ml: 'അവർക്ക് വിഷമമായി. നന്ദി പറഞ്ഞാൽ സ്നേഹം കാണിക്കാം.',
+        },
+      },
+      {
+        id: 'complain', role: 'wrong', emoji: '😒',
+        label: { en: "Say, 'I didn't want this'", ml: "'എനിക്ക് ഇത് വേണ്ടായിരുന്നു' എന്ന് പറയുക" },
+        result: {
+          en: 'That is hurtful. A thank you is kind even for a small gift.',
+          ml: 'അത് വിഷമമാകും. ചെറിയ സമ്മാനത്തിനും നന്ദി പറയണം.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'bumpsorry',
+    construct: 'politeness',
+    pool: 'training',
+    text: {
+      en: 'You bump into a classmate while turning around quickly.',
+      ml: 'വേഗം തിരിയുമ്പോൾ നീ ഒരു സഹപാഠിയെ തട്ടി.',
+    },
+    bubble: '💥',
+    scene: { mood: 'neutral' },
+    options: [
+      {
+        id: 'saysorry', role: 'kind', emoji: '🙏',
+        label: { en: "Say, 'Oh, sorry!'", ml: "'അയ്യോ, സോറി!' എന്ന് പറയുക" },
+        result: {
+          en: 'Saying sorry makes things right.',
+          ml: 'സോറി പറഞ്ഞപ്പോൾ കാര്യം ശരിയായി.',
+        },
+      },
+      {
+        id: 'carryon', role: 'passive', emoji: '😐',
+        label: { en: 'Say nothing and carry on', ml: 'ഒന്നും പറയാതെ പോകുക' },
+        result: {
+          en: "She's left rubbing her arm. A sorry would be kind.",
+          ml: 'അവൾ കൈ തടവിക്കൊണ്ട് നിന്നു. ഒരു സോറി പറഞ്ഞാൽ നന്നായേനെ.',
+        },
+      },
+      {
+        id: 'blame', role: 'wrong', emoji: '😠',
+        label: { en: "Say, 'Watch where you stand!'", ml: "'നോക്കി നിൽക്കാൻ പറ്റില്ലേ!' എന്ന് കുറ്റപ്പെടുത്തുക" },
+        result: {
+          en: 'Blaming her is rude when it was an accident. Say sorry.',
+          ml: 'അറിയാതെ പറ്റിയതിന് കുറ്റപ്പെടുത്തുന്നത് മോശമാ. സോറി പറയ്.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'phonecall',
+    construct: 'politeness',
+    pool: 'probe',
+    text: {
+      en: 'Your mother is on an important phone call and you want juice.',
+      ml: 'അമ്മ ഒരു പ്രധാന ഫോൺ വിളിയിലാ, നിനക്ക് ജ്യൂസ് വേണം.',
+    },
+    bubble: '📞',
+    scene: { mood: 'neutral', tall: true },
+    options: [
+      {
+        id: 'waitcall', role: 'kind', emoji: '🙋',
+        label: { en: 'Wait quietly until she finishes', ml: 'വിളി കഴിയുന്നതുവരെ മിണ്ടാതെ കാത്തിരിക്കുക' },
+        result: {
+          en: 'Mother finishes and gladly gets your juice.',
+          ml: 'വിളി കഴിഞ്ഞ് അമ്മ സന്തോഷത്തോടെ ജ്യൂസ് തന്നു.',
+        },
+      },
+      {
+        id: 'giveup', role: 'passive', emoji: '🚶',
+        label: { en: 'Give up and walk away thirsty', ml: 'വേണ്ടെന്ന് വെച്ച് ദാഹത്തോടെ പോകുക' },
+        result: {
+          en: 'You stay thirsty. Waiting and asking after would work.',
+          ml: 'നിനക്ക് ദാഹം മാറിയില്ല. കാത്തിരുന്ന് ചോദിച്ചാൽ മതിയായിരുന്നു.',
+        },
+      },
+      {
+        id: 'yellover', role: 'wrong', emoji: '📢',
+        label: { en: 'Shout over her call', ml: 'വിളിക്ക് മീതെ ഒച്ചവെക്കുക' },
+        result: {
+          en: 'Shouting over a call is rude. Wait for a pause.',
+          ml: 'വിളിക്ക് മീതെ ഒച്ചവെക്കുന്നത് മോശമാ. ഒന്ന് നിർത്തുന്നതുവരെ കാത്തിരിക്ക്.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'sharedfood',
+    construct: 'politeness',
+    pool: 'probe',
+    text: {
+      en: "A friend offers you a bite of food you don't like.",
+      ml: 'ഒരു കൂട്ടുകാരൻ നിനക്ക് ഇഷ്ടമല്ലാത്ത ഭക്ഷണം ഒരു കഷണം നീട്ടി.',
+    },
+    bubble: '🍢',
+    scene: { mood: 'neutral' },
+    options: [
+      {
+        id: 'politeno', role: 'kind', emoji: '🙂',
+        label: { en: "Smile and say, 'No thank you'", ml: "ചിരിച്ച് 'വേണ്ട, നന്ദി' എന്ന് പറയുക" },
+        result: {
+          en: 'A polite no keeps your friend happy.',
+          ml: 'മര്യാദയോടെ വേണ്ടെന്ന് പറഞ്ഞപ്പോൾ കൂട്ടുകാരന് സന്തോഷം.',
+        },
+      },
+      {
+        id: 'faceaway', role: 'passive', emoji: '😐',
+        label: { en: 'Turn your face away silently', ml: 'ഒന്നും പറയാതെ മുഖം തിരിക്കുക' },
+        result: {
+          en: 'That looks rude. A polite "no thank you" is kinder.',
+          ml: 'അത് മോശമായി തോന്നും. "വേണ്ട, നന്ദി" എന്ന് പറയുന്നതാ നല്ലത്.',
+        },
+      },
+      {
+        id: 'yuck', role: 'wrong', emoji: '🤢',
+        label: { en: "Say, 'Yuck, that's disgusting!'", ml: "'ഛെ, ഇത് അറപ്പാ!' എന്ന് പറയുക" },
+        result: {
+          en: 'That hurts his feelings. A polite no is kind.',
+          ml: 'അത് അവനെ വേദനിപ്പിച്ചു. മര്യാദയോടെ വേണ്ടെന്ന് പറയുന്നതാ നല്ലത്.',
+        },
+      },
+    ],
+  },
+
+  // --- fairness -----------------------------------------------------------------
+  {
+    id: 'onecookie',
+    construct: 'fairness',
+    pool: 'training',
+    text: {
+      en: "There is one cookie left and your friend hasn't had any.",
+      ml: 'ഒരു ബിസ്‌ക്കറ്റ് മാത്രം ബാക്കി, കൂട്ടുകാരന് ഇതുവരെ ഒന്നും കിട്ടിയിട്ടില്ല.',
+    },
+    bubble: '🍪',
+    scene: { mood: 'sad' },
+    options: [
+      {
+        id: 'halfit', role: 'kind', emoji: '🤝',
+        label: { en: 'Break it in half to share', ml: 'പകുതിയാക്കി പങ്കുവെക്കുക' },
+        result: {
+          en: 'You both get a piece. That was fair!',
+          ml: 'രണ്ടുപേർക്കും കിട്ടി. അത് ന്യായമായി!',
+        },
+      },
+      {
+        id: 'eatall', role: 'passive', emoji: '🤷',
+        label: { en: 'Eat it quickly yourself', ml: 'വേഗം സ്വയം കഴിക്കുക' },
+        result: {
+          en: 'Your friend gets none. Sharing would be fair.',
+          ml: 'കൂട്ടുകാരന് ഒന്നും കിട്ടിയില്ല. പങ്കുവെക്കുന്നതായിരുന്നു ന്യായം.',
+        },
+      },
+      {
+        id: 'eattease', role: 'wrong', emoji: '😋',
+        label: { en: 'Eat it slowly in front of him', ml: 'അവന്റെ മുന്നിൽ പതുക്കെ കഴിക്കുക' },
+        result: {
+          en: 'That is unkind. Sharing the last one is fair.',
+          ml: 'അത് മോശമാ. അവസാനത്തേത് പങ്കുവെക്കുന്നതാ ന്യായം.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'bigslice',
+    construct: 'fairness',
+    pool: 'training',
+    text: {
+      en: 'You cut the cake — one slice is big, one is small.',
+      ml: 'നീ കേക്ക് മുറിച്ചു — ഒരു കഷണം വലുത്, ഒന്ന് ചെറുത്.',
+    },
+    bubble: '🍰',
+    scene: { mood: 'neutral' },
+    options: [
+      {
+        id: 'givebig', role: 'kind', emoji: '🤝',
+        label: { en: 'Give your friend the big slice', ml: 'വലിയ കഷണം കൂട്ടുകാരന് കൊടുക്കുക' },
+        result: {
+          en: 'Your friend is happy — that was generous and fair.',
+          ml: 'കൂട്ടുകാരന് സന്തോഷം — അത് ഉദാരവും ന്യായവുമായി.',
+        },
+      },
+      {
+        id: 'takebig', role: 'passive', emoji: '🙂',
+        label: { en: 'Keep the big one for yourself', ml: 'വലിയത് സ്വന്തമാക്കുക' },
+        result: {
+          en: 'Your friend gets the small piece. Sharing evenly is fairer.',
+          ml: 'കൂട്ടുകാരന് ചെറിയത് കിട്ടി. ഒരുപോലെ പങ്കിടുന്നതാ ന്യായം.',
+        },
+      },
+      {
+        id: 'bothmine', role: 'wrong', emoji: '🙅',
+        label: { en: 'Take both slices', ml: 'രണ്ട് കഷണവും എടുക്കുക' },
+        result: {
+          en: 'Taking both leaves him nothing. Fair means sharing.',
+          ml: 'രണ്ടും എടുത്താൽ അവന് ഒന്നും ഇല്ല. ന്യായം എന്നാൽ പങ്കുവെക്കലാ.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'foundpencil',
+    construct: 'fairness',
+    pool: 'probe',
+    text: {
+      en: 'You find a nice pencil. Another child says it might be theirs.',
+      ml: 'നിനക്ക് നല്ലൊരു പെൻസിൽ കിട്ടി. അത് തന്റേതാവാം എന്ന് വേറൊരു കുട്ടി പറയുന്നു.',
+    },
+    bubble: '✏️',
+    scene: { mood: 'neutral' },
+    options: [
+      {
+        id: 'checkowner', role: 'kind', emoji: '🙋',
+        label: { en: 'Ask around to find whose it is', ml: 'ആരുടേതാണെന്ന് അന്വേഷിക്കുക' },
+        result: {
+          en: 'You find the owner. Being fair feels good.',
+          ml: 'ഉടമയെ കണ്ടെത്തി. ന്യായം കാണിച്ചത് നല്ലതായി.',
+        },
+      },
+      {
+        id: 'slipbag', role: 'passive', emoji: '🤐',
+        label: { en: 'Quietly slip it into your bag', ml: 'മിണ്ടാതെ ബാഗിലിടുക' },
+        result: {
+          en: 'Someone lost their pencil. Finding the owner is fair.',
+          ml: 'ആരുടെയോ പെൻസിൽ പോയി. ഉടമയെ കണ്ടെത്തുന്നതാ ന്യായം.',
+        },
+      },
+      {
+        id: 'itsmine', role: 'wrong', emoji: '🙅',
+        label: { en: "Insist, 'It's mine now!'", ml: "'ഇനി ഇത് എന്റേതാ!' എന്ന് വാശിപിടിക്കുക" },
+        result: {
+          en: 'Claiming it unfairly is not right. Find who lost it.',
+          ml: 'അന്യായമായി അവകാശപ്പെടുന്നത് ശരിയല്ല. കളഞ്ഞുപോയ ആളെ കണ്ടെത്ത്.',
+        },
+      },
+    ],
+  },
+  {
+    id: 'scorecheat',
+    construct: 'fairness',
+    pool: 'probe',
+    text: {
+      en: 'In a board game, you could move an extra space when no one is looking.',
+      ml: 'ബോർഡ് കളിയിൽ ആരും നോക്കാത്തപ്പോൾ നിനക്ക് ഒരു കളം കൂടുതൽ നീങ്ങാം.',
+    },
+    bubble: '🎲',
+    scene: { mood: 'neutral' },
+    options: [
+      {
+        id: 'playfair', role: 'kind', emoji: '🤝',
+        label: { en: 'Move only the right number', ml: 'ശരിയായ എണ്ണം മാത്രം നീങ്ങുക' },
+        result: {
+          en: 'Everyone trusts you — fair play keeps it fun.',
+          ml: 'എല്ലാവർക്കും നിന്നെ വിശ്വാസമായി — ന്യായമായി കളിച്ചാൽ രസമാ.',
+        },
+      },
+      {
+        id: 'hidescore', role: 'passive', emoji: '🤫',
+        label: { en: 'Stay quiet about the real score', ml: 'ശരിയായ സ്കോർ പറയാതിരിക്കുക' },
+        result: {
+          en: 'Hiding the score is not fair. Play by the real count.',
+          ml: 'സ്കോർ ഒളിപ്പിക്കുന്നത് ന്യായമല്ല. ശരിക്കുള്ള എണ്ണം അനുസരിച്ച് കളിക്ക്.',
+        },
+      },
+      {
+        id: 'moveextra', role: 'wrong', emoji: '😏',
+        label: { en: 'Sneak an extra move', ml: 'ഒളിച്ച് ഒരു നീക്കം കൂടുതൽ ചെയ്യുക' },
+        result: {
+          en: 'Cheating is unfair to everyone. Play by the rules.',
+          ml: 'കള്ളക്കളി എല്ലാവരോടും അന്യായമാ. നിയമപ്രകാരം കളിക്ക്.',
         },
       },
     ],

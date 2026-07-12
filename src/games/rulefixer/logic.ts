@@ -7,9 +7,11 @@
  *    which option roles are shown: Easy contrasts kind vs. clearly wrong,
  *    Moderate adds the plausible-passive distractor, Hard drops the obvious
  *    wrong option and forces the sensitive kind-vs-passive discrimination.
- *  - Fixed composition: a level always contains every situation of the pool
- *    (2 per construct × 5 constructs = 10 trials), so item difficulty is a
- *    property of the level, not of a random draw. Only order varies.
+ *  - Sampled composition: a level is 5 constructs × 2 = 10 trials, sampled
+ *    from a bank of 4 situations per construct per pool. Sessions therefore
+ *    rotate through the enlarged bank — repeated sessions accumulate
+ *    per-construct evidence across different items without lengthening any
+ *    single session (fatigue) — while the per-construct quota is fixed.
  *  - Stratified order: constructs are dealt in shuffled cycles — each of the
  *    5 constructs appears once in the first half and once in the second.
  *  - Chance level: 1/2 on Easy and Hard, 1/3 on Moderate; `levelChance` feeds
@@ -39,7 +41,7 @@ export {
   type LevelSummary,
 } from '../progression'
 
-/** Trials per level: every situation of the pool, once (5 constructs × 2). */
+/** Trials per level: two sampled situations per construct (5 constructs × 2). */
 export const ACTIVITY_COUNT = 10
 
 /** Which graded option roles a level shows (order here is pre-shuffle). */
@@ -65,8 +67,9 @@ export function buildLevel(
   pool: StimulusPool = 'training',
 ): Trial[] {
   const roles = OPTION_ROLES[difficulty]
-  // Two stratified cycles: every construct once per cycle, then repeat with
-  // each construct's remaining situation.
+  // Two stratified cycles: every construct once per cycle. Each construct's
+  // pile is shuffled first, so the two popped situations are a fresh sample
+  // of its four banked ones — sessions rotate through the bank.
   const remaining = new Map<Construct, Situation[]>(
     CONSTRUCTS.map((c) => [c, shuffle(situationsFor(c, pool), rng)]),
   )

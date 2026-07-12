@@ -14,9 +14,13 @@
  *    time), so "unusual = wrong" heuristics score at chance.
  *  - Construct taxonomy: greetings / sharing / turns / space / politeness, so
  *    per-construct accuracy always has a denominator.
- *  - Balanced valence: each construct × pool × tier cell holds exactly one
- *    okay and one not-okay behaviour (5 × 2 × 2 × 2 = 40 items), so every
- *    level is 5 okay / 5 not-okay and response bias is measurable.
+ *  - Balanced valence: each construct × pool × tier cell holds exactly two
+ *    okay and two not-okay behaviours (5 × 2 × 2 × 2 × 2 = 80 items). A level
+ *    samples one exemplar per cell it needs, so every level stays 10 trials
+ *    (5 okay / 5 not-okay — no fatigue) while repeated sessions rotate
+ *    through different exemplars, accumulating enough per-construct evidence
+ *    to read one child's strength on a single construct rather than only
+ *    group means.
  *  - Training vs probe pools: probe behaviours are held out of practice and
  *    only appear in Assessment mode, so generalization is measured on unseen
  *    items.
@@ -650,6 +654,577 @@ export const BEHAVIORS: Behavior[] = [
     explain: {
       en: 'His friend chose it specially. A thank you makes them feel happy.',
       ml: 'കൂട്ടുകാരൻ പ്രത്യേകം എടുത്തതാ. ഒരു താങ്ക്യൂ പറഞ്ഞാൽ അവന് സന്തോഷമാകും.',
+    },
+    pose: {}, scene: { toy: 'hold' },
+  },
+
+  // === second exemplar per cell (per-construct reliability) =====================
+  // --- greetings ---------------------------------------------------------------
+  {
+    id: 'smilehi',
+    construct: 'greetings', pool: 'training', tier: 'clear', isFine: true,
+    text: {
+      en: "Ravi sees his classmate and says 'Hi!' with a big smile.",
+      ml: "രവി സഹപാഠിയെ കണ്ട് വലിയ ചിരിയോടെ 'ഹായ്!' പറഞ്ഞു.",
+    },
+    bubble: '😀',
+    explain: {
+      en: 'Saying hi with a smile is a warm greeting.',
+      ml: 'ചിരിച്ചോണ്ട് ഹായ് പറയുന്നത് നല്ല സ്നേഹമാ.',
+    },
+    pose: { armUp: true }, scene: { waveBack: true },
+  },
+  {
+    id: 'turnback',
+    construct: 'greetings', pool: 'training', tier: 'clear', isFine: false,
+    text: {
+      en: 'A friend calls Sam by name to say hi, but Sam turns his back on him.',
+      ml: 'കൂട്ടുകാരൻ പേര് വിളിച്ച് ഹായ് പറഞ്ഞു, പക്ഷേ സാം അവന് നേരെ പുറംതിരിഞ്ഞു നിന്നു.',
+    },
+    bubble: '🙅',
+    explain: {
+      en: 'Turning your back hurts. Turn around and say hi.',
+      ml: 'പുറംതിരിഞ്ഞ് നിന്നാൽ വിഷമമാകും. തിരിഞ്ഞ് ഹായ് പറയ്.',
+    },
+    pose: {}, scene: { turnAway: true },
+  },
+  {
+    id: 'nodhi',
+    construct: 'greetings', pool: 'training', tier: 'subtle', isFine: true,
+    text: {
+      en: "Anu's mouth is full of food, so she smiles and nods hello.",
+      ml: 'അനുവിന്റെ വായിൽ ഭക്ഷണം ഉണ്ടായിരുന്നു, അതുകൊണ്ട് ചിരിച്ച് തലയാട്ടി ഹലോ പറഞ്ഞു.',
+    },
+    bubble: '🙂',
+    explain: {
+      en: 'A smile and a nod is a real hello too.',
+      ml: 'ചിരിയും തലയാട്ടലും ഒരു നല്ല ഹലോ ആണ്.',
+    },
+    pose: {}, scene: { waveBack: true },
+  },
+  {
+    id: 'lookaway',
+    construct: 'greetings', pool: 'training', tier: 'subtle', isFine: false,
+    text: {
+      en: "Ravi's friend says hi. Ravi hears it but keeps looking at the wall and says nothing.",
+      ml: 'രവിയുടെ കൂട്ടുകാരൻ ഹായ് പറഞ്ഞു. രവി കേട്ടിട്ടും ചുമരിലേക്ക് നോക്കിനിന്ന് ഒന്നും മിണ്ടിയില്ല.',
+    },
+    bubble: '😐',
+    explain: {
+      en: 'Not answering makes him feel ignored. A quick hi helps.',
+      ml: 'മറുപടി പറയാതിരുന്നാൽ അവന് അവഗണിച്ചെന്ന് തോന്നും. ഒരു ചെറിയ ഹായ് മതി.',
+    },
+    pose: {}, scene: { turnAway: true },
+  },
+  {
+    id: 'welcomehi',
+    construct: 'greetings', pool: 'probe', tier: 'clear', isFine: true,
+    text: {
+      en: "A new girl joins the class, and Sana says, 'Hi! Welcome!'",
+      ml: "പുതിയ കുട്ടി ക്ലാസ്സിൽ വന്നപ്പോൾ സന 'ഹായ്! വെൽക്കം!' എന്ന് പറഞ്ഞു.",
+    },
+    bubble: '🤗',
+    explain: {
+      en: 'A warm welcome helps a new friend feel happy.',
+      ml: 'സ്നേഹത്തോടെ സ്വീകരിച്ചാൽ പുതിയ കൂട്ടുകാരിക്ക് സന്തോഷമാകും.',
+    },
+    pose: { armUp: true }, scene: { waveBack: true },
+  },
+  {
+    id: 'tongue',
+    construct: 'greetings', pool: 'probe', tier: 'clear', isFine: false,
+    text: {
+      en: 'A friend says hello, and Ben sticks out his tongue at him.',
+      ml: 'കൂട്ടുകാരൻ ഹലോ പറഞ്ഞപ്പോൾ ബെൻ അവനെ നോക്കി നാക്ക് നീട്ടിക്കാണിച്ചു.',
+    },
+    bubble: '😝',
+    explain: {
+      en: 'That is unkind. Say hello back instead.',
+      ml: 'അത് മോശമാ. പകരം ഹലോ പറയ്.',
+    },
+    pose: { lean: 0.3 }, scene: {},
+  },
+  {
+    id: 'washhi',
+    construct: 'greetings', pool: 'probe', tier: 'subtle', isFine: true,
+    text: {
+      en: "Aisha's hands are wet at the tap, so she says, 'Hi! I'll come after I wash up.'",
+      ml: "ആയിഷയുടെ കൈ പൈപ്പിന്റെ അടുത്ത് നനഞ്ഞിരുന്നു, അതുകൊണ്ട് 'ഹായ്! കൈ കഴുകിയിട്ട് വരാം' എന്ന് പറഞ്ഞു.",
+    },
+    bubble: '💧',
+    explain: {
+      en: 'She greeted her friend and will come soon — that is fine.',
+      ml: 'അവൾ ഹായ് പറഞ്ഞല്ലോ, വേഗം വരികയും ചെയ്യും — അത് ശരിയാ.',
+    },
+    pose: { armUp: true }, scene: { polite: true },
+  },
+  {
+    id: 'headphones',
+    construct: 'greetings', pool: 'probe', tier: 'subtle', isFine: false,
+    text: {
+      en: 'A boy says hi to Meera. Meera sees him but turns back to her drawing without a word.',
+      ml: 'ഒരു കുട്ടി മീരയോട് ഹായ് പറഞ്ഞു. മീര അവനെ കണ്ടിട്ടും ഒന്നും മിണ്ടാതെ വരയിലേക്ക് തിരിഞ്ഞു.',
+    },
+    bubble: '🧍',
+    explain: {
+      en: 'Ignoring his hello feels unfriendly. A short hi is kind.',
+      ml: 'ഹായ് അവഗണിച്ചാൽ അവന് വിഷമമാകും. ഒരു ചെറിയ ഹായ് നല്ലതാ.',
+    },
+    pose: {}, scene: { turnAway: true, toy: 'hold' },
+  },
+
+  // --- sharing -----------------------------------------------------------------
+  {
+    id: 'sharecrayon',
+    construct: 'sharing', pool: 'training', tier: 'clear', isFine: true,
+    text: {
+      en: 'Anu gives a friend some of her crayons to colour with.',
+      ml: 'അനു കൂട്ടുകാരിക്ക് കുറച്ച് ക്രയോൺസ് വരയ്ക്കാൻ കൊടുത്തു.',
+    },
+    bubble: '🖍️',
+    explain: {
+      en: 'Sharing lets both of you have fun.',
+      ml: 'പങ്കുവെച്ചാൽ രണ്ടുപേർക്കും രസമാ.',
+    },
+    pose: { armUp: true }, scene: { toy: 'offer' },
+  },
+  {
+    id: 'snatchback',
+    construct: 'sharing', pool: 'training', tier: 'clear', isFine: false,
+    text: {
+      en: 'Sam snatches the ball back from a friend who was playing with it.',
+      ml: 'സാം കളിച്ചുകൊണ്ടിരുന്ന കൂട്ടുകാരന്റെ കയ്യിൽ നിന്ന് പന്ത് പിടിച്ചുവാങ്ങി.',
+    },
+    bubble: '✋',
+    explain: {
+      en: 'Snatching starts a fight. Ask for a turn instead.',
+      ml: 'പിടിച്ചുവാങ്ങിയാൽ വഴക്കാകും. പകരം ഊഴം ചോദിക്ക്.',
+    },
+    pose: { lean: 0.4 }, scene: { toy: 'grab' },
+  },
+  {
+    id: 'minutethen',
+    construct: 'sharing', pool: 'training', tier: 'subtle', isFine: true,
+    text: {
+      en: "Ravi says, 'Let me finish this row, then the blocks are yours.'",
+      ml: "'ഈ വരി കെട്ടിത്തീർത്തിട്ട് ബ്ലോക്ക് നിനക്ക് തരാം' എന്ന് രവി പറഞ്ഞു.",
+    },
+    bubble: '🔁',
+    explain: {
+      en: 'Finishing first and then sharing is fair.',
+      ml: 'തീർത്തിട്ട് കൊടുക്കുന്നത് ന്യായമാ.',
+    },
+    pose: {}, scene: { toy: 'hold', polite: true },
+  },
+  {
+    id: 'fullplate',
+    construct: 'sharing', pool: 'training', tier: 'subtle', isFine: false,
+    text: {
+      en: 'Leo takes a big pile of biscuits and leaves none for the friend beside him.',
+      ml: 'ലിയോ ഒരു കൂമ്പാരം ബിസ്‌ക്കറ്റ് എടുത്തു, അടുത്തിരുന്ന കൂട്ടുകാരന് ഒന്നും ബാക്കിവെച്ചില്ല.',
+    },
+    bubble: '🍪',
+    explain: {
+      en: 'His friend gets none. Leaving some to share is kind.',
+      ml: 'കൂട്ടുകാരന് ഒന്നും കിട്ടിയില്ല. കുറച്ച് ബാക്കിവെക്കുന്നതാ നല്ലത്.',
+    },
+    pose: {}, scene: { toy: 'hold' },
+  },
+  {
+    id: 'givepencil',
+    construct: 'sharing', pool: 'probe', tier: 'clear', isFine: true,
+    text: {
+      en: 'Sana lends her extra pencil to a friend who has none.',
+      ml: 'സന തന്റെ അധിക പെൻസിൽ ഒന്നുമില്ലാത്ത കൂട്ടുകാരിക്ക് കൊടുത്തു.',
+    },
+    bubble: '✏️',
+    explain: {
+      en: 'Lending what you have spare is kind.',
+      ml: 'ബാക്കിയുള്ളത് കൊടുക്കുന്നത് നല്ല മനസ്സാ.',
+    },
+    pose: { armUp: true }, scene: { toy: 'offer', waveBack: true },
+  },
+  {
+    id: 'hugtoys',
+    construct: 'sharing', pool: 'probe', tier: 'clear', isFine: false,
+    text: {
+      en: "Manu piles all the toys into his lap and shouts, 'Nobody else can play!'",
+      ml: "മനു എല്ലാ കളിപ്പാട്ടങ്ങളും മടിയിലേക്ക് വാരിക്കൂട്ടി 'വേറെ ആർക്കും കളിക്കാൻ പറ്റില്ല!' എന്ന് ഒച്ചവെച്ചു.",
+    },
+    bubble: '🧸',
+    explain: {
+      en: 'Keeping them all is unfair. Share so all can play.',
+      ml: 'എല്ലാം സ്വന്തമാക്കുന്നത് ന്യായമല്ല. പങ്കുവെച്ചാൽ എല്ലാവർക്കും കളിക്കാം.',
+    },
+    pose: { lean: 0.4 }, scene: { toy: 'grab' },
+  },
+  {
+    id: 'takethis',
+    construct: 'sharing', pool: 'probe', tier: 'subtle', isFine: true,
+    text: {
+      en: 'Aisha is using the big drum, so she hands her friend the small one to play.',
+      ml: 'ആയിഷ വലിയ ഡ്രം കൊട്ടുകയായിരുന്നു, അതുകൊണ്ട് ചെറിയ ഡ്രം കൂട്ടുകാരിക്ക് കൊട്ടാൻ കൊടുത്തു.',
+    },
+    bubble: '🥁',
+    explain: {
+      en: 'Offering the other one is a fair way to share.',
+      ml: 'വേറൊന്ന് കൊടുക്കുന്നതും നല്ല പങ്കുവെക്കലാ.',
+    },
+    pose: { armUp: true }, scene: { toy: 'offer' },
+  },
+  {
+    id: 'turnhold',
+    construct: 'sharing', pool: 'probe', tier: 'subtle', isFine: false,
+    text: {
+      en: 'A friend asks Ben for one crayon. Ben turns away and holds the box tightly.',
+      ml: 'ഒരു ക്രയോൺ ചോദിച്ചപ്പോൾ ബെൻ തിരിഞ്ഞ് പെട്ടി മുറുകെ പിടിച്ചു.',
+    },
+    bubble: '🖍️',
+    explain: {
+      en: 'Turning away leaves his friend with none. One crayon is easy to share.',
+      ml: 'തിരിഞ്ഞുനിന്നാൽ കൂട്ടുകാരന് ഒന്നും കിട്ടില്ല. ഒരു ക്രയോൺ കൊടുക്കാലോ.',
+    },
+    pose: {}, scene: { toy: 'hold', turnAway: true },
+  },
+
+  // --- turns -------------------------------------------------------------------
+  {
+    id: 'waitswing',
+    construct: 'turns', pool: 'training', tier: 'clear', isFine: true,
+    text: {
+      en: 'Sam waits behind his friend for his turn on the swing.',
+      ml: 'സാം ഊഞ്ഞാലിനുള്ള ഊഴത്തിനായി കൂട്ടുകാരന്റെ പിന്നിൽ കാത്തുനിന്നു.',
+    },
+    bubble: '⏳',
+    explain: {
+      en: 'Waiting your turn is fair to everyone.',
+      ml: 'ഊഴം കാത്തുനിൽക്കുന്നത് എല്ലാവരോടും ന്യായമാ.',
+    },
+    pose: {}, scene: { line: true },
+  },
+  {
+    id: 'cutfront',
+    construct: 'turns', pool: 'training', tier: 'clear', isFine: false,
+    text: {
+      en: 'Ravi runs straight to the front of the line without waiting.',
+      ml: 'രവി കാത്തുനിൽക്കാതെ വരിയുടെ ഏറ്റവും മുന്നിലേക്ക് ഓടിക്കയറി.',
+    },
+    bubble: '😠',
+    explain: {
+      en: 'Cutting in is unfair. Go to the back and wait.',
+      ml: 'ഇടയ്ക്ക് കയറുന്നത് അന്യായമാ. പിന്നിൽ പോയി കാത്തുനിൽക്ക്.',
+    },
+    pose: { lean: 0.4 }, scene: { line: true },
+  },
+  {
+    id: 'yourturn',
+    construct: 'turns', pool: 'training', tier: 'subtle', isFine: true,
+    text: {
+      en: "Anu has the ball but says, 'It's your turn now,' and passes it on.",
+      ml: "അനുവിന്റെ കയ്യിൽ പന്തുണ്ടായിരുന്നു, പക്ഷേ 'ഇനി നിന്റെ ഊഴം' എന്ന് പറഞ്ഞ് കൈമാറി.",
+    },
+    bubble: '💗',
+    explain: {
+      en: 'Giving up your turn kindly is a nice choice.',
+      ml: 'സ്വന്തം ഊഴം സ്നേഹത്തോടെ കൊടുക്കുന്നത് നല്ലതാ.',
+    },
+    pose: { armUp: true }, scene: { toy: 'offer', line: true },
+  },
+  {
+    id: 'againagain',
+    construct: 'turns', pool: 'training', tier: 'subtle', isFine: false,
+    text: {
+      en: "Others are waiting for the ball, but Sam keeps saying 'just one more' and holds on.",
+      ml: "മറ്റുള്ളവർ പന്തിനായി കാത്തുനിൽക്കുമ്പോഴും സാം 'ഒന്നൂടെ മാത്രം' എന്ന് പറഞ്ഞ് പന്ത് വിട്ടില്ല.",
+    },
+    bubble: '⏳',
+    explain: {
+      en: 'The others wait and wait. Pass it to the next child.',
+      ml: 'മറ്റുള്ളവർ കാത്തുനിന്ന് മടുത്തു. അടുത്ത കുട്ടിക്ക് കൈമാറ്.',
+    },
+    pose: {}, scene: { line: true, toy: 'hold' },
+  },
+  {
+    id: 'passturn',
+    construct: 'turns', pool: 'probe', tier: 'clear', isFine: true,
+    text: {
+      en: 'When her turn on the slide ends, Sana climbs down so the next child can go.',
+      ml: 'സനയുടെ സ്ലൈഡ് ഊഴം കഴിഞ്ഞപ്പോൾ അടുത്ത കുട്ടിക്ക് വേണ്ടി അവൾ താഴെയിറങ്ങി.',
+    },
+    bubble: '🛝',
+    explain: {
+      en: 'Stepping aside when your turn ends is fair.',
+      ml: 'ഊഴം കഴിഞ്ഞ് മാറിക്കൊടുക്കുന്നത് ന്യായമാ.',
+    },
+    pose: {}, scene: { line: true, waveBack: true },
+  },
+  {
+    id: 'shovein',
+    construct: 'turns', pool: 'probe', tier: 'clear', isFine: false,
+    text: {
+      en: 'Ben shoves in front of a smaller child to grab the next turn.',
+      ml: 'അടുത്ത ഊഴം തട്ടിയെടുക്കാൻ ബെൻ ചെറിയ കുട്ടിയെ തള്ളിമാറ്റി മുന്നിൽ കയറി.',
+    },
+    bubble: '😠',
+    explain: {
+      en: 'Shoving in is unfair to those waiting. Wait your turn.',
+      ml: 'തള്ളിക്കയറുന്നത് കാത്തുനിൽക്കുന്നവരോട് അന്യായമാ. ഊഴം കാത്തുനിൽക്ക്.',
+    },
+    pose: { lean: 0.4 }, scene: { line: true },
+  },
+  {
+    id: 'holdplace',
+    construct: 'turns', pool: 'probe', tier: 'subtle', isFine: true,
+    text: {
+      en: "Meera tells a friend, 'You go first, I'll wait here,' and stays in her place.",
+      ml: "മീര കൂട്ടുകാരിയോട് 'നീ ആദ്യം പോ, ഞാൻ ഇവിടെ കാത്തുനിൽക്കാം' എന്ന് പറഞ്ഞ് സ്ഥലത്ത് നിന്നു.",
+    },
+    bubble: '🙋',
+    explain: {
+      en: 'Letting a friend go and waiting is exactly how turns work.',
+      ml: 'കൂട്ടുകാരിയെ വിട്ടിട്ട് കാത്തുനിൽക്കുന്നതാ ശരിയായ രീതി.',
+    },
+    pose: {}, scene: { line: true, polite: true },
+  },
+  {
+    id: 'sitlong',
+    construct: 'turns', pool: 'probe', tier: 'subtle', isFine: false,
+    text: {
+      en: 'The class is sharing one book, but Aisha keeps it and reads for a very long time.',
+      ml: 'ക്ലാസ് ഒരു പുസ്തകം പങ്കിടുകയാ, പക്ഷേ ആയിഷ അത് കയ്യിൽ വെച്ച് ഒരുപാട് നേരം വായിച്ചു.',
+    },
+    bubble: '📖',
+    explain: {
+      en: 'Others want a turn too. Finish and pass the book on.',
+      ml: 'മറ്റുള്ളവർക്കും ഊഴം വേണം. വായിച്ചിട്ട് പുസ്തകം കൈമാറ്.',
+    },
+    pose: {}, scene: { line: true, toy: 'hold' },
+  },
+
+  // --- space -------------------------------------------------------------------
+  {
+    id: 'wavefar',
+    construct: 'space', pool: 'training', tier: 'clear', isFine: true,
+    text: {
+      en: "Maya waves from a little way off to get her friend's attention.",
+      ml: 'മായ കുറച്ച് അകലെനിന്ന് കൈ വീശി കൂട്ടുകാരിയുടെ ശ്രദ്ധ ക്ഷണിച്ചു.',
+    },
+    bubble: '🤚',
+    explain: {
+      en: 'Waving from nearby is a polite way to get attention.',
+      ml: 'അടുത്തുനിന്ന് കൈ വീശുന്നത് മര്യാദയുള്ള രീതിയാ.',
+    },
+    pose: { armUp: true }, scene: { waveBack: true },
+  },
+  {
+    id: 'shovechair',
+    construct: 'space', pool: 'training', tier: 'clear', isFine: false,
+    text: {
+      en: 'Tom pushes his chair right up against a friend until they are squashed.',
+      ml: 'ടോം തന്റെ കസേര കൂട്ടുകാരന്റെ അടുത്തേക്ക് അമർത്തി നീക്കി, അവന് ഞെരുങ്ങുന്നതുവരെ.',
+    },
+    bubble: '😬',
+    explain: {
+      en: 'That is too close and uncomfortable. Give a little space.',
+      ml: 'അത് വല്ലാതെ അടുത്താ, ബുദ്ധിമുട്ടാകും. കുറച്ച് അകലം കൊടുക്ക്.',
+    },
+    pose: { close: true, lean: 0.2 }, scene: {},
+  },
+  {
+    id: 'waveinstead',
+    construct: 'space', pool: 'training', tier: 'subtle', isFine: true,
+    text: {
+      en: "Ben doesn't like being touched, so he waves instead of shaking hands.",
+      ml: 'ബെന്നിന് തൊടുന്നത് ഇഷ്ടമല്ല, അതുകൊണ്ട് ഹസ്തദാനത്തിന് പകരം കൈ വീശി.',
+    },
+    bubble: '👋',
+    explain: {
+      en: 'Choosing a wave over a touch is okay — it is still friendly.',
+      ml: 'തൊടുന്നതിന് പകരം കൈ വീശുന്നത് തെറ്റല്ല — അതും സ്നേഹമാ.',
+    },
+    pose: { armUp: true }, scene: { waveBack: true },
+  },
+  {
+    id: 'leanline',
+    construct: 'space', pool: 'training', tier: 'subtle', isFine: false,
+    text: {
+      en: 'In the line, Sam leans his whole body onto the boy in front of him.',
+      ml: 'വരിയിൽ നിൽക്കുമ്പോൾ സാം തന്റെ ദേഹം മുഴുവൻ മുന്നിലുള്ള കുട്ടിയുടെ മേൽ ചാരി.',
+    },
+    bubble: '💨',
+    explain: {
+      en: 'Leaning on people feels crowding. Stand with a little gap.',
+      ml: 'ആളുകളുടെ മേൽ ചാരുന്നത് ഞെരുക്കമാ. കുറച്ച് അകലം വിട്ട് നിൽക്ക്.',
+    },
+    pose: { lean: 0.3, close: true }, scene: { line: true },
+  },
+  {
+    id: 'knockdoor',
+    construct: 'space', pool: 'probe', tier: 'clear', isFine: true,
+    text: {
+      en: 'Sana knocks and waits before going into the room.',
+      ml: 'സന വാതിലിൽ മുട്ടി കാത്തുനിന്നിട്ടാ മുറിയിലേക്ക് കയറിയത്.',
+    },
+    bubble: '🚪',
+    explain: {
+      en: "Knocking first respects other people's space.",
+      ml: 'മുട്ടിയിട്ട് കയറുന്നത് മറ്റുള്ളവരുടെ ഇടത്തോടുള്ള മര്യാദയാ.',
+    },
+    pose: {}, scene: { polite: true, waveBack: true },
+  },
+  {
+    id: 'grabface',
+    construct: 'space', pool: 'probe', tier: 'clear', isFine: false,
+    text: {
+      en: "Manu grabs a friend's cheeks hard to turn his face toward him.",
+      ml: 'മനു കൂട്ടുകാരന്റെ കവിളിൽ പിടിച്ച് ശക്തിയായി മുഖം തന്റെ നേരെ തിരിച്ചു.',
+    },
+    bubble: '😣',
+    explain: {
+      en: 'Grabbing his face hurts. Call his name gently instead.',
+      ml: 'മുഖത്ത് പിടിച്ചാൽ വേദനിക്കും. പകരം പതിയെ പേര് വിളിക്ക്.',
+    },
+    pose: { lean: 0.4, close: true }, scene: {},
+  },
+  {
+    id: 'restnow',
+    construct: 'space', pool: 'probe', tier: 'subtle', isFine: true,
+    text: {
+      en: "Aisha is tired, so she says, 'I want to rest now. Let's play after.'",
+      ml: "ആയിഷ ക്ഷീണിച്ചിരുന്നു, അതുകൊണ്ട് 'എനിക്ക് കുറച്ച് വിശ്രമിക്കണം. പിന്നെ കളിക്കാം' എന്ന് പറഞ്ഞു.",
+    },
+    bubble: '🤫',
+    explain: {
+      en: "Asking for rest kindly is okay — she'll play later.",
+      ml: 'സ്നേഹത്തോടെ വിശ്രമം ചോദിക്കുന്നത് തെറ്റല്ല — പിന്നെ കളിക്കുമല്ലോ.',
+    },
+    pose: {}, scene: { polite: true },
+  },
+  {
+    id: 'crowdbook',
+    construct: 'space', pool: 'probe', tier: 'subtle', isFine: false,
+    text: {
+      en: "Ben leans in so close over Sana's book that she has to move away.",
+      ml: 'ബെൻ സനയുടെ പുസ്തകത്തിന് മീതെ വല്ലാതെ അടുത്ത് കുനിഞ്ഞു, അവൾക്ക് മാറിയിരിക്കേണ്ടി വന്നു.',
+    },
+    bubble: '📖',
+    explain: {
+      en: 'Crowding her makes reading hard. Look from beside her.',
+      ml: 'അത്ര അടുത്ത് നിന്നാൽ അവൾക്ക് വായിക്കാൻ പറ്റില്ല. അടുത്ത് മാറിനിന്ന് നോക്ക്.',
+    },
+    pose: { close: true, lean: 0.3 }, scene: {},
+  },
+
+  // --- politeness --------------------------------------------------------------
+  {
+    id: 'pleasepass',
+    construct: 'politeness', pool: 'training', tier: 'clear', isFine: true,
+    text: {
+      en: "Ravi wants the glue and asks, 'Could you pass it, please?'",
+      ml: "രവിക്ക് പശ വേണം, 'അത് ഒന്ന് എടുത്തുതരാമോ, പ്ലീസ്?' എന്ന് ചോദിച്ചു.",
+    },
+    bubble: '🙏',
+    explain: {
+      en: 'Asking with a please is polite and kind.',
+      ml: 'പ്ലീസ് പറഞ്ഞ് ചോദിക്കുന്നത് മര്യാദയാ.',
+    },
+    pose: { armUp: true }, scene: { polite: true },
+  },
+  {
+    id: 'snaporder',
+    construct: 'politeness', pool: 'training', tier: 'clear', isFine: false,
+    text: {
+      en: "Meera snaps, 'Move! I want to sit there,' at a friend.",
+      ml: "മീര കൂട്ടുകാരിയോട് 'മാറ്! എനിക്ക് അവിടെ ഇരിക്കണം' എന്ന് കയർത്തു.",
+    },
+    bubble: '📢',
+    explain: {
+      en: 'Snapping orders is rude. Ask nicely instead.',
+      ml: 'അങ്ങനെ കയർത്ത് പറയുന്നത് മോശമാ. മര്യാദയോടെ ചോദിക്ക്.',
+    },
+    pose: { lean: 0.4 }, scene: {},
+  },
+  {
+    id: 'maybelater',
+    construct: 'politeness', pool: 'training', tier: 'subtle', isFine: true,
+    text: {
+      en: "Ravi is busy drawing, so he says, 'Not right now, thanks — maybe later.'",
+      ml: "രവി വരയ്ക്കുന്ന തിരക്കിലായിരുന്നു, അതുകൊണ്ട് 'ഇപ്പോ വേണ്ട, താങ്ക്സ് — പിന്നെയാകാം' എന്ന് പറഞ്ഞു.",
+    },
+    bubble: '🙂',
+    explain: {
+      en: "Saying no politely is fine — you can't always play.",
+      ml: 'മര്യാദയോടെ വേണ്ടെന്ന് പറയുന്നത് തെറ്റല്ല — എപ്പോഴും കളിക്കാൻ പറ്റില്ലല്ലോ.',
+    },
+    pose: {}, scene: { polite: true },
+  },
+  {
+    id: 'spillgo',
+    construct: 'politeness', pool: 'training', tier: 'subtle', isFine: false,
+    text: {
+      en: "Anu spills water on a friend's book by accident and just walks off.",
+      ml: 'അനു അറിയാതെ കൂട്ടുകാരിയുടെ പുസ്തകത്തിൽ വെള്ളം തൂകി, ഒന്നും പറയാതെ നടന്നുപോയി.',
+    },
+    bubble: '💦',
+    explain: {
+      en: 'It was an accident, but leaving hurts. Say sorry and help.',
+      ml: 'അറിയാതെ പറ്റിയതാ, പക്ഷേ മിണ്ടാതെ പോയാൽ വിഷമമാകും. സോറി പറഞ്ഞ് സഹായിക്ക്.',
+    },
+    pose: {}, scene: { turnAway: true },
+  },
+  {
+    id: 'thankshare',
+    construct: 'politeness', pool: 'probe', tier: 'clear', isFine: true,
+    text: {
+      en: "A friend shares her snack, and Manu says, 'Thank you so much!'",
+      ml: "കൂട്ടുകാരി പലഹാരം പങ്കുവെച്ചപ്പോൾ മനു 'ഒരുപാട് നന്ദി!' എന്ന് പറഞ്ഞു.",
+    },
+    bubble: '💝',
+    explain: {
+      en: 'Saying thank you makes people feel good.',
+      ml: 'നന്ദി പറഞ്ഞാൽ അവർക്ക് സന്തോഷമാകും.',
+    },
+    pose: { armUp: true }, scene: { polite: true, waveBack: true },
+  },
+  {
+    id: 'shoutlose',
+    construct: 'politeness', pool: 'probe', tier: 'clear', isFine: false,
+    text: {
+      en: "When his team loses, Ben yells, 'You're all stupid!' at the others.",
+      ml: "ടീം തോറ്റപ്പോൾ ബെൻ മറ്റുള്ളവരോട് 'നിങ്ങളെല്ലാം മണ്ടന്മാരാ!' എന്ന് ഒച്ചവെച്ചു.",
+    },
+    bubble: '😠',
+    explain: {
+      en: 'Mean words hurt. Losing a game is okay.',
+      ml: 'മോശം വാക്കുകൾ വേദനിപ്പിക്കും. കളിയിൽ തോൽക്കുന്നത് കുഴപ്പമില്ല.',
+    },
+    pose: { lean: 0.4 }, scene: {},
+  },
+  {
+    id: 'waitfinish',
+    construct: 'politeness', pool: 'probe', tier: 'subtle', isFine: true,
+    text: {
+      en: 'Sana wants to ask something while the teacher is busy, so she waits quietly until the teacher is free.',
+      ml: 'ടീച്ചർ തിരക്കിലായിരുന്നു, അതുകൊണ്ട് സന ടീച്ചർ ഒഴിവാകുന്നതുവരെ മിണ്ടാതെ കാത്തുനിന്നു.',
+    },
+    bubble: '🙋',
+    explain: {
+      en: 'Waiting quietly for a free moment is polite.',
+      ml: 'ഒഴിവാകുന്നതുവരെ മിണ്ടാതെ കാത്തുനിൽക്കുന്നത് മര്യാദയാ.',
+    },
+    pose: {}, scene: { polite: true },
+  },
+  {
+    id: 'helpquiet',
+    construct: 'politeness', pool: 'probe', tier: 'subtle', isFine: false,
+    text: {
+      en: 'A friend helps Ravi find his lost shoe. Ravi takes it and says nothing.',
+      ml: 'കൂട്ടുകാരൻ രവിയുടെ കാണാതായ ഷൂ കണ്ടുപിടിച്ചു കൊടുത്തു. രവി അത് വാങ്ങി ഒന്നും പറഞ്ഞില്ല.',
+    },
+    bubble: '👟',
+    explain: {
+      en: 'He helped you. A thank you makes him feel good.',
+      ml: 'അവൻ സഹായിച്ചല്ലോ. ഒരു നന്ദി പറഞ്ഞാൽ അവന് സന്തോഷമാകും.',
     },
     pose: {}, scene: { toy: 'hold' },
   },

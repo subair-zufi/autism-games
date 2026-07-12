@@ -27,14 +27,14 @@ test('behavior ids are unique', () => {
   expect(new Set(BEHAVIORS.map((b) => b.id)).size).toBe(BEHAVIORS.length)
 })
 
-test('every construct × pool × tier cell has exactly one okay and one not-okay item', () => {
+test('every construct × pool × tier cell has exactly two okay and two not-okay items', () => {
   for (const construct of CONSTRUCTS) {
     for (const pool of POOLS) {
       const items = behaviorsFor(construct, pool)
-      expect(items).toHaveLength(4)
+      expect(items).toHaveLength(8)
       for (const tier of TIERS) {
-        expect(items.filter((b) => b.tier === tier && b.isFine)).toHaveLength(1)
-        expect(items.filter((b) => b.tier === tier && !b.isFine)).toHaveLength(1)
+        expect(items.filter((b) => b.tier === tier && b.isFine)).toHaveLength(2)
+        expect(items.filter((b) => b.tier === tier && !b.isFine)).toHaveLength(2)
       }
     }
   }
@@ -83,6 +83,25 @@ test('easy is all clear, hard is all subtle, medium mixes one of each per constr
       expect(tiers.sort()).toEqual(['clear', 'subtle'])
     }
     expect(LEVEL_TIERS.medium).toEqual(['clear', 'subtle'])
+  }
+})
+
+test('repeated builds rotate through both exemplars of every cell', () => {
+  // Each tier×valence cell holds two authored exemplars; the builder samples
+  // one per build. Across many builds every item of the bank must appear, so
+  // sessions accumulate evidence on different items instead of a fixed set.
+  for (const pool of POOLS) {
+    const seen = new Set<string>()
+    for (let i = 0; i < 200; i++) {
+      for (const d of DIFFS) {
+        for (const b of buildLevel(d, Math.random, pool)) seen.add(b.id)
+      }
+    }
+    for (const construct of CONSTRUCTS) {
+      for (const b of behaviorsFor(construct, pool)) {
+        expect(seen.has(b.id)).toBe(true)
+      }
+    }
   }
 })
 
