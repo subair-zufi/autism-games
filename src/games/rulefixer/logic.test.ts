@@ -10,14 +10,13 @@ import {
   CONSTRUCTS,
   SITUATIONS,
 } from './logic'
-import { situationsFor, type StimulusPool } from './content'
+import { situationsFor } from './content'
 
 const rng = (seq: number[]) => {
   let i = 0
   return () => seq[i++ % seq.length]
 }
 
-const POOLS: StimulusPool[] = ['training', 'probe']
 const DIFFS: Difficulty[] = ['easy', 'medium', 'hard']
 
 // --- item bank ---------------------------------------------------------------
@@ -37,11 +36,9 @@ test('every situation has exactly one option of each graded role', () => {
   }
 })
 
-test('every construct has exactly 4 training and 4 probe situations', () => {
+test('every construct has exactly 8 situations', () => {
   for (const construct of CONSTRUCTS) {
-    for (const pool of POOLS) {
-      expect(situationsFor(construct, pool)).toHaveLength(4)
-    }
+    expect(situationsFor(construct)).toHaveLength(8)
   }
 })
 
@@ -61,32 +58,27 @@ test('all child-facing text is present in both languages', () => {
 
 // --- level construction --------------------------------------------------------
 
-test('a level has 10 unique trials, two per construct, from the requested pool', () => {
-  for (const pool of POOLS) {
-    const trials = buildLevel('medium', Math.random, pool)
-    expect(trials).toHaveLength(ACTIVITY_COUNT)
-    const ids = trials.map((t) => t.situation.id)
-    expect(new Set(ids).size).toBe(ACTIVITY_COUNT)
-    for (const t of trials) expect(t.situation.pool).toBe(pool)
-    for (const construct of CONSTRUCTS) {
-      expect(trials.filter((t) => t.situation.construct === construct)).toHaveLength(2)
-    }
+test('a level has 10 unique trials, two per construct', () => {
+  const trials = buildLevel('medium')
+  expect(trials).toHaveLength(ACTIVITY_COUNT)
+  const ids = trials.map((t) => t.situation.id)
+  expect(new Set(ids).size).toBe(ACTIVITY_COUNT)
+  for (const construct of CONSTRUCTS) {
+    expect(trials.filter((t) => t.situation.construct === construct)).toHaveLength(2)
   }
 })
 
-test('repeated builds rotate through all four situations of every construct', () => {
-  // A level samples 2 of each construct's 4 banked situations. Across many
+test('repeated builds rotate through all eight situations of every construct', () => {
+  // A level samples 2 of each construct's 8 banked situations. Across many
   // builds every situation must appear, so sessions accumulate per-construct
   // evidence on different items instead of replaying a fixed set.
-  for (const pool of POOLS) {
-    const seen = new Set<string>()
-    for (let i = 0; i < 200; i++) {
-      for (const t of buildLevel('medium', Math.random, pool)) seen.add(t.situation.id)
-    }
-    for (const construct of CONSTRUCTS) {
-      for (const s of situationsFor(construct, pool)) {
-        expect(seen.has(s.id)).toBe(true)
-      }
+  const seen = new Set<string>()
+  for (let i = 0; i < 200; i++) {
+    for (const t of buildLevel('medium')) seen.add(t.situation.id)
+  }
+  for (const construct of CONSTRUCTS) {
+    for (const s of situationsFor(construct)) {
+      expect(seen.has(s.id)).toBe(true)
     }
   }
 })

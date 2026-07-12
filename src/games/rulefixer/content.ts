@@ -11,13 +11,11 @@
  *    antisocial). Which roles are shown depends on the level (see logic.ts),
  *    so difficulty is a property of the *discrimination required*, not of
  *    round count.
- *  - Training vs probe pools: probe situations are held out of practice and
- *    only appear in Assessment mode, so generalization can be measured on
- *    unseen items. Each construct has 4 training + 4 probe situations; a
- *    level samples 2 of the 4, so sessions stay 10 trials (no fatigue) while
- *    repeated sessions rotate through different items — accumulating enough
- *    per-construct evidence to read one child's strength on a single
- *    construct, not only group means.
+ *  - Sampled composition: each construct has 8 situations; a level samples 2 of
+ *    them, so sessions stay 10 trials (no fatigue) while repeated sessions
+ *    rotate through different items — accumulating enough per-construct
+ *    evidence to read one child's strength on a single construct, not only
+ *    group means.
  *  - Bilingual (Kerala deployment): every child-facing line carries English
  *    and Malayalam, written colloquially the way adults actually talk to a
  *    small child (same convention as Roll-Back Buddy).
@@ -29,9 +27,6 @@ import type { Lang } from '../../i18n/strings'
 
 export type Construct = 'helping' | 'comforting' | 'inclusion' | 'politeness' | 'fairness'
 export const CONSTRUCTS: Construct[] = ['helping', 'comforting', 'inclusion', 'politeness', 'fairness']
-
-/** Which item pool a situation belongs to (probe = held-out assessment items). */
-export type StimulusPool = 'training' | 'probe'
 
 export type PeerMood = 'sad' | 'cry' | 'hurt' | 'neutral'
 
@@ -53,7 +48,6 @@ export interface Option {
 export interface Situation {
   id: string
   construct: Construct
-  pool: StimulusPool
   /** what the narrator describes about the frozen moment */
   text: BiText
   /** emoji cue shown in the bubble */
@@ -77,9 +71,7 @@ export const SITUATIONS: Situation[] = [
   // --- helping ---------------------------------------------------------------
   {
     id: 'books',
-    construct: 'helping',
-    pool: 'training',
-    text: {
+    construct: 'helping',    text: {
       en: 'Aisha dropped all her books on the floor.',
       ml: 'ആയിഷയുടെ പുസ്തകങ്ങളെല്ലാം താഴെ വീണു.',
     },
@@ -114,9 +106,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'fell',
-    construct: 'helping',
-    pool: 'training',
-    text: {
+    construct: 'helping',    text: {
       en: 'A friend trips and falls in the playground.',
       ml: 'കളിസ്ഥലത്ത് ഒരു കൂട്ടുകാരൻ തട്ടി വീണു.',
     },
@@ -151,9 +141,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'papers',
-    construct: 'helping',
-    pool: 'probe',
-    text: {
+    construct: 'helping',    text: {
       en: 'Your teacher drops her papers near the door.',
       ml: 'ടീച്ചറുടെ പേപ്പറുകൾ വാതിലിനടുത്ത് താഴെ വീണു.',
     },
@@ -188,9 +176,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'heavybag',
-    construct: 'helping',
-    pool: 'probe',
-    text: {
+    construct: 'helping',    text: {
       en: 'Meera is struggling with a very heavy bag.',
       ml: 'മീരയ്ക്ക് ഭാരമുള്ള ബാഗ് ചുമക്കാൻ പറ്റുന്നില്ല.',
     },
@@ -227,9 +213,7 @@ export const SITUATIONS: Situation[] = [
   // --- comforting -------------------------------------------------------------
   {
     id: 'crying',
-    construct: 'comforting',
-    pool: 'training',
-    text: {
+    construct: 'comforting',    text: {
       en: 'A new boy is crying all by himself at break.',
       ml: 'ഇടവേളയ്ക്ക് ഒരു പുതിയ കുട്ടി ഒറ്റയ്ക്കിരുന്ന് കരയുന്നു.',
     },
@@ -264,9 +248,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'losttoy',
-    construct: 'comforting',
-    pool: 'training',
-    text: {
+    construct: 'comforting',    text: {
       en: 'Ravi looks very sad — his toy car is lost.',
       ml: 'രവിയുടെ കളിപ്പാട്ട കാർ കാണാനില്ല — അവന് നല്ല സങ്കടം.',
     },
@@ -301,9 +283,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'kneehurt',
-    construct: 'comforting',
-    pool: 'probe',
-    text: {
+    construct: 'comforting',    text: {
       en: 'Sana fell off the swing and her knee hurts.',
       ml: 'സന ഊഞ്ഞാലിൽ നിന്ന് വീണു, കാൽമുട്ടിന് വേദന.',
     },
@@ -338,9 +318,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'missmom',
-    construct: 'comforting',
-    pool: 'probe',
-    text: {
+    construct: 'comforting',    text: {
       en: 'Anu is tearful — she misses her mother.',
       ml: 'അനുവിന്റെ കണ്ണ് നിറഞ്ഞിരിക്കുന്നു — അമ്മയെ കാണാൻ തോന്നുന്നു.',
     },
@@ -377,9 +355,7 @@ export const SITUATIONS: Situation[] = [
   // --- inclusion ---------------------------------------------------------------
   {
     id: 'lonely',
-    construct: 'inclusion',
-    pool: 'training',
-    text: {
+    construct: 'inclusion',    text: {
       en: 'A child stands alone, watching your game.',
       ml: 'ഒരു കുട്ടി ഒറ്റയ്ക്ക് നിന്ന് നിങ്ങളുടെ കളി നോക്കുന്നു.',
     },
@@ -414,9 +390,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'newgirl',
-    construct: 'inclusion',
-    pool: 'training',
-    text: {
+    construct: 'inclusion',    text: {
       en: 'A new girl sits alone at lunch time.',
       ml: 'ഊണിന്റെ സമയത്ത് പുതിയ കുട്ടി ഒറ്റയ്ക്കിരിക്കുന്നു.',
     },
@@ -451,9 +425,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'team',
-    construct: 'inclusion',
-    pool: 'probe',
-    text: {
+    construct: 'inclusion',    text: {
       en: 'Everyone is picked for the game except Manu.',
       ml: 'കളിക്ക് എല്ലാവരെയും എടുത്തു, മനുവിനെ മാത്രം എടുത്തില്ല.',
     },
@@ -488,9 +460,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'drawing',
-    construct: 'inclusion',
-    pool: 'probe',
-    text: {
+    construct: 'inclusion',    text: {
       en: 'Fathima watches you and your friend drawing.',
       ml: 'നീയും കൂട്ടുകാരിയും വരയ്ക്കുന്നത് ഫാത്തിമ നോക്കിനിൽക്കുന്നു.',
     },
@@ -527,9 +497,7 @@ export const SITUATIONS: Situation[] = [
   // --- politeness ----------------------------------------------------------------
   {
     id: 'teacher',
-    construct: 'politeness',
-    pool: 'training',
-    text: {
+    construct: 'politeness',    text: {
       en: 'Your teacher walks in to start the class.',
       ml: 'ക്ലാസ് തുടങ്ങാൻ ടീച്ചർ അകത്തേക്ക് വരുന്നു.',
     },
@@ -564,9 +532,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'wantball',
-    construct: 'politeness',
-    pool: 'training',
-    text: {
+    construct: 'politeness',    text: {
       en: 'Ravi is playing with the ball you want.',
       ml: 'നിനക്ക് വേണ്ട പന്ത് രവിയാ കളിക്കുന്നത്.',
     },
@@ -601,9 +567,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'visitor',
-    construct: 'politeness',
-    pool: 'probe',
-    text: {
+    construct: 'politeness',    text: {
       en: 'Grandma has come to visit your home.',
       ml: 'അമ്മൂമ്മ വീട്ടിൽ വിരുന്നു വന്നിരിക്കുന്നു.',
     },
@@ -638,9 +602,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'excuse',
-    construct: 'politeness',
-    pool: 'probe',
-    text: {
+    construct: 'politeness',    text: {
       en: 'Your teacher is talking to another teacher — you need help.',
       ml: 'ടീച്ചർ വേറൊരു ടീച്ചറോട് സംസാരിക്കുകയാ — നിനക്ക് സഹായം വേണം.',
     },
@@ -677,9 +639,7 @@ export const SITUATIONS: Situation[] = [
   // --- fairness -----------------------------------------------------------------
   {
     id: 'swing',
-    construct: 'fairness',
-    pool: 'training',
-    text: {
+    construct: 'fairness',    text: {
       en: 'Your friend has waited a long time for the swing.',
       ml: 'നിന്റെ കൂട്ടുകാരി ഊഞ്ഞാലിന് ഒരുപാട് നേരമായി കാത്തുനിൽക്കുന്നു.',
     },
@@ -714,9 +674,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'crayons',
-    construct: 'fairness',
-    pool: 'training',
-    text: {
+    construct: 'fairness',    text: {
       en: "You have many crayons — Anu's box is empty.",
       ml: 'നിന്റെ കയ്യിൽ ഒരുപാട് ക്രയോൺസ് ഉണ്ട് — അനുവിന്റെ പെട്ടി കാലിയാ.',
     },
@@ -751,9 +709,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'queue',
-    construct: 'fairness',
-    pool: 'probe',
-    text: {
+    construct: 'fairness',    text: {
       en: 'Children are waiting in a line at the water tap.',
       ml: 'വെള്ളം കുടിക്കാൻ കുട്ടികൾ വരിയിൽ നിൽക്കുകയാ.',
     },
@@ -788,9 +744,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'choosegame',
-    construct: 'fairness',
-    pool: 'probe',
-    text: {
+    construct: 'fairness',    text: {
       en: 'You chose the last game. Meera wants to choose this time.',
       ml: 'കഴിഞ്ഞ കളി നീ തിരഞ്ഞെടുത്തതാ. ഇത്തവണ മീരയ്ക്ക് തിരഞ്ഞെടുക്കണം.',
     },
@@ -828,9 +782,7 @@ export const SITUATIONS: Situation[] = [
   // --- helping ---------------------------------------------------------------
   {
     id: 'spilledbag',
-    construct: 'helping',
-    pool: 'training',
-    text: {
+    construct: 'helping',    text: {
       en: "Ravi's bag tips over and his things spill in the corridor.",
       ml: 'രവിയുടെ ബാഗ് മറിഞ്ഞ് സാധനങ്ങളെല്ലാം ഇടനാഴിയിൽ ചിതറി.',
     },
@@ -865,9 +817,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'cantopen',
-    construct: 'helping',
-    pool: 'training',
-    text: {
+    construct: 'helping',    text: {
       en: 'A small boy cannot open his water bottle.',
       ml: 'ഒരു ചെറിയ കുട്ടിക്ക് വെള്ളക്കുപ്പി തുറക്കാൻ പറ്റുന്നില്ല.',
     },
@@ -902,9 +852,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'droppedcoins',
-    construct: 'helping',
-    pool: 'probe',
-    text: {
+    construct: 'helping',    text: {
       en: 'A shopkeeper drops coins that roll near your feet.',
       ml: 'കടക്കാരന്റെ കയ്യിൽ നിന്ന് നാണയങ്ങൾ വീണ് നിന്റെ കാലിനടുത്തേക്ക് ഉരുണ്ടു.',
     },
@@ -939,9 +887,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'stucklace',
-    construct: 'helping',
-    pool: 'probe',
-    text: {
+    construct: 'helping',    text: {
       en: "Anu's shoelace is stuck in a knot and the bell is ringing.",
       ml: 'അനുവിന്റെ ഷൂലേസ് കുരുങ്ങിപ്പോയി, ബെല്ലടിക്കുകയും ചെയ്യുന്നു.',
     },
@@ -978,9 +924,7 @@ export const SITUATIONS: Situation[] = [
   // --- comforting -------------------------------------------------------------
   {
     id: 'brokemodel',
-    construct: 'comforting',
-    pool: 'training',
-    text: {
+    construct: 'comforting',    text: {
       en: "Sam's clay model broke and he looks very upset.",
       ml: 'സാമിന്റെ കളിമൺ രൂപം പൊട്ടിപ്പോയി, അവന് വലിയ സങ്കടം.',
     },
@@ -1015,9 +959,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'scaredark',
-    construct: 'comforting',
-    pool: 'training',
-    text: {
+    construct: 'comforting',    text: {
       en: 'The lights go out and a younger boy looks frightened.',
       ml: 'ലൈറ്റ് പോയപ്പോൾ ഒരു ചെറിയ കുട്ടി പേടിച്ചുനിൽക്കുന്നു.',
     },
@@ -1052,9 +994,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'lostrace',
-    construct: 'comforting',
-    pool: 'probe',
-    text: {
+    construct: 'comforting',    text: {
       en: 'Meera came last in the race and is close to tears.',
       ml: 'മീര ഓട്ടമത്സരത്തിൽ ഏറ്റവും പിന്നിലായി, കരയാറായി നിൽക്കുന്നു.',
     },
@@ -1089,9 +1029,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'sickfriend',
-    construct: 'comforting',
-    pool: 'probe',
-    text: {
+    construct: 'comforting',    text: {
       en: 'Aisha feels sick and is resting her head on the desk.',
       ml: 'ആയിഷയ്ക്ക് സുഖമില്ല, തല മേശയിൽ ചായ്ച്ചു കിടക്കുന്നു.',
     },
@@ -1128,9 +1066,7 @@ export const SITUATIONS: Situation[] = [
   // --- inclusion ---------------------------------------------------------------
   {
     id: 'nopartner',
-    construct: 'inclusion',
-    pool: 'training',
-    text: {
+    construct: 'inclusion',    text: {
       en: 'The class makes pairs and one boy has no partner.',
       ml: 'ക്ലാസ്സിൽ ജോഡികളാക്കുമ്പോൾ ഒരു കുട്ടിക്ക് ജോഡിയില്ല.',
     },
@@ -1165,9 +1101,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'newtable',
-    construct: 'inclusion',
-    pool: 'training',
-    text: {
+    construct: 'inclusion',    text: {
       en: 'A new boy stands holding his tray, with nowhere to sit.',
       ml: 'പുതിയ കുട്ടി ട്രേ പിടിച്ച് നിൽക്കുന്നു, ഇരിക്കാൻ സ്ഥലമില്ല.',
     },
@@ -1202,9 +1136,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'grouptalk',
-    construct: 'inclusion',
-    pool: 'probe',
-    text: {
+    construct: 'inclusion',    text: {
       en: 'Two friends are chatting and a lonely girl edges closer, wanting to join.',
       ml: 'രണ്ട് കൂട്ടുകാർ സംസാരിക്കുന്നു, ഒറ്റയ്ക്കുള്ള ഒരു കുട്ടി കൂടാൻ ആഗ്രഹിച്ച് അടുത്തേക്ക് നീങ്ങുന്നു.',
     },
@@ -1239,9 +1171,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'wheelchair',
-    construct: 'inclusion',
-    pool: 'probe',
-    text: {
+    construct: 'inclusion',    text: {
       en: 'A boy in a wheelchair watches the others play tag.',
       ml: 'വീൽചെയറിലിരിക്കുന്ന ഒരു കുട്ടി മറ്റുള്ളവർ പിടിത്തക്കളി കളിക്കുന്നത് നോക്കുന്നു.',
     },
@@ -1278,9 +1208,7 @@ export const SITUATIONS: Situation[] = [
   // --- politeness ----------------------------------------------------------------
   {
     id: 'gotgift',
-    construct: 'politeness',
-    pool: 'training',
-    text: {
+    construct: 'politeness',    text: {
       en: 'Your aunt gives you a present.',
       ml: 'നിന്റെ ആന്റി നിനക്കൊരു സമ്മാനം തന്നു.',
     },
@@ -1315,9 +1243,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'bumpsorry',
-    construct: 'politeness',
-    pool: 'training',
-    text: {
+    construct: 'politeness',    text: {
       en: 'You bump into a classmate while turning around quickly.',
       ml: 'വേഗം തിരിയുമ്പോൾ നീ ഒരു സഹപാഠിയെ തട്ടി.',
     },
@@ -1352,9 +1278,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'phonecall',
-    construct: 'politeness',
-    pool: 'probe',
-    text: {
+    construct: 'politeness',    text: {
       en: 'Your mother is on an important phone call and you want juice.',
       ml: 'അമ്മ ഒരു പ്രധാന ഫോൺ വിളിയിലാ, നിനക്ക് ജ്യൂസ് വേണം.',
     },
@@ -1389,9 +1313,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'sharedfood',
-    construct: 'politeness',
-    pool: 'probe',
-    text: {
+    construct: 'politeness',    text: {
       en: "A friend offers you a bite of food you don't like.",
       ml: 'ഒരു കൂട്ടുകാരൻ നിനക്ക് ഇഷ്ടമല്ലാത്ത ഭക്ഷണം ഒരു കഷണം നീട്ടി.',
     },
@@ -1428,9 +1350,7 @@ export const SITUATIONS: Situation[] = [
   // --- fairness -----------------------------------------------------------------
   {
     id: 'onecookie',
-    construct: 'fairness',
-    pool: 'training',
-    text: {
+    construct: 'fairness',    text: {
       en: "There is one cookie left and your friend hasn't had any.",
       ml: 'ഒരു ബിസ്‌ക്കറ്റ് മാത്രം ബാക്കി, കൂട്ടുകാരന് ഇതുവരെ ഒന്നും കിട്ടിയിട്ടില്ല.',
     },
@@ -1465,9 +1385,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'bigslice',
-    construct: 'fairness',
-    pool: 'training',
-    text: {
+    construct: 'fairness',    text: {
       en: 'You cut the cake — one slice is big, one is small.',
       ml: 'നീ കേക്ക് മുറിച്ചു — ഒരു കഷണം വലുത്, ഒന്ന് ചെറുത്.',
     },
@@ -1502,9 +1420,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'foundpencil',
-    construct: 'fairness',
-    pool: 'probe',
-    text: {
+    construct: 'fairness',    text: {
       en: 'You find a nice pencil. Another child says it might be theirs.',
       ml: 'നിനക്ക് നല്ലൊരു പെൻസിൽ കിട്ടി. അത് തന്റേതാവാം എന്ന് വേറൊരു കുട്ടി പറയുന്നു.',
     },
@@ -1539,9 +1455,7 @@ export const SITUATIONS: Situation[] = [
   },
   {
     id: 'scorecheat',
-    construct: 'fairness',
-    pool: 'probe',
-    text: {
+    construct: 'fairness',    text: {
       en: 'In a board game, you could move an extra space when no one is looking.',
       ml: 'ബോർഡ് കളിയിൽ ആരും നോക്കാത്തപ്പോൾ നിനക്ക് ഒരു കളം കൂടുതൽ നീങ്ങാം.',
     },
@@ -1576,7 +1490,7 @@ export const SITUATIONS: Situation[] = [
   },
 ]
 
-/** Situations of one construct within one pool (each pair is a level's quota). */
-export function situationsFor(construct: Construct, pool: StimulusPool): Situation[] {
-  return SITUATIONS.filter((s) => s.construct === construct && s.pool === pool)
+/** Situations of one construct (a level samples its quota from these). */
+export function situationsFor(construct: Construct): Situation[] {
+  return SITUATIONS.filter((s) => s.construct === construct)
 }

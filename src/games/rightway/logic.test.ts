@@ -10,14 +10,13 @@ import {
   tallyByConstruct,
   tallyByValence,
 } from './logic'
-import { behaviorsFor, type StimulusPool, type Tier } from './content'
+import { behaviorsFor, type Tier } from './content'
 
 const rng = (seq: number[]) => {
   let i = 0
   return () => seq[i++ % seq.length]
 }
 
-const POOLS: StimulusPool[] = ['training', 'probe']
 const TIERS: Tier[] = ['clear', 'subtle']
 const DIFFS: Difficulty[] = ['easy', 'medium', 'hard']
 
@@ -27,15 +26,13 @@ test('behavior ids are unique', () => {
   expect(new Set(BEHAVIORS.map((b) => b.id)).size).toBe(BEHAVIORS.length)
 })
 
-test('every construct × pool × tier cell has exactly two okay and two not-okay items', () => {
+test('every construct × tier cell has exactly four okay and four not-okay items', () => {
   for (const construct of CONSTRUCTS) {
-    for (const pool of POOLS) {
-      const items = behaviorsFor(construct, pool)
-      expect(items).toHaveLength(8)
-      for (const tier of TIERS) {
-        expect(items.filter((b) => b.tier === tier && b.isFine)).toHaveLength(2)
-        expect(items.filter((b) => b.tier === tier && !b.isFine)).toHaveLength(2)
-      }
+    const items = behaviorsFor(construct)
+    expect(items).toHaveLength(16)
+    for (const tier of TIERS) {
+      expect(items.filter((b) => b.tier === tier && b.isFine)).toHaveLength(4)
+      expect(items.filter((b) => b.tier === tier && !b.isFine)).toHaveLength(4)
     }
   }
 })
@@ -52,14 +49,11 @@ test('all child-facing text is present in both languages', () => {
 
 // --- level construction --------------------------------------------------------
 
-test('a level has 10 unique trials from the requested pool', () => {
-  for (const pool of POOLS) {
-    for (const d of DIFFS) {
-      const trials = buildLevel(d, Math.random, pool)
-      expect(trials).toHaveLength(ACTIVITY_COUNT)
-      expect(new Set(trials.map((b) => b.id)).size).toBe(ACTIVITY_COUNT)
-      for (const b of trials) expect(b.pool).toBe(pool)
-    }
+test('a level has 10 unique trials', () => {
+  for (const d of DIFFS) {
+    const trials = buildLevel(d)
+    expect(trials).toHaveLength(ACTIVITY_COUNT)
+    expect(new Set(trials.map((b) => b.id)).size).toBe(ACTIVITY_COUNT)
   }
 })
 
@@ -86,21 +80,19 @@ test('easy is all clear, hard is all subtle, medium mixes one of each per constr
   }
 })
 
-test('repeated builds rotate through both exemplars of every cell', () => {
-  // Each tier×valence cell holds two authored exemplars; the builder samples
+test('repeated builds rotate through every exemplar of every cell', () => {
+  // Each tier×valence cell holds four authored exemplars; the builder samples
   // one per build. Across many builds every item of the bank must appear, so
   // sessions accumulate evidence on different items instead of a fixed set.
-  for (const pool of POOLS) {
-    const seen = new Set<string>()
-    for (let i = 0; i < 200; i++) {
-      for (const d of DIFFS) {
-        for (const b of buildLevel(d, Math.random, pool)) seen.add(b.id)
-      }
+  const seen = new Set<string>()
+  for (let i = 0; i < 200; i++) {
+    for (const d of DIFFS) {
+      for (const b of buildLevel(d)) seen.add(b.id)
     }
-    for (const construct of CONSTRUCTS) {
-      for (const b of behaviorsFor(construct, pool)) {
-        expect(seen.has(b.id)).toBe(true)
-      }
+  }
+  for (const construct of CONSTRUCTS) {
+    for (const b of behaviorsFor(construct)) {
+      expect(seen.has(b.id)).toBe(true)
     }
   }
 })

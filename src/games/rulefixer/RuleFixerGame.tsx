@@ -186,8 +186,8 @@ export function RuleFixerGame() {
         <span className="er-level-chip">{t('level', lang)}: {t(LEVEL_LABEL_KEY[level], lang)}</span>
         <span className="er-activity-chip">{t('activity', lang, { n: idx + 1, total: trials.length })}</span>
         {/* Trial progress only — no running score on screen: seeing the tally
-            move is itself corrective feedback, which assessment must withhold
-            and practice already gives through the spoken consequence. */}
+            move is itself corrective feedback, and practice already gives that
+            through the spoken consequence after each choice. */}
         <ProgressBar value={Math.round(((idx + (picked ? 1 : 0)) / trials.length) * 100)} />
         <div className="game-canvas">
           <RuleFixerScene situation={trial.situation} outcome={outcome} />

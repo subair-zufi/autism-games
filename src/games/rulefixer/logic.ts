@@ -8,10 +8,10 @@
  *    Moderate adds the plausible-passive distractor, Hard drops the obvious
  *    wrong option and forces the sensitive kind-vs-passive discrimination.
  *  - Sampled composition: a level is 5 constructs × 2 = 10 trials, sampled
- *    from a bank of 4 situations per construct per pool. Sessions therefore
- *    rotate through the enlarged bank — repeated sessions accumulate
- *    per-construct evidence across different items without lengthening any
- *    single session (fatigue) — while the per-construct quota is fixed.
+ *    from a bank of 8 situations per construct. Sessions therefore rotate
+ *    through the enlarged bank — repeated sessions accumulate per-construct
+ *    evidence across different items without lengthening any single session
+ *    (fatigue) — while the per-construct quota is fixed.
  *  - Stratified order: constructs are dealt in shuffled cycles — each of the
  *    5 constructs appears once in the first half and once in the second.
  *  - Chance level: 1/2 on Easy and Hard, 1/3 on Moderate; `levelChance` feeds
@@ -26,11 +26,10 @@ import {
   type Option,
   type Role,
   type Situation,
-  type StimulusPool,
 } from './content'
 
 // Re-exported so the 3D scene and UI import everything from one module.
-export type { Construct, Option, PeerMood, Role, Situation, StimulusPool } from './content'
+export type { Construct, Option, PeerMood, Role, Situation } from './content'
 export { CONSTRUCTS, SITUATIONS } from './content'
 
 // Scoring is shared across level games; re-exported so imports stay uniform.
@@ -57,21 +56,14 @@ export interface Trial {
   choices: Option[]
 }
 
-/**
- * Build one level's trials from the given pool ('training' for practice,
- * 'probe' for Assessment mode — held-out situations only).
- */
-export function buildLevel(
-  difficulty: Difficulty,
-  rng: () => number = Math.random,
-  pool: StimulusPool = 'training',
-): Trial[] {
+/** Build one level's trials. */
+export function buildLevel(difficulty: Difficulty, rng: () => number = Math.random): Trial[] {
   const roles = OPTION_ROLES[difficulty]
   // Two stratified cycles: every construct once per cycle. Each construct's
   // pile is shuffled first, so the two popped situations are a fresh sample
-  // of its four banked ones — sessions rotate through the bank.
+  // of its eight banked ones — sessions rotate through the bank.
   const remaining = new Map<Construct, Situation[]>(
-    CONSTRUCTS.map((c) => [c, shuffle(situationsFor(c, pool), rng)]),
+    CONSTRUCTS.map((c) => [c, shuffle(situationsFor(c), rng)]),
   )
   const trials: Trial[] = []
   const cycles = Math.ceil(ACTIVITY_COUNT / CONSTRUCTS.length)

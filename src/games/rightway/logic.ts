@@ -28,12 +28,11 @@ import {
   CONSTRUCTS,
   type Behavior,
   type Construct,
-  type StimulusPool,
   type Tier,
 } from './content'
 
 // Re-exported so the 3D scene and UI import everything from one module.
-export type { Behavior, BiText, Construct, Pose, SceneCue, StimulusPool, Tier } from './content'
+export type { Behavior, BiText, Construct, Pose, SceneCue, Tier } from './content'
 export { BEHAVIORS, CONSTRUCTS } from './content'
 
 // Scoring is shared across level games; re-exported so imports stay uniform.
@@ -67,11 +66,10 @@ export const LEVEL_TIERS: Record<Difficulty, Tier[]> = {
  */
 function constructPair(
   construct: Construct,
-  pool: StimulusPool,
   difficulty: Difficulty,
   rng: () => number,
 ): Behavior[] {
-  const items = behaviorsFor(construct, pool)
+  const items = behaviorsFor(construct)
   const pick = (tier: Tier, isFine: boolean) => {
     const cell = items.filter((b) => b.tier === tier && b.isFine === isFine)
     return cell[Math.floor(rng() * cell.length)]
@@ -83,19 +81,15 @@ function constructPair(
     : [pick('subtle', true), pick('clear', false)]
 }
 
-/**
- * Build one level's trials from the given pool ('training' for practice,
- * 'probe' for Assessment mode — held-out behaviours only).
- */
+/** Build one level's trials. */
 export function buildLevel(
   difficulty: Difficulty,
   rng: () => number = Math.random,
-  pool: StimulusPool = 'training',
 ): Behavior[] {
   // Two stratified cycles: every construct once per cycle, then repeat with
   // each construct's remaining behaviour.
   const remaining = new Map<Construct, Behavior[]>(
-    CONSTRUCTS.map((c) => [c, shuffle(constructPair(c, pool, difficulty, rng), rng)]),
+    CONSTRUCTS.map((c) => [c, shuffle(constructPair(c, difficulty, rng), rng)]),
   )
   const trials: Behavior[] = []
   const cycles = Math.ceil(ACTIVITY_COUNT / CONSTRUCTS.length)
