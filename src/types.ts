@@ -7,6 +7,7 @@ export type GameId =
   | 'rightway'
   | 'rulefixer'
   | 'identifyemotions'
+  | 'discovery'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
 /** The four skills the study targets — every game trains exactly one. */
@@ -139,7 +140,8 @@ export const GAME_LIST: GameMeta[] = [
     color: '#3b82f6',
     skill: 'jointattention',
     description: 'Look where they look',
-    objective: 'Joint attention · step 1: follow a fading cue (glowing point → point → far point) among a few exhibits in a calm room',
+    objective:
+      'Joint attention · step 1 (responding — prerequisite): follow a deictic cue that fades with success (glowing point → point → far point → gaze only) among a few exhibits in a calm room. Trains the attention-following prerequisite of responding to joint attention, not the full live dyadic skill',
     duration: '5–10 min',
     hasLevels: false,
   },
@@ -151,7 +153,21 @@ export const GAME_LIST: GameMeta[] = [
     color: '#22c55e',
     skill: 'jointattention',
     description: 'Follow the point in the garden',
-    objective: 'Joint attention · step 2: follow a fading cue (glowing point → point → far point) in a busy garden',
+    objective:
+      'Joint attention · step 2 (responding — prerequisite): follow the same fading cue ladder (glowing point → point → far point → gaze only) under distractor load in a busy garden. Trains cue-following among competing objects, the attentional prerequisite of responding to joint attention',
+    duration: '5–10 min',
+    hasLevels: false,
+  },
+  {
+    id: 'discovery',
+    title: 'Look What I Found!',
+    icon: '✨',
+    path: '/discovery',
+    color: '#8b5cf6',
+    skill: 'jointattention',
+    description: 'Share your discovery · കണ്ടെത്തിയത് കാണിക്കൂ',
+    objective:
+      'Joint attention · step 3 (initiating): when a surprise appears and nothing prompts you, spontaneously show it to a friend — surprises get subtler and hints disappear at harder levels',
     duration: '5–10 min',
     hasLevels: false,
   },

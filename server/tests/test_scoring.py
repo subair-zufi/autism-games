@@ -86,6 +86,20 @@ def test_museum_first_attempt_among_completed_rounds():
     assert g.score == 25.0
 
 
+def test_museum_chance_prefers_visible_count_over_cue():
+    # New events carry visibleCount (cue fades within a session, so it no
+    # longer identifies the pedestal count); legacy events fall back to cue.
+    evs = [
+        ev("museum", "answer", {"correct": True, "firstAttempt": False, "cue": "gaze", "visibleCount": 6}),
+        ev("museum", "answer", {"correct": True, "firstAttempt": True, "cue": "gaze", "visibleCount": 6}),
+    ]
+    g = scoring.score_game("museum", evs)
+    # p=0.5, chance 1/6 -> (0.5-0.1667)/(0.8333) = 0.4 -> 40.0
+    assert g.score == 40.0
+    legacy = scoring.score_game("museum", [ev("museum", "answer", {"correct": True, "firstAttempt": True, "cue": "hover"})])
+    assert legacy.n_trials == 1 and legacy.score == 100.0  # cue-map fallback still works
+
+
 def test_rollback_partner_chance_from_cue():
     evs = [ev("rollback", "roll_return", {"correct": True, "firstAttempt": True, "cue": "gesture"}) for _ in range(4)]
     g = scoring.score_game("rollback", evs)
@@ -100,6 +114,21 @@ def test_blocks_placements_vs_impatient():
     assert g.n_trials == 4
     assert g.raw_accuracy == 0.75
     assert g.score == 75.0  # chance 0 -> score == raw accuracy * 100
+
+
+def test_discovery_spontaneous_shares():
+    evs = [
+        ev("discovery", "event_ready", {"discovery": "gem", "saliency": "big"}),  # not a trial
+        ev("discovery", "nudge", {"kind": "share", "count": 1}),  # not a trial
+        ev("discovery", "share", {"correct": True, "spontaneous": True, "nudges": 0, "latencyMs": 2100}),
+        ev("discovery", "share", {"correct": False, "spontaneous": False, "nudges": 2, "latencyMs": 9400}),
+    ]
+    g = scoring.score_game("discovery", evs)
+    assert g.skill == "jointattention"
+    assert g.n_trials == 2  # only completed shares count
+    assert g.raw_accuracy == 0.5
+    assert g.score == 50.0  # chance 0 -> score == raw accuracy * 100
+    assert g.median_latency_ms == 5750
 
 
 # --- improvement (pre/post) ---------------------------------------------------

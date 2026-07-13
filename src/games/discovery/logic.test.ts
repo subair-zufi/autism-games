@@ -1,0 +1,118 @@
+import { describe, expect, it } from 'vitest'
+import {
+  CONFIG,
+  DISCOVERIES,
+  FRIENDS,
+  POINTS,
+  STREAK_LEN,
+  discoveryMeta,
+  makeRound,
+  pickFriend,
+  pointsFor,
+  spawnDelayMs,
+  starsFor,
+} from './logic'
+
+function seededRng(seed: number) {
+  let s = seed
+  return () => {
+    s = (s * 1664525 + 1013904223) % 4294967296
+    return s / 4294967296
+  }
+}
+
+describe('discoveries', () => {
+  it('has 6 surprises with positions', () => {
+    expect(DISCOVERIES).toHaveLength(6)
+    for (const d of DISCOVERIES) {
+      expect(d.position).toHaveLength(2)
+      expect(discoveryMeta(d.id)).toBe(d)
+    }
+  })
+})
+
+describe('makeRound', () => {
+  it('never repeats the previous surprise', () => {
+    const rng = seededRng(7)
+    let prev = makeRound(null, rng).discovery
+    for (let i = 0; i < 200; i++) {
+      const next = makeRound(prev, rng).discovery
+      expect(next).not.toBe(prev)
+      prev = next
+    }
+  })
+
+  it('always returns a valid discovery id', () => {
+    const rng = seededRng(3)
+    const ids = DISCOVERIES.map((d) => d.id)
+    for (let i = 0; i < 50; i++) {
+      expect(ids).toContain(makeRound(null, rng).discovery)
+    }
+  })
+})
+
+describe('scaffold fading by difficulty', () => {
+  it('fades saliency: big -> medium -> subtle', () => {
+    expect(CONFIG.easy.saliency).toBe('big')
+    expect(CONFIG.medium.saliency).toBe('medium')
+    expect(CONFIG.hard.saliency).toBe('subtle')
+  })
+
+  it('slows then removes the nudge — hard must be fully spontaneous', () => {
+    expect(CONFIG.easy.nudgeAfterMs).not.toBeNull()
+    expect(CONFIG.medium.nudgeAfterMs).not.toBeNull()
+    expect(CONFIG.easy.nudgeAfterMs!).toBeLessThan(CONFIG.medium.nudgeAfterMs!)
+    expect(CONFIG.hard.nudgeAfterMs).toBeNull()
+  })
+
+  it('turns the friend further away as difficulty rises', () => {
+    expect(CONFIG.easy.awayYaw).toBeLessThan(CONFIG.medium.awayYaw)
+    expect(CONFIG.medium.awayYaw).toBeLessThan(CONFIG.hard.awayYaw)
+  })
+
+  it('raises the session goal with difficulty', () => {
+    expect(CONFIG.easy.goal).toBeLessThan(CONFIG.medium.goal)
+    expect(CONFIG.medium.goal).toBeLessThan(CONFIG.hard.goal)
+  })
+})
+
+describe('pointsFor', () => {
+  it('rewards spontaneous shares more than prompted ones, never zero', () => {
+    expect(pointsFor(true, 1)).toBe(POINTS.spontaneous)
+    expect(pointsFor(false, 0)).toBe(POINTS.prompted)
+    expect(pointsFor(false, 0)).toBeGreaterThan(0)
+  })
+
+  it('adds the streak bonus only at the streak threshold', () => {
+    expect(pointsFor(true, STREAK_LEN - 1)).toBe(POINTS.spontaneous)
+    expect(pointsFor(true, STREAK_LEN)).toBe(POINTS.spontaneous + POINTS.streakBonus)
+  })
+})
+
+describe('starsFor', () => {
+  it('gives 3 stars at >=80% spontaneous, 2 at >=50%, else 1', () => {
+    expect(starsFor(5, 5)).toBe(3)
+    expect(starsFor(4, 5)).toBe(3)
+    expect(starsFor(3, 5)).toBe(2)
+    expect(starsFor(2, 5)).toBe(1)
+    expect(starsFor(0, 5)).toBe(1)
+  })
+})
+
+describe('session helpers', () => {
+  it('spawn delay stays in a calm 0.9-2.5s window', () => {
+    const rng = seededRng(11)
+    for (let i = 0; i < 100; i++) {
+      const ms = spawnDelayMs(rng)
+      expect(ms).toBeGreaterThanOrEqual(900)
+      expect(ms).toBeLessThanOrEqual(2500)
+    }
+  })
+
+  it('picks a valid friend', () => {
+    const rng = seededRng(5)
+    for (let i = 0; i < 20; i++) {
+      expect(FRIENDS).toContain(pickFriend(rng))
+    }
+  })
+})

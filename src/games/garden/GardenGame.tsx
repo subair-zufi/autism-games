@@ -10,7 +10,20 @@ import { WebGLGate } from '../../components/WebGLGate'
 import { speak } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
-import { CUE, GOAL, errorType, makeRound, pointsFor, starsFor, type ObjectId, type Round } from './logic'
+import {
+  CUE_LADDER,
+  FADE_STREAK,
+  GOAL,
+  START_TIER,
+  errorType,
+  fadedTier,
+  makeRound,
+  pointsFor,
+  starsFor,
+  supportedTier,
+  type ObjectId,
+  type Round,
+} from './logic'
 import { gardenLine, gardenObjectLabel } from './strings'
 import { GardenScene } from './GardenScene'
 import { useGameAnalytics } from '../useGameAnalytics'
@@ -24,9 +37,12 @@ export function GardenGame() {
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('garden')
   const goal = GOAL[difficulty]
-  const cue = CUE[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
+  /** rung on the prompt-fading ladder — starts at the difficulty's entry rung,
+   * thins with success streaks, regains one rung of support after an error */
+  const [tier, setTier] = useState(() => START_TIER[difficulty])
+  const cue = CUE_LADDER[tier]
   const [round, setRound] = useState<Round>(() => makeRound(null))
   const [score, setScore] = useState(0) // child-facing points
   const [found, setFound] = useState(0) // correct finds this session
@@ -50,6 +66,7 @@ export function GardenGame() {
 
   function start() {
     resetSession()
+    setTier(START_TIER[difficulty])
     setScore(0)
     setFound(0)
     setFirstTries(0)
@@ -105,6 +122,9 @@ export function GardenGame() {
         cueReadyAt.current = null
         setWrongPicks([])
         setLocked(false)
+        // prompt fading: every FADE_STREAK-th consecutive independent find
+        // thins the cue one rung (pulse -> hover -> distal -> gaze)
+        if (nextStreak > 0 && nextStreak % FADE_STREAK === 0) setTier((t) => fadedTier(t))
         setRound((r) => makeRound(r.target))
       }, 1400)
     } else {
@@ -122,6 +142,9 @@ export function GardenGame() {
         latencyMs,
         errorType: errorType(round.target, id),
       })
+      // least-to-most: an error immediately brings one rung of support back
+      // (the retry happens under the easier cue, recorded as such)
+      setTier((t) => supportedTier(t, difficulty))
     }
   }
 

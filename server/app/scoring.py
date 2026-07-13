@@ -1,8 +1,8 @@
 """Standardised, cross-game scoring for the research battery.
 
-The 8 games emit very different raw numbers (chance-corrected accuracy for the
-emotion/social quizzes, point tallies with lives for the joint-attention and
-turn-taking scenes, latencies everywhere). To compare a child over time, to
+The nine games emit very different raw numbers (chance-corrected accuracy for
+the emotion/social quizzes, point tallies with lives for the joint-attention
+and turn-taking scenes, latencies everywhere). To compare a child over time, to
 compare the four target skills, and to compare cohorts, every game has to reduce
 to *one* comparable quantity.
 
@@ -22,7 +22,7 @@ source of truth for scoring. It reads the *existing* event stream, so no
 gameplay change is needed and historical data still scores.
 
 Aggregation is equal-weighted on purpose:
-  * a **Skill Score** is the mean of the (<=2) game scores in that skill, so one
+  * a **Skill Score** is the mean of the (<=3) game scores in that skill, so one
     game cannot dominate a skill;
   * the **Composite Social-Emotional Score** is the mean of the available skill
     scores, so each skill contributes equally regardless of how many games or
@@ -54,6 +54,7 @@ SKILL_BY_GAME = {
     "rulefixer": "socialnorms",
     "museum": "jointattention",
     "garden": "jointattention",
+    "discovery": "jointattention",
 }
 
 GAMES = tuple(SKILL_BY_GAME.keys())
@@ -66,10 +67,20 @@ GAMES = tuple(SKILL_BY_GAME.keys())
 EMOTIONREC_CHANCE = {"easy": 1 / 2, "medium": 1 / 3, "hard": 1 / 3}
 CLIPS_CHANCE = {"easy": 1 / 2, "medium": 1 / 3, "hard": 1 / 4}
 
-# Joint attention: the cue also identifies the difficulty, which sets how many
-# tappable targets are on screen (Museum) — Garden always shows all 8 objects.
+# Joint attention: Museum answers record ``visibleCount`` (pedestals on
+# screen), so chance is read as 1/n directly. The cue map below is a legacy
+# fallback for events recorded before within-session cue fading (July 2026),
+# when the cue still identified the difficulty (and thus the pedestal count).
+# Garden always shows all 8 objects regardless of cue.
 MUSEUM_CUE_CHANCE = {"pulse": 1 / 3, "hover": 1 / 4, "distal": 1 / 6}
 GARDEN_CHANCE = 1 / 8
+
+
+def _museum_chance(p: dict) -> float:
+    n = p.get("visibleCount")
+    if isinstance(n, (int, float)) and n >= 2:
+        return 1 / int(n)
+    return MUSEUM_CUE_CHANCE.get(str(p.get("cue")), 1 / 3)
 
 # Roll-Back: the cue identifies difficulty, which sets the number of partners the
 # child must pick the ready one from. With a single partner the "who is ready"
@@ -228,6 +239,31 @@ def _rollback_trials(events: Iterable[EventLike]) -> list[Trial]:
     return out
 
 
+def _discovery_trials(events: Iterable[EventLike]) -> list[Trial]:
+    """Look What I Found (initiating JA): each round ends on a completed share
+    (the child tapped both the surprise and the friend). A share is a success
+    iff it was ``spontaneous`` — completed before any helper nudge fired.
+    Initiation has no guessing baseline, so chance is 0 (like Blocks), and
+    ``latencyMs`` is surprise-onset -> friend-tap (the initiation latency)."""
+    out: list[Trial] = []
+    for e in events:
+        if e.event_type != "share":
+            continue
+        p = _p(e)
+        if "correct" not in p:
+            continue
+        out.append(
+            Trial(
+                correct=_is_true(p.get("correct")),
+                chance=0.0,
+                latency_ms=_int_or_none(p.get("latencyMs")),
+                session_id=_sid(e),
+                ts=e.created_at,
+            )
+        )
+    return out
+
+
 def _blocks_trials(events: Iterable[EventLike]) -> list[Trial]:
     """Block Buddies: waiting for one's turn has no guessing baseline. Each block
     placed is a success; each out-of-turn (impatient) tap is a failure."""
@@ -253,13 +289,15 @@ def trials_for_game(game_key: str, events: Iterable[EventLike]) -> list[Trial]:
     if game_key in ("rightway", "rulefixer"):
         return _payload_chance_trials(evs)
     if game_key == "museum":
-        return _pointing_trials(evs, lambda p: MUSEUM_CUE_CHANCE.get(str(p.get("cue")), 1 / 3))
+        return _pointing_trials(evs, _museum_chance)
     if game_key == "garden":
         return _pointing_trials(evs, lambda p: GARDEN_CHANCE)
     if game_key == "rollback":
         return _rollback_trials(evs)
     if game_key == "blocks":
         return _blocks_trials(evs)
+    if game_key == "discovery":
+        return _discovery_trials(evs)
     return []
 
 
