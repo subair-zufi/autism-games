@@ -360,7 +360,9 @@ export function RollBackGame() {
             message={
               completed ? `${rbLine('overWin', lang)} 🎉` : `${rbLine('overTry', lang)} 🌟`
             }
+            lang={lang}
             onRestart={start}
+            onChooseLevel={() => setPhase('start')}
           />
         )}
       </div>

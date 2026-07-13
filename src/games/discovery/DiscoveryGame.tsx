@@ -247,6 +247,7 @@ export function DiscoveryGame() {
             message={t('greatPlaying', lang)}
             lang={lang}
             onRestart={start}
+            onChooseLevel={() => setPhase('start')}
           />
         )}
       </div>

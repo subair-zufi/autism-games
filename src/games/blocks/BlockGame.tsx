@@ -235,7 +235,7 @@ export function BlockGame() {
           </div>
         </div>
         {phase === 'over' && (
-          <GameOverDialog score={score} best={Math.max(best, score)} message={t('greatPlaying', lang)} lang={lang} onRestart={start} />
+          <GameOverDialog score={score} best={Math.max(best, score)} message={t('greatPlaying', lang)} lang={lang} onRestart={start} onChooseLevel={() => setPhase('start')} />
         )}
       </div>
     </WebGLGate>
