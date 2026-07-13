@@ -1,10 +1,12 @@
 import { expect, test } from 'vitest'
 import {
-  CUE_LADDER,
   EXHIBITS,
   FADE_STREAK,
+  GAZE_TRIALS,
   GOAL,
+  HAND_LADDER,
   START_TIER,
+  cueSchedule,
   errorType,
   exhibitMeta,
   fadedTier,
@@ -13,6 +15,7 @@ import {
   slotPosition,
   starsFor,
   supportedTier,
+  trialCue,
 } from './logic'
 
 const rng = (seq: number[]) => {
@@ -63,28 +66,48 @@ test('all 6 exhibits have metadata', () => {
   expect(exhibitMeta('gem').label).toBe('Gem')
 })
 
-test('cue ladder runs highlighted point -> plain point -> distal point -> gaze', () => {
-  expect(CUE_LADDER).toEqual(['pulse', 'hover', 'distal', 'gaze'])
+test('the hand ladder runs highlighted point -> plain point -> distal point', () => {
+  expect(HAND_LADDER).toEqual(['pulse', 'hover', 'distal'])
 })
 
 test('difficulty sets the entry rung: pulse / hover / distal', () => {
-  expect(CUE_LADDER[START_TIER.easy]).toBe('pulse')
-  expect(CUE_LADDER[START_TIER.medium]).toBe('hover')
-  expect(CUE_LADDER[START_TIER.hard]).toBe('distal')
+  expect(HAND_LADDER[START_TIER.easy]).toBe('pulse')
+  expect(HAND_LADDER[START_TIER.medium]).toBe('hover')
+  expect(HAND_LADDER[START_TIER.hard]).toBe('distal')
 })
 
-test('fading thins the prompt one rung at a time, capped at gaze', () => {
+test('fading thins the hand one rung at a time, capped at the distal point', () => {
   expect(fadedTier(START_TIER.easy)).toBe(1)
-  expect(fadedTier(2)).toBe(3)
-  expect(fadedTier(3)).toBe(3) // gaze is the thinnest prompt — no further fade
+  expect(fadedTier(1)).toBe(2)
+  expect(fadedTier(2)).toBe(2) // distal is the thinnest hand rung — no further fade
   expect(FADE_STREAK).toBeGreaterThan(1) // fading requires a run of successes
 })
 
 test('errors bring support back, but never below the entry rung', () => {
-  expect(supportedTier(3, 'hard')).toBe(2)
-  expect(supportedTier(2, 'hard')).toBe(2) // hard never regains the pulse ring
+  expect(supportedTier(2, 'hard')).toBe(2) // hard never regains a closer point
   expect(supportedTier(2, 'easy')).toBe(1)
+  expect(supportedTier(1, 'easy')).toBe(0)
   expect(supportedTier(0, 'easy')).toBe(0)
+})
+
+test('gaze trials are a steady, evenly-spread share of the session', () => {
+  for (const d of ['easy', 'medium', 'hard'] as const) {
+    const schedule = cueSchedule(d)
+    expect(schedule).toHaveLength(GOAL[d])
+    expect(schedule.filter((k) => k === 'gaze')).toHaveLength(GAZE_TRIALS[d])
+    expect(schedule[0]).toBe('hand') // the session always opens on the supportive hand
+  }
+  // hard alternates hand/gaze so gaze is probed every other trial, not once
+  expect(cueSchedule('hard')).toEqual([
+    'hand', 'gaze', 'hand', 'gaze', 'hand', 'gaze', 'hand', 'gaze', 'hand', 'gaze',
+  ])
+})
+
+test('a gaze trial falls back to the hand once the child has missed it', () => {
+  expect(trialCue('gaze', 2, false)).toBe('gaze') // first try: gaze only
+  expect(trialCue('gaze', 2, true)).toBe('distal') // after a miss: hand support returns
+  expect(trialCue('hand', 0, false)).toBe('pulse') // hand trials follow the hand ladder
+  expect(trialCue('hand', 1, true)).toBe('hover')
 })
 
 test('goal rises with difficulty', () => {

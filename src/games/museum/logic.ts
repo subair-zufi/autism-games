@@ -25,26 +25,67 @@ export function exhibitMeta(id: ExhibitId): ExhibitMeta {
 const COUNT: Record<Difficulty, number> = { easy: 3, medium: 4, hard: 6 }
 
 /**
- * The joint-attention cue fades *within a session* (JASPER-style prompt
- * fading): highlighted proximal point -> plain proximal point -> distal point
- * from across the room -> gaze only (a face turning toward the target, no
- * hand at all). Difficulty sets the *entry* rung; every `FADE_STREAK`
- * consecutive first-attempt finds thins the prompt one rung, and a wrong pick
- * brings one rung of support back (least-to-most), never below the entry
- * rung. Same ladder as the garden game so step-1 vs step-2 data lines up.
+ * Joint attention is probed with two distinct *cue kinds*:
+ *  - a pointing HAND (deictic gesture) shown at one of three support levels
+ *    that fade within a session (JASPER-style prompt fading): highlighted
+ *    proximal point -> plain proximal point -> distal point from across the
+ *    room. Difficulty sets the *entry* rung; every `FADE_STREAK` consecutive
+ *    first-attempt finds thins the hand one rung, and a wrong pick brings one
+ *    rung of support back (least-to-most), never below the entry rung.
+ *  - a GAZE-only doll: a friendly face across the room turning to *look* at the
+ *    target, no hand at all — the harder, more socially demanding RJA probe.
+ *
+ * Gaze used to sit only at the very top of a single fade ladder, so a child met
+ * it once or twice in a whole session at most. It is now scheduled as a fixed
+ * share of trials (see `cueSchedule`), interleaved with hand trials, so both
+ * cue kinds are exercised in balance — RJA is classically assessed with
+ * gestural *and* gaze cues, not overwhelmingly one.
  */
 export type CueMode = 'pulse' | 'hover' | 'distal' | 'gaze'
-export const CUE_LADDER: CueMode[] = ['pulse', 'hover', 'distal', 'gaze']
+/** the hand's support ladder — fades one rung per success streak (gaze is separate) */
+export const HAND_LADDER: CueMode[] = ['pulse', 'hover', 'distal']
 export const START_TIER: Record<Difficulty, number> = { easy: 0, medium: 1, hard: 2 }
-/** consecutive first-attempt finds needed to fade the cue one rung */
+/** consecutive first-attempt finds needed to fade the hand cue one rung */
 export const FADE_STREAK = 3
 
 export function fadedTier(tier: number): number {
-  return Math.min(tier + 1, CUE_LADDER.length - 1)
+  return Math.min(tier + 1, HAND_LADDER.length - 1)
 }
 
 export function supportedTier(tier: number, difficulty: Difficulty): number {
   return Math.max(tier - 1, START_TIER[difficulty])
+}
+
+/** whether a trial presents the pointing hand or the gaze-only doll */
+export type CueKind = 'hand' | 'gaze'
+
+/** gaze-cue trials per session — the rest use the hand (roughly 40-50% gaze). */
+export const GAZE_TRIALS: Record<Difficulty, number> = { easy: 2, medium: 3, hard: 5 }
+
+/**
+ * The cue kind for each of a session's `GOAL` trials. Gaze trials are spread
+ * evenly across the session and never land on the opening trial (which stays on
+ * the more supportive hand), so gaze is probed steadily rather than just once.
+ */
+export function cueSchedule(difficulty: Difficulty): CueKind[] {
+  const goal = GOAL[difficulty]
+  const gaze = Math.min(GAZE_TRIALS[difficulty], goal)
+  const schedule: CueKind[] = Array(goal).fill('hand')
+  for (let i = 0; i < gaze; i++) {
+    const pos = Math.floor(((i + 0.5) * goal) / gaze)
+    schedule[Math.min(pos, goal - 1)] = 'gaze'
+  }
+  return schedule
+}
+
+/**
+ * The cue shown for the current trial. A gaze trial the child has already
+ * missed this round drops back to the hand for the retry (least-to-most: if the
+ * gaze alone wasn't followed, bring the pointing gesture back to support it).
+ */
+export function trialCue(kind: CueKind, handTier: number, hasErred: boolean): CueMode {
+  if (kind === 'gaze' && !hasErred) return 'gaze'
+  return HAND_LADDER[handTier]
 }
 
 /** correct finds needed to win a session */
@@ -107,9 +148,12 @@ export function makeRound(
 /** Evenly spread `n` pedestals along a gentle arc facing the camera. */
 export function slotPosition(index: number, n: number): [number, number] {
   if (n === 1) return [0, 0]
-  const span = Math.min(2.6, 1.3 * (n - 1)) // half-width of the row
+  // wider half-width (and a bit more per-pedestal room) so the hard level's six
+  // exhibits are no longer cramped shoulder-to-shoulder — spacing stays inside
+  // the velvet rope / camera frame.
+  const span = Math.min(3.6, 1.5 * (n - 1)) // half-width of the row
   const x = -span + (index / (n - 1)) * span * 2
-  const z = Math.abs(x) * 0.35 // pull the ends slightly forward into an arc
+  const z = Math.abs(x) * 0.32 // pull the ends slightly back into an arc
   return [x, -z]
 }
 

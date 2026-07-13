@@ -129,6 +129,7 @@ const MESSAGES = {
   numCorrect: { en: 'Correct', ml: 'ശരി' },
   numIncorrect: { en: 'Incorrect', ml: 'തെറ്റ്' },
   playAgain: { en: 'Play again', ml: 'വീണ്ടും കളിക്കൂ' },
+  changeLevel: { en: '🎚️ Choose level', ml: '🎚️ ലെവൽ തിരഞ്ഞെടുക്കൂ' },
   home: { en: '🏠 Home', ml: '🏠 ഹോം' },
   // Mastery (≥80%): fully complete + next level open.
   resultMastered: {

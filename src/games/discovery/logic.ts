@@ -3,8 +3,8 @@ import type { Difficulty } from '../../types'
 /**
  * Look What I Found! — *initiating* joint attention (IJA).
  *
- * Museum Look and Garden Finder train the responding half of joint attention
- * (following someone else's point). This game trains the other, harder half:
+ * Museum Look trains the responding half of joint attention (following
+ * someone else's point). This game trains the other, harder half:
  * spontaneously *sharing* a discovery with a partner. A surprise appears while
  * the friend is looking away and nothing tells the child to act — the round
  * only completes when the child both taps the discovery (the "point") and taps

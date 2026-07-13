@@ -12,7 +12,7 @@ import type { Difficulty } from '../../types'
  *  - rolling *before* the partner signals ready  -> a reciprocity/timing slip
  *    (the dyadic analog of Block Buddies' `impatient_tap`).
  *  - rolling to the *wrong* partner               -> an orientation-reading slip
- *    (shares scoring intent with the Garden joint-attention work).
+ *    (shares scoring intent with the Museum joint-attention work).
  */
 
 /** Visual appearance for the 3D kid avatars — reuse the Block Buddies Look. */
@@ -37,7 +37,7 @@ export interface Player {
 
 /**
  * How the "I'm ready to receive" cue is delivered. Fades exactly like the
- * Garden prompt-hierarchy (CueMode there: pulse -> hover -> distal):
+ * Museum prompt-hierarchy (CueMode there: pulse -> hover -> distal):
  *  - `verbal`  : partner says "roll it to me!" + a glowing arc to their hands.
  *  - `gesture` : no words; partner raises/opens hands and leans in.
  *  - `orient`  : subtle body/gaze orientation only — the child must *infer*
@@ -80,7 +80,7 @@ export const CONFIG: Record<Difficulty, RollConfig> = {
   hard:   { partners: 3, rounds: 10, rollTravelMs: 750,  readyDelayMs: 800, cue: 'orient',  selfInitiate: true },
 }
 
-/** correct returns needed to win a session (mirrors Garden's GOAL). */
+/** correct returns needed to win a session (mirrors Museum's GOAL). */
 export const GOAL: Record<Difficulty, number> = { easy: 5, medium: 7, hard: 10 }
 
 /** Friendly Kerala peer roster (sliced to the partner count). Names are in
@@ -154,7 +154,7 @@ export function makeSequence(
 
 /**
  * Child-facing points. Independent (first-attempt) returns earn more than
- * corrected ones; retries are still rewarded, never punished. Mirrors Garden.
+ * corrected ones; retries are still rewarded, never punished. Mirrors Museum.
  */
 export const POINTS = { first: 10, retry: 5, streakBonus: 2 }
 /** consecutive first-attempt returns before the streak bonus kicks in */

@@ -16,7 +16,7 @@ test('defaults: voice on, sound on, easy difficulty everywhere', () => {
 test('setDifficulty updates one game only', () => {
   useSettings.getState().setDifficulty('museum', 'hard')
   expect(useSettings.getState().difficulty.museum).toBe('hard')
-  expect(useSettings.getState().difficulty.garden).toBe('easy')
+  expect(useSettings.getState().difficulty.blocks).toBe('easy')
 })
 
 test('persists to localStorage', () => {

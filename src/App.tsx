@@ -15,7 +15,6 @@ import { GameDetail } from './pages/GameDetail'
 import { ComingSoon } from './components/ComingSoon'
 import { GAME_LIST, type GameId } from './types'
 import { EmotionRecognitionGame } from './games/emotionrecognition/EmotionRecognitionGame'
-import { GardenGame } from './games/garden/GardenGame'
 import { BlockGame } from './games/blocks/BlockGame'
 import { RollBackGame } from './games/rollback/RollBackGame'
 import { MuseumGame } from './games/museum/MuseumGame'
@@ -27,7 +26,6 @@ import { useAuth } from './state/auth'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotionrecognition: EmotionRecognitionGame,
-  garden: GardenGame,
   blocks: BlockGame,
   rollback: RollBackGame,
   museum: MuseumGame,

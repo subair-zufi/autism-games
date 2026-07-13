@@ -11,10 +11,9 @@
 
 ## ✨ Features
 
-🎮 **10 Interactive Games** - Carefully designed therapeutic games for engagement and learning
+🎮 **9 Interactive Games** - Carefully designed therapeutic games for engagement and learning
 - **Feelings Faces** - Explore and recognize emotions
 - **Cross the Road** - Choose Walk or Wait to cross safely _(timing and decision-making)_
-- **Garden Finder** - Visual search and pattern recognition
 - **Ball Drop** - Physics-based interactive gameplay
 - **Emotion Mirror** - Read feelings on an animated 3D face _(emotional recognition)_
 - **Block Buddies** - Take turns stacking a tower with a robot _(turn taking)_
@@ -45,13 +44,9 @@
     </td>
   </tr>
   <tr>
-    <td align="center" width="50%">
+    <td align="center" colspan="2">
       <b>Feelings Faces Game</b><br>
-      <img src="./docs/3.png" width="100%" alt="Feelings Faces">
-    </td>
-    <td align="center" width="50%">
-      <b>Garden Finder Game</b><br>
-      <img src="./docs/4.png" width="100%" alt="Garden Finder">
+      <img src="./docs/3.png" width="50%" alt="Feelings Faces">
     </td>
   </tr>
   <tr>
@@ -95,9 +90,6 @@ Explore and identify different emotions through interactive faces. Perfect for e
 
 ### 🚦 Cross the Road
 Navigate safely across the road while avoiding obstacles. Develops timing, decision-making, and risk assessment skills.
-
-### 🦋 Garden Finder
-Find hidden objects in a beautiful garden environment. Enhances visual search and pattern recognition abilities.
 
 ### 🔴 Ball Drop
 Interactive physics-based game where colored balls drop and react to movement. Encourages hand-eye coordination and spatial awareness.
@@ -145,8 +137,7 @@ autism-games/
 │   ├── components/       # Reusable React components
 │   ├── games/            # Game implementations
 │   │   ├── emotions/     # Feelings Faces game
-│   │   ├── balldrop/     # Ball Drop game
-│   │   └── garden/       # Garden Finder game
+│   │   └── balldrop/     # Ball Drop game
 │   ├── pages/            # Page components
 │   ├── state/            # Zustand stores (scores, settings)
 │   ├── services/         # Utility services (sounds, etc.)

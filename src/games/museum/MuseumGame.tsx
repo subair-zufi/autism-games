@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { GAME_LIST } from '../../types'
 import { useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
@@ -11,16 +11,17 @@ import { speak } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
-  CUE_LADDER,
   FADE_STREAK,
   GOAL,
   START_TIER,
+  cueSchedule,
   errorType,
   fadedTier,
   makeRound,
   pointsFor,
   starsFor,
   supportedTier,
+  trialCue,
   type ExhibitId,
   type Round,
 } from './logic'
@@ -39,10 +40,9 @@ export function MuseumGame() {
   const goal = GOAL[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
-  /** rung on the prompt-fading ladder — starts at the difficulty's entry rung,
-   * thins with success streaks, regains one rung of support after an error */
+  /** rung on the hand's prompt-fading ladder — starts at the difficulty's entry
+   * rung, thins with success streaks, regains one rung of support after an error */
   const [tier, setTier] = useState(() => START_TIER[difficulty])
-  const cue = CUE_LADDER[tier]
   const [round, setRound] = useState<Round>(() => makeRound(difficulty, null))
   const [score, setScore] = useState(0) // child-facing points
   const [found, setFound] = useState(0) // correct finds this session
@@ -54,6 +54,13 @@ export function MuseumGame() {
   const [stars, setStars] = useState(0)
   /** timestamp of the moment the pointing cue settled on the target (latency zero-point) */
   const cueReadyAt = useRef<number | null>(null)
+
+  // Which trials show the gaze doll vs the pointing hand — a fixed, evenly-spread
+  // share of gaze trials per session, so gaze is probed far more than the old
+  // "only at the top of the fade ladder" behaviour allowed.
+  const schedule = useMemo(() => cueSchedule(difficulty), [difficulty])
+  const cueKind = schedule[Math.min(found, schedule.length - 1)]
+  const cue = trialCue(cueKind, tier, wrongPicks.length > 0)
 
   // Malayalam-aware speech + level captions (surface the cue-fading ladder).
   const say = (key: Parameters<typeof museumLine>[0], params?: Record<string, string>) =>
@@ -83,7 +90,7 @@ export function MuseumGame() {
   function handleCueReady() {
     if (cueReadyAt.current !== null) return
     cueReadyAt.current = performance.now()
-    recordStep('cue_ready', { target: round.target, cue })
+    recordStep('cue_ready', { target: round.target, cue, cueKind })
   }
 
   function pick(id: ExhibitId) {
@@ -108,7 +115,7 @@ export function MuseumGame() {
         'answer',
         // visibleCount drives the guessing baseline server-side (1/n) now that
         // the cue no longer identifies the difficulty
-        { correct: true, target: round.target, picked: id, cue, visibleCount: round.visible.length, firstAttempt, latencyMs, points, score: nextScore, found: nextFound },
+        { correct: true, target: round.target, picked: id, cue, cueKind, visibleCount: round.visible.length, firstAttempt, latencyMs, points, score: nextScore, found: nextFound },
         { score: nextScore },
       )
       if (nextFound >= goal) {
@@ -142,6 +149,7 @@ export function MuseumGame() {
         target: round.target,
         picked: id,
         cue,
+        cueKind,
         visibleCount: round.visible.length,
         latencyMs,
         errorType: errorType(round.visible, round.target, id),
@@ -181,6 +189,7 @@ export function MuseumGame() {
             message={t('greatPlaying', lang)}
             lang={lang}
             onRestart={start}
+            onChooseLevel={() => setPhase('start')}
           />
         )}
       </div>
