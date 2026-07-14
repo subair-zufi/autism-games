@@ -3,6 +3,7 @@ export type GameId =
   | 'blocks'
   | 'rollback'
   | 'museum'
+  | 'museum360'
   | 'rightway'
   | 'rulefixer'
   | 'identifyemotions'
@@ -141,6 +142,19 @@ export const GAME_LIST: GameMeta[] = [
     description: 'Look where they look',
     objective:
       'Joint attention · step 1 (responding — prerequisite): follow a pointing hand that fades with success (glowing point → point → far point), interleaved with gaze-only trials where a friend simply looks at the target. Trains the attention-following prerequisite of responding to joint attention across both gesture and gaze cues, not the full live dyadic skill',
+    duration: '5–10 min',
+    hasLevels: false,
+  },
+  {
+    id: 'museum360',
+    title: 'Museum 360',
+    icon: '🧭',
+    path: '/museum-360',
+    color: '#0ea5e9',
+    skill: 'jointattention',
+    description: 'Look all around — follow the cue',
+    objective:
+      'Joint attention · step 1 (responding) in an immersive 360° gallery: the exhibits surround the child, who turns the view (drag or scroll) to follow the same fading point → gaze cues as Museum Look — trains attention-following when the target starts outside the field of view, closer to a real-world head turn',
     duration: '5–10 min',
     hasLevels: false,
   },

@@ -18,6 +18,7 @@ import { EmotionRecognitionGame } from './games/emotionrecognition/EmotionRecogn
 import { BlockGame } from './games/blocks/BlockGame'
 import { RollBackGame } from './games/rollback/RollBackGame'
 import { MuseumGame } from './games/museum/MuseumGame'
+import { Museum360Game } from './games/museum360/Museum360Game'
 import { RightWayGame } from './games/rightway/RightWayGame'
 import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
 import { IdentifyEmotionsGame } from './games/identifyemotions/IdentifyEmotionsGame'
@@ -29,6 +30,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   blocks: BlockGame,
   rollback: RollBackGame,
   museum: MuseumGame,
+  museum360: Museum360Game,
   rightway: RightWayGame,
   rulefixer: RuleFixerGame,
   identifyemotions: IdentifyEmotionsGame,

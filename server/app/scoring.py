@@ -53,6 +53,7 @@ SKILL_BY_GAME = {
     "rightway": "socialnorms",
     "rulefixer": "socialnorms",
     "museum": "jointattention",
+    "museum360": "jointattention",
     "garden": "jointattention",
     "discovery": "jointattention",
 }
@@ -288,7 +289,9 @@ def trials_for_game(game_key: str, events: Iterable[EventLike]) -> list[Trial]:
         return _clips_trials(evs)
     if game_key in ("rightway", "rulefixer"):
         return _payload_chance_trials(evs)
-    if game_key == "museum":
+    if game_key in ("museum", "museum360"):
+        # Museum 360 is the immersive copy of Museum Look — same answer
+        # payloads, so the same 1/visibleCount guessing baseline applies.
         return _pointing_trials(evs, _museum_chance)
     if game_key == "garden":
         return _pointing_trials(evs, lambda p: GARDEN_CHANCE)

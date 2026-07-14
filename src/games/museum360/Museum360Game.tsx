@@ -1,0 +1,265 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { GAME_LIST } from '../../types'
+import { useSettings } from '../../state/settings'
+import { useScores } from '../../state/scores'
+import { StartScreen } from '../../components/StartScreen'
+import { ScoreBar } from '../../components/ScoreBar'
+import { PromptBanner } from '../../components/PromptBanner'
+import { GameOverDialog } from '../../components/GameOverDialog'
+import { WebGLGate } from '../../components/WebGLGate'
+import { speak } from '../../services/speech'
+import { t } from '../../i18n/strings'
+import { playGentle, playSuccess } from '../../services/sounds'
+import {
+  FADE_STREAK,
+  GOAL,
+  START_TIER,
+  cueSchedule,
+  errorType,
+  fadedTier,
+  makeRound,
+  pointsFor,
+  slotBearing,
+  starsFor,
+  supportedTier,
+  trialCue,
+  type ExhibitId,
+  type Round,
+} from './logic'
+import { museum360Line, exhibitLabel } from './strings'
+import { Museum360Scene } from './Museum360Scene'
+import { xrStore, vrSupported } from './xrStore'
+import { useGameAnalytics } from '../useGameAnalytics'
+
+const META = GAME_LIST.find((g) => g.id === 'museum360')!
+
+/** target's direction, in degrees clockwise from the helper — recorded per
+ * trial so analysis can relate performance to how far the child had to turn
+ * (a 170° target demands a bigger attention shift than a 60° one) */
+function targetBearingDeg(round: Round): number {
+  const idx = round.visible.indexOf(round.target)
+  return Math.round((slotBearing(idx, round.visible.length) * 180) / Math.PI)
+}
+
+export function Museum360Game() {
+  const difficulty = useSettings((s) => s.difficulty.museum360)
+  const lang = useSettings((s) => s.language)
+  const best = useScores((s) => s.best.museum360)
+  const reportScore = useScores((s) => s.reportScore)
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('museum360')
+  const goal = GOAL[difficulty]
+
+  const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
+  /** rung on the hand's prompt-fading ladder — starts at the difficulty's entry
+   * rung, thins with success streaks, regains one rung of support after an error */
+  const [tier, setTier] = useState(() => START_TIER[difficulty])
+  const [round, setRound] = useState<Round>(() => makeRound(difficulty, null))
+  const [score, setScore] = useState(0) // child-facing points
+  const [found, setFound] = useState(0) // correct finds this session
+  const [firstTries, setFirstTries] = useState(0) // finds made on the first attempt
+  const [streak, setStreak] = useState(0) // consecutive first-attempt finds
+  const [locked, setLocked] = useState(false)
+  const [wrongPicks, setWrongPicks] = useState<ExhibitId[]>([])
+  const [celebrate, setCelebrate] = useState(0)
+  const [stars, setStars] = useState(0)
+  /** the one-time "drag to look around" hint, dismissed on the first look */
+  const [hintSeen, setHintSeen] = useState(false)
+  /** whether this browser can enter immersive VR (Quest etc.) — shows the button */
+  const [canVR, setCanVR] = useState(false)
+  /** timestamp of the moment the pointing cue settled on the target (latency zero-point) */
+  const cueReadyAt = useRef<number | null>(null)
+
+  useEffect(() => {
+    void vrSupported().then(setCanVR)
+  }, [])
+
+  // When the session ends, leave immersive VR so the (DOM) results dialog and
+  // level picker are visible again on the headset's browser.
+  useEffect(() => {
+    if (phase === 'over') void xrStore.getState().session?.end()
+  }, [phase])
+
+  // Which trials show the gaze doll vs the pointing hand — a fixed, evenly-spread
+  // share of gaze trials per session, same schedule as Museum Look.
+  const schedule = useMemo(() => cueSchedule(difficulty), [difficulty])
+  const cueKind = schedule[Math.min(found, schedule.length - 1)]
+  const cue = trialCue(cueKind, tier, wrongPicks.length > 0)
+
+  // Malayalam-aware speech + level captions (surface the cue-fading ladder).
+  const say = (key: Parameters<typeof museum360Line>[0], params?: Record<string, string>) =>
+    speak(museum360Line(key, lang, params), lang)
+  const levelNotes = {
+    easy: museum360Line('noteEasy', lang),
+    medium: museum360Line('noteMedium', lang),
+    hard: museum360Line('noteHard', lang),
+  }
+
+  function start() {
+    resetSession()
+    setTier(START_TIER[difficulty])
+    setScore(0)
+    setFound(0)
+    setFirstTries(0)
+    setStreak(0)
+    setWrongPicks([])
+    setLocked(false)
+    setCelebrate(0)
+    setStars(0)
+    setHintSeen(false)
+    cueReadyAt.current = null
+    setRound(makeRound(difficulty, null))
+    setPhase('playing')
+  }
+
+  function handleCueReady() {
+    if (cueReadyAt.current !== null) return
+    cueReadyAt.current = performance.now()
+    recordStep('cue_ready', { target: round.target, cue, cueKind, targetBearingDeg: targetBearingDeg(round) })
+  }
+
+  function pick(id: ExhibitId) {
+    if (locked || wrongPicks.includes(id)) return
+    // latency from cue arrival, not round start, so the hand's travel time never
+    // inflates it — in 360 the latency *includes* the time spent turning to look,
+    // which is exactly the attention-shift the game measures
+    const latencyMs = cueReadyAt.current === null ? null : Math.round(performance.now() - cueReadyAt.current)
+    if (id === round.target) {
+      const firstAttempt = wrongPicks.length === 0
+      const nextStreak = firstAttempt ? streak + 1 : 0
+      const points = pointsFor(firstAttempt, nextStreak)
+      const nextScore = score + points
+      const nextFound = found + 1
+      const nextFirstTries = firstTries + (firstAttempt ? 1 : 0)
+      setLocked(true)
+      setCelebrate((c) => c + 1)
+      playSuccess()
+      setScore(nextScore)
+      setFound(nextFound)
+      setFirstTries(nextFirstTries)
+      setStreak(nextStreak)
+      recordStep(
+        'answer',
+        // visibleCount drives the guessing baseline server-side (1/n), same as Museum Look
+        { correct: true, target: round.target, picked: id, cue, cueKind, visibleCount: round.visible.length, targetBearingDeg: targetBearingDeg(round), firstAttempt, latencyMs, points, score: nextScore, found: nextFound },
+        { score: nextScore },
+      )
+      if (nextFound >= goal) {
+        setStars(starsFor(nextFirstTries, goal))
+        say('sayWin')
+        reportScore('museum360', nextScore)
+        finishGame(nextScore)
+        setTimeout(() => setPhase('over'), 1200)
+        return
+      }
+      say('sayCorrect', { label: exhibitLabel(id, lang) })
+      setTimeout(() => {
+        cueReadyAt.current = null
+        setWrongPicks([])
+        setLocked(false)
+        setCelebrate(0)
+        // prompt fading: every FADE_STREAK-th consecutive independent find
+        // thins the cue one rung (pulse -> hover -> distal -> gaze)
+        if (nextStreak > 0 && nextStreak % FADE_STREAK === 0) setTier((t) => fadedTier(t))
+        setRound((r) => makeRound(difficulty, r.target))
+      }, 1400)
+    } else {
+      // No-fail: a wrong tap is gently corrected and the child keeps trying —
+      // the session never ends on a mistake.
+      playGentle()
+      say('sayWrong')
+      setWrongPicks((w) => [...w, id])
+      setStreak(0)
+      recordStep('answer', {
+        correct: false,
+        target: round.target,
+        picked: id,
+        cue,
+        cueKind,
+        visibleCount: round.visible.length,
+        targetBearingDeg: targetBearingDeg(round),
+        latencyMs,
+        errorType: errorType(round.visible, round.target, id),
+      })
+      // least-to-most: an error immediately brings one rung of support back
+      // (the retry happens under the easier cue, recorded as such)
+      setTier((t) => supportedTier(t, difficulty))
+    }
+  }
+
+  if (phase === 'start') return <StartScreen game={META} onStart={start} levelNotes={levelNotes} />
+
+  return (
+    <WebGLGate>
+      <div className="game-page">
+        <ScoreBar score={score} progress={`${found} / ${goal}`} />
+        <div className="game-canvas" onPointerDown={() => setHintSeen(true)}>
+          <Museum360Scene
+            round={round}
+            locked={locked}
+            disabledIds={wrongPicks}
+            celebrate={celebrate}
+            cue={cue}
+            onPick={pick}
+            onCueReady={handleCueReady}
+            hudScore={`⭐ ${score} · 🔍 ${found} / ${goal}`}
+            hudPrompt={museum360Line('prompt', lang)}
+          />
+          {canVR && (
+            <button
+              onClick={() => xrStore.enterVR()}
+              style={{
+                position: 'absolute',
+                top: 10,
+                right: 10,
+                padding: '10px 16px',
+                borderRadius: 22,
+                border: 'none',
+                background: 'rgba(14, 165, 233, 0.92)',
+                color: '#fff',
+                fontWeight: 700,
+                fontSize: '1rem',
+                cursor: 'pointer',
+              }}
+            >
+              🥽 {lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'}
+            </button>
+          )}
+          {!hintSeen && (
+            <div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                bottom: '14%',
+                transform: 'translateX(-50%)',
+                background: 'rgba(0,0,0,0.55)',
+                color: '#fff',
+                padding: '8px 18px',
+                borderRadius: 24,
+                fontSize: '1.05rem',
+                pointerEvents: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              👈 {lang === 'ml' ? 'ചുറ്റും നോക്കാൻ വലിച്ചു നീക്കൂ' : 'Drag to look all around'} 👉
+            </div>
+          )}
+          {celebrate > 0 && locked && <div className="celebrate">⭐</div>}
+        </div>
+        <div className="game-bottom">
+          <PromptBanner text={museum360Line('prompt', lang)} lang={lang} />
+        </div>
+        {phase === 'over' && (
+          <GameOverDialog
+            score={score}
+            best={Math.max(best, score)}
+            stars={stars}
+            message={t('greatPlaying', lang)}
+            lang={lang}
+            onRestart={start}
+            onChooseLevel={() => setPhase('start')}
+          />
+        )}
+      </div>
+    </WebGLGate>
+  )
+}
