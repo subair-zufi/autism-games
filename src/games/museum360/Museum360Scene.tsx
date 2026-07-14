@@ -787,13 +787,13 @@ function Exhibit({
 
   return (
     <group position={position}>
-      {/* pedestal */}
+      {/* slim pedestal — kept narrow so the row hides less of the avatar */}
       <mesh position={[0, PEDESTAL_H / 2, 0]}>
-        <cylinderGeometry args={[0.42, 0.5, PEDESTAL_H, 20]} />
+        <cylinderGeometry args={[0.28, 0.34, PEDESTAL_H, 20]} />
         <meshStandardMaterial color="#bcae98" />
       </mesh>
-      <mesh position={[0, PEDESTAL_H + 0.04, 0]}>
-        <cylinderGeometry args={[0.5, 0.5, 0.12, 20]} />
+      <mesh position={[0, PEDESTAL_H + 0.03, 0]}>
+        <cylinderGeometry args={[0.34, 0.34, 0.1, 20]} />
         <meshStandardMaterial color="#cdbfa6" />
       </mesh>
 
