@@ -23,7 +23,7 @@ export const useSettings = create<SettingsState>()(
       voiceOn: true,
       soundOn: true,
       language: 'en',
-      difficulty: { emotionrecognition: 'easy', blocks: 'easy', rollback: 'easy', museum: 'easy', museum360: 'easy', rightway: 'easy', rulefixer: 'easy', identifyemotions: 'easy', discovery: 'easy' },
+      difficulty: { emotionrecognition: 'easy', blocks: 'easy', rollback: 'easy', football360: 'easy', museum: 'easy', museum360: 'easy', rightway: 'easy', rulefixer: 'easy', identifyemotions: 'easy', discovery: 'easy' },
       setVoiceOn: (voiceOn) => set({ voiceOn }),
       setSoundOn: (soundOn) => set({ soundOn }),
       setLanguage: (language) => set({ language }),

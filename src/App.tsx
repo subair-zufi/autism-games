@@ -17,6 +17,7 @@ import { GAME_LIST, type GameId } from './types'
 import { EmotionRecognitionGame } from './games/emotionrecognition/EmotionRecognitionGame'
 import { BlockGame } from './games/blocks/BlockGame'
 import { RollBackGame } from './games/rollback/RollBackGame'
+import { Football360Game } from './games/football360/Football360Game'
 import { MuseumGame } from './games/museum/MuseumGame'
 import { Museum360Game } from './games/museum360/Museum360Game'
 import { RightWayGame } from './games/rightway/RightWayGame'
@@ -29,6 +30,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotionrecognition: EmotionRecognitionGame,
   blocks: BlockGame,
   rollback: RollBackGame,
+  football360: Football360Game,
   museum: MuseumGame,
   museum360: Museum360Game,
   rightway: RightWayGame,

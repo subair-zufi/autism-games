@@ -2,6 +2,7 @@ export type GameId =
   | 'emotionrecognition'
   | 'blocks'
   | 'rollback'
+  | 'football360'
   | 'museum'
   | 'museum360'
   | 'rightway'
@@ -101,6 +102,19 @@ export const GAME_LIST: GameMeta[] = [
     skill: 'turntaking',
     description: 'Roll the ball back · പന്ത് ഉരുട്ടിക്കൊടുക്കൂ',
     objective: 'Turn-taking · reciprocity: read who is ready for the ball (voice → gesture → body cue) and roll it back · ആരാ റെഡി എന്ന് നോക്കി പന്ത് ഉരുട്ടിക്കൊടുക്കൂ',
+    duration: '5–10 min',
+    hasLevels: false,
+  },
+  {
+    id: 'football360',
+    title: 'Football 360',
+    icon: '🏟️',
+    path: '/football-360',
+    color: '#22c55e',
+    skill: 'turntaking',
+    description: 'Pass on the pitch — look around · ഗ്രൗണ്ടിൽ പാസ് ചെയ്യൂ',
+    objective:
+      'Turn-taking · reciprocity in an immersive first-person football ground: the same read-who-is-ready exchange as Roll-Back Buddy (voice → gesture → body cue, with child-initiated rallies on hard), but the child stands on the centre spot and turns the view — a head turn in VR — to find the teammate who is ready and pass the ball back',
     duration: '5–10 min',
     hasLevels: false,
   },

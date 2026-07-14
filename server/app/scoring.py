@@ -50,6 +50,7 @@ SKILL_BY_GAME = {
     "identifyemotions": "emotion",
     "blocks": "turntaking",
     "rollback": "turntaking",
+    "football360": "turntaking",
     "rightway": "socialnorms",
     "rulefixer": "socialnorms",
     "museum": "jointattention",
@@ -295,7 +296,9 @@ def trials_for_game(game_key: str, events: Iterable[EventLike]) -> list[Trial]:
         return _pointing_trials(evs, _museum_chance)
     if game_key == "garden":
         return _pointing_trials(evs, lambda p: GARDEN_CHANCE)
-    if game_key == "rollback":
+    if game_key in ("rollback", "football360"):
+        # Football 360 is the immersive copy of Roll-Back Buddy — same
+        # roll_return payloads, so the same 1/partners guessing baseline applies.
         return _rollback_trials(evs)
     if game_key == "blocks":
         return _blocks_trials(evs)
