@@ -7,6 +7,8 @@ import {
   EXHIBIT_RADIUS,
   bearingToXZ,
   dragDistance,
+  isDragTail,
+  lookDrag,
   slotBearing,
   type CueMode,
   type ExhibitId,
@@ -64,6 +66,7 @@ export function Museum360Scene(props: Museum360SceneProps) {
  * viewer. Pitch is clamped so the room never flips; motion is damped so
  * turning feels smooth, not jumpy (gentler for sensory comfort).
  */
+
 function LookControls() {
   const { camera, gl } = useThree()
   const view = useRef({ yaw: 0, pitch: 0, tYaw: 0, tPitch: 0 })
@@ -73,11 +76,14 @@ function LookControls() {
     let down = false
     let lastX = 0
     let lastY = 0
+    let startX = 0
+    let startY = 0
     const clampPitch = (p: number) => Math.max(-0.5, Math.min(0.35, p))
     const onDown = (e: PointerEvent) => {
       down = true
-      lastX = e.clientX
-      lastY = e.clientY
+      lastX = startX = e.clientX
+      lastY = startY = e.clientY
+      lookDrag.px = 0
     }
     const onMove = (e: PointerEvent) => {
       if (!down) return
@@ -87,8 +93,10 @@ function LookControls() {
       v.tPitch = clampPitch(v.tPitch + (e.clientY - lastY) * 0.0032)
       lastX = e.clientX
       lastY = e.clientY
+      lookDrag.px = Math.max(lookDrag.px, Math.hypot(e.clientX - startX, e.clientY - startY))
     }
     const onUp = () => {
+      if (down) lookDrag.endedAt = Date.now()
       down = false
     }
     const onWheel = (e: WheelEvent) => {
@@ -407,7 +415,6 @@ function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueR
   const targetIdx = round.visible.indexOf(round.target)
   const targetBearing = slotBearing(targetIdx, n)
   const [tx, tz] = bearingToXZ(targetBearing, EXHIBIT_RADIUS)
-  const hoverPoint = new THREE.Vector3(tx, EXHIBIT_Y + 1.15, tz)
   const aimPoint = new THREE.Vector3(tx, EXHIBIT_Y, tz)
 
   return (
@@ -429,35 +436,30 @@ function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueR
         )
       })}
 
-      {/* the helper is always present at their "home" spot (bearing 0) and
-          shows the cue with their whole body — far more readable in VR than
-          the old floating hand/head */}
+      {/* one person, one cue: the helper avatar at their "home" spot (bearing
+          0) is the single source of every cue — a second floating hand would
+          split the child's attention between two places */}
       <HelperFigure mode={cue} cueKey={round.target} aimPoint={aimPoint} onSettled={onCueReady} />
-
-      {/* on the two closest support rungs a hand additionally hovers right at
-          the target (the proximal point of the fading ladder) */}
-      {(cue === 'pulse' || cue === 'hover') && (
-        <HoverHand cueKey={round.target} hoverPoint={hoverPoint} onSettled={onCueReady} />
-      )}
     </group>
   )
 }
 
-/* ---- the helper: a full standing figure at bearing 0 ----------------------
- * In VR a small floating hand or lone head is nearly impossible to read a
- * direction from (the Quest test confirmed it). The helper is now a whole
- * person: their BODY turns toward the target (body orientation stays legible
- * at any distance), the far point is a full shoulder-anchored ARM with a
- * repeated pointing thrust and a short fingertip sparkle trail — it shows the
- * *direction* for about a metre and stops far short of the target, so the
- * child still extrapolates and searches. The gaze cue looks AT the child
- * first (attention bid), then visibly shifts to the target and keeps
- * re-shifting: a movement, not a pose. Ladder support order is preserved:
- * pulse/hover additionally get the at-target hover hand, distal gets the
- * pointing arm, gaze gets the head turn only (body shifts just subtly).
+/* ---- the helper: a full standing avatar at bearing 0 ----------------------
+ * The avatar is the SINGLE source of every cue (a second floating hand split
+ * the child's attention between two places — Quest pilot feedback). On hand
+ * rungs the body turns toward the target and a shoulder-anchored arm points
+ * with a repeated thrust; the fading ladder is expressed through the extra
+ * support around that one gesture:
+ *   pulse  — point + fingertip sparkle trail + glowing ring at the target
+ *   hover  — point + fingertip sparkle trail
+ *   distal — plain point
+ *   gaze   — no gesture: the head looks at the child first (attention bid),
+ *            then visibly shifts to the target and keeps re-shifting
+ * The trail shows the *direction* for about a metre and stops far short of
+ * the target, so the child still extrapolates and searches.
  */
 const HELPER_POS = new THREE.Vector3(0, 0, -3.1)
-const HEAD_POS = new THREE.Vector3(0, 1.66, -3.1) // head pivot, world space
+const HEAD_POS = new THREE.Vector3(0, 1.74, -3.1) // head pivot, world space
 const CHILD_EYES = new THREE.Vector3(0, 1.5, 0) // roughly the child's face
 const SHOULDER_LOCAL = new THREE.Vector3(0.3, 1.4, 0) // right shoulder, body-local
 const ARM_LEN = 1.05 // shoulder to fingertip along the arm's +z
@@ -502,7 +504,7 @@ function HelperFigure({
   }, [cueKey, mode])
 
   const handMode = mode !== 'gaze'
-  const distal = mode === 'distal'
+  const trailOn = mode === 'pulse' || mode === 'hover'
 
   useFrame((state, dt) => {
     const b = body.current
@@ -510,7 +512,7 @@ function HelperFigure({
     if (!b || !h) return
     if (t0.current === null) t0.current = state.clock.elapsedTime
     const t = state.clock.elapsedTime - t0.current
-    const k = Math.min(1, dt * 3.5)
+    const k = Math.min(1, dt * 5)
 
     // body swings toward the target — on gaze trials only subtly, keeping
     // gaze the head-led (harder) cue
@@ -521,39 +523,42 @@ function HelperFigure({
 
     // head: look at the child first (the attention bid), then at the target;
     // gaze trials repeat the shift every few seconds so it reads as motion
-    const inBid = mode === 'gaze' ? t % 3.6 < 0.9 : t < 0.7
+    const inBid = mode === 'gaze' ? t % 3.0 < 0.75 : t < 0.45
     lookM.lookAt(inBid ? CHILD_EYES : aimPoint, HEAD_POS, UP)
     qHead.setFromRotationMatrix(lookM)
-    h.quaternion.slerp(qHead, Math.min(1, dt * 4.5))
+    h.quaternion.slerp(qHead, Math.min(1, dt * 6))
     // a light bob during the bid marks the moment the gaze shift starts
-    h.position.y = 1.66 + (inBid ? Math.sin(state.clock.elapsedTime * 6) * 0.02 : 0)
+    h.position.y = 1.74 + (inBid ? Math.sin(state.clock.elapsedTime * 6) * 0.02 : 0)
 
     if (mode === 'gaze' && !settled.current && !inBid && h.quaternion.angleTo(qHead) < 0.12) {
       settled.current = true
       onSettledRef.current()
     }
 
-    // the far point: a whole arm from the shoulder with a repeated thrust
+    // every hand rung: the whole arm points from the shoulder with a thrust
     const a = arm.current
-    if (a && distal) {
+    if (a && handMode) {
       vShoulder.copy(SHOULDER_LOCAL).applyAxisAngle(UP, yaw.current).add(HELPER_POS)
       vDir.copy(aimPoint).sub(vShoulder).normalize()
       qArm.setFromUnitVectors(FWD, vDir)
       qBodyInv.setFromAxisAngle(UP, yaw.current).invert()
       qArm.premultiply(qBodyInv) // world → body-local (arm is a child of the body)
-      a.quaternion.slerp(qArm, Math.min(1, dt * 4))
-      const thrust = inBid ? 0 : Math.max(0, Math.sin((t - 0.7) * 2.4)) * 0.12
+      a.quaternion.slerp(qArm, Math.min(1, dt * 6))
+      const thrust = inBid ? 0 : Math.max(0, Math.sin((t - 0.45) * 2.4)) * 0.12
       vLocal.copy(vDir).applyAxisAngle(UP, -yaw.current)
       a.position.copy(SHOULDER_LOCAL).addScaledVector(vLocal, thrust)
 
-      // fingertip sparkle trail: direction only, never reaches the target
-      for (let i = 0; i < dots.current.length; i++) {
-        const dot = dots.current[i]
-        if (!dot) continue
-        const phase = (t * 0.55 + i / TRAIL_DOTS) % 1
-        vDot.copy(vShoulder).addScaledVector(vDir, ARM_LEN + thrust + 0.15 + phase * 1.1).sub(HELPER_POS)
-        dot.position.copy(vDot)
-        ;(dot.material as THREE.MeshBasicMaterial).opacity = inBid ? 0 : 0.85 * (1 - phase)
+      // fingertip sparkle trail (pulse/hover support): direction only,
+      // never reaches the target
+      if (trailOn) {
+        for (let i = 0; i < dots.current.length; i++) {
+          const dot = dots.current[i]
+          if (!dot) continue
+          const phase = (t * 0.55 + i / TRAIL_DOTS) % 1
+          vDot.copy(vShoulder).addScaledVector(vDir, ARM_LEN + thrust + 0.15 + phase * 1.1).sub(HELPER_POS)
+          dot.position.copy(vDot)
+          ;(dot.material as THREE.MeshBasicMaterial).opacity = inBid ? 0 : 0.85 * (1 - phase)
+        }
       }
 
       if (!settled.current && !inBid && a.quaternion.angleTo(qArm) < 0.15 && Math.abs(yawGoal - yaw.current) < 0.12) {
@@ -569,11 +574,18 @@ function HelperFigure({
     <group position={HELPER_POS.toArray()}>
       {/* body (yaw only): legs, torso and the pointing arm */}
       <group ref={body}>
+        {/* legs + shoes */}
         {[-0.13, 0.13].map((x) => (
-          <mesh key={x} position={[x, 0.33, 0]}>
-            <cylinderGeometry args={[0.09, 0.1, 0.66, 10]} />
-            <meshStandardMaterial color="#5a668c" />
-          </mesh>
+          <group key={x}>
+            <mesh position={[x, 0.36, 0]}>
+              <cylinderGeometry args={[0.09, 0.1, 0.72, 10]} />
+              <meshStandardMaterial color="#5a668c" />
+            </mesh>
+            <mesh position={[x, 0.045, 0.05]}>
+              <boxGeometry args={[0.16, 0.09, 0.3]} />
+              <meshStandardMaterial color="#3a3a44" />
+            </mesh>
+          </group>
         ))}
         <mesh position={[0, 1.02, 0]}>
           <cylinderGeometry args={[0.26, 0.32, 0.75, 14]} />
@@ -584,13 +596,50 @@ function HelperFigure({
           <sphereGeometry args={[0.32, 14, 14]} />
           <meshStandardMaterial color={shirt} />
         </mesh>
-        {/* resting left arm */}
-        <mesh position={[-0.34, 1.05, 0]} rotation={[0, 0, 0.15]}>
-          <cylinderGeometry args={[0.055, 0.065, 0.72, 10]} />
-          <meshStandardMaterial color={shirt} />
+        {/* neck, so the head sits on the body instead of in it */}
+        <mesh position={[0, 1.52, 0]}>
+          <cylinderGeometry args={[0.09, 0.11, 0.18, 10]} />
+          <meshStandardMaterial color={skin} />
         </mesh>
-        {/* pointing right arm, built along +z, aimed in useFrame (far point only) */}
-        <group ref={arm} position={SHOULDER_LOCAL.toArray()} visible={distal}>
+        {/* shoulder joints keep both arms visually attached */}
+        {[-0.3, 0.3].map((x) => (
+          <mesh key={x} position={[x, 1.4, 0]}>
+            <sphereGeometry args={[0.1, 12, 12]} />
+            <meshStandardMaterial color={shirt} />
+          </mesh>
+        ))}
+        {/* resting left arm: sleeve, forearm and a hand */}
+        <group position={[-0.3, 1.4, 0]} rotation={[0, 0, 0.12]}>
+          <mesh position={[0, -0.26, 0]}>
+            <cylinderGeometry args={[0.065, 0.075, 0.5, 10]} />
+            <meshStandardMaterial color={shirt} />
+          </mesh>
+          <mesh position={[0, -0.62, 0]}>
+            <cylinderGeometry args={[0.05, 0.06, 0.26, 10]} />
+            <meshStandardMaterial color={skin} />
+          </mesh>
+          <mesh position={[0, -0.8, 0]}>
+            <sphereGeometry args={[0.07, 10, 10]} />
+            <meshStandardMaterial color={skin} />
+          </mesh>
+        </group>
+        {/* resting right arm — shown when the avatar is not pointing (gaze) */}
+        <group position={[0.3, 1.4, 0]} rotation={[0, 0, -0.12]} visible={!handMode}>
+          <mesh position={[0, -0.26, 0]}>
+            <cylinderGeometry args={[0.065, 0.075, 0.5, 10]} />
+            <meshStandardMaterial color={shirt} />
+          </mesh>
+          <mesh position={[0, -0.62, 0]}>
+            <cylinderGeometry args={[0.05, 0.06, 0.26, 10]} />
+            <meshStandardMaterial color={skin} />
+          </mesh>
+          <mesh position={[0, -0.8, 0]}>
+            <sphereGeometry args={[0.07, 10, 10]} />
+            <meshStandardMaterial color={skin} />
+          </mesh>
+        </group>
+        {/* pointing right arm, built along +z, aimed in useFrame (hand rungs) */}
+        <group ref={arm} position={SHOULDER_LOCAL.toArray()} visible={handMode}>
           <mesh position={[0, 0, 0.29]} rotation={[Math.PI / 2, 0, 0]}>
             <cylinderGeometry args={[0.06, 0.075, 0.58, 10]} />
             <meshStandardMaterial color={shirt} />
@@ -599,20 +648,20 @@ function HelperFigure({
             <cylinderGeometry args={[0.05, 0.06, 0.32, 10]} />
             <meshStandardMaterial color={skin} />
           </mesh>
-          <mesh position={[0, 0, 0.92]}>
-            <boxGeometry args={[0.12, 0.11, 0.13]} />
+          {/* a rounded hand with an extended index finger */}
+          <mesh position={[0, 0, 0.9]} scale={[1, 0.9, 1.2]}>
+            <sphereGeometry args={[0.065, 10, 10]} />
             <meshStandardMaterial color={skin} />
           </mesh>
-          {/* extended index finger */}
-          <mesh position={[0, 0, ARM_LEN - 0.02]}>
-            <boxGeometry args={[0.04, 0.04, 0.18]} />
+          <mesh position={[0, 0, ARM_LEN - 0.03]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.018, 0.022, 0.16, 8]} />
             <meshStandardMaterial color={skin} />
           </mesh>
         </group>
       </group>
 
       {/* head — independent of body yaw, so gaze stays a head-led cue */}
-      <group ref={head} position={[0, 1.66, 0]}>
+      <group ref={head} position={[0, 1.74, 0]}>
         <mesh>
           <sphereGeometry args={[0.3, 20, 20]} />
           <meshStandardMaterial color={skin} />
@@ -647,8 +696,8 @@ function HelperFigure({
         </mesh>
       </group>
 
-      {/* fingertip direction trail (far point only; positioned in useFrame) */}
-      <group visible={distal}>
+      {/* fingertip direction trail (pulse/hover support; positioned in useFrame) */}
+      <group visible={trailOn}>
         {Array.from({ length: TRAIL_DOTS }, (_, i) => (
           <mesh key={i} ref={(m) => { dots.current[i] = m }}>
             <sphereGeometry args={[0.05, 8, 8]} />
@@ -733,9 +782,12 @@ function Exhibit({
           visible={false}
           onClick={(e) => {
             e.stopPropagation()
-            // a drag that ends on a pedestal is looking around, not a pick
-            // (XR trigger/pinch events carry no drag — dragDistance handles both)
-            if (dragDistance(e) > 8) return
+            // a drag that ends on a pedestal is looking around, not a pick.
+            // Checked against LookControls' own measurement (recent drag) AND
+            // the event's drag distance where available — XR trigger/pinch
+            // events carry neither and count as clean taps (dragDistance
+            // swallows their throwing delta getter).
+            if (isDragTail() || dragDistance(e) > 8) return
             if (!disabled) onPick()
           }}
           onPointerOver={(e) => {
@@ -842,68 +894,3 @@ function ExhibitModel({ id }: { id: ExhibitId }) {
   }
 }
 
-/** The proximal point of the fading ladder: a hand floating right at the
- *  target (pulse/hover rungs). The far point is the helper's arm instead. */
-function HoverHand({
-  cueKey,
-  hoverPoint,
-  onSettled,
-}: {
-  cueKey: ExhibitId
-  hoverPoint: THREE.Vector3
-  onSettled: () => void
-}) {
-  const group = useRef<THREE.Group>(null)
-  const settled = useRef(false)
-  // keep the latest callback without re-subscribing the frame loop
-  const onSettledRef = useRef(onSettled)
-  onSettledRef.current = onSettled
-
-  useEffect(() => {
-    settled.current = false
-  }, [cueKey])
-
-  useFrame((state, dt) => {
-    const g = group.current
-    if (!g) return
-    const k = Math.min(1, dt * 4)
-    g.position.lerp(hoverPoint, k)
-    g.position.y += Math.sin(state.clock.elapsedTime * 3) * 0.02
-    g.rotation.set(0, 0, Math.sin(state.clock.elapsedTime * 1.5) * 0.06)
-    if (!settled.current && g.position.distanceTo(hoverPoint) < 0.25) {
-      settled.current = true
-      onSettledRef.current()
-    }
-  })
-
-  const skin = '#f2c89b'
-  return (
-    <group ref={group} position={[0, 4, 0]} scale={0.8}>
-      {/* palm */}
-      <mesh position={[0.05, 0.55, 0]}>
-        <boxGeometry args={[0.5, 0.55, 0.22]} />
-        <meshStandardMaterial color={skin} />
-      </mesh>
-      {/* extended index finger, pointing down (rotated toward the target in distal mode) */}
-      <mesh position={[-0.14, 0.12, 0]}>
-        <boxGeometry args={[0.16, 0.5, 0.18]} />
-        <meshStandardMaterial color={skin} />
-      </mesh>
-      {/* folded fingers */}
-      <mesh position={[0.13, 0.26, 0]}>
-        <boxGeometry args={[0.32, 0.24, 0.23]} />
-        <meshStandardMaterial color="#e8b888" />
-      </mesh>
-      {/* thumb */}
-      <mesh position={[0.34, 0.62, 0]} rotation={[0, 0, 0.55]}>
-        <boxGeometry args={[0.14, 0.32, 0.16]} />
-        <meshStandardMaterial color={skin} />
-      </mesh>
-      {/* cuff */}
-      <mesh position={[0.05, 0.92, 0]}>
-        <boxGeometry args={[0.56, 0.2, 0.28]} />
-        <meshStandardMaterial color="#7f8fb6" />
-      </mesh>
-    </group>
-  )
-}

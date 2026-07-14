@@ -13,6 +13,9 @@ export const xrStore = createXRStore({
   // the child stands still at the centre of the rotunda — no teleport/locomotion
   hand: { teleportPointer: false },
   controller: { teleportPointer: false },
+  // no localhost headset emulation: its fake pose/controller interferes with
+  // the on-screen (non-VR) mode during development, and real devices never use it
+  emulate: false,
 })
 
 /** Whether this browser can offer immersive VR (drives the Enter VR button). */

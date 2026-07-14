@@ -68,6 +68,9 @@ export function Museum360Game() {
   const [canVR, setCanVR] = useState(false)
   /** timestamp of the moment the pointing cue settled on the target (latency zero-point) */
   const cueReadyAt = useRef<number | null>(null)
+  /** last pick, to swallow duplicate click events — the XR layer forwards
+   * HTML events alongside r3f's own, so one tap can reach pick() twice */
+  const lastPick = useRef<{ id: ExhibitId; at: number } | null>(null)
 
   useEffect(() => {
     void vrSupported().then(setCanVR)
@@ -118,6 +121,9 @@ export function Museum360Game() {
   }
 
   function pick(id: ExhibitId) {
+    const now = performance.now()
+    if (lastPick.current && lastPick.current.id === id && now - lastPick.current.at < 250) return
+    lastPick.current = { id, at: now }
     if (locked || wrongPicks.includes(id)) return
     // latency from cue arrival, not round start, so the hand's travel time never
     // inflates it — in 360 the latency *includes* the time spent turning to look,
@@ -152,6 +158,8 @@ export function Museum360Game() {
         return
       }
       say('sayCorrect', { label: exhibitLabel(id, lang) })
+      // short pause: long enough for the star + wobble to land, short enough
+      // that the next trial doesn't feel laggy (Quest pilot feedback)
       setTimeout(() => {
         cueReadyAt.current = null
         setWrongPicks([])
@@ -161,7 +169,7 @@ export function Museum360Game() {
         // thins the cue one rung (pulse -> hover -> distal -> gaze)
         if (nextStreak > 0 && nextStreak % FADE_STREAK === 0) setTier((t) => fadedTier(t))
         setRound((r) => makeRound(difficulty, r.target))
-      }, 1400)
+      }, 1000)
     } else {
       // No-fail: a wrong tap is gently corrected and the child keeps trying —
       // the session never ends on a mistake.

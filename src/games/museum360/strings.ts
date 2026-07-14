@@ -31,10 +31,12 @@ const MESSAGES = {
     en: 'Look again — turn around and see what they show you!',
     ml: 'ഒന്നൂടെ ചുറ്റും നോക്ക്. എന്താ കാണിക്കുന്നത്?',
   },
-  // Level-picker captions — surface where the fading ladder starts.
-  noteEasy: { en: 'Glowing point to start', ml: 'തുടക്കം തിളങ്ങുന്ന ചൂണ്ടൽ' },
-  noteMedium: { en: 'Plain point to start', ml: 'തുടക്കം സാധാരണ ചൂണ്ടൽ' },
-  noteHard: { en: 'Far point, fading to just a look', ml: 'ദൂരെ ചൂണ്ടൽ, പിന്നെ നോട്ടം മാത്രം' },
+  // Level-picker captions — surface where the fading ladder starts. All cues
+  // come from the helper avatar; support fades from a glowing target down to
+  // just their look.
+  noteEasy: { en: 'Point + glowing target to start', ml: 'തുടക്കം ചൂണ്ടലും തിളങ്ങുന്ന ലക്ഷ്യവും' },
+  noteMedium: { en: 'Point + sparkle trail to start', ml: 'തുടക്കം മിന്നും പൊട്ടുകളോടെ ചൂണ്ടൽ' },
+  noteHard: { en: 'Plain point, fading to just a look', ml: 'വെറും ചൂണ്ടൽ, പിന്നെ നോട്ടം മാത്രം' },
 } satisfies Record<string, Entry>
 
 export type Museum360Key = keyof typeof MESSAGES

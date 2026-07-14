@@ -10,6 +10,8 @@ import {
   cueSchedule,
   dragDistance,
   errorType,
+  isDragTail,
+  lookDrag,
   exhibitMeta,
   fadedTier,
   makeRound,
@@ -179,6 +181,18 @@ test('dragDistance reads screen drags but treats XR events as clean taps', () =>
     },
   }
   expect(dragDistance(xrEvent)).toBe(0)
+})
+
+test('isDragTail blocks clicks that end a look-around drag, then expires', () => {
+  lookDrag.px = 0
+  lookDrag.endedAt = 1000
+  expect(isDragTail(1050)).toBe(false) // no drag: a plain tap goes through
+  lookDrag.px = 120
+  expect(isDragTail(1050)).toBe(true) // click right after a drag is the drag's tail
+  expect(isDragTail(1000 + 800)).toBe(false) // ...but a later tap is deliberate
+  lookDrag.px = 4
+  expect(isDragTail(1050)).toBe(false) // tiny wobble under the threshold is a tap
+  lookDrag.px = 0
 })
 
 test('errorType splits near-misses from picks far around the room', () => {

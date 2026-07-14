@@ -31,9 +31,12 @@ const COUNT: Record<Difficulty, number> = { easy: 3, medium: 4, hard: 6 }
  * start outside the field of view entirely, the way real-world responding to
  * joint attention requires a head turn, not just an eye shift.
  *
- * Cue kinds and fading are identical to Museum Look:
- *  - a pointing HAND at three fading support levels (pulse -> hover -> distal)
- *  - a GAZE-only helper turning to look at the target
+ * Cue fading follows Museum Look's ladder, but every cue comes from ONE
+ * helper avatar (a second floating hand split attention — Quest pilot):
+ *  - pulse:  avatar points + fingertip sparkle trail + glowing target ring
+ *  - hover:  avatar points + fingertip sparkle trail
+ *  - distal: avatar points, nothing else
+ *  - gaze:   no gesture — the avatar only turns to look at the target
  * with the same least-to-most support on errors and the same gaze schedule.
  */
 export type CueMode = 'pulse' | 'hover' | 'distal' | 'gaze'
@@ -179,6 +182,21 @@ export function dragDistance(e: { delta?: number }): number {
   } catch {
     return 0
   }
+}
+
+/**
+ * The last look-around drag, measured by the scene's own controls. Exhibit
+ * taps are ignored right after a drag — independent of which event system
+ * delivered the click, since the XR layer forwards a second copy of every
+ * screen event whose drag distance is unreadable (see dragDistance).
+ * Lives here (not in the scene file) so hot reload never duplicates it and
+ * the guard is unit-testable.
+ */
+export const lookDrag = { px: 0, endedAt: 0 }
+
+/** whether a click arriving now is just the tail end of a look-around drag */
+export function isDragTail(now: number = Date.now()): boolean {
+  return lookDrag.px > 8 && now - lookDrag.endedAt < 700
 }
 
 function shuffle<T>(arr: T[], rng: () => number): T[] {
