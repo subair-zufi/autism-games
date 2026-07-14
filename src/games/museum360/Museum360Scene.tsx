@@ -6,6 +6,7 @@ import { xrStore } from './xrStore'
 import {
   EXHIBIT_RADIUS,
   bearingToXZ,
+  dragDistance,
   slotBearing,
   type CueMode,
   type ExhibitId,
@@ -610,7 +611,8 @@ function Exhibit({
           onClick={(e) => {
             e.stopPropagation()
             // a drag that ends on a pedestal is looking around, not a pick
-            if (e.delta > 8) return
+            // (XR trigger/pinch events carry no drag — dragDistance handles both)
+            if (dragDistance(e) > 8) return
             if (!disabled) onPick()
           }}
           onPointerOver={(e) => {

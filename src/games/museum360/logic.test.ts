@@ -8,6 +8,7 @@ import {
   START_TIER,
   bearingToXZ,
   cueSchedule,
+  dragDistance,
   errorType,
   exhibitMeta,
   fadedTier,
@@ -163,6 +164,21 @@ test('stars reward first-try finds; every finished session earns at least one', 
   expect(starsFor(3, 5)).toBe(2) // 60%
   expect(starsFor(2, 5)).toBe(1) // 40%
   expect(starsFor(0, 5)).toBe(1) // never below one
+})
+
+test('dragDistance reads screen drags but treats XR events as clean taps', () => {
+  // screen (r3f) events report drag pixels in `delta`
+  expect(dragDistance({ delta: 0 })).toBe(0)
+  expect(dragDistance({ delta: 42 })).toBe(42)
+  expect(dragDistance({})).toBe(0)
+  // XR controller/hand events (pmndrs/pointer-events) THROW on accessing
+  // `delta` — a trigger squeeze must still count as a tap, never crash
+  const xrEvent = {
+    get delta(): number {
+      throw new Error('not supported')
+    },
+  }
+  expect(dragDistance(xrEvent)).toBe(0)
 })
 
 test('errorType splits near-misses from picks far around the room', () => {

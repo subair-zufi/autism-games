@@ -166,6 +166,21 @@ export function bearingToXZ(bearing: number, radius: number): [number, number] {
   return [Math.sin(bearing) * radius, -Math.cos(bearing) * radius]
 }
 
+/**
+ * How far the pointer travelled between press and release, in screen pixels —
+ * used to ignore "taps" that were really look-around drags. Screen events
+ * (r3f) report this as `delta`; XR controller/hand events (pmndrs/
+ * pointer-events) *throw* on accessing it, so those count as clean taps —
+ * correct, since in VR the head does the looking and no drag exists.
+ */
+export function dragDistance(e: { delta?: number }): number {
+  try {
+    return e.delta ?? 0
+  } catch {
+    return 0
+  }
+}
+
 function shuffle<T>(arr: T[], rng: () => number): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
