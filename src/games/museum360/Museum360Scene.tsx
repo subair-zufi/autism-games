@@ -429,45 +429,68 @@ function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueR
         )
       })}
 
-      {cue === 'gaze' ? (
-        <GazingHead cueKey={round.target} aimPoint={aimPoint} onSettled={onCueReady} />
-      ) : (
-        <PointingHand
-          mode={cue === 'distal' ? 'distal' : 'hover'}
-          cueKey={round.target}
-          hoverPoint={hoverPoint}
-          aimPoint={aimPoint}
-          onSettled={onCueReady}
-        />
+      {/* the helper is always present at their "home" spot (bearing 0) and
+          shows the cue with their whole body — far more readable in VR than
+          the old floating hand/head */}
+      <HelperFigure mode={cue} cueKey={round.target} aimPoint={aimPoint} onSettled={onCueReady} />
+
+      {/* on the two closest support rungs a hand additionally hovers right at
+          the target (the proximal point of the fading ladder) */}
+      {(cue === 'pulse' || cue === 'hover') && (
+        <HoverHand cueKey={round.target} hoverPoint={hoverPoint} onSettled={onCueReady} />
       )}
     </group>
   )
 }
 
-/** where the gazing helper stands: at bearing 0, between the child and the wall,
- *  facing the child when the view is at its starting direction */
-const GAZE_POS = new THREE.Vector3(0, 1.95, -3.1)
-const GAZE_UP = new THREE.Vector3(0, 1, 0)
-const gazeM = new THREE.Matrix4()
-const gazeQ = new THREE.Quaternion()
-
-/**
- * The thinnest rung of the prompt ladder: no hand, no point — just a friendly
- * face turning to *look* at the target, which may be behind the child. The
- * child must read the head's direction and turn the view the same way — the
- * full real-world gaze-following loop. Fires `onSettled` once the head's turn
- * has landed on the target.
+/* ---- the helper: a full standing figure at bearing 0 ----------------------
+ * In VR a small floating hand or lone head is nearly impossible to read a
+ * direction from (the Quest test confirmed it). The helper is now a whole
+ * person: their BODY turns toward the target (body orientation stays legible
+ * at any distance), the far point is a full shoulder-anchored ARM with a
+ * repeated pointing thrust and a short fingertip sparkle trail — it shows the
+ * *direction* for about a metre and stops far short of the target, so the
+ * child still extrapolates and searches. The gaze cue looks AT the child
+ * first (attention bid), then visibly shifts to the target and keeps
+ * re-shifting: a movement, not a pose. Ladder support order is preserved:
+ * pulse/hover additionally get the at-target hover hand, distal gets the
+ * pointing arm, gaze gets the head turn only (body shifts just subtly).
  */
-function GazingHead({
+const HELPER_POS = new THREE.Vector3(0, 0, -3.1)
+const HEAD_POS = new THREE.Vector3(0, 1.66, -3.1) // head pivot, world space
+const CHILD_EYES = new THREE.Vector3(0, 1.5, 0) // roughly the child's face
+const SHOULDER_LOCAL = new THREE.Vector3(0.3, 1.4, 0) // right shoulder, body-local
+const ARM_LEN = 1.05 // shoulder to fingertip along the arm's +z
+const TRAIL_DOTS = 4
+const UP = new THREE.Vector3(0, 1, 0)
+const FWD = new THREE.Vector3(0, 0, 1)
+// scratch objects reused every frame
+const lookM = new THREE.Matrix4()
+const qHead = new THREE.Quaternion()
+const qArm = new THREE.Quaternion()
+const qBodyInv = new THREE.Quaternion()
+const vShoulder = new THREE.Vector3()
+const vDir = new THREE.Vector3()
+const vLocal = new THREE.Vector3()
+const vDot = new THREE.Vector3()
+
+function HelperFigure({
+  mode,
   cueKey,
   aimPoint,
   onSettled,
 }: {
+  mode: CueMode
   cueKey: ExhibitId
   aimPoint: THREE.Vector3
   onSettled: () => void
 }) {
+  const body = useRef<THREE.Group>(null)
   const head = useRef<THREE.Group>(null)
+  const arm = useRef<THREE.Group>(null)
+  const dots = useRef<(THREE.Mesh | null)[]>([])
+  const yaw = useRef(0)
+  const t0 = useRef<number | null>(null)
   const settled = useRef(false)
   // keep the latest callback without re-subscribing the frame loop
   const onSettledRef = useRef(onSettled)
@@ -475,64 +498,164 @@ function GazingHead({
 
   useEffect(() => {
     settled.current = false
-  }, [cueKey])
+    t0.current = null // restart the attention-bid sequence each round
+  }, [cueKey, mode])
+
+  const handMode = mode !== 'gaze'
+  const distal = mode === 'distal'
 
   useFrame((state, dt) => {
-    const g = head.current
-    if (!g) return
-    const k = Math.min(1, dt * 3)
-    // face model is built looking down +z (toward the child at the centre), so
-    // this orients the face toward whichever pedestal holds the target
-    gazeM.lookAt(aimPoint, GAZE_POS, GAZE_UP)
-    gazeQ.setFromRotationMatrix(gazeM)
-    g.quaternion.slerp(gazeQ, k)
-    // local bob around the parent's anchor, not an absolute height
-    g.position.y = Math.sin(state.clock.elapsedTime * 1.6) * 0.03
-    if (!settled.current && g.quaternion.angleTo(gazeQ) < 0.1) {
+    const b = body.current
+    const h = head.current
+    if (!b || !h) return
+    if (t0.current === null) t0.current = state.clock.elapsedTime
+    const t = state.clock.elapsedTime - t0.current
+    const k = Math.min(1, dt * 3.5)
+
+    // body swings toward the target — on gaze trials only subtly, keeping
+    // gaze the head-led (harder) cue
+    const yawToAim = Math.atan2(aimPoint.x - HELPER_POS.x, aimPoint.z - HELPER_POS.z)
+    const yawGoal = (handMode ? 1 : 0.35) * yawToAim
+    yaw.current += (yawGoal - yaw.current) * k
+    b.rotation.y = yaw.current
+
+    // head: look at the child first (the attention bid), then at the target;
+    // gaze trials repeat the shift every few seconds so it reads as motion
+    const inBid = mode === 'gaze' ? t % 3.6 < 0.9 : t < 0.7
+    lookM.lookAt(inBid ? CHILD_EYES : aimPoint, HEAD_POS, UP)
+    qHead.setFromRotationMatrix(lookM)
+    h.quaternion.slerp(qHead, Math.min(1, dt * 4.5))
+    // a light bob during the bid marks the moment the gaze shift starts
+    h.position.y = 1.66 + (inBid ? Math.sin(state.clock.elapsedTime * 6) * 0.02 : 0)
+
+    if (mode === 'gaze' && !settled.current && !inBid && h.quaternion.angleTo(qHead) < 0.12) {
       settled.current = true
       onSettledRef.current()
+    }
+
+    // the far point: a whole arm from the shoulder with a repeated thrust
+    const a = arm.current
+    if (a && distal) {
+      vShoulder.copy(SHOULDER_LOCAL).applyAxisAngle(UP, yaw.current).add(HELPER_POS)
+      vDir.copy(aimPoint).sub(vShoulder).normalize()
+      qArm.setFromUnitVectors(FWD, vDir)
+      qBodyInv.setFromAxisAngle(UP, yaw.current).invert()
+      qArm.premultiply(qBodyInv) // world → body-local (arm is a child of the body)
+      a.quaternion.slerp(qArm, Math.min(1, dt * 4))
+      const thrust = inBid ? 0 : Math.max(0, Math.sin((t - 0.7) * 2.4)) * 0.12
+      vLocal.copy(vDir).applyAxisAngle(UP, -yaw.current)
+      a.position.copy(SHOULDER_LOCAL).addScaledVector(vLocal, thrust)
+
+      // fingertip sparkle trail: direction only, never reaches the target
+      for (let i = 0; i < dots.current.length; i++) {
+        const dot = dots.current[i]
+        if (!dot) continue
+        const phase = (t * 0.55 + i / TRAIL_DOTS) % 1
+        vDot.copy(vShoulder).addScaledVector(vDir, ARM_LEN + thrust + 0.15 + phase * 1.1).sub(HELPER_POS)
+        dot.position.copy(vDot)
+        ;(dot.material as THREE.MeshBasicMaterial).opacity = inBid ? 0 : 0.85 * (1 - phase)
+      }
+
+      if (!settled.current && !inBid && a.quaternion.angleTo(qArm) < 0.15 && Math.abs(yawGoal - yaw.current) < 0.12) {
+        settled.current = true
+        onSettledRef.current()
+      }
     }
   })
 
   const skin = '#f2c89b'
+  const shirt = '#7f8fb6'
   return (
-    <group position={GAZE_POS.toArray()}>
-      <group ref={head}>
-        {/* head */}
+    <group position={HELPER_POS.toArray()}>
+      {/* body (yaw only): legs, torso and the pointing arm */}
+      <group ref={body}>
+        {[-0.13, 0.13].map((x) => (
+          <mesh key={x} position={[x, 0.33, 0]}>
+            <cylinderGeometry args={[0.09, 0.1, 0.66, 10]} />
+            <meshStandardMaterial color="#5a668c" />
+          </mesh>
+        ))}
+        <mesh position={[0, 1.02, 0]}>
+          <cylinderGeometry args={[0.26, 0.32, 0.75, 14]} />
+          <meshStandardMaterial color={shirt} />
+        </mesh>
+        {/* shoulders */}
+        <mesh position={[0, 1.4, 0]} scale={[1, 0.55, 0.8]}>
+          <sphereGeometry args={[0.32, 14, 14]} />
+          <meshStandardMaterial color={shirt} />
+        </mesh>
+        {/* resting left arm */}
+        <mesh position={[-0.34, 1.05, 0]} rotation={[0, 0, 0.15]}>
+          <cylinderGeometry args={[0.055, 0.065, 0.72, 10]} />
+          <meshStandardMaterial color={shirt} />
+        </mesh>
+        {/* pointing right arm, built along +z, aimed in useFrame (far point only) */}
+        <group ref={arm} position={SHOULDER_LOCAL.toArray()} visible={distal}>
+          <mesh position={[0, 0, 0.29]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.06, 0.075, 0.58, 10]} />
+            <meshStandardMaterial color={shirt} />
+          </mesh>
+          <mesh position={[0, 0, 0.72]} rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.05, 0.06, 0.32, 10]} />
+            <meshStandardMaterial color={skin} />
+          </mesh>
+          <mesh position={[0, 0, 0.92]}>
+            <boxGeometry args={[0.12, 0.11, 0.13]} />
+            <meshStandardMaterial color={skin} />
+          </mesh>
+          {/* extended index finger */}
+          <mesh position={[0, 0, ARM_LEN - 0.02]}>
+            <boxGeometry args={[0.04, 0.04, 0.18]} />
+            <meshStandardMaterial color={skin} />
+          </mesh>
+        </group>
+      </group>
+
+      {/* head — independent of body yaw, so gaze stays a head-led cue */}
+      <group ref={head} position={[0, 1.66, 0]}>
         <mesh>
-          <sphereGeometry args={[0.42, 20, 20]} />
+          <sphereGeometry args={[0.3, 20, 20]} />
           <meshStandardMaterial color={skin} />
         </mesh>
         {/* hair cap */}
-        <mesh position={[0, 0.16, -0.06]} scale={[1, 0.75, 1]}>
-          <sphereGeometry args={[0.45, 20, 20]} />
+        <mesh position={[0, 0.12, -0.05]} scale={[1, 0.72, 1]}>
+          <sphereGeometry args={[0.32, 20, 20]} />
           <meshStandardMaterial color="#4a3320" />
         </mesh>
-        {/* eyes: whites + pupils on the +z face — they travel with the turn */}
-        {[-0.15, 0.15].map((ex) => (
-          <group key={ex} position={[ex, 0.04, 0.36]}>
-            <mesh scale={[1, 1.25, 0.5]}>
-              <sphereGeometry args={[0.085, 12, 12]} />
+        {/* big high-contrast eyes — readable from across the room */}
+        {[-0.11, 0.11].map((ex) => (
+          <group key={ex} position={[ex, 0.03, 0.25]}>
+            <mesh scale={[1, 1.3, 0.5]}>
+              <sphereGeometry args={[0.075, 12, 12]} />
               <meshStandardMaterial color="#ffffff" />
             </mesh>
-            <mesh position={[0, 0, 0.05]}>
-              <sphereGeometry args={[0.042, 10, 10]} />
-              <meshStandardMaterial color="#2b2620" />
+            <mesh position={[0, 0, 0.045]}>
+              <sphereGeometry args={[0.04, 10, 10]} />
+              <meshStandardMaterial color="#1c1712" />
             </mesh>
           </group>
         ))}
+        {/* the nose makes head orientation legible even in profile */}
+        <mesh position={[0, -0.03, 0.3]} rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.045, 0.14, 10]} />
+          <meshStandardMaterial color="#e8b888" />
+        </mesh>
         {/* smile (arc flipped downward) */}
-        <mesh position={[0, -0.13, 0.38]} rotation={[0.25, 0, Math.PI]}>
-          <torusGeometry args={[0.09, 0.022, 8, 16, Math.PI]} />
+        <mesh position={[0, -0.13, 0.26]} rotation={[0.25, 0, Math.PI]}>
+          <torusGeometry args={[0.07, 0.018, 8, 16, Math.PI]} />
           <meshStandardMaterial color="#9a5b4a" />
         </mesh>
       </group>
-      {/* shoulders — same cuff colour as the pointing hand, so the gaze tier
-          reads as the same helper with the pointing faded away */}
-      <mesh position={[0, -0.55, 0]} scale={[1.5, 0.8, 0.9]}>
-        <sphereGeometry args={[0.42, 16, 16]} />
-        <meshStandardMaterial color="#7f8fb6" />
-      </mesh>
+
+      {/* fingertip direction trail (far point only; positioned in useFrame) */}
+      <group visible={distal}>
+        {Array.from({ length: TRAIL_DOTS }, (_, i) => (
+          <mesh key={i} ref={(m) => { dots.current[i] = m }}>
+            <sphereGeometry args={[0.05, 8, 8]} />
+            <meshBasicMaterial color="#ffd95e" transparent opacity={0} />
+          </mesh>
+        ))}
+      </group>
     </group>
   )
 }
@@ -719,23 +842,15 @@ function ExhibitModel({ id }: { id: ExhibitId }) {
   }
 }
 
-/** where the distal hand floats: beside the helper at bearing 0, raised so the
- *  point across (or behind) the room reads clearly */
-const DISTAL_POS = new THREE.Vector3(0, 2.35, -2.9)
-const DOWN = new THREE.Vector3(0, -1, 0)
-const distalBase = new THREE.Vector3()
-
-function PointingHand({
-  mode,
+/** The proximal point of the fading ladder: a hand floating right at the
+ *  target (pulse/hover rungs). The far point is the helper's arm instead. */
+function HoverHand({
   cueKey,
   hoverPoint,
-  aimPoint,
   onSettled,
 }: {
-  mode: 'hover' | 'distal'
   cueKey: ExhibitId
   hoverPoint: THREE.Vector3
-  aimPoint: THREE.Vector3
   onSettled: () => void
 }) {
   const group = useRef<THREE.Group>(null)
@@ -746,48 +861,24 @@ function PointingHand({
 
   useEffect(() => {
     settled.current = false
-  }, [cueKey, mode])
+  }, [cueKey])
 
   useFrame((state, dt) => {
     const g = group.current
     if (!g) return
     const k = Math.min(1, dt * 4)
-    if (mode === 'hover') {
-      g.position.lerp(hoverPoint, k)
-      g.position.y += Math.sin(state.clock.elapsedTime * 3) * 0.02
-      g.rotation.set(0, 0, Math.sin(state.clock.elapsedTime * 1.5) * 0.06)
-      if (!settled.current && g.position.distanceTo(hoverPoint) < 0.25) {
-        settled.current = true
-        onSettledRef.current()
-      }
-    } else {
-      // drift a little toward the target's side of the room, the way a real
-      // arm shifts across the body when pointing
-      distalBase.set(
-        DISTAL_POS.x + (aimPoint.x / EXHIBIT_RADIUS) * 0.5,
-        DISTAL_POS.y,
-        DISTAL_POS.z + ((aimPoint.z - DISTAL_POS.z) / EXHIBIT_RADIUS) * 0.4,
-      )
-      g.position.lerp(distalBase, k)
-      g.position.y += Math.sin(state.clock.elapsedTime * 3) * 0.012
-      const dir = aimPoint.clone().sub(g.position).normalize()
-      const q = new THREE.Quaternion().setFromUnitVectors(DOWN, dir)
-      g.quaternion.slerp(q, k)
-      if (!settled.current && g.position.distanceTo(distalBase) < 0.25 && g.quaternion.angleTo(q) < 0.12) {
-        settled.current = true
-        onSettledRef.current()
-      }
+    g.position.lerp(hoverPoint, k)
+    g.position.y += Math.sin(state.clock.elapsedTime * 3) * 0.02
+    g.rotation.set(0, 0, Math.sin(state.clock.elapsedTime * 1.5) * 0.06)
+    if (!settled.current && g.position.distanceTo(hoverPoint) < 0.25) {
+      settled.current = true
+      onSettledRef.current()
     }
   })
 
   const skin = '#f2c89b'
-  const distal = mode === 'distal'
   return (
-    <group
-      ref={group}
-      position={distal ? DISTAL_POS.toArray() : [0, 4, 0]}
-      scale={distal ? 0.6 : 0.8}
-    >
+    <group ref={group} position={[0, 4, 0]} scale={0.8}>
       {/* palm */}
       <mesh position={[0.05, 0.55, 0]}>
         <boxGeometry args={[0.5, 0.55, 0.22]} />
