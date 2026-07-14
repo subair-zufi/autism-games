@@ -248,7 +248,7 @@ export function Museum360Game() {
                 whiteSpace: 'nowrap',
               }}
             >
-              👈 {lang === 'ml' ? 'ചുറ്റും നോക്കാൻ വലിച്ചു നീക്കൂ' : 'Drag to look all around'} 👉
+              👈 {lang === 'ml' ? 'ഇടത്തോട്ടും വലത്തോട്ടും വലിച്ചു നോക്കൂ' : 'Drag to look left and right'} 👉
             </div>
           )}
           {celebrate > 0 && locked && <div className="celebrate">⭐</div>}

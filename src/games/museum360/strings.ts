@@ -16,8 +16,8 @@ type Entry = Record<Lang, string>
 // the child must *turn around* to find what is shown.
 const MESSAGES = {
   prompt: {
-    en: 'Turn all around — tap what they show you!',
-    ml: 'ചുറ്റും തിരിഞ്ഞു നോക്കൂ — കാണിക്കുന്നത് തൊട്ടോളൂ!',
+    en: 'Look along the row — tap what they show you!',
+    ml: 'വരിയിൽ നോക്കി കാണിക്കുന്നത് തൊട്ടോളൂ!',
   },
   sayWin: {
     en: 'You followed every cue! Wonderful looking!',
@@ -28,8 +28,8 @@ const MESSAGES = {
     ml: 'ശരി! {label}!',
   },
   sayWrong: {
-    en: 'Look again — turn around and see what they show you!',
-    ml: 'ഒന്നൂടെ ചുറ്റും നോക്ക്. എന്താ കാണിക്കുന്നത്?',
+    en: 'Look again — which one are they showing you?',
+    ml: 'ഒന്നൂടെ നോക്ക് — ഏതാ കാണിക്കുന്നത്?',
   },
   // Level-picker captions — surface where the fading ladder starts. All cues
   // come from the helper avatar; support fades from a glowing target down to

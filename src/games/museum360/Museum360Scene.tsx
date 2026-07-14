@@ -15,8 +15,11 @@ import {
   type Round,
 } from './logic'
 
-const PEDESTAL_H = 1.2
-const EXHIBIT_Y = PEDESTAL_H + 0.55
+// shorter pedestals than the flat-screen Museum Look: the exhibits sit a bit
+// lower so they clear the helper avatar standing behind the row (the avatar's
+// face and pointing arm stay readable above the exhibits)
+const PEDESTAL_H = 1.0
+const EXHIBIT_Y = PEDESTAL_H + 0.5
 /** the child's eye height — the camera stands here, at the centre of the rotunda */
 const EYE_Y = 1.7
 
@@ -440,16 +443,31 @@ function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueR
           0) is the single source of every cue — a second floating hand would
           split the child's attention between two places */}
       <HelperFigure mode={cue} cueKey={round.target} aimPoint={aimPoint} onSettled={onCueReady} />
+
+      {/* podium the helper stands on, behind the row, so the exhibits never
+          hide its face or merge with its body (the gaze cue needs the face
+          readable). Two tiers so it reads as a small stage, not a plinth. */}
+      <group position={[0, 0, HELPER_Z]}>
+        <mesh position={[0, HELPER_LIFT * 0.35, 0]}>
+          <cylinderGeometry args={[1.15, 1.3, HELPER_LIFT * 0.7, 32]} />
+          <meshStandardMaterial color="#b3a68e" metalness={0.2} roughness={0.5} />
+        </mesh>
+        <mesh position={[0, HELPER_LIFT * 0.85, 0]}>
+          <cylinderGeometry args={[0.95, 1.1, HELPER_LIFT * 0.3, 32]} />
+          <meshStandardMaterial color="#c3b79e" metalness={0.2} roughness={0.5} />
+        </mesh>
+      </group>
     </group>
   )
 }
 
-/* ---- the helper: a full standing avatar at bearing 0 ----------------------
+/* ---- the helper: a full standing avatar behind the front row --------------
  * The avatar is the SINGLE source of every cue (a second floating hand split
- * the child's attention between two places — Quest pilot feedback). On hand
- * rungs the body turns toward the target and a shoulder-anchored arm points
- * with a repeated thrust; the fading ladder is expressed through the extra
- * support around that one gesture:
+ * the child's attention between two places — Quest pilot feedback). It stands
+ * behind the row of exhibits, facing the child, on a low dais so the row never
+ * hides its face. On hand rungs the body turns toward the target and a
+ * shoulder-anchored arm points with a repeated thrust; the fading ladder is
+ * expressed through the extra support around that one gesture:
  *   pulse  — point + fingertip sparkle trail + glowing ring at the target
  *   hover  — point + fingertip sparkle trail
  *   distal — plain point
@@ -458,8 +476,13 @@ function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueR
  * The trail shows the *direction* for about a metre and stops far short of
  * the target, so the child still extrapolates and searches.
  */
-const HELPER_POS = new THREE.Vector3(0, 0, -3.1)
-const HEAD_POS = new THREE.Vector3(0, 1.74, -3.1) // head pivot, world space
+const HELPER_Z = -7.9 // behind the row (exhibits sit at radius 5.4 in front)
+// podium height — raises the whole upper body clear of the exhibits so the
+// avatar reads as standing *behind* the row and never merges with the exhibit
+// directly in front of it (e.g. the centre pedestal on the 3-exhibit level)
+const HELPER_LIFT = 0.8
+const HELPER_POS = new THREE.Vector3(0, HELPER_LIFT, HELPER_Z)
+const HEAD_POS = new THREE.Vector3(0, HELPER_LIFT + 1.74, HELPER_Z) // head pivot, world space
 const CHILD_EYES = new THREE.Vector3(0, 1.5, 0) // roughly the child's face
 const SHOULDER_LOCAL = new THREE.Vector3(0.3, 1.4, 0) // right shoulder, body-local
 const ARM_LEN = 1.05 // shoulder to fingertip along the arm's +z

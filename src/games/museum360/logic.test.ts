@@ -6,6 +6,7 @@ import {
   GOAL,
   HAND_LADDER,
   START_TIER,
+  FRONT_HALF_ARC,
   bearingToXZ,
   cueSchedule,
   dragDistance,
@@ -55,30 +56,24 @@ test('deterministic with seeded rng', () => {
   expect(a).toEqual(b)
 })
 
-test('bearings run clockwise, symmetric around the point behind the child', () => {
+test('exhibits form a front row: ordered left to right, symmetric about centre', () => {
   for (const n of [3, 4, 6]) {
     const bearings = Array.from({ length: n }, (_, i) => slotBearing(i, n))
     for (let i = 1; i < bearings.length; i++) expect(bearings[i]).toBeGreaterThan(bearings[i - 1])
-    // symmetric: first and last pedestals sit at mirrored bearings
-    expect(bearings[0] + bearings[n - 1]).toBeCloseTo(Math.PI * 2)
+    // symmetric about straight-ahead: the two ends mirror around bearing 0
+    expect(bearings[0] + bearings[n - 1]).toBeCloseTo(0)
   }
 })
 
-test('a gap is kept around the helper (bearing 0) so no pedestal hides behind them', () => {
+test('every exhibit stays in front — a head turn, never a spin behind the child', () => {
   for (const n of [3, 4, 6]) {
     for (let i = 0; i < n; i++) {
       const b = slotBearing(i, n)
-      expect(b).toBeGreaterThan(Math.PI / 4)
-      expect(b).toBeLessThan(Math.PI * 2 - Math.PI / 4)
+      // within the front arc, and comfortably inside the ±90° front hemisphere
+      expect(Math.abs(b)).toBeLessThanOrEqual(FRONT_HALF_ARC + 1e-9)
+      expect(Math.abs(b)).toBeLessThan(Math.PI / 2)
     }
   }
-})
-
-test('on hard, some pedestals sit behind the child — the view must turn', () => {
-  const behind = Array.from({ length: 6 }, (_, i) => slotBearing(i, 6)).filter(
-    (b) => b > Math.PI / 2 && b < (3 * Math.PI) / 2,
-  )
-  expect(behind.length).toBeGreaterThanOrEqual(2)
 })
 
 test('bearingToXZ maps bearing 0 to straight ahead (-z) and π to behind (+z)', () => {

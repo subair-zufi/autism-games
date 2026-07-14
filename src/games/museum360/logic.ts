@@ -26,10 +26,11 @@ const COUNT: Record<Difficulty, number> = { easy: 3, medium: 4, hard: 6 }
 
 /**
  * Same joint-attention design as Museum Look (see museum/logic.ts), lifted into
- * a 360° rotunda: the child stands at the centre and the exhibits surround
- * them, so following the cue can require *turning the view* — the target may
- * start outside the field of view entirely, the way real-world responding to
- * joint attention requires a head turn, not just an eye shift.
+ * an immersive first-person gallery: the child stands inside the rotunda and
+ * the exhibits sit in a gentle arc directly in front of them, with the helper
+ * avatar behind the row facing them. Following the cue is a comfortable head
+ * turn along the row (never a body spin behind the child) — the ergonomic,
+ * headset-friendly version of a real "look where I'm pointing" exchange.
  *
  * Cue fading follows Museum Look's ladder, but every cue comes from ONE
  * helper avatar (a second floating hand split attention — Quest pilot):
@@ -143,25 +144,25 @@ export function makeRound(
   return { target, visible }
 }
 
-/* ---- 360° layout -----------------------------------------------------------
- * Bearings are radians clockwise from the helper, who stands at bearing 0 —
- * the direction the view faces when a session starts. Exhibits are spread
- * around the rest of the circle (a gap is kept around the helper so no
- * pedestal hides behind them), which puts the middle exhibits *behind* the
- * child: they must turn the view to find those.
+/* ---- front-row layout ------------------------------------------------------
+ * Bearings are radians left(−)/right(+) of straight-ahead (bearing 0 = the
+ * direction the view faces when a session starts). The exhibits sit in a
+ * shallow arc in FRONT of the child — every pedestal within ±FRONT_HALF_ARC of
+ * centre, so the whole row is a gentle head turn away and nothing hides behind
+ * the child. All exhibits share one radius, so they're equidistant (steady
+ * focus in a headset). The helper avatar stands behind the row, facing the
+ * child, so its gaze/point reads across the exhibits.
  */
 
-/** distance from the centre of the room to each pedestal */
-export const EXHIBIT_RADIUS = 5.2
-/** gap kept clear either side of the helper (bearing 0) */
-const ARC_GAP = (Math.PI * 55) / 180
+/** distance from the child at the centre to each pedestal in the front row */
+export const EXHIBIT_RADIUS = 5.4
+/** half-width of the row: exhibits span from −this to +this around straight-ahead */
+export const FRONT_HALF_ARC = (Math.PI * 40) / 180
 
-/** Bearing of pedestal `index` of `n`, spread evenly around the child. */
+/** Bearing of pedestal `index` of `n`, spread evenly across the front arc. */
 export function slotBearing(index: number, n: number): number {
-  if (n === 1) return Math.PI
-  const start = ARC_GAP
-  const end = Math.PI * 2 - ARC_GAP
-  return start + (index / (n - 1)) * (end - start)
+  if (n === 1) return 0
+  return -FRONT_HALF_ARC + (index / (n - 1)) * (2 * FRONT_HALF_ARC)
 }
 
 /** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z). */

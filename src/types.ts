@@ -152,9 +152,9 @@ export const GAME_LIST: GameMeta[] = [
     path: '/museum-360',
     color: '#0ea5e9',
     skill: 'jointattention',
-    description: 'Look all around — follow the cue',
+    description: 'Look along the row — follow the cue',
     objective:
-      'Joint attention · step 1 (responding) in an immersive 360° gallery: the exhibits surround the child, who turns the view (drag or scroll) to follow the same fading point → gaze cues as Museum Look — trains attention-following when the target starts outside the field of view, closer to a real-world head turn',
+      'Joint attention · step 1 (responding) in an immersive first-person gallery: the exhibits sit in a row in front of the child with the helper avatar facing them, and the child turns the view to follow the same fading point and gaze cues as Museum Look — a headset-friendly head turn along the row, closer to a real-world "look where I point" exchange',
     duration: '5–10 min',
     hasLevels: false,
   },
