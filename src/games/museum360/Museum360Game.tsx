@@ -19,7 +19,7 @@ import {
   fadedTier,
   makeRound,
   pointsFor,
-  slotBearing,
+  slotHeadingDeg,
   starsFor,
   supportedTier,
   trialCue,
@@ -33,12 +33,13 @@ import { useGameAnalytics } from '../useGameAnalytics'
 
 const META = GAME_LIST.find((g) => g.id === 'museum360')!
 
-/** target's direction, in degrees clockwise from the helper — recorded per
- * trial so analysis can relate performance to how far the child had to turn
- * (a 170° target demands a bigger attention shift than a 60° one) */
+/** the child's head-turn to reach the target, in degrees left(−)/right(+) of
+ * straight-ahead — recorded per trial so analysis can relate performance to
+ * how far the child had to shift attention (an edge target is a bigger turn
+ * than a central one) */
 function targetBearingDeg(round: Round): number {
   const idx = round.visible.indexOf(round.target)
-  return Math.round((slotBearing(idx, round.visible.length) * 180) / Math.PI)
+  return slotHeadingDeg(idx, round.visible.length)
 }
 
 export function Museum360Game() {
@@ -87,6 +88,10 @@ export function Museum360Game() {
   const schedule = useMemo(() => cueSchedule(difficulty), [difficulty])
   const cueKind = schedule[Math.min(found, schedule.length - 1)]
   const cue = trialCue(cueKind, tier, wrongPicks.length > 0)
+  // The prompt names the cue the child should follow this trial, so a pointing
+  // trial and a look-only trial ask for different things instead of one vague
+  // line. A missed gaze trial that falls back to the hand reads as pointing.
+  const promptKey = cue === 'gaze' ? 'promptLook' : 'promptPoint'
 
   // Malayalam-aware speech + level captions (surface the cue-fading ladder).
   const say = (key: Parameters<typeof museum360Line>[0], params?: Record<string, string>) =>
@@ -210,7 +215,7 @@ export function Museum360Game() {
             onPick={pick}
             onCueReady={handleCueReady}
             hudScore={`⭐ ${score} · 🔍 ${found} / ${goal}`}
-            hudPrompt={museum360Line('prompt', lang)}
+            hudPrompt={museum360Line(promptKey, lang)}
           />
           {canVR && (
             <button
@@ -254,7 +259,7 @@ export function Museum360Game() {
           {celebrate > 0 && locked && <div className="celebrate">⭐</div>}
         </div>
         <div className="game-bottom">
-          <PromptBanner text={museum360Line('prompt', lang)} lang={lang} />
+          <PromptBanner text={museum360Line(promptKey, lang)} lang={lang} />
         </div>
         {phase === 'over' && (
           <GameOverDialog

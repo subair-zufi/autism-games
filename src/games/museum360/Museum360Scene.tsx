@@ -4,12 +4,13 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import {
-  EXHIBIT_RADIUS,
+  AVATAR_Z,
+  OBJECT_RADIUS,
   bearingToXZ,
   dragDistance,
   isDragTail,
   lookDrag,
-  slotBearing,
+  slotPosition,
   type CueMode,
   type ExhibitId,
   type Round,
@@ -18,7 +19,7 @@ import {
 // shorter pedestals than the flat-screen Museum Look: the exhibits sit a bit
 // lower so they clear the helper avatar standing behind the row (the avatar's
 // face and pointing arm stay readable above the exhibits)
-const PEDESTAL_H = 1.0
+const PEDESTAL_H = 0.9
 const EXHIBIT_Y = PEDESTAL_H + 0.5
 /** the child's eye height — the camera stands here, at the centre of the rotunda */
 const EYE_Y = 1.7
@@ -227,9 +228,9 @@ function RotundaRoom() {
         <circleGeometry args={[ROOM_R, 64]} />
         <meshStandardMaterial color="#cfc9c0" metalness={0.35} roughness={0.18} />
       </mesh>
-      {/* a darker inlaid marble ring under the circle of exhibits */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, 0]}>
-        <ringGeometry args={[EXHIBIT_RADIUS - 0.9, EXHIBIT_RADIUS + 0.9, 64]} />
+      {/* a darker inlaid marble band running under the front row of exhibits */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.005, AVATAR_Z + OBJECT_RADIUS * 0.85]}>
+        <circleGeometry args={[OBJECT_RADIUS + 1.1, 48]} />
         <meshStandardMaterial color="#bcb09a" metalness={0.3} roughness={0.25} />
       </mesh>
       {/* a small medallion where the child stands */}
@@ -416,8 +417,7 @@ function Bench({ bearingDeg }: { bearingDeg: number }) {
 function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueReady }: Museum360SceneProps) {
   const n = round.visible.length
   const targetIdx = round.visible.indexOf(round.target)
-  const targetBearing = slotBearing(targetIdx, n)
-  const [tx, tz] = bearingToXZ(targetBearing, EXHIBIT_RADIUS)
+  const [tx, tz] = slotPosition(targetIdx, n)
   const aimPoint = new THREE.Vector3(tx, EXHIBIT_Y, tz)
 
   return (
@@ -425,8 +425,7 @@ function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueR
       {cue === 'pulse' && <TargetRing x={tx} z={tz} />}
 
       {round.visible.map((id, i) => {
-        const bearing = slotBearing(i, n)
-        const [x, z] = bearingToXZ(bearing, EXHIBIT_RADIUS)
+        const [x, z] = slotPosition(i, n)
         return (
           <Exhibit
             key={id}
@@ -476,11 +475,11 @@ function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueR
  * The trail shows the *direction* for about a metre and stops far short of
  * the target, so the child still extrapolates and searches.
  */
-const HELPER_Z = -7.9 // behind the row (exhibits sit at radius 5.4 in front)
-// podium height — raises the whole upper body clear of the exhibits so the
-// avatar reads as standing *behind* the row and never merges with the exhibit
-// directly in front of it (e.g. the centre pedestal on the 3-exhibit level)
-const HELPER_LIFT = 0.8
+const HELPER_Z = AVATAR_Z // the avatar stands at the arc's centre, behind the row
+// podium height — on odd-count levels one exhibit sits on the avatar's forward
+// axis, so the avatar stands high enough that its head, torso and pointing arm
+// all clear the row and only its legs pass behind the centre exhibit
+const HELPER_LIFT = 1.0
 const HELPER_POS = new THREE.Vector3(0, HELPER_LIFT, HELPER_Z)
 const HEAD_POS = new THREE.Vector3(0, HELPER_LIFT + 1.74, HELPER_Z) // head pivot, world space
 const CHILD_EYES = new THREE.Vector3(0, 1.5, 0) // roughly the child's face

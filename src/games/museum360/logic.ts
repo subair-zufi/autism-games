@@ -21,8 +21,8 @@ export function exhibitMeta(id: ExhibitId): ExhibitMeta {
   return EXHIBITS.find((e) => e.id === id)!
 }
 
-/** how many pedestals surround the child — more exhibits = harder to follow the cue */
-const COUNT: Record<Difficulty, number> = { easy: 3, medium: 4, hard: 6 }
+/** how many pedestals are in the row — more exhibits = harder to follow the cue */
+const COUNT: Record<Difficulty, number> = { easy: 3, medium: 4, hard: 5 }
 
 /**
  * Same joint-attention design as Museum Look (see museum/logic.ts), lifted into
@@ -144,28 +144,51 @@ export function makeRound(
   return { target, visible }
 }
 
-/* ---- front-row layout ------------------------------------------------------
- * Bearings are radians left(−)/right(+) of straight-ahead (bearing 0 = the
- * direction the view faces when a session starts). The exhibits sit in a
- * shallow arc in FRONT of the child — every pedestal within ±FRONT_HALF_ARC of
- * centre, so the whole row is a gentle head turn away and nothing hides behind
- * the child. All exhibits share one radius, so they're equidistant (steady
- * focus in a headset). The helper avatar stands behind the row, facing the
- * child, so its gaze/point reads across the exhibits.
+/* ---- front-row layout, arced around the AVATAR -----------------------------
+ * The exhibits sit on an arc CENTRED ON THE HELPER AVATAR (not the child): the
+ * avatar stands at the arc's centre and the pedestals fan out in front of it,
+ * toward the child. Two consequences:
+ *  1. Every exhibit is equidistant from the avatar and evenly spaced *in the
+ *     avatar's own field of view*, so the avatar's gaze/point angle to each
+ *     one is distinct — the child can tell the far-right exhibit from a middle
+ *     one (arcing around the *child* instead compressed those angles and made
+ *     the cue ambiguous, especially on the busiest level).
+ *  2. Because the pedestals are one radius away from the avatar in every
+ *     direction, none sits at the avatar's body — the exhibit is always well
+ *     in front of it (this also fixes the old centre-exhibit overlap).
+ * `slotAngle` is the angle from the avatar's forward direction; `slotPosition`
+ * is the resulting floor position. Everything is still in front of the child,
+ * a gentle head turn away — nothing behind them.
  */
 
-/** distance from the child at the centre to each pedestal in the front row */
-export const EXHIBIT_RADIUS = 5.4
-/** half-width of the row: exhibits span from −this to +this around straight-ahead */
+/** the avatar (and the arc's centre) stands this far back, on the −z axis */
+export const AVATAR_Z = -7.4
+/** distance from the avatar to each pedestal on the arc */
+export const OBJECT_RADIUS = 4.2
+/** half-width of the arc: exhibits span ±this around the avatar's forward line */
 export const FRONT_HALF_ARC = (Math.PI * 40) / 180
 
-/** Bearing of pedestal `index` of `n`, spread evenly across the front arc. */
+/** Angle of pedestal `index` of `n` from the avatar's forward direction. */
 export function slotBearing(index: number, n: number): number {
   if (n === 1) return 0
   return -FRONT_HALF_ARC + (index / (n - 1)) * (2 * FRONT_HALF_ARC)
 }
 
-/** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z). */
+/** Floor [x, z] of pedestal `index` of `n`, on the arc centred on the avatar. */
+export function slotPosition(index: number, n: number): [number, number] {
+  const a = slotBearing(index, n)
+  return [Math.sin(a) * OBJECT_RADIUS, AVATAR_Z + Math.cos(a) * OBJECT_RADIUS]
+}
+
+/** The child's head-turn to face pedestal `index`, in degrees left(−)/right(+)
+ *  of straight-ahead — recorded per trial as the attention-shift size. */
+export function slotHeadingDeg(index: number, n: number): number {
+  const [x, z] = slotPosition(index, n)
+  return Math.round((Math.atan2(x, -z) * 180) / Math.PI)
+}
+
+/** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z).
+ *  Used for wall decor arranged around the rotunda (centred on the child). */
 export function bearingToXZ(bearing: number, radius: number): [number, number] {
   return [Math.sin(bearing) * radius, -Math.cos(bearing) * radius]
 }

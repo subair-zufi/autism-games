@@ -6,7 +6,8 @@ import {
   GOAL,
   HAND_LADDER,
   START_TIER,
-  FRONT_HALF_ARC,
+  AVATAR_Z,
+  OBJECT_RADIUS,
   bearingToXZ,
   cueSchedule,
   dragDistance,
@@ -18,6 +19,7 @@ import {
   makeRound,
   pointsFor,
   slotBearing,
+  slotPosition,
   starsFor,
   supportedTier,
   trialCue,
@@ -28,10 +30,10 @@ const rng = (seq: number[]) => {
   return () => seq[i++ % seq.length]
 }
 
-test('easy shows 3 exhibits, medium 4, hard 6', () => {
+test('easy shows 3 exhibits, medium 4, hard 5', () => {
   expect(makeRound('easy', null, Math.random).visible).toHaveLength(3)
   expect(makeRound('medium', null, Math.random).visible).toHaveLength(4)
-  expect(makeRound('hard', null, Math.random).visible).toHaveLength(6)
+  expect(makeRound('hard', null, Math.random).visible).toHaveLength(5)
 })
 
 test('visible always includes the target and has no duplicates', () => {
@@ -56,22 +58,32 @@ test('deterministic with seeded rng', () => {
   expect(a).toEqual(b)
 })
 
-test('exhibits form a front row: ordered left to right, symmetric about centre', () => {
-  for (const n of [3, 4, 6]) {
+test('exhibit angles are ordered left to right and symmetric about the avatar', () => {
+  for (const n of [3, 4, 5]) {
     const bearings = Array.from({ length: n }, (_, i) => slotBearing(i, n))
     for (let i = 1; i < bearings.length; i++) expect(bearings[i]).toBeGreaterThan(bearings[i - 1])
-    // symmetric about straight-ahead: the two ends mirror around bearing 0
+    // symmetric about the avatar's forward line: the two ends mirror around 0
     expect(bearings[0] + bearings[n - 1]).toBeCloseTo(0)
   }
 })
 
 test('every exhibit stays in front — a head turn, never a spin behind the child', () => {
-  for (const n of [3, 4, 6]) {
+  for (const n of [3, 4, 5]) {
     for (let i = 0; i < n; i++) {
-      const b = slotBearing(i, n)
-      // within the front arc, and comfortably inside the ±90° front hemisphere
-      expect(Math.abs(b)).toBeLessThanOrEqual(FRONT_HALF_ARC + 1e-9)
-      expect(Math.abs(b)).toBeLessThan(Math.PI / 2)
+      const [x, z] = slotPosition(i, n)
+      // in front of the child (negative z) and a modest head turn from centre
+      expect(z).toBeLessThan(0)
+      expect(Math.abs(Math.atan2(x, -z))).toBeLessThan(Math.PI / 2)
+    }
+  }
+})
+
+test('the row arcs around the AVATAR: every exhibit is equidistant from it', () => {
+  for (const n of [3, 4, 5]) {
+    for (let i = 0; i < n; i++) {
+      const [x, z] = slotPosition(i, n)
+      const distToAvatar = Math.hypot(x - 0, z - AVATAR_Z)
+      expect(distToAvatar).toBeCloseTo(OBJECT_RADIUS) // even gaze/point angles
     }
   }
 })

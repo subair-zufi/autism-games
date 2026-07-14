@@ -15,9 +15,14 @@ type Entry = Record<Lang, string>
 // face turning to look at the target. The 360 twist is surfaced in the prompt:
 // the child must *turn around* to find what is shown.
 const MESSAGES = {
-  prompt: {
-    en: 'Look along the row — tap what they show you!',
-    ml: 'വരിയിൽ നോക്കി കാണിക്കുന്നത് തൊട്ടോളൂ!',
+  // Two cue kinds, two prompts, so the child knows what to follow this trial.
+  promptPoint: {
+    en: 'They are pointing — tap what they point to!',
+    ml: 'അവർ ചൂണ്ടുന്നു — ചൂണ്ടുന്നത് തൊട്ടോളൂ!',
+  },
+  promptLook: {
+    en: 'They are looking — tap where they look!',
+    ml: 'അവർ നോക്കുന്നു — നോക്കുന്നത് തൊട്ടോളൂ!',
   },
   sayWin: {
     en: 'You followed every cue! Wonderful looking!',
