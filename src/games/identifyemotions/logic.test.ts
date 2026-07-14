@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import { CONFUSABLE_WITH, type EmotionId } from '../emotionVocab'
-import { VIDEO_CLIPS, VIDEO_COUNT, buildQuiz } from './logic'
+import { HARD_CLIPS, VIDEO_CLIPS, VIDEO_COUNT, buildQuiz } from './logic'
 
 // Deterministic PRNG (mulberry32) so builds are reproducible in tests.
 function seeded(seed: number): () => number {
@@ -14,19 +14,38 @@ function seeded(seed: number): () => number {
   }
 }
 
-test('there are 12 clips, 2 per emotion', () => {
-  expect(VIDEO_CLIPS).toHaveLength(12)
-  const counts: Record<string, number> = {}
-  for (const c of VIDEO_CLIPS) counts[c.emotion] = (counts[c.emotion] ?? 0) + 1
-  expect(Object.values(counts)).toEqual([2, 2, 2, 2, 2, 2])
+test('both pools have 12 clips, 2 per emotion', () => {
+  for (const pool of [VIDEO_CLIPS, HARD_CLIPS]) {
+    expect(pool).toHaveLength(12)
+    const counts: Record<string, number> = {}
+    for (const c of pool) counts[c.emotion] = (counts[c.emotion] ?? 0) + 1
+    expect(Object.values(counts)).toEqual([2, 2, 2, 2, 2, 2])
+  }
 })
 
-test('every clip has a gender and early < peak timestamps', () => {
+test('every clip has a gender; hard clips have early < peak timestamps', () => {
   for (const c of VIDEO_CLIPS) {
     expect(['boy', 'girl']).toContain(c.gender)
     expect(c.peakTime).toBeGreaterThan(0)
+  }
+  for (const c of HARD_CLIPS) {
+    expect(['boy', 'girl']).toContain(c.gender)
+    expect(c.peakTime).toBeGreaterThan(0)
     expect(c.earlyTime).toBeGreaterThan(0)
-    expect(c.earlyTime).toBeLessThan(c.peakTime)
+    expect(c.earlyTime!).toBeLessThan(c.peakTime)
+  }
+})
+
+test('every hard clip has an authored cause with a valid answer index', () => {
+  for (const c of HARD_CLIPS) {
+    expect(c.cause).toBeDefined()
+    expect(c.cause!.options.length).toBeGreaterThanOrEqual(2)
+    expect(c.cause!.answerIndex).toBeGreaterThanOrEqual(0)
+    expect(c.cause!.answerIndex).toBeLessThan(c.cause!.options.length)
+    for (const opt of c.cause!.options) {
+      expect(opt.en.length).toBeGreaterThan(0)
+      expect(opt.ml.length).toBeGreaterThan(0)
+    }
   }
 })
 
@@ -96,7 +115,7 @@ test('easy/medium freeze at the peak; hard freezes early (lower intensity)', () 
 })
 
 test('authored cause questions are shuffled with the answer tracked', () => {
-  const clip = VIDEO_CLIPS[0]
+  const clip = HARD_CLIPS[0]
   const original = clip.cause
   clip.cause = {
     options: [
