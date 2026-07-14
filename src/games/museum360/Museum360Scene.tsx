@@ -19,7 +19,7 @@ import {
 // shorter pedestals than the flat-screen Museum Look: the exhibits sit a bit
 // lower so they clear the helper avatar standing behind the row (the avatar's
 // face and pointing arm stay readable above the exhibits)
-const PEDESTAL_H = 0.9
+const PEDESTAL_H = 0.6
 const EXHIBIT_Y = PEDESTAL_H + 0.5
 /** the child's eye height — the camera stands here, at the centre of the rotunda */
 const EYE_Y = 1.7
