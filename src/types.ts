@@ -1,5 +1,6 @@
 export type GameId =
   | 'emotionrecognition'
+  | 'emotionrecognition360'
   | 'blocks'
   | 'playroom360'
   | 'rollback'
@@ -69,6 +70,19 @@ export const GAME_LIST: GameMeta[] = [
     objective: 'Recognise and name basic and complex emotions from facial cues',
     duration: '15–20 min',
     hasLevels: true,
+  },
+  {
+    id: 'emotionrecognition360',
+    title: 'Emotion Room 360',
+    icon: '🖼️',
+    path: '/emotion-recognition-360',
+    color: '#f59e0b',
+    skill: 'emotion',
+    description: 'Find who feels it — look around · ആ ഭാവം കണ്ടെത്തൂ',
+    objective:
+      'Emotion recognition in an immersive first-person gallery: the same "Who feels ___?" question as Emotion Recognition, but the faces stand on framed boards across the front arc and the child turns the view — a head turn in VR — to scan them and tap the right person; distractor faces get more confusable and hints fade to nothing at harder levels, and each answer records how far the child had to turn to reach the correct face',
+    duration: '5–10 min',
+    hasLevels: false,
   },
   {
     id: 'identifyemotions',

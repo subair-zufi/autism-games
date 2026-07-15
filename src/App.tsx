@@ -15,6 +15,7 @@ import { GameDetail } from './pages/GameDetail'
 import { ComingSoon } from './components/ComingSoon'
 import { GAME_LIST, type GameId } from './types'
 import { EmotionRecognitionGame } from './games/emotionrecognition/EmotionRecognitionGame'
+import { EmotionRecognition360Game } from './games/emotionrecognition360/EmotionRecognition360Game'
 import { BlockGame } from './games/blocks/BlockGame'
 import { Playroom360Game } from './games/playroom360/Playroom360Game'
 import { RollBackGame } from './games/rollback/RollBackGame'
@@ -30,6 +31,7 @@ import { useAuth } from './state/auth'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotionrecognition: EmotionRecognitionGame,
+  emotionrecognition360: EmotionRecognition360Game,
   blocks: BlockGame,
   playroom360: Playroom360Game,
   rollback: RollBackGame,
