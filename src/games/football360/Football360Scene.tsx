@@ -18,10 +18,11 @@ import { fbLine } from './strings'
 const EYE_Y = 1.6
 const BALL_R = 0.32
 const BALL_Y = BALL_R
-/** where the ball rests while the child holds it: on the grass just ahead and
- * a little to the right, low in the view so it reads as "at your feet"
- * without hiding the teammate straight in front */
-const CHILD_BALL: readonly [number, number] = [0.7, -3.4]
+/** where the ball rests while the child holds it: right at the child's feet
+ * (just ahead of the centre spot, slightly to the right so it doesn't hide the
+ * teammate straight in front). Kept close so a pass visibly leaves the child —
+ * Quest feedback: a ball resting further out didn't feel like it came from you */
+const CHILD_BALL: readonly [number, number] = [0.45, -1.9]
 
 export interface Football360SceneProps {
   players: Player[]
