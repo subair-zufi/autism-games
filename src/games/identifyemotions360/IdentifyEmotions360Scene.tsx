@@ -61,12 +61,12 @@ export function IdentifyEmotions360Scene(props: IdentifyEmotions360SceneProps) {
           tracking) and the controllers' rays drive the same pointer events the
           mouse/touch use — the game logic is identical in and out of VR */}
       <XR store={xrStore}>
-        {/* a calm, dim media room so the screen reads as the bright focus */}
-        <color attach="background" args={['#2b2f38']} />
-        <ambientLight intensity={0.55} color="#e9ecf2" />
-        <directionalLight position={[2, 6, 3]} intensity={0.35} color="#fff4e2" />
-        {/* a soft cool fill from the screen's direction */}
-        <pointLight position={[0, SCREEN_Y, -SCREEN_DISTANCE + 1]} intensity={0.5} color="#bcd6ff" distance={12} />
+        {/* a calm, softly-lit room — never dark (a dark room can frighten), but
+            not stark either: gentle daylight, muted surfaces */}
+        <color attach="background" args={['#e8ecf1']} />
+        <ambientLight intensity={0.95} color="#fff8ee" />
+        <directionalLight position={[3, 10, 4]} intensity={0.5} color="#fff2dc" />
+        <directionalLight position={[-5, 7, -3]} intensity={0.22} color="#eaf1ff" />
         <LookControls />
         <MediaRoom />
         <BigScreen videoEl={props.videoEl} clipSlug={props.clipSlug} frozen={props.frozen} />
@@ -144,35 +144,39 @@ function MediaRoom() {
   const WALL_H = 4.5
   return (
     <group>
-      {/* floor */}
+      {/* floor: warm light wood */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
         <circleGeometry args={[WALL_R, 48]} />
-        <meshStandardMaterial color="#4a4038" />
+        <meshStandardMaterial color="#cdbfa8" />
       </mesh>
-      {/* soft rug under the child's spot */}
+      {/* soft muted rug under the child's spot */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -0.4]}>
         <circleGeometry args={[2.2, 40]} />
-        <meshStandardMaterial color="#6a5a72" />
+        <meshStandardMaterial color="#b7c3cf" />
       </mesh>
-      {/* wraparound wall */}
+      {/* wraparound wall: light, with a warm wood wainscot band low down */}
       <mesh position={[0, WALL_H / 2, 0]}>
         <cylinderGeometry args={[WALL_R, WALL_R, WALL_H, 40, 1, true]} />
-        <meshStandardMaterial color="#39414d" side={THREE.BackSide} />
+        <meshStandardMaterial color="#e3e7ed" side={THREE.BackSide} />
+      </mesh>
+      <mesh position={[0, 1.0, 0]}>
+        <cylinderGeometry args={[WALL_R - 0.02, WALL_R - 0.02, 2.0, 40, 1, true]} />
+        <meshStandardMaterial color="#c8ad8c" side={THREE.BackSide} />
       </mesh>
       {/* ceiling */}
       <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, WALL_H, 0]}>
         <circleGeometry args={[WALL_R, 40]} />
-        <meshStandardMaterial color="#2f353f" side={THREE.DoubleSide} />
+        <meshStandardMaterial color="#eef1f5" side={THREE.DoubleSide} />
       </mesh>
-      {/* a warm accent wall directly behind the screen */}
+      {/* a soft sage accent wall directly behind the screen */}
       <mesh position={[0, SCREEN_Y, -SCREEN_DISTANCE - 0.2]}>
         <planeGeometry args={[SCREEN_W + 2.4, SCREEN_H + 2.0]} />
-        <meshStandardMaterial color="#4d4450" />
+        <meshStandardMaterial color="#d3ddd2" />
       </mesh>
       {/* a low console beneath the screen */}
       <mesh position={[0, 0.35, -SCREEN_DISTANCE + 0.3]}>
         <boxGeometry args={[SCREEN_W + 0.6, 0.7, 0.5]} />
-        <meshStandardMaterial color="#5b4d42" />
+        <meshStandardMaterial color="#b79d86" />
       </mesh>
       {/* a couple of plants flanking the screen */}
       <Plant x={-(SCREEN_W / 2 + 1.1)} z={-SCREEN_DISTANCE + 0.4} />
@@ -302,7 +306,7 @@ function AnswerLayer(props: IdentifyEmotions360SceneProps) {
             i={i}
             n={n}
             width={0.66}
-            height={0.78}
+            height={0.62}
             emoji={emotionMeta(id).emoji}
             lines={displayLangs(lang).map((l) => emotionLabel(id, l))}
             state={state}

@@ -38,23 +38,25 @@ export const EYE_Y = 1.5
  * not too far). A 3.2 m × 1.8 m (16:9) screen 4.5 m away subtends ~39°
  * horizontally / ~23° vertically — a comfortable "big screen" that fills the
  * central field of view without forcing eye strain or a sweep of the head. Its
- * centre sits at 1.55 m, just above the child's 1.5 m eye line, so the gaze is
- * essentially straight ahead (a hair up), never craned. The screen stands dead
- * ahead at bearing 0 (toward -z), the natural resting direction.
+ * centre sits at 1.7 m, a touch above the child's 1.5 m eye line (a ~2.5° up
+ * glance), which lifts the screen's bottom edge clear of the answer cards below
+ * so nothing overlaps the picture. The screen stands dead ahead at bearing 0
+ * (toward -z), the natural resting direction.
  */
 export const SCREEN_W = 3.2
 export const SCREEN_H = 1.8
-export const SCREEN_Y = 1.55
+export const SCREEN_Y = 1.7
 export const SCREEN_DISTANCE = 4.5
 
 /**
- * The answer cards sit on a shallow console below the screen — close enough to
- * read and tap comfortably (2.9 m), low enough (0.95 m) that the child glances
- * down to the cards and up to the screen, like watching a show and answering on
- * a panel. They never require a head turn.
+ * The answer cards sit on a strip *below* the screen — near enough to read and
+ * tap comfortably (2.5 m) and low enough (0.75 m) that, being closer to the
+ * child than the screen, they project fully beneath its bottom edge and never
+ * cover the face. The child glances down to the cards and up to the screen,
+ * like watching a show and answering on a panel; they never require a head turn.
  */
-export const CARD_RADIUS = 2.9
-export const CARD_Y = 0.95
+export const CARD_RADIUS = 2.5
+export const CARD_Y = 0.75
 /** angular gap between adjacent answer cards */
 export const CARD_STEP_DEG = 16
 
