@@ -1,6 +1,7 @@
 export type GameId =
   | 'emotionrecognition'
   | 'blocks'
+  | 'playroom360'
   | 'rollback'
   | 'football360'
   | 'museum'
@@ -90,6 +91,19 @@ export const GAME_LIST: GameMeta[] = [
     skill: 'turntaking',
     description: 'Take turns building',
     objective: 'Share and wait during a cooperative activity',
+    duration: '5–10 min',
+    hasLevels: false,
+  },
+  {
+    id: 'playroom360',
+    title: 'Playroom 360',
+    icon: '🧸',
+    path: '/playroom-360',
+    color: '#ea580c',
+    skill: 'turntaking',
+    description: 'Build together in the playroom — look around',
+    objective:
+      'Turn-taking · sharing and waiting in an immersive first-person playroom: the same build-wait-hand-off exchange as Block Buddies (fixed rotation → shuffled order → grab-and-place), but the child sits at the play table and turns the view — a head turn in VR — to watch each friend build, tap their own block on their turn, and pass the turn by tapping the next friend',
     duration: '5–10 min',
     hasLevels: false,
   },
