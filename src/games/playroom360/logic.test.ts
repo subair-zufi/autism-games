@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest'
 import {
   BLOCK_H,
   CONFIG,
-  PEER_BEARINGS,
+  PEER_STAND_RADIUS,
   TABLE_H,
+  TABLE_R,
+  TABLE_RADIUS,
   TOWER_BEARING,
   TOWER_MAX,
   blockY,
@@ -61,10 +63,12 @@ describe('playroom360 logic (same rotation as Block Buddies)', () => {
     }
   })
 
-  it('difficulty ladder matches Block Buddies exactly', () => {
-    expect(CONFIG.easy).toMatchObject({ players: 3, rounds: 5, shuffle: false, grab: false })
-    expect(CONFIG.medium).toMatchObject({ players: 4, rounds: 7, shuffle: false, grab: false })
-    expect(CONFIG.hard).toMatchObject({ players: 5, rounds: 10, shuffle: true, grab: true })
+  it('difficulty ladder matches Block Buddies (players/rounds/shuffle)', () => {
+    expect(CONFIG.easy).toMatchObject({ players: 3, rounds: 5, shuffle: false })
+    expect(CONFIG.medium).toMatchObject({ players: 4, rounds: 7, shuffle: false })
+    expect(CONFIG.hard).toMatchObject({ players: 5, rounds: 10, shuffle: true })
+    // every level places blocks with a single tap — no grab-and-drag anywhere
+    expect(Object.values(CONFIG).some((c) => 'grab' in c)).toBe(false)
   })
 
   it('blocks stack on the table top by BLOCK_H', () => {
@@ -72,11 +76,19 @@ describe('playroom360 logic (same rotation as Block Buddies)', () => {
     expect(blockY(2)).toBeCloseTo(TABLE_H + BLOCK_H / 2 + 2 * BLOCK_H)
   })
 
-  it('every friend stands in the front half-circle, clear of the tower', () => {
-    for (const bearings of Object.values(PEER_BEARINGS)) {
-      for (const b of bearings) {
-        expect(Math.abs(b)).toBeLessThanOrEqual(70) // never behind the child
-        expect(Math.abs(b - TOWER_BEARING)).toBeGreaterThanOrEqual(10) // never behind the tower
+  it('every friend gathers at the table, in the front half-circle, clear of the tower', () => {
+    for (const players of [3, 4, 5]) {
+      for (let i = 1; i < players; i++) {
+        const [x, z] = peerPosition(i, players)
+        // stands at the table rim: their distance to the table centre is the
+        // stand radius, so they never drift far out to the sides
+        const distToTableCentre = Math.hypot(x - 0, z - -TABLE_RADIUS)
+        expect(distToTableCentre).toBeCloseTo(PEER_STAND_RADIUS)
+        expect(distToTableCentre - TABLE_R).toBeLessThan(0.7) // close to the edge
+        // and stays in the child's front view, not aligned behind the tower
+        const bearing = peerBearingDeg(i, players)
+        expect(Math.abs(bearing)).toBeLessThanOrEqual(45)
+        expect(Math.abs(bearing - TOWER_BEARING)).toBeGreaterThanOrEqual(5)
       }
     }
   })
@@ -86,11 +98,11 @@ describe('playroom360 logic (same rotation as Block Buddies)', () => {
     expect(towerTop).toBeLessThan(1.45) // kid head top in the scene
   })
 
-  it('peerPosition puts friends at their bearings, child at the origin', () => {
+  it('peerPosition puts the middle friend straight ahead, child at the origin', () => {
     expect(peerPosition(0, 4)).toEqual([0, 0])
-    const [x, z] = peerPosition(2, 4) // middle friend of 3, bearing 0
+    const [x, z] = peerPosition(2, 4) // middle friend of 3, straight ahead
     expect(peerBearingDeg(2, 4)).toBe(0)
     expect(x).toBeCloseTo(0)
-    expect(z).toBeLessThan(0) // straight ahead
+    expect(z).toBeLessThan(0) // in front of the child
   })
 })

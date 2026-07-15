@@ -57,8 +57,6 @@ export function Playroom360Game() {
   const anticipating =
     turn?.kind === 'peer' && !handoffTo && sequence[index + 1]?.kind === 'child'
 
-  // Hard mode: the child places by grabbing the 3D block, not a tap.
-  const grabMode = config.grab
   const nextChildSpec = useMemo(
     () => sequence.slice(index).find((t) => t.kind === 'child') ?? null,
     [sequence, index],
@@ -118,19 +116,18 @@ export function Playroom360Game() {
         clearTimeout(t2)
       }
     }
-    // child's turn: wait for the tap/grab in the scene
+    // child's turn: wait for the tap on their block in the scene
   }, [index, phase, handoffTo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // current round number (0-based) for analytics payloads
   const round = Math.floor(index / config.players)
 
-  // Shared success path: the child placed a block by tapping it (easy/medium)
-  // or by physically grabbing it onto the tower (hard).
-  function succeedPlace(method: 'tap' | 'grab') {
+  // The child placed a block by tapping their glowing block on the table.
+  function succeedPlace() {
     if (phase !== 'playing' || turn === null || turn.kind !== 'child' || handoffTo) return
     playSuccess()
     say('sayNiceBlock')
-    recordStep('place_block', { round, slot: index % config.players, method }, { score: score + 1 })
+    recordStep('place_block', { round, slot: index % config.players, method: 'tap' }, { score: score + 1 })
     // Drop the block now (it appears), then require an explicit hand-off to
     // the next player before their turn begins — unless this was the last turn.
     const nextTurn = sequence[index + 1] ?? null
@@ -138,22 +135,22 @@ export function Playroom360Game() {
     if (nextTurn) setHandoffTo(players[nextTurn.playerIndex])
   }
 
-  // Acted out of turn — gently coach patience. No-fail: an impatient tap is
-  // only redirected, it never ends the session.
-  function impatient(source: 'tap' | 'grab') {
+  // Tapped the block out of turn — gently coach patience. No-fail: an impatient
+  // tap is only redirected, it never ends the session.
+  function impatient() {
     if (phase !== 'playing') return
     playGentle()
     if (handoffTo) {
-      // touched the block mid hand-off: remind them to pass first
+      // tapped the block mid hand-off: remind them to pass first
       say('sayPassFirst', { name: handoffTo.name })
-      recordStep('impatient_tap', { round, during: 'handoff', source })
+      recordStep('impatient_tap', { round, during: 'handoff', source: 'tap' })
       return
     }
     say('sayWaitTurn')
     recordStep('impatient_tap', {
       round,
       activePlayer: turn ? players[turn.playerIndex]?.id : undefined,
-      source,
+      source: 'tap',
     })
   }
 
@@ -183,7 +180,7 @@ export function Playroom360Game() {
     promptKey = 'promptHandoff'
     promptParams = { name: handoffTo.name }
   } else if (isChildTurn) {
-    promptKey = grabMode ? 'promptGrab' : 'promptPlace'
+    promptKey = 'promptPlace'
   } else if (anticipating) {
     promptKey = 'promptGetReady'
   } else {
@@ -205,12 +202,10 @@ export function Playroom360Game() {
             reaching={reaching}
             childNext={anticipating}
             childTurn={!!isChildTurn}
-            grabMode={grabMode}
             nextChildSpec={nextChildSpec}
             handoffIndex={handoffIndex}
             onPlace={succeedPlace}
             onIllegal={impatient}
-            onGrabHint={() => say('sayGrabHint')}
             onHandoff={passHandoff}
             hudScore={`🧱 ${score} / ${config.rounds}`}
             hudPrompt={prLine(promptKey, lang, promptParams)}

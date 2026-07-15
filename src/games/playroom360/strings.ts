@@ -37,10 +37,6 @@ const MESSAGES = {
     en: 'Almost! Wait a moment for your turn.',
     ml: 'ഒന്ന് നിൽക്ക്! നിന്റെ ഊഴം വരട്ടെ.',
   },
-  sayGrabHint: {
-    en: 'Use your hand — grab the block and put it on the tower!',
-    ml: 'കൈകൊണ്ട് ബ്ലോക്ക് എടുത്ത് ഗോപുരത്തിൽ വെക്ക്!',
-  },
   sayHandoff: {
     en: 'Your turn now, {name}!',
     ml: 'ഇനി {name} കളിക്കട്ടെ!',
@@ -50,10 +46,6 @@ const MESSAGES = {
   promptHandoff: {
     en: 'Pass the turn — tap {name}!',
     ml: 'ഊഴം കൈമാറൂ — {name} തൊടൂ!',
-  },
-  promptGrab: {
-    en: 'Your turn — grab your block and place it on the tower!',
-    ml: 'നിന്റെ ഊഴം — ബ്ലോക്ക് എടുത്ത് ഗോപുരത്തിൽ വെക്കൂ!',
   },
   promptPlace: {
     en: 'Your turn — tap your glowing block!',

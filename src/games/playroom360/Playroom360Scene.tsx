@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
@@ -40,16 +40,12 @@ export interface Playroom360SceneProps {
   childNext: boolean
   /** the child may act now (their turn, no hand-off pending) */
   childTurn: boolean
-  /** hard difficulty: the child grabs and drags the block instead of tapping */
-  grabMode: boolean
   /** the child's upcoming block (colour/offset); null once the game is over */
   nextChildSpec: TurnSpec | null
   /** friend the child must tap to pass the turn, or null */
   handoffIndex: number | null
-  onPlace: (method: 'tap' | 'grab') => void
-  onIllegal: (source: 'tap' | 'grab') => void
-  /** hard mode: tapped the block without dragging — speak the grab hint */
-  onGrabHint: () => void
+  onPlace: () => void
+  onIllegal: () => void
   onHandoff: () => void
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
@@ -525,7 +521,7 @@ function PlayroomRoom() {
 /* ---- the play: table, tower, the child's block, the friends ----------------- */
 
 function SceneInner(props: Playroom360SceneProps) {
-  const { players, placed, activeIndex, reaching, childNext, childTurn, grabMode, nextChildSpec, handoffIndex, onPlace, onIllegal, onGrabHint, onHandoff, bubbleTap } = props
+  const { players, placed, activeIndex, reaching, childNext, childTurn, nextChildSpec, handoffIndex, onPlace, onIllegal, onHandoff, bubbleTap } = props
 
   // Completed towers are set aside as minis so the active stack stays short
   // and no friend's face ever hides behind it.
@@ -557,17 +553,12 @@ function SceneInner(props: Playroom360SceneProps) {
           spec={nextChildSpec}
           canAct={childTurn}
           anticipating={childNext}
-          grabMode={grabMode}
-          towerX={towerX + nextChildSpec.offset}
-          towerZ={towerZ}
-          targetY={blockY(current.length)}
           onPlace={onPlace}
           onIllegal={onIllegal}
-          onGrabHint={onGrabHint}
         />
       )}
 
-      {/* the friends, on an arc across the front half-circle */}
+      {/* the friends, gathered around the play table */}
       {players.map((player, i) => {
         if (player.kind === 'child') return null // first person: the camera IS the child
         const [x, z] = peerPosition(i, players.length)
@@ -655,73 +646,35 @@ function MiniTower({ specs, slot }: { specs: TurnSpec[]; slot: number }) {
 }
 
 /**
- * The child's own block, resting on the near table edge. On easy/medium it
- * glows and bounces on the child's turn and a tap places it; on hard the
- * child physically grabs and drags it onto the ghost slot at the top of the
- * tower (a reach, like VR). Touching it out of turn shakes it and reports an
- * impatient tap — no-fail, only redirected.
+ * The child's own block, resting on the near table edge. It glows and bounces
+ * on the child's turn; a tap places it on the tower (the same single-tap on
+ * every level — and the same tap works as a controller-ray click in VR).
+ * Tapping it out of turn shakes it and reports an impatient tap — no-fail,
+ * only redirected.
  */
 function ChildBlock({
   spec,
   canAct,
   anticipating,
-  grabMode,
-  towerX,
-  towerZ,
-  targetY,
   onPlace,
   onIllegal,
-  onGrabHint,
 }: {
   spec: TurnSpec
   canAct: boolean
   anticipating: boolean
-  grabMode: boolean
-  towerX: number
-  towerZ: number
-  targetY: number
-  onPlace: (method: 'tap' | 'grab') => void
-  onIllegal: (source: 'tap' | 'grab') => void
-  onGrabHint: () => void
+  onPlace: () => void
+  onIllegal: () => void
 }) {
   const ref = useRef<THREE.Mesh>(null)
-  const [dragging, setDragging] = useState(false)
   const [homeX, homeZ] = useMemo(() => landmarkXZ(TRAY_BEARING, TRAY_RADIUS), [])
   const restY = TABLE_H + BLOCK_H / 2
-  const pos = useRef(new THREE.Vector3(homeX, restY, homeZ))
-  const home = useRef(new THREE.Vector3(homeX, restY, homeZ))
-  const target = useRef(new THREE.Vector3())
-  target.current.set(towerX, targetY, towerZ)
   const shake = useRef(0)
-  // the drag plane stands upright through the tower, facing the child
-  const planeRotY = Math.atan2(-towerX, -towerZ)
-
-  // Resolve the drop wherever the pointer is released (hard mode).
-  useEffect(() => {
-    if (!dragging) return
-    const up = () => {
-      setDragging(false)
-      if (pos.current.distanceTo(target.current) < 0.3) {
-        onPlace('grab')
-      } else if (pos.current.distanceTo(home.current) < 0.12) {
-        // barely moved: a tap, not a grab — coach the gesture
-        onGrabHint()
-      }
-    }
-    window.addEventListener('pointerup', up)
-    return () => window.removeEventListener('pointerup', up)
-  }, [dragging]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useFrame((state, dt) => {
     const m = ref.current
     if (!m) return
-    if (dragging) {
-      m.position.copy(pos.current)
-    } else {
-      pos.current.lerp(home.current, 0.12)
-      const bounce = canAct ? Math.abs(Math.sin(state.clock.elapsedTime * 2.5)) * 0.05 : 0
-      m.position.set(pos.current.x, pos.current.y + bounce, pos.current.z)
-    }
+    const bounce = canAct ? Math.abs(Math.sin(state.clock.elapsedTime * 2.5)) * 0.05 : 0
+    m.position.set(homeX, restY + bounce, homeZ)
     if (shake.current > 0) {
       shake.current = Math.max(0, shake.current - dt * 3)
       m.position.x += Math.sin(state.clock.elapsedTime * 40) * shake.current * 0.04
@@ -736,61 +689,29 @@ function ChildBlock({
   })
 
   return (
-    <>
-      <mesh
-        ref={ref}
-        position={[homeX, restY, homeZ]}
-        onPointerDown={(e: ThreeEvent<PointerEvent>) => {
-          e.stopPropagation()
-          if (isDragTail()) return
-          if (!canAct) {
-            shake.current = 1
-            onIllegal(grabMode ? 'grab' : 'tap')
-            return
-          }
-          if (!grabMode) return // easy/medium place on click (tap), not press
-          pos.current.set(e.point.x, Math.max(restY, e.point.y), e.point.z)
-          setDragging(true)
-        }}
-        onClick={(e) => {
-          e.stopPropagation()
-          if (grabMode || !canAct) return
-          if (isDragTail() || dragDistance(e) > 8) return
-          onPlace('tap')
-        }}
-        onPointerOver={() => {
-          document.body.style.cursor = 'pointer'
-        }}
-        onPointerOut={() => {
-          document.body.style.cursor = 'auto'
-        }}
-      >
-        <boxGeometry args={[BLOCK_W, BLOCK_H, BLOCK_W]} />
-        <meshStandardMaterial color={spec.color} emissive={spec.color} emissiveIntensity={0} roughness={0.6} />
-      </mesh>
-
-      {/* hard mode: ghost slot showing where the block belongs */}
-      {grabMode && canAct && (
-        <mesh position={[towerX, targetY, towerZ]}>
-          <boxGeometry args={[BLOCK_W + 0.02, BLOCK_H, BLOCK_W + 0.02]} />
-          <meshBasicMaterial color={spec.color} transparent opacity={0.25} />
-        </mesh>
-      )}
-
-      {/* invisible drag plane standing through the tower, facing the child */}
-      {dragging && (
-        <mesh
-          position={[towerX, 1.2, towerZ]}
-          rotation={[0, planeRotY, 0]}
-          onPointerMove={(e: ThreeEvent<PointerEvent>) => {
-            pos.current.set(e.point.x, Math.max(restY, e.point.y), e.point.z)
-          }}
-        >
-          <planeGeometry args={[30, 30]} />
-          <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-        </mesh>
-      )}
-    </>
+    <mesh
+      ref={ref}
+      position={[homeX, restY, homeZ]}
+      onClick={(e) => {
+        e.stopPropagation()
+        if (isDragTail() || dragDistance(e) > 8) return
+        if (!canAct) {
+          shake.current = 1
+          onIllegal()
+          return
+        }
+        onPlace()
+      }}
+      onPointerOver={() => {
+        document.body.style.cursor = 'pointer'
+      }}
+      onPointerOut={() => {
+        document.body.style.cursor = 'auto'
+      }}
+    >
+      <boxGeometry args={[BLOCK_W, BLOCK_H, BLOCK_W]} />
+      <meshStandardMaterial color={spec.color} emissive={spec.color} emissiveIntensity={0} roughness={0.6} />
+    </mesh>
   )
 }
 

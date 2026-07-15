@@ -49,18 +49,19 @@ export interface BlockConfig {
    * reshuffled each round as a harder generalization step.
    */
   shuffle: boolean
-  /**
-   * When true, the child's tap is replaced by a physical grab-and-place:
-   * they drag the 3D block onto the tower, like reaching in VR.
-   */
-  grab: boolean
 }
 
-/** Identical ladder to Block Buddies. */
+/**
+ * Difficulty ladder — mirrors Block Buddies (more friends, more rounds, then a
+ * reshuffled order on hard). Unlike the flat-screen original, every level
+ * places blocks with a single tap: the grab-and-drag reach doesn't add to the
+ * turn-taking skill here and fights the 360 look-around controls, so it is
+ * dropped for a consistent tap across all levels.
+ */
 export const CONFIG: Record<Difficulty, BlockConfig> = {
-  easy: { players: 3, rounds: 5, peerTurnMs: 1300, shuffle: false, grab: false },
-  medium: { players: 4, rounds: 7, peerTurnMs: 1800, shuffle: false, grab: false },
-  hard: { players: 5, rounds: 10, peerTurnMs: 2400, shuffle: true, grab: true },
+  easy: { players: 3, rounds: 5, peerTurnMs: 1300, shuffle: false },
+  medium: { players: 4, rounds: 7, peerTurnMs: 1800, shuffle: false },
+  hard: { players: 5, rounds: 10, peerTurnMs: 2400, shuffle: true },
 }
 
 /** Blocks per tower before it is set aside and a new one begins — with the
@@ -164,21 +165,26 @@ export const TRAY_RADIUS = 1.9
 export const PARK_BEARING = 32
 export const PARK_RADIUS = 2.7
 
-/** how far from the child the friends stand (just past the table's far edge) */
-export const PEER_RADIUS = 3.7
+/**
+ * The friends gather *around the play table*, not on a wide arc centred on the
+ * child — otherwise the outer friends on hard drift far out to the sides and
+ * away from the table. Each friend stands just past the table's rim, spread
+ * across its far half so they cluster at the table (realistic) and all stay in
+ * the child's front view.
+ */
 
-/** friend bearings (degrees off straight-ahead) by peer count — all within
- * the front half-circle, and none aligned with the tower at −12° */
-export const PEER_BEARINGS: Record<number, ReadonlyArray<number>> = {
-  2: [-22, 22],
-  3: [-40, 0, 40],
-  4: [-60, -24, 24, 60],
-}
+/** how far past the table centre a friend stands — the table rim plus a step */
+export const PEER_STAND_RADIUS = TABLE_R + 0.5
 
-/** Bearing (degrees) of player `index` (>= 1) among `players` total players. */
-export function peerBearingDeg(index: number, players: number): number {
-  const slots = PEER_BEARINGS[Math.min(Math.max(players - 1, 2), 4)]
-  return slots[Math.min(index - 1, slots.length - 1)] ?? 0
+/**
+ * Where each friend stands, as an angle (degrees) *about the table centre*:
+ * 0 = the far side straight ahead of the child, positive = to the right. The
+ * child sits at the near rim (180°), so the friends fan across the far arc.
+ */
+export const PEER_TABLE_ANGLES: Record<number, ReadonlyArray<number>> = {
+  2: [-52, 52],
+  3: [-66, 0, 66],
+  4: [-84, -48, 48, 84],
 }
 
 /** Convert a bearing (radians) to floor coordinates (bearing 0 = toward -z). */
@@ -186,11 +192,25 @@ export function bearingToXZ(bearing: number, radius: number): [number, number] {
   return [Math.sin(bearing) * radius, -Math.cos(bearing) * radius]
 }
 
-/** Floor [x, z] where peer `index` stands (index 0, the child, is the camera). */
+/** Angle (deg, about the table centre) at which friend `index` (>= 1) stands. */
+export function peerTableAngleDeg(index: number, players: number): number {
+  const slots = PEER_TABLE_ANGLES[Math.min(Math.max(players - 1, 2), 4)]
+  return slots[Math.min(index - 1, slots.length - 1)] ?? 0
+}
+
+/** Floor [x, z] where friend `index` stands (index 0, the child, is the camera). */
 export function peerPosition(index: number, players: number): [number, number] {
   if (index <= 0) return [0, 0]
-  const a = (peerBearingDeg(index, players) * Math.PI) / 180
-  return bearingToXZ(a, PEER_RADIUS)
+  const phi = (peerTableAngleDeg(index, players) * Math.PI) / 180
+  const [cx, cz] = bearingToXZ(0, TABLE_RADIUS) // the table centre
+  return [cx + Math.sin(phi) * PEER_STAND_RADIUS, cz - Math.cos(phi) * PEER_STAND_RADIUS]
+}
+
+/** The child's head-turn (bearing, degrees left(−)/right(+) of straight-ahead)
+ *  to face friend `index` — recorded per hand-off as the attention-shift size. */
+export function peerBearingDeg(index: number, players: number): number {
+  const [x, z] = peerPosition(index, players)
+  return Math.round((Math.atan2(x, -z) * 180) / Math.PI)
 }
 
 /** [x, z] of a named table landmark. */
