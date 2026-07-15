@@ -343,12 +343,17 @@ function FaceBoard({
   const spark = useRef<THREE.Mesh>(null)
   const frameMat = useRef<THREE.MeshStandardMaterial>(null)
 
+  const { gl } = useThree()
+
   // load the real face photo as a texture (no Suspense needed)
   const texture = useMemo(() => {
     const tex = new THREE.TextureLoader().load(board.imageSrc)
     tex.colorSpace = THREE.SRGBColorSpace
+    // anisotropic filtering keeps the face crisp at the board's viewing angle,
+    // instead of shimmering as the child turns their head
+    tex.anisotropy = gl.capabilities.getMaxAnisotropy()
     return tex
-  }, [board.imageSrc])
+  }, [board.imageSrc, gl])
   useEffect(() => () => texture.dispose(), [texture])
 
   useFrame((s) => {
@@ -391,8 +396,11 @@ function FaceBoard({
         </mesh>
       ))}
 
-      {/* wooden frame behind the photo (warms to gold when correct) */}
-      <mesh position={[0, BOARD_Y, -0.04]}>
+      {/* wooden frame behind the photo (warms to gold when correct). Sits a
+          clear gap behind the photo plane — coplanar surfaces z-fight and
+          flicker badly in VR (stereo + head motion), so the frame front (at
+          z = -0.02) and the photo (at z = 0.02) are kept 4 cm apart. */}
+      <mesh position={[0, BOARD_Y, -0.06]}>
         <boxGeometry args={[BOARD_W + 0.22, BOARD_H + 0.22, 0.08]} />
         <meshStandardMaterial
           ref={frameMat}
@@ -402,8 +410,8 @@ function FaceBoard({
         />
       </mesh>
 
-      {/* the real face photo */}
-      <mesh position={[0, BOARD_Y, 0]}>
+      {/* the real face photo, stood proud of the frame so it never z-fights */}
+      <mesh position={[0, BOARD_Y, 0.02]}>
         <planeGeometry args={[BOARD_W, BOARD_H]} />
         <meshBasicMaterial map={texture} transparent opacity={faceOpacity} toneMapped={false} />
       </mesh>
