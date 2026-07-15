@@ -10,6 +10,7 @@ export type GameId =
   | 'rightway'
   | 'rulefixer'
   | 'identifyemotions'
+  | 'identifyemotions360'
   | 'discovery'
   | 'park360'
 export type Difficulty = 'easy' | 'medium' | 'hard'
@@ -95,6 +96,19 @@ export const GAME_LIST: GameMeta[] = [
     objective: 'Identify emotions from dynamic video clips, from full-intensity to partially-formed expressions',
     duration: '5–10 min',
     hasLevels: true,
+  },
+  {
+    id: 'identifyemotions360',
+    title: 'Emotion Cinema 360',
+    icon: '🎥',
+    path: '/emotion-clips-360',
+    color: '#8b5cf6',
+    skill: 'emotion',
+    description: 'Name the feeling on the big screen · സ്ക്രീനിലെ ഭാവം പറയൂ',
+    objective:
+      'Emotion Clips in an immersive media room: the same clips, freeze-frame, tiered choices and "why does he/she feel …?" follow-up as Emotion Clips, but the clip plays on one big screen sat at a comfortable distance and height, and the child answers by tapping in-world cards; harder levels freeze earlier on a half-formed expression and force confusable choices',
+    duration: '5–10 min',
+    hasLevels: false,
   },
   // --- Turn-Taking --------------------------------------------------------
   {

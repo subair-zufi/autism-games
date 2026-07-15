@@ -1,0 +1,123 @@
+import type { Difficulty } from '../../types'
+
+/**
+ * Emotion Clips 360 — *naming an emotion in motion*, immersive.
+ *
+ * The flat Emotion Clips game (see identifyemotions/logic.ts) lifted into a
+ * calm first-person media room: the child sits facing one big screen, watches a
+ * short clip that freezes on its expressive frame, and names the feeling by
+ * tapping an in-world choice card. Everything about the quiz — which clips,
+ * where each freezes (peak vs. early on Hard), the tiered distractors, the
+ * "why does he/she feel …?" cause follow-up — is REUSED unchanged from the flat
+ * game via `buildQuiz`; only the presentation is immersive.
+ *
+ * Unlike the other 360 games there is no head-turn/scan metric here: a single
+ * screen sits straight ahead. The 360 value is the shared-space "watch
+ * together on the big screen" framing and headset comfort, so the one design
+ * job is screen ergonomics — see the SCREEN_* constants.
+ */
+export {
+  buildQuiz,
+  VIDEO_COUNT,
+  CHOICE_COUNT,
+  DISTRACTOR_TIER,
+  FREEZE_KIND,
+  type VideoQuestion,
+  type VideoClip,
+  type CauseQuestion,
+  type FreezeKind,
+} from '../identifyemotions/logic'
+
+import { VIDEO_COUNT } from '../identifyemotions/logic'
+
+/** the child's eye height — the camera sits here, facing the screen */
+export const EYE_Y = 1.5
+
+/**
+ * Big-screen ergonomics (the user's brief: comfortable to watch, not too close,
+ * not too far). A 3.2 m × 1.8 m (16:9) screen 4.5 m away subtends ~39°
+ * horizontally / ~23° vertically — a comfortable "big screen" that fills the
+ * central field of view without forcing eye strain or a sweep of the head. Its
+ * centre sits at 1.55 m, just above the child's 1.5 m eye line, so the gaze is
+ * essentially straight ahead (a hair up), never craned. The screen stands dead
+ * ahead at bearing 0 (toward -z), the natural resting direction.
+ */
+export const SCREEN_W = 3.2
+export const SCREEN_H = 1.8
+export const SCREEN_Y = 1.55
+export const SCREEN_DISTANCE = 4.5
+
+/**
+ * The answer cards sit on a shallow console below the screen — close enough to
+ * read and tap comfortably (2.9 m), low enough (0.95 m) that the child glances
+ * down to the cards and up to the screen, like watching a show and answering on
+ * a panel. They never require a head turn.
+ */
+export const CARD_RADIUS = 2.9
+export const CARD_Y = 0.95
+/** angular gap between adjacent answer cards */
+export const CARD_STEP_DEG = 16
+
+/** Signed bearing of the i-th of n answer cards, centred on straight-ahead. */
+export function cardBearingDeg(i: number, n: number): number {
+  return (i - (n - 1) / 2) * CARD_STEP_DEG
+}
+
+/** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z). */
+export function bearingToXZ(bearingRad: number, radius: number): [number, number] {
+  return [Math.sin(bearingRad) * radius, -Math.cos(bearingRad) * radius]
+}
+
+/** Floor [x, z] of the i-th answer card. */
+export function cardPosition(i: number, n: number): [number, number] {
+  return bearingToXZ((cardBearingDeg(i, n) * Math.PI) / 180, CARD_RADIUS)
+}
+
+/** Clips in a session at each difficulty (the quiz length). */
+export function sessionLength(difficulty: Difficulty): number {
+  return VIDEO_COUNT[difficulty]
+}
+
+/** Child-facing points: a correct FIRST-try naming is worth this. */
+export const POINTS_PER_CORRECT = 10
+
+export function pointsFor(firstTryCorrect: boolean): number {
+  return firstTryCorrect ? POINTS_PER_CORRECT : 0
+}
+
+/**
+ * Stars reward accuracy over the session: 3 ≥80% first-try, 2 ≥50%, else 1 —
+ * every finished session earns at least one.
+ */
+export function starsFor(firstTryCorrect: number, total: number): number {
+  const ratio = total > 0 ? firstTryCorrect / total : 0
+  if (ratio >= 0.8) return 3
+  if (ratio >= 0.5) return 2
+  return 1
+}
+
+/**
+ * How far the pointer travelled between press and release, in screen pixels —
+ * used to ignore "taps" that were really look-around drags. Screen events
+ * (r3f) report this as `delta`; XR controller/hand events (pmndrs/
+ * pointer-events) *throw* on accessing it, so those count as clean taps.
+ */
+export function dragDistance(e: { delta?: number }): number {
+  try {
+    return e.delta ?? 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * The last look-around drag, measured by the scene's own controls. Taps are
+ * ignored right after a drag. Lives here (not in the scene file) so hot reload
+ * never duplicates it and the guard is unit-testable.
+ */
+export const lookDrag = { px: 0, endedAt: 0 }
+
+/** whether a click arriving now is just the tail end of a look-around drag */
+export function isDragTail(now: number = Date.now()): boolean {
+  return lookDrag.px > 8 && now - lookDrag.endedAt < 700
+}

@@ -1,0 +1,490 @@
+import { useEffect, useMemo, useRef } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { XR, useXR } from '@react-three/xr'
+import * as THREE from 'three'
+import { xrStore } from './xrStore'
+import {
+  EYE_Y,
+  SCREEN_DISTANCE,
+  SCREEN_H,
+  SCREEN_W,
+  SCREEN_Y,
+  CARD_Y,
+  cardBearingDeg,
+  cardPosition,
+  dragDistance,
+  isDragTail,
+  lookDrag,
+} from './logic'
+import { emotionLabel, displayLangs, type Lang, type LocalizedText } from '../../i18n/strings'
+import { emotionMeta, type EmotionId } from '../emotionVocab'
+
+export type CardState = 'idle' | 'correct' | 'wrong' | 'dim'
+
+export interface IdentifyEmotions360SceneProps {
+  /** the shared <video> element the game drives; shown on the big screen */
+  videoEl: HTMLVideoElement | null
+  /** re-key the video texture when the clip changes */
+  clipSlug: string
+  /** true once the clip has frozen on its expressive frame — answering opens */
+  frozen: boolean
+  /** which sub-question is active */
+  stage: 'emotion' | 'cause'
+  /** naming stage */
+  choices: EmotionId[]
+  answer: EmotionId
+  wrong: EmotionId[]
+  locked: boolean
+  onPickEmotion: (id: EmotionId) => void
+  /** cause ("why?") stage */
+  causeOptions: LocalizedText[] | null
+  causeAnswerIndex: number
+  causePicked: number | null
+  onPickCause: (i: number) => void
+  celebrating: boolean
+  lang: Lang
+  /** HUD lines mirrored inside VR, where the DOM overlay is invisible */
+  hudScore: string
+  hudPrompt: string
+}
+
+export function IdentifyEmotions360Scene(props: IdentifyEmotions360SceneProps) {
+  return (
+    <Canvas
+      camera={{ position: [0, EYE_Y, 0], fov: 60, near: 0.1, far: 100 }}
+      onCreated={({ camera, gl }) => {
+        camera.rotation.order = 'YXZ'
+        gl.outputColorSpace = THREE.SRGBColorSpace
+      }}
+    >
+      {/* WebXR: on a headset the session takes over the camera (real head
+          tracking) and the controllers' rays drive the same pointer events the
+          mouse/touch use — the game logic is identical in and out of VR */}
+      <XR store={xrStore}>
+        {/* a calm, dim media room so the screen reads as the bright focus */}
+        <color attach="background" args={['#2b2f38']} />
+        <ambientLight intensity={0.55} color="#e9ecf2" />
+        <directionalLight position={[2, 6, 3]} intensity={0.35} color="#fff4e2" />
+        {/* a soft cool fill from the screen's direction */}
+        <pointLight position={[0, SCREEN_Y, -SCREEN_DISTANCE + 1]} intensity={0.5} color="#bcd6ff" distance={12} />
+        <LookControls />
+        <MediaRoom />
+        <BigScreen videoEl={props.videoEl} clipSlug={props.clipSlug} frozen={props.frozen} />
+        <AnswerLayer {...props} />
+        {props.celebrating && <Celebration />}
+        <VRHud score={props.hudScore} prompt={props.hudPrompt} />
+      </XR>
+    </Canvas>
+  )
+}
+
+/* ---- 360° look-around controls (same as the other 360 games) ------------- */
+function LookControls() {
+  const { camera, gl } = useThree()
+  const view = useRef({ yaw: 0, pitch: 0, tYaw: 0, tPitch: 0 })
+  useEffect(() => {
+    const el = gl.domElement
+    let down = false
+    let lastX = 0
+    let lastY = 0
+    let startX = 0
+    let startY = 0
+    const clampPitch = (p: number) => Math.max(-0.4, Math.min(0.4, p))
+    const onDown = (e: PointerEvent) => {
+      down = true
+      lastX = startX = e.clientX
+      lastY = startY = e.clientY
+      lookDrag.px = 0
+    }
+    const onMove = (e: PointerEvent) => {
+      if (!down) return
+      const v = view.current
+      v.tYaw -= (e.clientX - lastX) * 0.0042
+      v.tPitch = clampPitch(v.tPitch + (e.clientY - lastY) * 0.0032)
+      lastX = e.clientX
+      lastY = e.clientY
+      lookDrag.px = Math.max(lookDrag.px, Math.hypot(e.clientX - startX, e.clientY - startY))
+    }
+    const onUp = () => {
+      if (down) lookDrag.endedAt = Date.now()
+      down = false
+    }
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+      view.current.tYaw += d * 0.0022
+    }
+    el.addEventListener('pointerdown', onDown)
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      el.removeEventListener('pointerdown', onDown)
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+      el.removeEventListener('wheel', onWheel)
+    }
+  }, [gl])
+  useFrame((state, dt) => {
+    if (state.gl.xr.isPresenting) return
+    const v = view.current
+    const k = Math.min(1, dt * 9)
+    v.yaw += (v.tYaw - v.yaw) * k
+    v.pitch += (v.tPitch - v.pitch) * k
+    camera.rotation.set(v.pitch, -v.yaw, 0)
+  })
+  return null
+}
+
+/* ---- the media room ------------------------------------------------------- */
+function MediaRoom() {
+  const WALL_R = 7
+  const WALL_H = 4.5
+  return (
+    <group>
+      {/* floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
+        <circleGeometry args={[WALL_R, 48]} />
+        <meshStandardMaterial color="#4a4038" />
+      </mesh>
+      {/* soft rug under the child's spot */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -0.4]}>
+        <circleGeometry args={[2.2, 40]} />
+        <meshStandardMaterial color="#6a5a72" />
+      </mesh>
+      {/* wraparound wall */}
+      <mesh position={[0, WALL_H / 2, 0]}>
+        <cylinderGeometry args={[WALL_R, WALL_R, WALL_H, 40, 1, true]} />
+        <meshStandardMaterial color="#39414d" side={THREE.BackSide} />
+      </mesh>
+      {/* ceiling */}
+      <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, WALL_H, 0]}>
+        <circleGeometry args={[WALL_R, 40]} />
+        <meshStandardMaterial color="#2f353f" side={THREE.DoubleSide} />
+      </mesh>
+      {/* a warm accent wall directly behind the screen */}
+      <mesh position={[0, SCREEN_Y, -SCREEN_DISTANCE - 0.2]}>
+        <planeGeometry args={[SCREEN_W + 2.4, SCREEN_H + 2.0]} />
+        <meshStandardMaterial color="#4d4450" />
+      </mesh>
+      {/* a low console beneath the screen */}
+      <mesh position={[0, 0.35, -SCREEN_DISTANCE + 0.3]}>
+        <boxGeometry args={[SCREEN_W + 0.6, 0.7, 0.5]} />
+        <meshStandardMaterial color="#5b4d42" />
+      </mesh>
+      {/* a couple of plants flanking the screen */}
+      <Plant x={-(SCREEN_W / 2 + 1.1)} z={-SCREEN_DISTANCE + 0.4} />
+      <Plant x={SCREEN_W / 2 + 1.1} z={-SCREEN_DISTANCE + 0.4} />
+    </group>
+  )
+}
+
+function Plant({ x, z }: { x: number; z: number }) {
+  return (
+    <group position={[x, 0, z]}>
+      <mesh position={[0, 0.3, 0]}>
+        <cylinderGeometry args={[0.24, 0.2, 0.6, 12]} />
+        <meshStandardMaterial color="#8a8177" />
+      </mesh>
+      {[
+        [0, 0.85, 0, 0.5],
+        [0.2, 0.72, 0.12, 0.34],
+        [-0.18, 0.7, -0.1, 0.32],
+      ].map(([fx, fy, fz, r], i) => (
+        <mesh key={i} position={[fx, fy as number, fz]}>
+          <sphereGeometry args={[r as number, 12, 12]} />
+          <meshStandardMaterial color={i === 0 ? '#5f8f52' : '#6fa860'} />
+        </mesh>
+      ))}
+    </group>
+  )
+}
+
+/* ---- the big screen ------------------------------------------------------- */
+function BigScreen({
+  videoEl,
+  clipSlug,
+  frozen,
+}: {
+  videoEl: HTMLVideoElement | null
+  clipSlug: string
+  frozen: boolean
+}) {
+  // one VideoTexture per clip element; re-created if the element or clip changes
+  const texture = useMemo(() => {
+    if (!videoEl) return null
+    const tex = new THREE.VideoTexture(videoEl)
+    tex.colorSpace = THREE.SRGBColorSpace
+    tex.minFilter = THREE.LinearFilter
+    tex.magFilter = THREE.LinearFilter
+    return tex
+    // clipSlug re-keys so a new clip on the same element refreshes the texture
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [videoEl, clipSlug])
+
+  useFrame(() => {
+    // keep the frozen last frame crisp; VideoTexture auto-updates while playing
+    if (texture && videoEl && !videoEl.paused) texture.needsUpdate = true
+  })
+
+  return (
+    <group position={[0, SCREEN_Y, -SCREEN_DISTANCE]}>
+      {/* bezel, sat clearly behind the picture so the two never z-fight */}
+      <mesh position={[0, 0, -0.06]}>
+        <boxGeometry args={[SCREEN_W + 0.18, SCREEN_H + 0.18, 0.1]} />
+        <meshStandardMaterial
+          color="#15181d"
+          emissive={frozen ? '#f4b740' : '#000000'}
+          emissiveIntensity={frozen ? 0.25 : 0}
+        />
+      </mesh>
+      {/* the picture */}
+      <mesh>
+        <planeGeometry args={[SCREEN_W, SCREEN_H]} />
+        {texture ? (
+          <meshBasicMaterial map={texture} toneMapped={false} />
+        ) : (
+          <meshBasicMaterial color="#0d0f12" />
+        )}
+      </mesh>
+    </group>
+  )
+}
+
+/* ---- answer cards --------------------------------------------------------- */
+function AnswerLayer(props: IdentifyEmotions360SceneProps) {
+  const { frozen, stage, choices, answer, wrong, locked, onPickEmotion } = props
+  const { causeOptions, causeAnswerIndex, causePicked, onPickCause, lang } = props
+  if (!frozen) return null
+
+  if (stage === 'cause' && causeOptions) {
+    const n = causeOptions.length
+    return (
+      <group>
+        {causeOptions.map((opt, i) => {
+          const state: CardState =
+            causePicked === null
+              ? 'idle'
+              : i === causeAnswerIndex
+                ? 'correct'
+                : i === causePicked
+                  ? 'wrong'
+                  : 'dim'
+          return (
+            <TextCard
+              key={i}
+              i={i}
+              n={n}
+              width={1.15}
+              height={0.62}
+              lines={displayLangs(lang).map((l) => opt[l])}
+              state={state}
+              disabled={causePicked !== null}
+              onTap={() => onPickCause(i)}
+            />
+          )
+        })}
+      </group>
+    )
+  }
+
+  const n = choices.length
+  return (
+    <group>
+      {choices.map((id, i) => {
+        const isWrong = wrong.includes(id)
+        const state: CardState = locked && id === answer ? 'correct' : isWrong ? 'wrong' : 'idle'
+        return (
+          <TextCard
+            key={id}
+            i={i}
+            n={n}
+            width={0.66}
+            height={0.78}
+            emoji={emotionMeta(id).emoji}
+            lines={displayLangs(lang).map((l) => emotionLabel(id, l))}
+            state={state}
+            disabled={locked || isWrong}
+            onTap={() => onPickEmotion(id)}
+          />
+        )
+      })}
+    </group>
+  )
+}
+
+const STATE_BORDER: Record<CardState, string> = {
+  idle: '#c9cdd6',
+  correct: '#22c55e',
+  wrong: '#ef6a5e',
+  dim: '#9aa0ab',
+}
+
+function TextCard({
+  i,
+  n,
+  width,
+  height,
+  emoji,
+  lines,
+  state,
+  disabled,
+  onTap,
+}: {
+  i: number
+  n: number
+  width: number
+  height: number
+  emoji?: string
+  lines: string[]
+  state: CardState
+  disabled: boolean
+  onTap: () => void
+}) {
+  const [x, z] = cardPosition(i, n)
+  const bearingRad = (cardBearingDeg(i, n) * Math.PI) / 180
+
+  const texture = useMemo(() => {
+    const cv = document.createElement('canvas')
+    cv.width = 512
+    cv.height = Math.round((512 * height) / width)
+    return new THREE.CanvasTexture(cv)
+  }, [width, height])
+
+  useEffect(() => {
+    const cv = texture.image as HTMLCanvasElement
+    const ctx = cv.getContext('2d')!
+    ctx.clearRect(0, 0, cv.width, cv.height)
+    const r = cv.height * 0.16
+    // card face
+    ctx.beginPath()
+    ctx.roundRect(6, 6, cv.width - 12, cv.height - 12, r)
+    ctx.fillStyle = state === 'dim' ? 'rgba(244,246,250,0.55)' : '#f8fafc'
+    ctx.fill()
+    // colored border by state
+    ctx.lineWidth = state === 'idle' ? 8 : 14
+    ctx.strokeStyle = STATE_BORDER[state]
+    ctx.stroke()
+
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    const cx = cv.width / 2
+    let top = cv.height * 0.5
+    if (emoji) {
+      ctx.font = `${Math.round(cv.height * 0.34)}px "Comic Sans MS", sans-serif`
+      ctx.fillText(emoji, cx, cv.height * 0.34)
+      top = cv.height * 0.72
+    }
+    // label line(s), shrunk to fit
+    const lineGap = cv.height * 0.18
+    const startY = top - ((lines.length - 1) * lineGap) / 2
+    lines.forEach((text, li) => {
+      let size = Math.round(cv.height * 0.16)
+      do {
+        ctx.font = `bold ${size}px "Comic Sans MS", "Noto Sans Malayalam", sans-serif`
+        size -= 2
+      } while (ctx.measureText(text).width > cv.width - 48 && size > 12)
+      ctx.fillStyle = '#2a2f3a'
+      ctx.fillText(text, cx, startY + li * lineGap)
+    })
+    texture.needsUpdate = true
+  }, [texture, emoji, lines, state])
+
+  useEffect(() => () => texture.dispose(), [texture])
+
+  return (
+    <group position={[x, CARD_Y, z]} rotation={[0, -bearingRad, 0]}>
+      <mesh
+        onClick={(e) => {
+          e.stopPropagation()
+          if (disabled || isDragTail() || dragDistance(e) > 8) return
+          onTap()
+        }}
+        onPointerOver={() => !disabled && (document.body.style.cursor = 'pointer')}
+        onPointerOut={() => (document.body.style.cursor = 'auto')}
+      >
+        <planeGeometry args={[width, height]} />
+        <meshBasicMaterial map={texture} transparent />
+      </mesh>
+    </group>
+  )
+}
+
+/* ---- celebration + VR HUD ------------------------------------------------- */
+function Celebration() {
+  const spark = useRef<THREE.Mesh>(null)
+  useFrame((s) => {
+    if (spark.current) {
+      const t = s.clock.elapsedTime
+      spark.current.rotation.y = t * 2.4
+      spark.current.scale.setScalar(1 + Math.sin(t * 6) * 0.25)
+    }
+  })
+  return (
+    <mesh ref={spark} position={[0, SCREEN_Y + SCREEN_H / 2 + 0.4, -SCREEN_DISTANCE]}>
+      <octahedronGeometry args={[0.22]} />
+      <meshBasicMaterial color="#f4b740" />
+    </mesh>
+  )
+}
+
+function VRHud({ score, prompt }: { score: string; prompt: string }) {
+  const inSession = useXR((s) => !!s.session)
+  if (!inSession) return null
+  return (
+    <group>
+      <TextPanel text={prompt} position={[0, SCREEN_Y - SCREEN_H / 2 - 0.5, -SCREEN_DISTANCE + 0.3]} width={3.4} height={0.6} font={66} />
+      <TextPanel text={score} position={[0, SCREEN_Y + SCREEN_H / 2 + 0.55, -SCREEN_DISTANCE + 0.3]} width={2.2} height={0.5} font={92} />
+    </group>
+  )
+}
+
+function TextPanel({
+  text,
+  position,
+  width,
+  height,
+  font,
+}: {
+  text: string
+  position: [number, number, number]
+  width: number
+  height: number
+  font: number
+}) {
+  const texture = useMemo(() => {
+    const cv = document.createElement('canvas')
+    cv.width = 1024
+    cv.height = Math.round((1024 * height) / width)
+    return new THREE.CanvasTexture(cv)
+  }, [width, height])
+  useEffect(() => {
+    const cv = texture.image as HTMLCanvasElement
+    const ctx = cv.getContext('2d')!
+    ctx.clearRect(0, 0, cv.width, cv.height)
+    const r = cv.height * 0.3
+    ctx.beginPath()
+    ctx.roundRect(4, 4, cv.width - 8, cv.height - 8, r)
+    ctx.fillStyle = 'rgba(20, 24, 30, 0.82)'
+    ctx.fill()
+    ctx.fillStyle = '#f5f7fb'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    let size = font
+    do {
+      ctx.font = `bold ${size}px "Comic Sans MS", "Noto Sans Malayalam", sans-serif`
+      size -= 4
+    } while (ctx.measureText(text).width > cv.width - 90 && size > 24)
+    ctx.fillText(text, cv.width / 2, cv.height / 2)
+    texture.needsUpdate = true
+  }, [text, font, texture])
+  useEffect(() => () => texture.dispose(), [texture])
+  return (
+    <mesh position={position}>
+      <planeGeometry args={[width, height]} />
+      <meshBasicMaterial map={texture} transparent />
+    </mesh>
+  )
+}
