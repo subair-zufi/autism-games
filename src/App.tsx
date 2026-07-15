@@ -25,6 +25,7 @@ import { RightWayGame } from './games/rightway/RightWayGame'
 import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
 import { IdentifyEmotionsGame } from './games/identifyemotions/IdentifyEmotionsGame'
 import { DiscoveryGame } from './games/discovery/DiscoveryGame'
+import { Park360Game } from './games/park360/Park360Game'
 import { useAuth } from './state/auth'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
@@ -39,6 +40,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   rulefixer: RuleFixerGame,
   identifyemotions: IdentifyEmotionsGame,
   discovery: DiscoveryGame,
+  park360: Park360Game,
 }
 
 /** Gate a route behind a logged-in mentor; bounce to /login otherwise. */

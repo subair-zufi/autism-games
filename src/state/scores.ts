@@ -10,7 +10,7 @@ interface ScoresState {
 export const useScores = create<ScoresState>()(
   persist(
     (set) => ({
-      best: { emotionrecognition: 0, blocks: 0, playroom360: 0, rollback: 0, football360: 0, museum: 0, museum360: 0, rightway: 0, rulefixer: 0, identifyemotions: 0, discovery: 0 },
+      best: { emotionrecognition: 0, blocks: 0, playroom360: 0, rollback: 0, football360: 0, museum: 0, museum360: 0, rightway: 0, rulefixer: 0, identifyemotions: 0, discovery: 0, park360: 0 },
       reportScore: (game, score) =>
         set((s) => ({ best: { ...s.best, [game]: Math.max(s.best[game] ?? 0, score) } })),
     }),

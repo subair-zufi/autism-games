@@ -57,6 +57,7 @@ SKILL_BY_GAME = {
     "museum360": "jointattention",
     "garden": "jointattention",
     "discovery": "jointattention",
+    "park360": "jointattention",
 }
 
 GAMES = tuple(SKILL_BY_GAME.keys())
@@ -302,7 +303,9 @@ def trials_for_game(game_key: str, events: Iterable[EventLike]) -> list[Trial]:
         return _rollback_trials(evs)
     if game_key == "blocks":
         return _blocks_trials(evs)
-    if game_key == "discovery":
+    if game_key in ("discovery", "park360"):
+        # Park 360 is the immersive copy of Look What I Found! — same share
+        # payloads, so the same spontaneous-initiation scoring applies.
         return _discovery_trials(evs)
     return []
 

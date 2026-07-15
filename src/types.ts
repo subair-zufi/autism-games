@@ -10,6 +10,7 @@ export type GameId =
   | 'rulefixer'
   | 'identifyemotions'
   | 'discovery'
+  | 'park360'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
 /** The four skills the study targets — every game trains exactly one. */
@@ -196,6 +197,19 @@ export const GAME_LIST: GameMeta[] = [
     description: 'Share your discovery · കണ്ടെത്തിയത് കാണിക്കൂ',
     objective:
       'Joint attention · step 2 (initiating): when a surprise appears and nothing prompts you, spontaneously show it to a friend — surprises get subtler and hints disappear at harder levels',
+    duration: '5–10 min',
+    hasLevels: false,
+  },
+  {
+    id: 'park360',
+    title: 'Park 360',
+    icon: '🌳',
+    path: '/park-360',
+    color: '#a855f7',
+    skill: 'jointattention',
+    description: 'Share what you spot — look around · കണ്ടെത്തിയത് കാണിക്കൂ',
+    objective:
+      'Joint attention · step 2 (initiating) in an immersive first-person park: the same spontaneous two-tap share loop as Look What I Found! (tap the surprise, tap the friend, in either order — spontaneous shares score more, hints fade to nothing on hard), but the child stands on the lawn and turns the view — a head turn in VR — to spot the surprise; everything playable stays in the front half-circle so the search is a comfortable head turn, never a spin',
     duration: '5–10 min',
     hasLevels: false,
   },
