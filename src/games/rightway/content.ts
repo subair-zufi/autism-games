@@ -91,7 +91,7 @@ export const BEHAVIORS: Behavior[] = [
     bubble: '👋',
     explain: {
       en: 'Waving hello is a friendly way to greet.',
-      ml: 'കൈ വീശി ഹലോ പറയുന്നത് നല്ല സ്നേഹമുള്ള രീതിയാ.',
+      ml: 'കൈ വീശി ഹലോ പറയുന്നത് നല്ല രീതിയാ.',
     },
     pose: { armUp: true }, scene: { waveBack: true },
   },
@@ -100,7 +100,7 @@ export const BEHAVIORS: Behavior[] = [
     construct: 'greetings', tier: 'clear', isFine: false,
     text: {
       en: "Ben's friend says hi, but Ben makes a face and turns away.",
-      ml: 'ബെന്നിന്റെ കൂട്ടുകാരൻ ഹായ് പറഞ്ഞു, പക്ഷേ ബെൻ മുഖം കോട്ടി തിരിഞ്ഞുനിന്നു.',
+      ml: 'ബെന്നിന്റെ കൂട്ടുകാരൻ ഹായ് പറഞ്ഞു, പക്ഷേ ബെൻ മുഖം തിരിഞ്ഞുനിന്നു.',
     },
     bubble: '🙈',
     explain: {
@@ -119,7 +119,7 @@ export const BEHAVIORS: Behavior[] = [
     bubble: '🙂',
     explain: {
       en: "A small wave is a real greeting too — you don't have to talk.",
-      ml: 'ചെറിയ കൈവീശലും ഒരു നല്ല ഹലോ ആണ് — സംസാരിക്കണം എന്നില്ല.',
+      ml: 'മെല്ലെ കൈ വീശലും നല്ലതാണ് — സംസാരിക്കണം എന്നില്ല.',
     },
     pose: { armUp: true }, scene: { waveBack: true },
   },
@@ -219,7 +219,7 @@ export const BEHAVIORS: Behavior[] = [
     bubble: '✋',
     explain: {
       en: 'Grabbing hurts and starts fights. Ask for a turn instead.',
-      ml: 'പിടിച്ചുവാങ്ങിയാൽ വഴക്കാകും. പകരം ഊഴം ചോദിക്ക്.',
+      ml: 'പിടിച്ചുവാങ്ങിയാൽ വഴക്കാകും. പകരം കളിക്കാൻ കൂട്ടുമോ എന്ന് ചോദിക്ക്.',
     },
     pose: { lean: 0.4 }, scene: { toy: 'grab' },
   },
@@ -228,7 +228,7 @@ export const BEHAVIORS: Behavior[] = [
     construct: 'sharing', tier: 'subtle', isFine: true,
     text: {
       en: "Anu says, 'You can have the doll after my turn.'",
-      ml: "'എന്റെ ഊഴം കഴിഞ്ഞിട്ട് നിനക്ക് തരാം' എന്ന് അനു പറഞ്ഞു.",
+      ml: "'ഞാൻ കളിച്ചിട്ട് നിനക്ക് തരാം' എന്ന് അനു പറഞ്ഞു.",
     },
     bubble: '🔁',
     explain: {
@@ -556,7 +556,7 @@ export const BEHAVIORS: Behavior[] = [
     construct: 'politeness', tier: 'clear', isFine: false,
     text: {
       en: "Ravi shouts, 'Give me that NOW!' at his friend.",
-      ml: "രവി കൂട്ടുകാരനോട് 'അത് ഇപ്പോ താ!' എന്ന് ഒച്ചവെച്ചു.",
+      ml: "രവി കൂട്ടുകാരനോട് 'അത് ഇപ്പോ തന്നെ വേണം!' എന്ന് ഒച്ചവെച്ചു.",
     },
     bubble: '📢',
     explain: {
@@ -612,12 +612,12 @@ export const BEHAVIORS: Behavior[] = [
     construct: 'politeness', tier: 'clear', isFine: false,
     text: {
       en: 'Manu loses the game and calls his friend a mean name.',
-      ml: 'കളിയിൽ തോറ്റപ്പോൾ മനു കൂട്ടുകാരനെ മോശം പേര് വിളിച്ചു.',
+      ml: 'കളിയിൽ തോറ്റപ്പോൾ മനു കൂട്ടുകാരനെ ചീത്ത പേര് വിളിച്ചു.',
     },
     bubble: '😠',
     explain: {
       en: 'Mean names hurt long after the game. Losing is okay.',
-      ml: 'മോശം വിളികൾ വലിയ വേദനയാ. തോൽക്കുന്നത് ഒരു കുഴപ്പവുമല്ല.',
+      ml: 'ചീത്ത പേര് വിളിക്കുന്നത് വലിയ വേദനയാ. തോൽക്കുന്നത് ഒരു കുഴപ്പവുമല്ല.',
     },
     pose: { lean: 0.4 }, scene: {},
   },
@@ -645,7 +645,7 @@ export const BEHAVIORS: Behavior[] = [
     bubble: '🎁',
     explain: {
       en: 'His friend chose it specially. A thank you makes them feel happy.',
-      ml: 'കൂട്ടുകാരൻ പ്രത്യേകം എടുത്തതാ. ഒരു താങ്ക്യൂ പറഞ്ഞാൽ അവന് സന്തോഷമാകും.',
+      ml: 'കൂട്ടുകാരൻ പ്രത്യേകം തന്നതാണ്. ഒരു താങ്ക്യൂ പറഞ്ഞാൽ അവന് സന്തോഷമാകും.',
     },
     pose: {}, scene: { toy: 'hold' },
   },
@@ -741,12 +741,12 @@ export const BEHAVIORS: Behavior[] = [
     construct: 'greetings', tier: 'subtle', isFine: true,
     text: {
       en: "Aisha's hands are wet at the tap, so she says, 'Hi! I'll come after I wash up.'",
-      ml: "ആയിഷയുടെ കൈ പൈപ്പിന്റെ അടുത്ത് നനഞ്ഞിരുന്നു, അതുകൊണ്ട് 'ഹായ്! കൈ കഴുകിയിട്ട് വരാം' എന്ന് പറഞ്ഞു.",
+      ml: "ആയിഷ കൈ കഴുകാൻ പോകുകയായിരുന്നു, അതുകൊണ്ട് 'ഹായ്! കൈ കഴുകിയിട്ട് വരാം' എന്ന് പറഞ്ഞു.",
     },
     bubble: '💧',
     explain: {
       en: 'She greeted her friend and will come soon — that is fine.',
-      ml: 'അവൾ ഹായ് പറഞ്ഞല്ലോ, വേഗം വരികയും ചെയ്യും — അത് ശരിയാ.',
+      ml: 'അവൾ ഹായ് പറഞ്ഞല്ലോ, വേഗം വരികയും ചെയ്യും — അത് നല്ലതാ.',
     },
     pose: { armUp: true }, scene: { polite: true },
   },
@@ -813,7 +813,7 @@ export const BEHAVIORS: Behavior[] = [
     construct: 'sharing', tier: 'subtle', isFine: false,
     text: {
       en: 'Leo takes a big pile of biscuits and leaves none for the friend beside him.',
-      ml: 'ലിയോ ഒരു കൂമ്പാരം ബിസ്‌ക്കറ്റ് എടുത്തു, അടുത്തിരുന്ന കൂട്ടുകാരന് ഒന്നും ബാക്കിവെച്ചില്ല.',
+      ml: 'ലിയോ കുറെ ബിസ്‌ക്കറ്റ് എടുത്തു, അടുത്തിരുന്ന കൂട്ടുകാരന് ഒന്നും ബാക്കിവെച്ചില്ല.',
     },
     bubble: '🍪',
     explain: {
@@ -983,7 +983,7 @@ export const BEHAVIORS: Behavior[] = [
     construct: 'turns', tier: 'subtle', isFine: false,
     text: {
       en: 'The class is sharing one book, but Aisha keeps it and reads for a very long time.',
-      ml: 'ക്ലാസ് ഒരു പുസ്തകം പങ്കിടുകയാ, പക്ഷേ ആയിഷ അത് കയ്യിൽ വെച്ച് ഒരുപാട് നേരം വായിച്ചു.',
+      ml: 'ക്ലാസ്സിൽ ഒരു പുസ്തകം പങ്കിടുകയാ, പക്ഷേ ആയിഷ അത് കയ്യിൽ വെച്ച് ഒരുപാട് നേരം വായിച്ചു.',
     },
     bubble: '📖',
     explain: {

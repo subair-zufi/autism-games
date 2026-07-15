@@ -91,7 +91,7 @@ export const SITUATIONS: Situation[] = [
         label: { en: 'Walk on to your class', ml: 'ക്ലാസ്സിലേക്ക് നടന്നുപോകുക' },
         result: {
           en: 'Aisha picks them all up alone. Stopping to help would be kinder.',
-          ml: 'ആയിഷ ഒറ്റയ്ക്ക് എല്ലാം പെറുക്കി. നിന്ന് സഹായിച്ചിരുന്നെങ്കിൽ കൂടുതൽ നന്നായേനെ.',
+          ml: 'ആയിഷ ഒറ്റയ്ക്ക് എല്ലാം പെറുക്കി. അവിടെ നിന്ന് സഹായിച്ചിരുന്നെങ്കിൽ കൂടുതൽ നന്നായേനെ.',
         },
       },
       {
@@ -126,7 +126,7 @@ export const SITUATIONS: Situation[] = [
         label: { en: 'Keep playing your game', ml: 'നിന്റെ കളി തുടരുക' },
         result: {
           en: 'They stay on the ground, hurting. Stopping to help is kinder.',
-          ml: 'അവൻ വേദനയോടെ അവിടെത്തന്നെ കിടന്നു. നിന്ന് സഹായിക്കുന്നതാ നല്ലത്.',
+          ml: 'അവൻ വേദനയോടെ അവിടെത്തന്നെ കിടന്നു. അവിടെ നിന്ന് സഹായിക്കുന്നതാ നല്ലത്.',
         },
       },
       {
@@ -161,7 +161,7 @@ export const SITUATIONS: Situation[] = [
         label: { en: 'Stay quietly in your seat', ml: 'സീറ്റിൽ മിണ്ടാതെ ഇരിക്കുക' },
         result: {
           en: 'Teacher gathers them all alone. Offering help would be kind.',
-          ml: 'ടീച്ചർ ഒറ്റയ്ക്ക് എല്ലാം എടുത്തു. സഹായം ചോദിച്ചിരുന്നെങ്കിൽ നന്നായേനെ.',
+          ml: 'ടീച്ചർ ഒറ്റയ്ക്ക് എല്ലാം എടുത്തു. സഹായിക്കണോ എന്ന് ചോദിച്ചിരുന്നെങ്കിൽ നന്നായേനെ.',
         },
       },
       {
@@ -196,7 +196,7 @@ export const SITUATIONS: Situation[] = [
         label: { en: 'Walk along saying nothing', ml: 'ഒന്നും പറയാതെ കൂടെ നടക്കുക' },
         result: {
           en: 'Meera keeps struggling alone. Asking to help would be kind.',
-          ml: 'മീര ഒറ്റയ്ക്ക് കഷ്ടപ്പെട്ടു. സഹായം ചോദിക്കുന്നതായിരുന്നു നല്ലത്.',
+          ml: 'മീര ഒറ്റയ്ക്ക് കഷ്ടപ്പെട്ടു. സഹായിക്കണോ എന്ന് ചോദിക്കുന്നതായിരുന്നു നല്ലത്.',
         },
       },
       {
@@ -268,7 +268,7 @@ export const SITUATIONS: Situation[] = [
         label: { en: "Say, 'It's only a toy'", ml: "'അതൊരു കളിപ്പാട്ടമല്ലേ' എന്ന് പറയുക" },
         result: {
           en: "Ravi feels his sadness doesn't matter. Helping him look is kinder.",
-          ml: 'അവന്റെ സങ്കടം ആർക്കും വേണ്ടെന്ന് രവിക്ക് തോന്നി. കൂടെ തിരയുന്നതാ നല്ലത്.',
+          ml: 'അവന്റെ സങ്കടം ആരും കാര്യമാക്കുന്നില്ല എന്ന് രവിക്ക് തോന്നി. കൂടെ തിരയുന്നതാ നല്ലത്.',
         },
       },
       {
@@ -889,7 +889,7 @@ export const SITUATIONS: Situation[] = [
     id: 'stucklace',
     construct: 'helping',    text: {
       en: "Anu's shoelace is stuck in a knot and the bell is ringing.",
-      ml: 'അനുവിന്റെ ഷൂലേസ് കുരുങ്ങിപ്പോയി, ബെല്ലടിക്കുകയും ചെയ്യുന്നു.',
+      ml: 'അനുവിന്റെ ഷൂ ലേസ് കുരുങ്ങിപ്പോയി, ബെല്ലടിക്കുകയും ചെയ്യുന്നു.',
     },
     bubble: '👟',
     scene: { mood: 'sad' },
@@ -949,7 +949,7 @@ export const SITUATIONS: Situation[] = [
       },
       {
         id: 'laughbroke', role: 'wrong', emoji: '😆',
-        label: { en: "Laugh and say, 'It looks funny now'", ml: "ചിരിച്ച് 'ഇപ്പോ അത് തമാശയായി' എന്ന് പറയുക" },
+        label: { en: "Laugh and say, 'It looks funny now'", ml: "ചിരിച്ച് 'അത് നല്ല തമാശയായിപ്പോയി' എന്ന് പറയുക" },
         result: {
           en: 'That hurts Sam more. A kind word is better.',
           ml: 'അത് സാമിനെ കൂടുതൽ വിഷമിപ്പിച്ചു. നല്ല വാക്കാ വേണ്ടത്.',
@@ -1057,7 +1057,7 @@ export const SITUATIONS: Situation[] = [
         label: { en: 'Poke her to wake her up', ml: 'കുത്തി അവളെ ഉണർത്തുക' },
         result: {
           en: 'Poking a sick friend is unkind. Get help instead.',
-          ml: 'അസുഖമുള്ള കൂട്ടുകാരിയെ കുത്തുന്നത് മോശമാ. പകരം സഹായം കൊണ്ടുവാ.',
+          ml: 'അസുഖമുള്ള കൂട്ടുകാരിയെ കുത്തുന്നത് മോശമാ. പകരം സഹായിക്കൂ.',
         },
       },
     ],
@@ -1075,7 +1075,7 @@ export const SITUATIONS: Situation[] = [
     options: [
       {
         id: 'bepartner', role: 'kind', emoji: '🤝',
-        label: { en: "Say, 'Be my partner!'", ml: "'നീ എന്റെ ജോഡിയാകാം!' എന്ന് പറയുക" },
+        label: { en: "Say, 'Be my partner!'", ml: "'നിനക്ക് എന്റെ കൂടെ കൂടാം!' എന്ന് പറയുക" },
         result: {
           en: 'He grins and joins you happily.',
           ml: 'അവൻ ചിരിച്ച് സന്തോഷത്തോടെ കൂടെക്കൂടി.',
@@ -1173,7 +1173,7 @@ export const SITUATIONS: Situation[] = [
     id: 'wheelchair',
     construct: 'inclusion',    text: {
       en: 'A boy in a wheelchair watches the others play tag.',
-      ml: 'വീൽചെയറിലിരിക്കുന്ന ഒരു കുട്ടി മറ്റുള്ളവർ പിടിത്തക്കളി കളിക്കുന്നത് നോക്കുന്നു.',
+      ml: 'വീൽചെയറിലിരിക്കുന്ന ഒരു കുട്ടി മറ്റുള്ളവർ കളിക്കുന്നത് നോക്കുന്നു.',
     },
     bubble: '👦',
     scene: { mood: 'sad', watching: true },
@@ -1457,14 +1457,14 @@ export const SITUATIONS: Situation[] = [
     id: 'scorecheat',
     construct: 'fairness',    text: {
       en: 'In a board game, you could move an extra space when no one is looking.',
-      ml: 'ബോർഡ് കളിയിൽ ആരും നോക്കാത്തപ്പോൾ നിനക്ക് ഒരു കളം കൂടുതൽ നീങ്ങാം.',
+      ml: 'ബോർഡ് കളിയിൽ ആരും നോക്കാത്തപ്പോൾ നിനക്ക് ഒരു കളം കൂടുതൽ നീക്കാം.',
     },
     bubble: '🎲',
     scene: { mood: 'neutral' },
     options: [
       {
         id: 'playfair', role: 'kind', emoji: '🤝',
-        label: { en: 'Move only the right number', ml: 'ശരിയായ എണ്ണം മാത്രം നീങ്ങുക' },
+        label: { en: 'Move only the right number', ml: 'ശരിയായ എണ്ണം മാത്രം നീക്കുക' },
         result: {
           en: 'Everyone trusts you — fair play keeps it fun.',
           ml: 'എല്ലാവർക്കും നിന്നെ വിശ്വാസമായി — ന്യായമായി കളിച്ചാൽ രസമാ.',
