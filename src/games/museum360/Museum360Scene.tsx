@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSampler } from '../HeadSampler'
+import { angDiffDeg, latestYawDeg } from '../headTracking'
 import {
   AVATAR_Z,
   OBJECT_RADIUS,
@@ -472,8 +473,9 @@ function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueR
  *   pulse  — point + fingertip sparkle trail + glowing ring at the target
  *   hover  — point + fingertip sparkle trail
  *   distal — plain point
- *   gaze   — no gesture: the head looks at the child first (attention bid),
- *            then visibly shifts to the target and keeps re-shifting
+ *   gaze   — no gesture: the head holds on the child (attention bid) until
+ *            real eye contact, then shifts to the target and keeps
+ *            alternating back to the child and out again
  * The trail shows the *direction* for about a metre and stops far short of
  * the target, so the child still extrapolates and searches.
  */
@@ -488,6 +490,11 @@ const CHILD_EYES = new THREE.Vector3(0, 1.5, 0) // roughly the child's face
 const SHOULDER_LOCAL = new THREE.Vector3(0.3, 1.4, 0) // right shoulder, body-local
 const ARM_LEN = 1.05 // shoulder to fingertip along the arm's +z
 const TRAIL_DOTS = 4
+// gaze cue: the shift to the target only starts once the child actually
+// looks back at the avatar (real eye contact), not on a blind timer —
+// but a child who doesn't orient at all still gets the cue eventually
+const EYE_CONTACT_TOL_DEG = 15
+const EYE_CONTACT_TIMEOUT_S = 6
 const UP = new THREE.Vector3(0, 1, 0)
 const FWD = new THREE.Vector3(0, 0, 1)
 // scratch objects reused every frame
@@ -517,6 +524,8 @@ function HelperFigure({
   const dots = useRef<(THREE.Mesh | null)[]>([])
   const yaw = useRef(0)
   const t0 = useRef<number | null>(null)
+  const roundStart = useRef<number | null>(null)
+  const eyeContact = useRef(false)
   const settled = useRef(false)
   // keep the latest callback without re-subscribing the frame loop
   const onSettledRef = useRef(onSettled)
@@ -524,7 +533,9 @@ function HelperFigure({
 
   useEffect(() => {
     settled.current = false
+    eyeContact.current = false
     t0.current = null // restart the attention-bid sequence each round
+    roundStart.current = null
   }, [cueKey, mode])
 
   const handMode = mode !== 'gaze'
@@ -534,6 +545,23 @@ function HelperFigure({
     const b = body.current
     const h = head.current
     if (!b || !h) return
+    if (roundStart.current === null) roundStart.current = state.clock.elapsedTime
+
+    // hold the attention bid (looking at the child) until real eye contact —
+    // the child's head within EYE_CONTACT_TOL_DEG of the avatar's bearing
+    // (0°) — rather than shifting to the target on a blind timer. A child who
+    // never orients still gets the cue after EYE_CONTACT_TIMEOUT_S so the
+    // round can't stall indefinitely.
+    if (mode === 'gaze' && !eyeContact.current) {
+      const waited = state.clock.elapsedTime - roundStart.current
+      const looking = Math.abs(angDiffDeg(latestYawDeg(), 0)) <= EYE_CONTACT_TOL_DEG
+      if (looking || waited > EYE_CONTACT_TIMEOUT_S) {
+        eyeContact.current = true
+        t0.current = state.clock.elapsedTime // start the shift cycle now
+      } else {
+        t0.current = state.clock.elapsedTime // keep t at 0: stay in the bid
+      }
+    }
     if (t0.current === null) t0.current = state.clock.elapsedTime
     const t = state.clock.elapsedTime - t0.current
     const k = Math.min(1, dt * 5)

@@ -55,6 +55,12 @@ export function beginHeadWindow(now: number = performance.now()): void {
   windowStart = now
 }
 
+/** The most recent sampled yaw (deg), or 0 before any sample has arrived —
+ *  used to gate cues on the child's live facing rather than the trial window. */
+export function latestYawDeg(): number {
+  return buf.length ? buf[buf.length - 1].yaw : 0
+}
+
 /** Record one camera pose (called by <HeadSampler>; degrees). */
 export function sampleHeadPose(
   yawDeg: number,
