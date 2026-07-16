@@ -52,6 +52,7 @@ SKILL_BY_GAME = {
     "rollback": "turntaking",
     "football360": "turntaking",
     "rightway": "socialnorms",
+    "rightway360": "socialnorms",
     "rulefixer": "socialnorms",
     "museum": "jointattention",
     "museum360": "jointattention",
@@ -289,7 +290,10 @@ def trials_for_game(game_key: str, events: Iterable[EventLike]) -> list[Trial]:
         return _quiz_trials(evs, EMOTIONREC_CHANCE)
     if game_key == "identifyemotions":
         return _clips_trials(evs)
-    if game_key in ("rightway", "rulefixer"):
+    if game_key in ("rightway", "rightway360", "rulefixer"):
+        # Schoolyard 360 is the immersive copy of Right or Wrong — same answer
+        # payloads (`chance` and `construct` on every answer), so the same
+        # payload-chance scoring applies.
         return _payload_chance_trials(evs)
     if game_key in ("museum", "museum360"):
         # Museum 360 is the immersive copy of Museum Look — same answer
@@ -603,10 +607,12 @@ def _float_or(v: object, default: float) -> float:
 # That is too few to read one child's strength/weakness on one construct, so
 # the dashboard pools several recent sessions instead of reading one alone.
 
-SOCIAL_NORMS_GAMES = ("rightway", "rulefixer")
+SOCIAL_NORMS_GAMES = ("rightway", "rightway360", "rulefixer")
 
 SOCIAL_NORMS_CONSTRUCTS: dict[str, tuple[str, ...]] = {
     "rightway": ("greetings", "sharing", "turns", "space", "politeness"),
+    # Schoolyard 360 reuses the flat game's item bank, so the same constructs.
+    "rightway360": ("greetings", "sharing", "turns", "space", "politeness"),
     "rulefixer": ("helping", "comforting", "inclusion", "politeness", "fairness"),
 }
 

@@ -8,6 +8,7 @@ export type GameId =
   | 'museum'
   | 'museum360'
   | 'rightway'
+  | 'rightway360'
   | 'rulefixer'
   | 'identifyemotions'
   | 'identifyemotions360'
@@ -174,6 +175,19 @@ export const GAME_LIST: GameMeta[] = [
       'Social norms: judge whether a behaviour is okay across greetings, sharing, turns, space and politeness — harder levels use subtle behaviours (quiet omissions, polite refusals)',
     duration: '5–10 min',
     hasLevels: true,
+  },
+  {
+    id: 'rightway360',
+    title: 'Schoolyard 360',
+    icon: '🛝',
+    path: '/rightway-360',
+    color: '#15803d',
+    skill: 'socialnorms',
+    description: 'Watch the moment, judge it — look around · നോക്കി ശരിയോ തെറ്റോ പറയൂ',
+    objective:
+      'Social norms in an immersive first-person schoolyard: the same okay/not-okay judgment, item bank and clear/subtle tiers as Right or Wrong, but each behaviour is acted out by two kids at a spot across the front arc — the snatch lunges, the walk-past walks past, the queue-cut runs to the front — and the child turns the view (a head turn in VR) to find the scene, watch it, and tap an in-world 👍/👎 card; each answer records how far the child had to turn',
+    duration: '5–10 min',
+    hasLevels: false,
   },
   {
     id: 'rulefixer',

@@ -23,6 +23,7 @@ import { Football360Game } from './games/football360/Football360Game'
 import { MuseumGame } from './games/museum/MuseumGame'
 import { Museum360Game } from './games/museum360/Museum360Game'
 import { RightWayGame } from './games/rightway/RightWayGame'
+import { RightWay360Game } from './games/rightway360/RightWay360Game'
 import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
 import { IdentifyEmotionsGame } from './games/identifyemotions/IdentifyEmotionsGame'
 import { IdentifyEmotions360Game } from './games/identifyemotions360/IdentifyEmotions360Game'
@@ -40,6 +41,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   museum: MuseumGame,
   museum360: Museum360Game,
   rightway: RightWayGame,
+  rightway360: RightWay360Game,
   rulefixer: RuleFixerGame,
   identifyemotions: IdentifyEmotionsGame,
   identifyemotions360: IdentifyEmotions360Game,
