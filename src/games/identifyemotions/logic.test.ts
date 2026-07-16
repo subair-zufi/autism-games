@@ -84,6 +84,26 @@ test('choice counts: easy 2, medium 3, hard 4; answer always present and unique'
   check('hard', 4)
 })
 
+test('answer position is counterbalanced across a session, not left to chance (review M4)', () => {
+  // VIDEO_COUNT is an exact multiple of CHOICE_COUNT at every difficulty
+  // (6/2, 9/3, 12/4), so a fully counterbalanced session lands the answer on
+  // every choice slot exactly VIDEO_COUNT/CHOICE_COUNT times — never
+  // disproportionately on one slot (e.g. the correct card always on the left).
+  const cases: Array<['easy' | 'medium' | 'hard', number, number]> = [
+    ['easy', 6, 2],
+    ['medium', 9, 3],
+    ['hard', 12, 4],
+  ]
+  for (const [d, videoCount, choiceCount] of cases) {
+    for (let s = 1; s <= 10; s++) {
+      const quiz = buildQuiz(d, seeded(s))
+      const counts = new Array(choiceCount).fill(0)
+      for (const q of quiz) counts[q.choices.indexOf(q.answer)]++
+      expect(counts).toEqual(new Array(choiceCount).fill(videoCount / choiceCount))
+    }
+  }
+})
+
 test('easy distractors avoid confusable emotions; hard always includes one', () => {
   for (let s = 1; s <= 30; s++) {
     for (const q of buildQuiz('easy', seeded(s))) {

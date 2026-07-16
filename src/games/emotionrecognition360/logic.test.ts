@@ -7,6 +7,7 @@ import {
   CONFIG,
   FRONT_HALF_ARC_DEG,
   answerBearingDeg,
+  buildAnswerSlots,
   buildTargets,
   isDragTail,
   lookDrag,
@@ -83,6 +84,37 @@ describe('makeRound', () => {
       if (distractors.some((e) => CONFUSABLE_WITH.scared.includes(e))) sawConfusable = true
     }
     expect(sawConfusable).toBe(true)
+  })
+})
+
+describe('buildAnswerSlots', () => {
+  it('spreads the correct board evenly across every position, no side bias', () => {
+    for (const d of DIFFS) {
+      const slots = buildAnswerSlots(d, seededRng(d.length + 5))
+      expect(slots).toHaveLength(CONFIG[d].goal)
+      const counts = new Array(CONFIG[d].boardCount).fill(0)
+      for (const s of slots) counts[s]++
+      // every position appears within one of every other — never lopsided
+      // (e.g. correct board landing left 5/6 rounds), the M4 review finding
+      expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1)
+    }
+  })
+
+  it('never repeats the same slot across a cycle seam when it can avoid it', () => {
+    const slots = buildAnswerSlots('hard', seededRng(11))
+    for (let i = 1; i < slots.length; i++) {
+      // boardCount for hard is 3, so an immediate repeat is always avoidable
+      if (CONFIG.hard.boardCount > 1) expect(slots[i]).not.toBe(slots[i - 1])
+    }
+  })
+
+  it('makeRound honours an explicit answerSlot', () => {
+    const slots = buildAnswerSlots('medium', seededRng(2))
+    for (const slot of slots) {
+      const round = makeRound('happy', 'medium', seededRng(3), slot)
+      expect(round.answerIndex).toBe(slot)
+      expect(round.boards[slot].emotion).toBe('happy')
+    }
   })
 })
 

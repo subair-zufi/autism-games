@@ -112,17 +112,48 @@ export function makeRound(
   target: EmotionId,
   difficulty: Difficulty,
   rng: () => number = Math.random,
+  /** which board slot gets the target; omit to draw one uniformly (tests).
+   *  Real sessions should pass a slot from `buildAnswerSlots` so the correct
+   *  board doesn't land disproportionately on one side across a session. */
+  answerSlot?: number,
 ): Round {
   const cfg = CONFIG[difficulty]
-  const distractors = pickDistractors(target, cfg.boardCount - 1, cfg.tier, rng)
-  const emotions = shuffle([target, ...distractors], rng)
+  const distractors = shuffle(pickDistractors(target, cfg.boardCount - 1, cfg.tier, rng), rng)
+  const slot = answerSlot ?? Math.floor(rng() * cfg.boardCount)
+  const emotions: EmotionId[] = []
+  let di = 0
+  for (let i = 0; i < cfg.boardCount; i++) {
+    emotions.push(i === slot ? target : distractors[di++])
+  }
   const bearings = BEARINGS[cfg.boardCount]
   const boards: Board[] = emotions.map((emotion, i) => {
     const img = pick(singleImagesFor(emotion), rng)
     return { emotion, imageSrc: img.src, gender: img.gender, bearingDeg: bearings[i] }
   })
-  const answerIndex = boards.findIndex((b) => b.emotion === target)
-  return { boards, target, answerIndex }
+  return { boards, target, answerIndex: slot }
+}
+
+/**
+ * The correct board's slot index for each round, dealt in shuffled cycles over
+ * the level's board positions so a session sweeps every position evenly
+ * instead of favouring one side (review M4) — same shuffled-cycle technique as
+ * `buildTargets` here and `stageBearings` in rightway360/logic.ts.
+ */
+export function buildAnswerSlots(difficulty: Difficulty, rng: () => number = Math.random): number[] {
+  const cfg = CONFIG[difficulty]
+  const out: number[] = []
+  while (out.length < cfg.goal) {
+    const cycle = shuffle(
+      Array.from({ length: cfg.boardCount }, (_, i) => i),
+      rng,
+    )
+    // avoid the same slot twice in a row across the cycle seam
+    if (out.length > 0 && cycle[0] === out[out.length - 1] && cycle.length > 1) {
+      ;[cycle[0], cycle[1]] = [cycle[1], cycle[0]]
+    }
+    out.push(...cycle)
+  }
+  return out.slice(0, cfg.goal)
 }
 
 /**

@@ -13,6 +13,7 @@ import { playGentle, playSuccess } from '../../services/sounds'
 import {
   CONFIG,
   answerBearingDeg,
+  buildAnswerSlots,
   buildTargets,
   makeRound,
   pointsFor,
@@ -76,6 +77,9 @@ export function EmotionRecognition360Game() {
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const gapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** which board slot holds the correct face each round — dealt in shuffled
+   *  cycles so the session sweeps every position evenly (review M4) */
+  const answerSlots = useRef<number[]>([])
 
   useEffect(() => () => clearTimers(), [])
 
@@ -104,6 +108,7 @@ export function EmotionRecognition360Game() {
     setStars(0)
     const seq = buildTargets(difficulty)
     setTargets(seq)
+    answerSlots.current = buildAnswerSlots(difficulty)
     setRoundIdx(0)
     setPhase('playing')
     beginRound(seq, 0)
@@ -116,7 +121,7 @@ export function EmotionRecognition360Game() {
     setHint(false)
     setActive(false)
     readyAt.current = null
-    const next = makeRound(seq[idx], difficulty)
+    const next = makeRound(seq[idx], difficulty, Math.random, answerSlots.current[idx])
     setRound(next)
     // a calm beat, then the boards appear and the question is asked
     gapTimer.current = setTimeout(() => {

@@ -300,6 +300,28 @@ function sampleClips(pool: VideoClip[], count: number, rng: () => number): Video
   return shuffle(out, rng)
 }
 
+/**
+ * The correct choice's slot index for each clip, dealt in shuffled cycles over
+ * the level's choice count so a session sweeps every position evenly instead
+ * of favouring one side (review M4: Emotion Cinema 360 places choices at
+ * bearings by slot index, so an uncounterbalanced shuffle biased the bearing
+ * metric the same way Emotion Recognition 360's board pick did).
+ */
+function answerSlots(n: number, count: number, rng: () => number): number[] {
+  const out: number[] = []
+  while (out.length < count) {
+    const cycle = shuffle(
+      Array.from({ length: n }, (_, i) => i),
+      rng,
+    )
+    if (out.length > 0 && cycle[0] === out[out.length - 1] && cycle.length > 1) {
+      ;[cycle[0], cycle[1]] = [cycle[1], cycle[0]]
+    }
+    out.push(...cycle)
+  }
+  return out.slice(0, count)
+}
+
 export function buildQuiz(
   difficulty: Difficulty,
   rng: () => number = Math.random,
@@ -307,9 +329,14 @@ export function buildQuiz(
   const n = CHOICE_COUNT[difficulty]
   const tier = DISTRACTOR_TIER[difficulty]
   const freezeKind = FREEZE_KIND[difficulty]
-  return sampleClips(poolFor(difficulty), VIDEO_COUNT[difficulty], rng).map((clip) => {
+  const clips = sampleClips(poolFor(difficulty), VIDEO_COUNT[difficulty], rng)
+  const slots = answerSlots(n, clips.length, rng)
+  return clips.map((clip, idx) => {
     const answer = clip.emotion
-    const choices = shuffle([answer, ...pickDistractors(answer, n - 1, tier, rng)], rng)
+    const distractors = shuffle(pickDistractors(answer, n - 1, tier, rng), rng)
+    const choices: EmotionId[] = []
+    let di = 0
+    for (let i = 0; i < n; i++) choices.push(i === slots[idx] ? answer : distractors[di++])
     let cause: CauseQuestion | undefined
     if (clip.cause) {
       // Shuffle the authored options, keeping track of where the answer lands.

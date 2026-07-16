@@ -234,9 +234,18 @@ right).
    once clips + keys exist.
 
 **Next (research quality):**
-5. Gate Museum 360's attention bid on real eye contact; add gaze alternation (§3.5).
-6. Counterbalance correct-answer bearings (M4); add `hinted` to answer events and align
-   prompt pricing across games (M5, P3).
+5. ✅ **Done (2026-07-16).** Gate Museum 360's attention bid on real eye contact (§3.5). The
+   gaze cue now holds the avatar looking at the child until the child's head is within 15° of
+   the avatar's bearing (a 6 s fallback prevents an indefinite stall), then the existing repeating
+   bid/shift cycle reads as a genuine back-reference glance instead of a blind timer.
+6. ✅ **Done (2026-07-17).** Counterbalance correct-answer bearings (M4). Emotion Room 360 and
+   Emotion Clips/Cinema 360 (shared `identifyemotions/logic.ts`) both drew the correct
+   board/card's slot with an independent per-round shuffle; over a 6–12 trial session that could
+   land the answer on one side most of the time, biasing the bearing metric. Both now deal the
+   answer slot from a shuffled-cycle bag (same technique as `stageBearings` in
+   `rightway360/logic.ts` and `buildTargets` here) so every slot appears within one trial of
+   every other across a session, with a seam guard against an immediate repeat.
+   Still open: `hinted` on answer events and aligned prompt pricing (M5, P3).
 7. A shared VR practice/acclimatisation scene with unscored trials (U2).
 8. `no_share` / timeout logging for Park 360 Hard (§3.6).
 
