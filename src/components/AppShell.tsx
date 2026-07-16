@@ -5,6 +5,7 @@
  */
 import { NavLink, Outlet } from 'react-router-dom'
 import { ChartIcon, CohortIcon, HomeIcon, PeopleIcon, ProfileIcon } from './icons'
+import { useSettings } from '../state/settings'
 
 const TABS = [
   { to: '/', label: 'Home', Icon: HomeIcon, end: true },
@@ -32,8 +33,42 @@ export function AppShell() {
         ))}
       </nav>
       <main className="shell-main">
+        <PlayModeToggle />
         <Outlet />
       </main>
+    </div>
+  )
+}
+
+/**
+ * Persistent Desktop / VR HMD switch, pinned above every tab-shell page.
+ * Lives in settings (localStorage) rather than page state so it survives
+ * navigation and reloads — Home reads it to decide which build of each
+ * skill's games to list.
+ */
+function PlayModeToggle() {
+  const playMode = useSettings((s) => s.playMode)
+  const setPlayMode = useSettings((s) => s.setPlayMode)
+  return (
+    <div className="mode-toggle" role="radiogroup" aria-label="Play mode">
+      <button
+        type="button"
+        role="radio"
+        aria-checked={playMode === 'desktop'}
+        className={playMode === 'desktop' ? 'mode-toggle-btn active' : 'mode-toggle-btn'}
+        onClick={() => setPlayMode('desktop')}
+      >
+        🖥️ Desktop
+      </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={playMode === 'vr'}
+        className={playMode === 'vr' ? 'mode-toggle-btn active' : 'mode-toggle-btn'}
+        onClick={() => setPlayMode('vr')}
+      >
+        🥽 VR HMD
+      </button>
     </div>
   )
 }

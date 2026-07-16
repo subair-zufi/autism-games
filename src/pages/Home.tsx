@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/auth'
 import { GAMES_BY_SKILL, GAME_LIST, type GameId, type GameMeta } from '../types'
 import { useScores } from '../state/scores'
+import { useSettings } from '../state/settings'
 import { playTap } from '../services/sounds'
 import { analytics } from '../services/analytics'
 import { ProgressBar } from '../components/ProgressBar'
@@ -14,6 +15,7 @@ export function Home() {
   const activeStudentId = useAuth((s) => s.activeStudentId)
   const loadStudents = useAuth((s) => s.loadStudents)
   const best = useScores((s) => s.best)
+  const playMode = useSettings((s) => s.playMode)
 
   const active = students.find((s) => s.id === activeStudentId) ?? null
 
@@ -73,19 +75,23 @@ export function Home() {
         )}
       </header>
 
-      {GAMES_BY_SKILL.map(({ skill, games }) => (
-        <section key={skill.id}>
-          <div className="section-head">
-            <h2>{skill.icon} {skill.label}</h2>
-            <span className="section-count">{games.length} MODULES</span>
-          </div>
-          <div className="game-grid">
-            {games.map((g) => (
-              <GameCard key={g.id} game={g} percent={percents[g.id] ?? 0} best={best[g.id] ?? 0} onOpen={navigate} />
-            ))}
-          </div>
-        </section>
-      ))}
+      {GAMES_BY_SKILL.map(({ skill, games: allGames }) => {
+        const games = allGames.filter((g) => g.mode === playMode)
+        if (games.length === 0) return null
+        return (
+          <section key={skill.id}>
+            <div className="section-head">
+              <h2>{skill.icon} {skill.label}</h2>
+              <span className="section-count">{games.length} MODULES</span>
+            </div>
+            <div className="game-grid">
+              {games.map((g) => (
+                <GameCard key={g.id} game={g} percent={percents[g.id] ?? 0} best={best[g.id] ?? 0} onOpen={navigate} />
+              ))}
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }

@@ -357,6 +357,17 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .tab.active { color: var(--m-accent); }
 .tab-icon { width: 22px; height: 22px; }
 
+/* ---- Desktop / VR HMD play-mode switch (pinned atop every tab page) ---- */
+.mode-toggle {
+  display: flex; gap: 4px; background: #f1f4f9; border-radius: 999px;
+  padding: 4px; margin: 0 2px 16px;
+}
+.mode-toggle-btn {
+  flex: 1; background: transparent; color: var(--m-muted); border-radius: 999px;
+  padding: 10px 12px; font-weight: 700; font-size: 0.85rem;
+}
+.mode-toggle-btn.active { background: #fff; color: var(--m-accent); box-shadow: 0 2px 6px rgba(31, 42, 68, 0.1); }
+
 /* ---- generic tab-page bits ---- */
 .page-head h1 { font-size: 1.5rem; margin: 4px 2px 16px; }
 .empty { color: #8a97ad; text-align: center; padding: 24px; }

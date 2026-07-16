@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Difficulty, GameId } from '../types'
+import type { Difficulty, GameId, PlayMode } from '../types'
 import type { Lang } from '../i18n/strings'
 
 interface SettingsState {
@@ -11,10 +11,14 @@ interface SettingsState {
   // both languages at once; now only this one is rendered and spoken.
   language: Lang
   difficulty: Record<GameId, Difficulty>
+  // Which build of each skill's games Home shows — flipped from the
+  // persistent header toggle so the choice survives navigation and reloads.
+  playMode: PlayMode
   setVoiceOn: (v: boolean) => void
   setSoundOn: (v: boolean) => void
   setLanguage: (lang: Lang) => void
   setDifficulty: (game: GameId, d: Difficulty) => void
+  setPlayMode: (mode: PlayMode) => void
 }
 
 export const useSettings = create<SettingsState>()(
@@ -24,11 +28,13 @@ export const useSettings = create<SettingsState>()(
       soundOn: true,
       language: 'en',
       difficulty: { emotionrecognition: 'easy', emotionrecognition360: 'easy', blocks: 'easy', playroom360: 'easy', rollback: 'easy', football360: 'easy', museum: 'easy', museum360: 'easy', rightway: 'easy', rightway360: 'easy', rulefixer: 'easy', identifyemotions: 'easy', identifyemotions360: 'easy', discovery: 'easy', park360: 'easy' },
+      playMode: 'desktop',
       setVoiceOn: (voiceOn) => set({ voiceOn }),
       setSoundOn: (soundOn) => set({ soundOn }),
       setLanguage: (language) => set({ language }),
       setDifficulty: (game, d) =>
         set((s) => ({ difficulty: { ...s.difficulty, [game]: d } })),
+      setPlayMode: (playMode) => set({ playMode }),
     }),
     {
       name: 'autism-settings',
