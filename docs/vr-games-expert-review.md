@@ -276,7 +276,11 @@ right).
    ScoreBar's Home link, GameOverDialog) is invisible inside a headset and the only other way a
    session ended was reaching the game's "over" phase, so a child who never got there (or simply
    wanted out) previously had no way to leave VR at all. Quitting drops back to the flat page
-   exactly where the game was; it doesn't reset or skip the round. Still open: an in-world results
+   exactly where the game was; it doesn't reset or skip the round. Placed by BEARING just outside
+   each game's own left-most interactive element (Cinema −42°, Playroom −48°, Museum −50°, Emotion
+   Room −52°, Football −64°, Park −66° — each ~10° past that game's outer edge), low and turned to
+   face the child, so it sits at the edge of the activity arc — a small glance left — and never
+   overlaps or hides the game or its answer options in any game. Still open: an in-world results
    board with "play again" so game-over itself doesn't force-end the session into a jarring
    context switch (the other half of V3).
 10. Lazy-follow HUD with progress dots (V1, U1).

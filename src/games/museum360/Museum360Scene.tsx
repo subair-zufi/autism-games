@@ -155,7 +155,8 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
     <group>
       <TextPanel text={score} position={[0, 4.35, -7.6]} width={2.6} height={0.62} font={110} />
       <TextPanel text={prompt} position={[0, 3.55, -7.6]} width={4.6} height={0.8} font={64} />
-      <VRQuitButton position={[0, 2.85, -7.6]} label={quit} />
+      {/* just left of the outermost pedestal (≈−33°) — clear of the exhibits */}
+      <VRQuitButton bearingDeg={-50} label={quit} />
     </group>
   )
 }

@@ -15,15 +15,27 @@ import * as THREE from 'three'
  * link/GameOverDialog take over from there — this button only ever leaves
  * the headset, it never resets or skips the game itself.
  *
- * Drop one inside each game's `VRHud` (rendered only while `inSession`, same
- * as the score/prompt panels), at a position clear of that game's own HUD.
+ * Placed by BEARING, not raw coordinates: each game passes a `bearingDeg` just
+ * outside its own left-most interactive element (boards / cards / players /
+ * discoveries), so the button sits right at the edge of that game's activity
+ * arc — a small glance left to reach — and can never overlap or hide the game
+ * or its answer options. It rides low and turns to face the child. Drop one
+ * inside each game's `VRHud` (rendered only while `inSession`).
  */
 export function VRQuitButton({
-  position,
+  bearingDeg,
   label,
+  radius = 3.6,
+  height = 1.2,
 }: {
-  position: [number, number, number]
+  /** signed bearing from straight-ahead, degrees left(−)/right(+) — put it just
+   *  outside the game's own left activity edge */
+  bearingDeg: number
   label: string
+  /** distance from the child (metres) */
+  radius?: number
+  /** panel centre height (metres) */
+  height?: number
 }) {
   const session = useXR((s) => s.session)
 
@@ -55,9 +67,18 @@ export function VRQuitButton({
 
   if (!session) return null
 
+  // bearing 0 = forward/−z; left(−)/right(+) — same convention as every game
+  const rad = (bearingDeg * Math.PI) / 180
+  const x = Math.sin(rad) * radius
+  const z = -Math.cos(rad) * radius
+  // turn the panel to face the child at the origin (its −z default would sit
+  // edge-on at an off-centre bearing)
+  const rotY = Math.atan2(-x, -z)
+
   return (
     <mesh
-      position={position}
+      position={[x, height, z]}
+      rotation={[0, rotY, 0]}
       onClick={(e) => {
         e.stopPropagation()
         void session.end()
