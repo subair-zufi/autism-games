@@ -31,6 +31,7 @@ import { Museum360Scene } from './Museum360Scene'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
+import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
 
 const META = GAME_LIST.find((g) => g.id === 'museum360')!
 
@@ -46,6 +47,8 @@ function targetBearingDeg(round: Round): number {
 export function Museum360Game() {
   const difficulty = useSettings((s) => s.difficulty.museum360)
   const lang = useSettings((s) => s.language)
+  const vrPracticeDone = useSettings((s) => s.vrPracticeDone)
+  const setVrPracticeDone = useSettings((s) => s.setVrPracticeDone)
   const best = useScores((s) => s.best.museum360)
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('museum360', xrStore)
@@ -205,6 +208,11 @@ export function Museum360Game() {
       setTier((t) => supportedTier(t, difficulty))
     }
   }
+
+  // one-time, unscored warm-up before this child's very first real session
+  // ever, across every 360 game (review U2) — separates headset novelty from
+  // the skill this game measures
+  if (!vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
   if (phase === 'start') return <StartScreen game={META} onStart={start} levelNotes={levelNotes} />
 

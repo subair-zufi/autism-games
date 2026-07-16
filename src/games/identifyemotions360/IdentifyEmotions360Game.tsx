@@ -23,6 +23,7 @@ import { IdentifyEmotions360Scene } from './IdentifyEmotions360Scene'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
+import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
 
 const META = GAME_LIST.find((g) => g.id === 'identifyemotions360')!
 
@@ -44,6 +45,8 @@ const CAUSE_REVEAL_MS = 1500
 export function IdentifyEmotions360Game() {
   const difficulty = useSettings((s) => s.difficulty.identifyemotions360)
   const lang = useSettings((s) => s.language)
+  const vrPracticeDone = useSettings((s) => s.vrPracticeDone)
+  const setVrPracticeDone = useSettings((s) => s.setVrPracticeDone)
   const best = useScores((s) => s.best.identifyemotions360)
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('identifyemotions360', xrStore)
@@ -293,6 +296,11 @@ export function IdentifyEmotions360Game() {
     qRef.current = quiz[next]
     startQuestion(quiz, next)
   }
+
+  // one-time, unscored warm-up before this child's very first real session
+  // ever, across every 360 game (review U2) — separates headset novelty from
+  // the skill this game measures
+  if (!vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
   if (phase === 'start') {
     return (

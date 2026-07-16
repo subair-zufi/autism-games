@@ -189,11 +189,17 @@ export function roundChance(round: Round): number {
   return 1 / round.boards.length
 }
 
-/** Child-facing points: a correct first tap is worth this. */
+/**
+ * Child-facing points. A hinted correct (the "look around" cue already fired)
+ * earns half a spontaneous one — the same prompted/spontaneous ratio Park 360
+ * uses (review M5/P3), so prompt-dependence is comparable across games.
+ */
 export const POINTS_PER_CORRECT = 10
+export const POINTS_HINTED = 5
 
-export function pointsFor(correct: boolean): number {
-  return correct ? POINTS_PER_CORRECT : 0
+export function pointsFor(correct: boolean, hinted = false): number {
+  if (!correct) return 0
+  return hinted ? POINTS_HINTED : POINTS_PER_CORRECT
 }
 
 /**

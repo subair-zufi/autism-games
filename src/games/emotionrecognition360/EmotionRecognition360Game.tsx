@@ -26,6 +26,7 @@ import { EmotionRecognition360Scene } from './EmotionRecognition360Scene'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
+import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
 
 const META = GAME_LIST.find((g) => g.id === 'emotionrecognition360')!
 
@@ -46,6 +47,8 @@ const ROUND_GAP_MS = 700
 export function EmotionRecognition360Game() {
   const difficulty = useSettings((s) => s.difficulty.emotionrecognition360)
   const lang = useSettings((s) => s.language)
+  const vrPracticeDone = useSettings((s) => s.vrPracticeDone)
+  const setVrPracticeDone = useSettings((s) => s.setVrPracticeDone)
   const best = useScores((s) => s.best.emotionrecognition360)
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('emotionrecognition360', xrStore)
@@ -75,6 +78,10 @@ export function EmotionRecognition360Game() {
   /** guards the speak() onEnd callback against a later round's utterance */
   const promptTok = useRef(0)
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** whether the "look around" hint fired this round — read at answer time so a
+   *  hinted correct prices like a prompted find (review M5/P3), independent of
+   *  the `hint` display state (which clears the instant the child answers) */
+  const hintFiredRef = useRef(false)
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const gapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** which board slot holds the correct face each round — dealt in shuffled
@@ -119,6 +126,7 @@ export function EmotionRecognition360Game() {
     setAnswered(false)
     setPickedIndex(null)
     setHint(false)
+    hintFiredRef.current = false
     setActive(false)
     readyAt.current = null
     const next = makeRound(seq[idx], difficulty, Math.random, answerSlots.current[idx])
@@ -153,6 +161,7 @@ export function EmotionRecognition360Game() {
     if (cfg.hintAfterMs === null) return
     hintTimer.current = setTimeout(() => {
       setHint(true)
+      hintFiredRef.current = true
       playGentle()
       speak(roomLine('hintLook', lang), lang)
       recordStep('hint', {})
@@ -170,11 +179,12 @@ export function EmotionRecognition360Game() {
     // before it finished (or speech was off)
     const latencyFromPromptEndMs = promptEndAt.current === null ? null : Math.round(now - promptEndAt.current)
     const head = headMetrics(answerBearingDeg(round))
+    const hinted = hintFiredRef.current
     setPickedIndex(i)
     setAnswered(true)
     setHint(false)
 
-    const points = pointsFor(correct)
+    const points = pointsFor(correct, hinted)
     const nextScore = score + points
     const nextCorrect = correctCount + (correct ? 1 : 0)
     setScore(nextScore)
@@ -203,6 +213,7 @@ export function EmotionRecognition360Game() {
         latencyMs,
         latencyFromPromptEndMs,
         ...head,
+        hinted,
         mode: 'practice',
       },
       { score: nextScore },
@@ -234,6 +245,11 @@ export function EmotionRecognition360Game() {
     setRoundIdx(next)
     beginRound(targets, next)
   }
+
+  // one-time, unscored warm-up before this child's very first real session
+  // ever, across every 360 game (review U2) — separates headset novelty from
+  // the skill this game measures
+  if (!vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
   if (phase === 'start') {
     return (

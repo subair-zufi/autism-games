@@ -245,9 +245,26 @@ right).
    answer slot from a shuffled-cycle bag (same technique as `stageBearings` in
    `rightway360/logic.ts` and `buildTargets` here) so every slot appears within one trial of
    every other across a session, with a seam guard against an immediate repeat.
-   Still open: `hinted` on answer events and aligned prompt pricing (M5, P3).
-7. A shared VR practice/acclimatisation scene with unscored trials (U2).
-8. `no_share` / timeout logging for Park 360 Hard (§3.6).
+   ✅ Also done (2026-07-17): `hinted` on answer events + aligned prompt pricing (M5, P3). Emotion
+   Room 360's `answer` event previously carried no signal that its hint had already fired, and a
+   hinted correct earned full credit; it now tracks a `hintFiredRef` per round, prices a hinted
+   correct at half a spontaneous one (`POINTS_HINTED = 5` vs `POINTS_PER_CORRECT = 10`) — the same
+   prompted/spontaneous ratio Park 360 already used — and records `hinted` on the answer event.
+7. ✅ **Done (2026-07-17).** A shared VR practice/acclimatisation scene with unscored trials
+   (U2). New `src/games/vrPractice/` module (`VRPracticeScene.tsx` + pure `logic.ts`): a calm
+   warm-up with a star straight ahead (tap gesture alone) then one each side (a real look-around
+   turn) — the exact drag-to-look-or-head-turn + tap model every 360 game shares. Gated by a new
+   persistent `vrPracticeDone` flag in `state/settings.ts`; every 360 game (Emotion Room 360,
+   Emotion Cinema 360, Football 360, Playroom 360, Park 360, Museum 360 — Schoolyard 360 excluded
+   per review scope) checks it before its own `StartScreen`, so headset novelty is separated from
+   the skill being measured and it only ever runs once per child, never inside a scored session.
+8. ✅ **Done (2026-07-17).** `no_share` / timeout logging for Park 360 Hard (§3.6). Hard never
+   nudges, so a child who never initiates produced zero telemetry for that round — the single
+   most clinically interesting case (a non-initiating child) was also the least measurable. A new
+   one-off `NO_SHARE_TIMEOUT_MS` (20s) timer, armed only on the no-nudge tier, logs a `no_share`
+   event (`discovery`, `targetBearingDeg`, `timedOutAfterMs`, `foundOnly`, `calledOnly`, head
+   telemetry) if the round goes unacted-on that long — the round itself keeps waiting and can
+   still be completed normally afterward; the timer is simply cancelled if it is.
 
 **Then (experience & safety):**
 9. In-VR results board + pause/exit orb; end the XR session only on leaving to Home (V3, P5).

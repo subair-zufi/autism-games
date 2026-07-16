@@ -13,6 +13,13 @@ test('defaults: voice on, sound on, easy difficulty everywhere', () => {
   expect(s.difficulty.emotionrecognition).toBe('easy')
 })
 
+test('vrPracticeDone starts false and persists once set (review U2)', () => {
+  expect(useSettings.getState().vrPracticeDone).toBe(false)
+  useSettings.getState().setVrPracticeDone(true)
+  expect(useSettings.getState().vrPracticeDone).toBe(true)
+  expect(JSON.parse(localStorage.getItem('autism-settings')!).state.vrPracticeDone).toBe(true)
+})
+
 test('setDifficulty updates one game only', () => {
   useSettings.getState().setDifficulty('museum', 'hard')
   expect(useSettings.getState().difficulty.museum).toBe('hard')

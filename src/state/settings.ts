@@ -14,11 +14,17 @@ interface SettingsState {
   // Which build of each skill's games Home shows — flipped from the
   // persistent header toggle so the choice survives navigation and reloads.
   playMode: PlayMode
+  // Whether the child has completed the one-time shared VR/360 practice
+  // scene (look-around + tap gesture) — every 360 game checks this before its
+  // very first real session so headset novelty isn't confounded with the
+  // skill being measured (review U2). True forever once done.
+  vrPracticeDone: boolean
   setVoiceOn: (v: boolean) => void
   setSoundOn: (v: boolean) => void
   setLanguage: (lang: Lang) => void
   setDifficulty: (game: GameId, d: Difficulty) => void
   setPlayMode: (mode: PlayMode) => void
+  setVrPracticeDone: (v: boolean) => void
 }
 
 export const useSettings = create<SettingsState>()(
@@ -29,12 +35,14 @@ export const useSettings = create<SettingsState>()(
       language: 'en',
       difficulty: { emotionrecognition: 'easy', emotionrecognition360: 'easy', blocks: 'easy', playroom360: 'easy', rollback: 'easy', football360: 'easy', museum: 'easy', museum360: 'easy', rightway: 'easy', rightway360: 'easy', rulefixer: 'easy', identifyemotions: 'easy', identifyemotions360: 'easy', discovery: 'easy', park360: 'easy' },
       playMode: 'desktop',
+      vrPracticeDone: false,
       setVoiceOn: (voiceOn) => set({ voiceOn }),
       setSoundOn: (soundOn) => set({ soundOn }),
       setLanguage: (language) => set({ language }),
       setDifficulty: (game, d) =>
         set((s) => ({ difficulty: { ...s.difficulty, [game]: d } })),
       setPlayMode: (playMode) => set({ playMode }),
+      setVrPracticeDone: (vrPracticeDone) => set({ vrPracticeDone }),
     }),
     {
       name: 'autism-settings',

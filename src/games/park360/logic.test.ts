@@ -5,6 +5,7 @@ import {
   FRIEND_BEARING_DEG,
   FRIENDS,
   FRONT_HALF_ARC_DEG,
+  NO_SHARE_TIMEOUT_MS,
   POINTS,
   STREAK_LEN,
   discoveryBearingDeg,
@@ -95,6 +96,15 @@ describe('scaffold fading by difficulty (same CONFIG as the flat-screen game)', 
   it('turns the friend further away as difficulty rises', () => {
     expect(CONFIG.easy.awayYaw).toBeLessThan(CONFIG.medium.awayYaw)
     expect(CONFIG.medium.awayYaw).toBeLessThan(CONFIG.hard.awayYaw)
+  })
+
+  it('defines a sane no_share timeout for hard (no-nudge) rounds (review §3.6)', () => {
+    // hard is the only tier with no nudge path, so it's the only tier where a
+    // non-initiating child produces zero telemetry without this timeout
+    expect(CONFIG.hard.nudgeAfterMs).toBeNull()
+    expect(NO_SHARE_TIMEOUT_MS).toBeGreaterThan(0)
+    // generous enough that it never fires before a nudge would on easy/medium
+    expect(NO_SHARE_TIMEOUT_MS).toBeGreaterThan(CONFIG.medium.nudgeAfterMs!)
   })
 
   it('raises the session goal with difficulty', () => {

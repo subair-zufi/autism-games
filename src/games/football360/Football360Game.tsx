@@ -25,6 +25,7 @@ import { fbLine, fbLines, fbSpeak, type Football360MessageKey } from './strings'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
+import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
 
 const META = GAME_LIST.find((g) => g.id === 'football360')!
 const MAX_LIVES = 3
@@ -49,6 +50,8 @@ type Params = Parameters<typeof fbSpeak>[2]
 export function Football360Game() {
   const difficulty = useSettings((s) => s.difficulty.football360)
   const lang = useSettings((s) => s.language)
+  const vrPracticeDone = useSettings((s) => s.vrPracticeDone)
+  const setVrPracticeDone = useSettings((s) => s.setVrPracticeDone)
   const best = useScores((s) => s.best.football360)
   const reportScore = useScores((s) => s.reportScore)
   const config = CONFIG[difficulty]
@@ -310,6 +313,11 @@ export function Football360Game() {
       loseLife()
     }
   }
+
+  // one-time, unscored warm-up before this child's very first real session
+  // ever, across every 360 game (review U2) — separates headset novelty from
+  // the skill this game measures
+  if (!vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
   if (phase === 'start') return <StartScreen game={META} onStart={start} />
 

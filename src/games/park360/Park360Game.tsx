@@ -12,6 +12,7 @@ import { t } from '../../i18n/strings'
 import { playGentle, playSuccess, playTap } from '../../services/sounds'
 import {
   CONFIG,
+  NO_SHARE_TIMEOUT_MS,
   discoveryBearingDeg,
   makeRound,
   pickFriend,
@@ -26,6 +27,7 @@ import { Park360Scene } from './Park360Scene'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
+import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
 
 const META = GAME_LIST.find((g) => g.id === 'park360')!
 
@@ -40,6 +42,8 @@ const META = GAME_LIST.find((g) => g.id === 'park360')!
 export function Park360Game() {
   const difficulty = useSettings((s) => s.difficulty.park360)
   const lang = useSettings((s) => s.language)
+  const vrPracticeDone = useSettings((s) => s.vrPracticeDone)
+  const setVrPracticeDone = useSettings((s) => s.setVrPracticeDone)
   const best = useScores((s) => s.best.park360)
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('park360', xrStore)
@@ -73,6 +77,9 @@ export function Park360Game() {
   const calledRef = useRef(false)
   const spawnTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const nudgeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Hard only: logs once if the round goes unacted-on this long (review §3.6) */
+  const noShareTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const noShareLogged = useRef(false)
 
   useEffect(() => () => clearTimers(), [])
 
@@ -89,8 +96,10 @@ export function Park360Game() {
   function clearTimers() {
     if (spawnTimer.current) clearTimeout(spawnTimer.current)
     if (nudgeTimer.current) clearTimeout(nudgeTimer.current)
+    if (noShareTimer.current) clearTimeout(noShareTimer.current)
     spawnTimer.current = null
     nudgeTimer.current = null
+    noShareTimer.current = null
   }
 
   // Malayalam-aware speech + level captions (surface the fading scaffold).
@@ -123,6 +132,7 @@ export function Park360Game() {
     foundRef.current = false
     calledRef.current = false
     nudgeCount.current = 0
+    noShareLogged.current = false
     eventReadyAt.current = null
     shareLatency.current = null
     const next = makeRound(prev)
@@ -143,6 +153,7 @@ export function Park360Game() {
         targetBearingDeg: discoveryBearingDeg(next.discovery),
       })
       armNudge()
+      armNoShareTimeout(next.discovery)
     }, spawnDelayMs())
   }
 
@@ -151,6 +162,33 @@ export function Park360Game() {
     if (cfg.nudgeAfterMs === null) return
     if (nudgeTimer.current) clearTimeout(nudgeTimer.current)
     nudgeTimer.current = setTimeout(fireNudge, cfg.nudgeAfterMs)
+  }
+
+  /**
+   * Hard only (no nudges ever): if the round goes unacted-on this long, log a
+   * one-off `no_share` timeout event so a non-initiating child still produces
+   * data — the round itself keeps waiting, it can still be completed after.
+   * Takes the discovery explicitly (not the `round` state) since this fires
+   * from inside the same spawn callback that just set it, before the next render.
+   */
+  function armNoShareTimeout(discovery: Round['discovery']) {
+    if (cfg.nudgeAfterMs !== null) return
+    noShareTimer.current = setTimeout(() => {
+      // clearTimers() (called from completeShare) already cancels this timer
+      // once the round finishes, so reaching here always means an incomplete
+      // share; noShareLogged just guards against a second timer somehow firing
+      if (noShareLogged.current) return
+      noShareLogged.current = true
+      const head = headMetrics(discoveryBearingDeg(discovery))
+      recordStep('no_share', {
+        discovery,
+        targetBearingDeg: discoveryBearingDeg(discovery),
+        timedOutAfterMs: NO_SHARE_TIMEOUT_MS,
+        foundOnly: foundRef.current,
+        calledOnly: calledRef.current,
+        ...head,
+      })
+    }, NO_SHARE_TIMEOUT_MS)
   }
 
   function fireNudge() {
@@ -247,6 +285,11 @@ export function Park360Game() {
     }
     setTimeout(() => beginRound(round.discovery), 2000)
   }
+
+  // one-time, unscored warm-up before this child's very first real session
+  // ever, across every 360 game (review U2) — separates headset novelty from
+  // the skill this game measures
+  if (!vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
   if (phase === 'start') return <StartScreen game={META} onStart={start} levelNotes={levelNotes} />
 

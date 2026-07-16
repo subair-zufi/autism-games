@@ -142,6 +142,11 @@ describe('scoring', () => {
     expect(pointsFor(false)).toBe(0)
   })
 
+  it('halves a hinted correct, matching Park 360\'s prompted/spontaneous ratio (review M5/P3)', () => {
+    expect(pointsFor(true, true)).toBe(pointsFor(true, false) / 2)
+    expect(pointsFor(false, true)).toBe(0)
+  })
+
   it('awards stars by accuracy, always at least one', () => {
     expect(starsFor(10, 10)).toBe(3)
     expect(starsFor(5, 10)).toBe(2)

@@ -146,6 +146,13 @@ const MESSAGES = {
     en: 'Keep practicing! You need at least 70% to unlock the next level.',
     ml: 'പരിശീലനം തുടരൂ! അടുത്ത ലെവൽ തുറക്കാൻ കുറഞ്ഞത് 70% വേണം.',
   },
+  // --- Shared VR/360 practice warm-up (one-time, unscored — review U2) ------
+  practiceIntro: {
+    en: "Let's practice first! Look around and tap the star.",
+    ml: 'നമുക്ക് ആദ്യം പരിശീലിക്കാം! ചുറ്റും നോക്കി നക്ഷത്രം തൊടൂ.',
+  },
+  practiceGreat: { en: 'Great tap! 🌟', ml: 'നല്ല തൊടൽ! 🌟' },
+  practiceReady: { en: "You're ready to play! 🎉", ml: 'നിനക്ക് ഇപ്പോൾ കളിക്കാം! 🎉' },
 } satisfies Record<string, Entry>
 
 export type MessageKey = keyof typeof MESSAGES

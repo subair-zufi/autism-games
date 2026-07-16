@@ -98,6 +98,15 @@ export const CONFIG: Record<Difficulty, DiscoveryConfig> = {
 }
 
 /**
+ * On Hard (never nudged — success must be fully self-initiated) a child who
+ * never acts produces no telemetry at all for that round, the single most
+ * clinically interesting case (a non-initiating child). After this long with
+ * no share, the round logs a one-off `no_share` timeout event without ending
+ * or resetting the round — the child can still complete it any time after.
+ */
+export const NO_SHARE_TIMEOUT_MS = 20000
+
+/**
  * Child-facing points. Spontaneous (un-nudged) shares earn more than prompted
  * ones; prompted shares are still rewarded, never punished.
  */
