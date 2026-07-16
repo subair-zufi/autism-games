@@ -7,6 +7,7 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
 import { speakAll, speechAvailable } from '../../services/speech'
+import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
   CONFIG,
@@ -358,6 +359,7 @@ export function Football360Game() {
             onPickPartner={pick}
             hudScore={`⭐ ${score} · ⚽ ${returned} / ${goal} · ❤️ ${lives}`}
             hudPrompt={fbLine(promptKey, lang, promptParams)}
+            hudQuit={t('vrQuit', lang)}
           />
           {canVR && (
             <button

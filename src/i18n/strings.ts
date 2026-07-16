@@ -116,6 +116,12 @@ const MESSAGES = {
   feedbackGreat: { en: 'Great job! 🎉', ml: 'കൊള്ളാം! 🎉' },
   feedbackTryAgain: { en: "Let's look again — try again.", ml: 'വീണ്ടും നോക്കാം — ഒന്നുകൂടി ശ്രമിക്കൂ.' },
 
+  // --- In-world VR-only controls (shared across every 360 game) -------------
+  // The DOM Home link is invisible inside an immersive headset session, so
+  // this is the in-world equivalent — ends the session, drops back to the
+  // flat page right where the game was.
+  vrQuit: { en: 'Quit', ml: 'നിർത്തുക' },
+
   // --- Game-over dialog (shared across the arcade-style games) ---------------
   greatPlaying: { en: 'Great playing! 🎉', ml: 'നന്നായി കളിച്ചു! 🎉' },
   greatTrying: { en: 'Great trying! 🌟', ml: 'നല്ല ശ്രമം! 🌟' },

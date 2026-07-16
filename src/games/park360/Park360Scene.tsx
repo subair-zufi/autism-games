@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSampler } from '../HeadSampler'
+import { VRQuitButton } from '../VRQuitButton'
 import {
   bearingToXZ,
   discoveryPosition,
@@ -66,6 +67,8 @@ export interface Park360SceneProps {
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
+  /** localized "Quit" label for the in-world VR-only exit control */
+  hudQuit: string
 }
 
 export function Park360Scene(props: Park360SceneProps) {
@@ -91,7 +94,7 @@ export function Park360Scene(props: Park360SceneProps) {
         <HeadSampler />
         <ParkWorld />
         <SceneInner {...props} />
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} />
+        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
       </XR>
     </Canvas>
   )
@@ -174,13 +177,14 @@ function LookControls() {
  * rounds. Rendered only while a session is presenting. Kept below the
  * rainbow's sky spot so the panels never block a tap on it.
  */
-function VRHud({ score, prompt }: { score: string; prompt: string }) {
+function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
     <group>
       <TextPanel text={score} position={[0, 3.9, -7.4]} width={2.6} height={0.62} font={110} />
       <TextPanel text={prompt} position={[0, 3.15, -7.4]} width={4.6} height={0.8} font={64} />
+      <VRQuitButton position={[0, 2.45, -7.4]} label={quit} />
     </group>
   )
 }

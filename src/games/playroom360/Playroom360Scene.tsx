@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSampler } from '../HeadSampler'
+import { VRQuitButton } from '../VRQuitButton'
 import {
   BLOCK_H,
   BLOCK_W,
@@ -53,6 +54,8 @@ export interface Playroom360SceneProps {
   hudPrompt: string
   /** "Tap me!" bubble line over the hand-off friend (already in the chosen language) */
   bubbleTap: string
+  /** localized "Quit" label for the in-world VR-only exit control */
+  hudQuit: string
 }
 
 export function Playroom360Scene(props: Playroom360SceneProps) {
@@ -79,7 +82,7 @@ export function Playroom360Scene(props: Playroom360SceneProps) {
         <HeadSampler />
         <PlayroomRoom />
         <SceneInner {...props} />
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} />
+        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
       </XR>
     </Canvas>
   )
@@ -161,13 +164,14 @@ function LookControls() {
  * session, so the same lines are mirrored on floating panels at bearing 0 —
  * above the friends, the natural "home" direction of the play table.
  */
-function VRHud({ score, prompt }: { score: string; prompt: string }) {
+function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
     <group>
       <TextPanel text={score} position={[0, 3.02, -6.4]} width={2.2} height={0.5} font={110} />
       <TextPanel text={prompt} position={[0, 2.45, -6.4]} width={4.4} height={0.72} font={64} />
+      <VRQuitButton position={[0, 1.9, -6.4]} label={quit} />
     </group>
   )
 }

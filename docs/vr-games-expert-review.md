@@ -267,7 +267,15 @@ right).
    still be completed normally afterward; the timer is simply cancelled if it is.
 
 **Then (experience & safety):**
-9. In-VR results board + pause/exit orb; end the XR session only on leaving to Home (V3, P5).
+9. ⏳ **Partially done (2026-07-17).** The exit-orb half of V3/P5: every 360 game now has an
+   in-world "Quit" control (`src/games/VRQuitButton.tsx`), rendered next to the score/prompt HUD
+   only while a session is presenting, that ends the session on tap — the DOM (Enter VR button,
+   ScoreBar's Home link, GameOverDialog) is invisible inside a headset and the only other way a
+   session ended was reaching the game's "over" phase, so a child who never got there (or simply
+   wanted out) previously had no way to leave VR at all. Quitting drops back to the flat page
+   exactly where the game was; it doesn't reset or skip the round. Still open: an in-world results
+   board with "play again" so game-over itself doesn't force-end the session into a jarring
+   context switch (the other half of V3).
 10. Lazy-follow HUD with progress dots (V1, U1).
 11. Spatial audio for Football 360 cues (V4); controller haptics (V5).
 12. Height recentering at session start (V7); session timer with break prompts (P4);

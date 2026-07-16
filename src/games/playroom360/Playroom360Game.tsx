@@ -222,6 +222,7 @@ export function Playroom360Game() {
             onHandoff={passHandoff}
             hudScore={`🧱 ${score} / ${config.rounds}`}
             hudPrompt={prLine(promptKey, lang, promptParams)}
+            hudQuit={t('vrQuit', lang)}
             bubbleTap={prLine('bubbleMyTurn', lang)}
           />
           {canVR && (

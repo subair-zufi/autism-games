@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSampler } from '../HeadSampler'
+import { VRQuitButton } from '../VRQuitButton'
 import {
   EYE_Y,
   SCREEN_DISTANCE,
@@ -47,6 +48,8 @@ export interface IdentifyEmotions360SceneProps {
   /** HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
+  /** localized "Quit" label for the in-world VR-only exit control */
+  hudQuit: string
 }
 
 export function IdentifyEmotions360Scene(props: IdentifyEmotions360SceneProps) {
@@ -74,7 +77,7 @@ export function IdentifyEmotions360Scene(props: IdentifyEmotions360SceneProps) {
         <BigScreen videoEl={props.videoEl} clipSlug={props.clipSlug} frozen={props.frozen} />
         <AnswerLayer {...props} />
         {props.celebrating && <Celebration />}
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} />
+        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
       </XR>
     </Canvas>
   )
@@ -436,20 +439,21 @@ function Celebration() {
   )
 }
 
-function VRHud({ score, prompt }: { score: string; prompt: string }) {
+function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   // Both HUD lines sit ABOVE the screen (a marquee), right where the child is
   // already looking. The question must never go below the screen — the console
   // and the answer cards live there and would bury it (that hid the prompt in
   // VR). The prompt is the prominent line just above the picture; the score
-  // rides a little higher.
+  // rides a little higher. Quit rides higher still, for the same reason.
   const topY = SCREEN_Y + SCREEN_H / 2
   const z = -SCREEN_DISTANCE + 0.2
   return (
     <group>
       <TextPanel text={prompt} position={[0, topY + 0.45, z]} width={3.8} height={0.64} font={64} />
       <TextPanel text={score} position={[0, topY + 1.08, z]} width={1.8} height={0.44} font={88} />
+      <VRQuitButton position={[0, topY + 1.65, z]} label={quit} />
     </group>
   )
 }

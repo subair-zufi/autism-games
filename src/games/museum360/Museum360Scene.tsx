@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSampler } from '../HeadSampler'
 import { angDiffDeg, latestYawDeg } from '../headTracking'
+import { VRQuitButton } from '../VRQuitButton'
 import {
   AVATAR_Z,
   OBJECT_RADIUS,
@@ -39,6 +40,8 @@ export interface Museum360SceneProps {
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
+  /** localized "Quit" label for the in-world VR-only exit control */
+  hudQuit: string
 }
 
 export function Museum360Scene(props: Museum360SceneProps) {
@@ -61,7 +64,7 @@ export function Museum360Scene(props: Museum360SceneProps) {
         <HeadSampler />
         <RotundaRoom />
         <SceneInner {...props} />
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} />
+        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
       </XR>
     </Canvas>
   )
@@ -145,13 +148,14 @@ function LookControls() {
  * helper's bearing (0°) — the natural "home" direction the child returns to
  * between trials. Rendered only while a session is presenting.
  */
-function VRHud({ score, prompt }: { score: string; prompt: string }) {
+function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
     <group>
       <TextPanel text={score} position={[0, 4.35, -7.6]} width={2.6} height={0.62} font={110} />
       <TextPanel text={prompt} position={[0, 3.55, -7.6]} width={4.6} height={0.8} font={64} />
+      <VRQuitButton position={[0, 2.85, -7.6]} label={quit} />
     </group>
   )
 }

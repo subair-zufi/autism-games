@@ -283,6 +283,7 @@ export function EmotionRecognition360Game() {
               onPick={pick}
               hudScore={`⭐ ${score}`}
               hudPrompt={promptText}
+              hudQuit={t('vrQuit', lang)}
             />
           )}
           {canVR && (

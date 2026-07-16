@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSampler } from '../HeadSampler'
+import { VRQuitButton } from '../VRQuitButton'
 import {
   boardPosition,
   dragDistance,
@@ -39,6 +40,8 @@ export interface EmotionRecognition360SceneProps {
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
+  /** localized "Quit" label for the in-world VR-only exit control */
+  hudQuit: string
 }
 
 export function EmotionRecognition360Scene(props: EmotionRecognition360SceneProps) {
@@ -65,7 +68,7 @@ export function EmotionRecognition360Scene(props: EmotionRecognition360SceneProp
         <HeadSampler />
         <GalleryRoom />
         <BoardRow {...props} />
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} />
+        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
       </XR>
     </Canvas>
   )
@@ -231,13 +234,14 @@ function Planter({ x, z }: { x: number; z: number }) {
  * 0 — the natural "home" direction. Rendered only while a session is
  * presenting, and hung above the boards so they never block a tap.
  */
-function VRHud({ score, prompt }: { score: string; prompt: string }) {
+function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
     <group>
       <TextPanel text={prompt} position={[0, 2.85, -4.2]} width={4.2} height={0.72} font={70} />
       <TextPanel text={score} position={[0, 3.5, -4.2]} width={2.4} height={0.55} font={96} />
+      <VRQuitButton position={[0, 2.25, -4.2]} label={quit} />
     </group>
   )
 }

@@ -347,6 +347,7 @@ export function IdentifyEmotions360Game() {
               lang={lang}
               hudScore={`⭐ ${score}`}
               hudPrompt={promptText}
+              hudQuit={t('vrQuit', lang)}
             />
           )}
           {canVR && (
