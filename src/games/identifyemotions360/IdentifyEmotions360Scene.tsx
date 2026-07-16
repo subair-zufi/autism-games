@@ -437,10 +437,17 @@ function Celebration() {
 function VRHud({ score, prompt }: { score: string; prompt: string }) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
+  // Both HUD lines sit ABOVE the screen (a marquee), right where the child is
+  // already looking. The question must never go below the screen — the console
+  // and the answer cards live there and would bury it (that hid the prompt in
+  // VR). The prompt is the prominent line just above the picture; the score
+  // rides a little higher.
+  const topY = SCREEN_Y + SCREEN_H / 2
+  const z = -SCREEN_DISTANCE + 0.2
   return (
     <group>
-      <TextPanel text={prompt} position={[0, SCREEN_Y - SCREEN_H / 2 - 0.5, -SCREEN_DISTANCE + 0.3]} width={3.4} height={0.6} font={66} />
-      <TextPanel text={score} position={[0, SCREEN_Y + SCREEN_H / 2 + 0.55, -SCREEN_DISTANCE + 0.3]} width={2.2} height={0.5} font={92} />
+      <TextPanel text={prompt} position={[0, topY + 0.45, z]} width={3.8} height={0.64} font={64} />
+      <TextPanel text={score} position={[0, topY + 1.08, z]} width={1.8} height={0.44} font={88} />
     </group>
   )
 }
