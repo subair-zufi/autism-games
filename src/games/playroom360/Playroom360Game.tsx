@@ -180,9 +180,10 @@ export function Playroom360Game() {
   }
 
   // one-time, unscored warm-up before this child's very first real session
-  // ever, across every 360 game (review U2) — separates headset novelty from
-  // the skill this game measures
-  if (!vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
+  // (review U2): teaches the headset look-around + tap gesture. Shown only
+  // when the browser can actually enter immersive VR — on a flat desktop
+  // there's no headset novelty and it's just friction, so it's skipped.
+  if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
   if (phase === 'start') return <StartScreen game={META} onStart={start} />
 

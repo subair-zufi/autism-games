@@ -258,6 +258,9 @@ right).
    Emotion Cinema 360, Football 360, Playroom 360, Park 360, Museum 360 — Schoolyard 360 excluded
    per review scope) checks it before its own `StartScreen`, so headset novelty is separated from
    the skill being measured and it only ever runs once per child, never inside a scored session.
+   The gate is additionally conditioned on `canVR` (`vrSupported()`), so on a flat desktop with no
+   immersive-VR capability the warm-up is skipped entirely — it exists to acclimatise to the
+   headset, so gating desktop play behind it was pure friction and made every game look broken.
 8. ✅ **Done (2026-07-17).** `no_share` / timeout logging for Park 360 Hard (§3.6). Hard never
    nudges, so a child who never initiates produced zero telemetry for that round — the single
    most clinically interesting case (a non-initiating child) was also the least measurable. A new
