@@ -24,6 +24,7 @@ import { roomLine } from './strings'
 import { EmotionRecognition360Scene } from './EmotionRecognition360Scene'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
+import { beginHeadWindow, headMetrics } from '../headTracking'
 
 const META = GAME_LIST.find((g) => g.id === 'emotionrecognition360')!
 
@@ -46,7 +47,7 @@ export function EmotionRecognition360Game() {
   const lang = useSettings((s) => s.language)
   const best = useScores((s) => s.best.emotionrecognition360)
   const reportScore = useScores((s) => s.reportScore)
-  const { recordStep, finishGame, resetSession } = useGameAnalytics('emotionrecognition360')
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('emotionrecognition360', xrStore)
   const cfg = CONFIG[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
@@ -67,6 +68,11 @@ export function EmotionRecognition360Game() {
 
   /** when the boards became visible — response latency runs from here */
   const readyAt = useRef<number | null>(null)
+  /** when the spoken question finished — a second, TTS-unconfounded latency
+   *  runs from here (the question's length varies by emotion word and language) */
+  const promptEndAt = useRef<number | null>(null)
+  /** guards the speak() onEnd callback against a later round's utterance */
+  const promptTok = useRef(0)
   const hintTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const gapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -116,7 +122,16 @@ export function EmotionRecognition360Game() {
     gapTimer.current = setTimeout(() => {
       setActive(true)
       readyAt.current = performance.now()
-      speak(whoFeelsQuestion(next.target, lang), lang)
+      // open the head-telemetry window as the boards appear (the scan to the
+      // right face is measured from here)
+      beginHeadWindow()
+      // stamp when the spoken question finishes, guarded so a later round's
+      // utterance can't overwrite it (item 4: latency from prompt end)
+      const tok = ++promptTok.current
+      promptEndAt.current = null
+      speak(whoFeelsQuestion(next.target, lang), lang, () => {
+        if (promptTok.current === tok) promptEndAt.current = performance.now()
+      })
       recordStep('event_ready', {
         target: next.target,
         boardCount: next.boards.length,
@@ -143,7 +158,13 @@ export function EmotionRecognition360Game() {
     if (!active || answered || !round) return
     clearTimers()
     const correct = i === round.answerIndex
-    const latencyMs = readyAt.current === null ? null : Math.round(performance.now() - readyAt.current)
+    const now = performance.now()
+    const latencyMs = readyAt.current === null ? null : Math.round(now - readyAt.current)
+    // second latency measured from the end of the spoken question, so it isn't
+    // inflated by how long the question took to say; null if the child answered
+    // before it finished (or speech was off)
+    const latencyFromPromptEndMs = promptEndAt.current === null ? null : Math.round(now - promptEndAt.current)
+    const head = headMetrics(answerBearingDeg(round))
     setPickedIndex(i)
     setAnswered(true)
     setHint(false)
@@ -175,6 +196,8 @@ export function EmotionRecognition360Game() {
         targetBearingDeg: answerBearingDeg(round),
         chance: roundChance(round),
         latencyMs,
+        latencyFromPromptEndMs,
+        ...head,
         mode: 'practice',
       },
       { score: nextScore },

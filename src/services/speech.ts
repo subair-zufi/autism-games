@@ -23,20 +23,42 @@ function utterance(text: string, lang: Lang): SpeechSynthesisUtterance {
 /** Speak text aloud (cancels anything still talking). No-ops when
  *  unavailable or voice is muted, so callers never need to check.
  *  Pass `lang: 'ml'` for Malayalam — a Malayalam voice is used when the
- *  device has one (Android/Google TTS ships ml-IN; desktop often doesn't). */
-export function speak(text: string, lang: Lang = 'en') {
-  if (!speechAvailable() || !useSettings.getState().voiceOn) return
+ *  device has one (Android/Google TTS ships ml-IN; desktop often doesn't).
+ *  `onEnd` fires when the utterance finishes (or errors); it is called
+ *  synchronously when speech is unavailable/muted, so a caller measuring
+ *  "time since the prompt finished" gets a sane zero-point either way. */
+export function speak(text: string, lang: Lang = 'en', onEnd?: () => void) {
+  if (!speechAvailable() || !useSettings.getState().voiceOn) {
+    onEnd?.()
+    return
+  }
   window.speechSynthesis.cancel()
-  window.speechSynthesis.speak(utterance(text, lang))
+  const u = utterance(text, lang)
+  if (onEnd) {
+    u.addEventListener('end', onEnd)
+    u.addEventListener('error', onEnd)
+  }
+  window.speechSynthesis.speak(u)
 }
 
 /**
  * Speak several localized lines back-to-back (one cancel, then queued) so a
  * bilingual prompt reads e.g. Malayalam first, then English, without the
- * second line cutting off the first.
+ * second line cutting off the first. `onEnd` fires after the LAST line ends.
  */
-export function speakAll(parts: ReadonlyArray<{ text: string; lang: Lang }>) {
-  if (!speechAvailable() || !useSettings.getState().voiceOn) return
+export function speakAll(parts: ReadonlyArray<{ text: string; lang: Lang }>, onEnd?: () => void) {
+  if (!speechAvailable() || !useSettings.getState().voiceOn) {
+    onEnd?.()
+    return
+  }
   window.speechSynthesis.cancel()
-  for (const p of parts) window.speechSynthesis.speak(utterance(p.text, p.lang))
+  const utts = parts.map((p) => utterance(p.text, p.lang))
+  const last = utts[utts.length - 1]
+  if (onEnd && last) {
+    last.addEventListener('end', onEnd)
+    last.addEventListener('error', onEnd)
+  } else if (onEnd) {
+    onEnd()
+  }
+  for (const u of utts) window.speechSynthesis.speak(u)
 }

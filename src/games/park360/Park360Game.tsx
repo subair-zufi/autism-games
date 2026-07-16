@@ -25,6 +25,7 @@ import { discoveryLabel, parkLine } from './strings'
 import { Park360Scene } from './Park360Scene'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
+import { beginHeadWindow, headMetrics } from '../headTracking'
 
 const META = GAME_LIST.find((g) => g.id === 'park360')!
 
@@ -41,7 +42,7 @@ export function Park360Game() {
   const lang = useSettings((s) => s.language)
   const best = useScores((s) => s.best.park360)
   const reportScore = useScores((s) => s.reportScore)
-  const { recordStep, finishGame, resetSession } = useGameAnalytics('park360')
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('park360', xrStore)
   const cfg = CONFIG[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
@@ -130,6 +131,9 @@ export function Park360Game() {
       setRound(next)
       setRoundPhase('active')
       eventReadyAt.current = performance.now()
+      // open the head-telemetry window at the surprise pop-in — the child's
+      // scan to spot it (and the turn to the friend) is measured from here
+      beginHeadWindow()
       recordStep('event_ready', {
         discovery: next.discovery,
         saliency: cfg.saliency,
@@ -213,6 +217,9 @@ export function Park360Game() {
     setSpontCount(nextSpont)
     setStreak(nextStreak)
     say('sayWow', { label: discoveryLabel(round.discovery, lang) })
+    // the head's scan across this whole round: headToTargetMs = time to first
+    // look at the surprise, and the range/travel span the turn to the friend
+    const head = headMetrics(discoveryBearingDeg(round.discovery))
     recordStep(
       'share',
       {
@@ -223,6 +230,7 @@ export function Park360Game() {
         order,
         discovery: round.discovery,
         targetBearingDeg: discoveryBearingDeg(round.discovery),
+        ...head,
         points,
         score: nextScore,
         found: nextShared,

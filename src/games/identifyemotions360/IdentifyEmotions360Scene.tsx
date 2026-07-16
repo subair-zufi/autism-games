@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSampler } from '../HeadSampler'
 import {
   EYE_Y,
   SCREEN_DISTANCE,
@@ -68,6 +69,7 @@ export function IdentifyEmotions360Scene(props: IdentifyEmotions360SceneProps) {
         <directionalLight position={[3, 10, 4]} intensity={0.5} color="#fff2dc" />
         <directionalLight position={[-5, 7, -3]} intensity={0.22} color="#eaf1ff" />
         <LookControls />
+        <HeadSampler />
         <MediaRoom />
         <BigScreen videoEl={props.videoEl} clipSlug={props.clipSlug} frozen={props.frozen} />
         <AnswerLayer {...props} />

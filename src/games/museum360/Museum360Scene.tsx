@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSampler } from '../HeadSampler'
 import {
   AVATAR_Z,
   OBJECT_RADIUS,
@@ -56,6 +57,7 @@ export function Museum360Scene(props: Museum360SceneProps) {
         {/* soft warm ambient so nothing is pitch black */}
         <ambientLight intensity={0.55} color="#fff3e0" />
         <LookControls />
+        <HeadSampler />
         <RotundaRoom />
         <SceneInner {...props} />
         <VRHud score={props.hudScore} prompt={props.hudPrompt} />

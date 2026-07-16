@@ -22,6 +22,7 @@ import { clipLine } from './strings'
 import { IdentifyEmotions360Scene } from './IdentifyEmotions360Scene'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
+import { beginHeadWindow, headMetrics } from '../headTracking'
 
 const META = GAME_LIST.find((g) => g.id === 'identifyemotions360')!
 
@@ -45,7 +46,7 @@ export function IdentifyEmotions360Game() {
   const lang = useSettings((s) => s.language)
   const best = useScores((s) => s.best.identifyemotions360)
   const reportScore = useScores((s) => s.reportScore)
-  const { recordStep, finishGame, resetSession } = useGameAnalytics('identifyemotions360')
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('identifyemotions360', xrStore)
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [quiz, setQuiz] = useState<VideoQuestion[]>([])
@@ -73,6 +74,10 @@ export function IdentifyEmotions360Game() {
 
   const pausedRef = useRef(false)
   const frozenAtRef = useRef<number | null>(null)
+  /** when the spoken freeze question finished — a TTS-unconfounded latency runs
+   *  from here (item 4), guarded by a token against a re-asked question */
+  const promptEndAt = useRef<number | null>(null)
+  const promptTok = useRef(0)
   const causeAtRef = useRef<number | null>(null)
   const attemptRef = useRef(0)
   const firstTryRef = useRef(true)
@@ -98,6 +103,9 @@ export function IdentifyEmotions360Game() {
         videoEl.pause()
         pausedRef.current = true
         frozenAtRef.current = performance.now()
+        // open the head-telemetry window at the freeze (captures gaze stability
+        // on the expressive frame — there is no scan target on the flat screen)
+        beginHeadWindow()
         setFrozen(true)
       }
     }
@@ -105,6 +113,7 @@ export function IdentifyEmotions360Game() {
       if (pausedRef.current) return
       pausedRef.current = true
       frozenAtRef.current = performance.now()
+      beginHeadWindow()
       setFrozen(true)
     }
     videoEl.addEventListener('timeupdate', freezeAtTarget)
@@ -128,10 +137,15 @@ export function IdentifyEmotions360Game() {
     if (phase === 'over') void xrStore.getState().session?.end()
   }, [phase])
 
-  // Read the freeze prompt aloud once frozen (naming stage).
+  // Read the freeze prompt aloud once frozen (naming stage), stamping when it
+  // finishes so latency can also be measured from prompt end (item 4).
   useEffect(() => {
     if (frozen && !celebrating && stage === 'emotion' && q) {
-      speak(videoFreezeQuestion(q.clip.gender, lang), lang)
+      const tok = ++promptTok.current
+      promptEndAt.current = null
+      speak(videoFreezeQuestion(q.clip.gender, lang), lang, () => {
+        if (promptTok.current === tok) promptEndAt.current = performance.now()
+      })
     }
   }, [frozen, celebrating, stage, q, lang])
 
@@ -190,7 +204,9 @@ export function IdentifyEmotions360Game() {
   function pick(id: EmotionId) {
     if (!frozen || locked || stage !== 'emotion' || wrong.includes(id) || !q) return
     attemptRef.current += 1
-    const latencyMs = frozenAtRef.current !== null ? Math.round(performance.now() - frozenAtRef.current) : null
+    const now = performance.now()
+    const latencyMs = frozenAtRef.current !== null ? Math.round(now - frozenAtRef.current) : null
+    const latencyFromPromptEndMs = promptEndAt.current === null ? null : Math.round(now - promptEndAt.current)
     const base = {
       clip: q.clip.slug,
       difficulty,
@@ -198,6 +214,8 @@ export function IdentifyEmotions360Game() {
       picked: id,
       attempt: attemptRef.current,
       latencyMs,
+      latencyFromPromptEndMs,
+      ...headMetrics(),
       freezeKind: q.freezeKind,
     }
     if (id === q.answer) {

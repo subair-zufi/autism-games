@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSampler } from '../HeadSampler'
 import {
   BLOCK_H,
   BLOCK_W,
@@ -75,6 +76,7 @@ export function Playroom360Scene(props: Playroom360SceneProps) {
         {/* the pendant lamp over the play table */}
         <pointLight position={[0, 2.7, -TABLE_RADIUS]} intensity={22} color="#ffe9c4" distance={9} />
         <LookControls />
+        <HeadSampler />
         <PlayroomRoom />
         <SceneInner {...props} />
         <VRHud score={props.hudScore} prompt={props.hudPrompt} />

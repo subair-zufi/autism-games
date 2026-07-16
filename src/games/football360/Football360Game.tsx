@@ -24,6 +24,7 @@ import { Football360Scene } from './Football360Scene'
 import { fbLine, fbLines, fbSpeak, type Football360MessageKey } from './strings'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
+import { beginHeadWindow, headMetrics } from '../headTracking'
 
 const META = GAME_LIST.find((g) => g.id === 'football360')!
 const MAX_LIVES = 3
@@ -52,10 +53,12 @@ export function Football360Game() {
   const reportScore = useScores((s) => s.reportScore)
   const config = CONFIG[difficulty]
   const goal = GOAL[difficulty]
-  const { recordStep, finishGame, resetSession } = useGameAnalytics('football360')
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('football360', xrStore)
 
-  // Speak a line in the chosen language.
-  const say = (key: Football360MessageKey, params?: Params) => speakAll(fbSpeak(key, lang, params))
+  // Speak a line in the chosen language. `onEnd` (used for the ready cue) fires
+  // when the spoken line finishes, so latency can also be measured from there.
+  const say = (key: Football360MessageKey, params?: Params, onEnd?: () => void) =>
+    speakAll(fbSpeak(key, lang, params), onEnd)
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [players, setPlayers] = useState<Player[]>([])
@@ -79,6 +82,10 @@ export function Football360Game() {
   const [canVR, setCanVR] = useState(false)
   /** the ready-cue onset — the latency zero-point (never the ball arrival) */
   const cueAt = useRef<number | null>(null)
+  /** when the spoken ready cue finished — a TTS-unconfounded latency runs from
+   *  here (item 4), guarded by a token against a later rally's utterance */
+  const promptEndAt = useRef<number | null>(null)
+  const promptTok = useRef(0)
 
   const rally: Rally | null = ri < sequence.length ? sequence[ri] : null
 
@@ -136,6 +143,14 @@ export function Football360Game() {
     const t = setTimeout(() => {
       setCueShown(true)
       cueAt.current = performance.now()
+      // open the head-telemetry window at cue onset (the scan to the ready
+      // teammate is measured from here, same zero-point as the latency)
+      beginHeadWindow()
+      const tok = ++promptTok.current
+      promptEndAt.current = null
+      const markEnd = () => {
+        if (promptTok.current === tok) promptEndAt.current = performance.now()
+      }
       recordStep('cue_ready', {
         rally: ri,
         to: players[rally.to].id,
@@ -145,9 +160,12 @@ export function Football360Game() {
         // attention-shift size, recorded like Museum 360's targetBearingDeg
         targetBearingDeg: playerHeadingDeg(rally.to, config.partners),
       })
-      if (config.cue === 'verbal') say('sayVerbalCue', { name: biName(players[rally.to]) })
-      else if (config.cue === 'gesture') say('sayGestureCue')
-      else if (ri === 0) say('sayOrientCue')
+      if (config.cue === 'verbal') say('sayVerbalCue', { name: biName(players[rally.to]) }, markEnd)
+      else if (config.cue === 'gesture') say('sayGestureCue', undefined, markEnd)
+      else if (ri === 0) say('sayOrientCue', undefined, markEnd)
+      // no spoken cue this rally (orient after the first) — the prompt-end
+      // latency then simply coincides with the cue onset
+      else markEnd()
     }, config.readyDelayMs)
     return () => clearTimeout(t)
   }, [phase, ri, stage, cueShown]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -229,7 +247,12 @@ export function Football360Game() {
       loseLife()
       return
     }
-    const latencyMs = cueAt.current === null ? null : Math.round(performance.now() - cueAt.current)
+    const now = performance.now()
+    const latencyMs = cueAt.current === null ? null : Math.round(now - cueAt.current)
+    // second latency from the end of the spoken cue, so a long "pass it to me!"
+    // never inflates it; coincides with latencyMs when no cue was spoken
+    const latencyFromPromptEndMs = promptEndAt.current === null ? null : Math.round(now - promptEndAt.current)
+    const head = headMetrics(playerHeadingDeg(rally.to, config.partners))
     if (result === 'correct') {
       const firstAttempt = attempts === 0
       const nextStreak = firstAttempt ? streak + 1 : 0
@@ -253,6 +276,8 @@ export function Football360Game() {
           initiate: rally.initiate,
           firstAttempt,
           latencyMs,
+          latencyFromPromptEndMs,
+          ...head,
           points,
           score: nextScore,
           returned: nextReturned,
@@ -277,6 +302,8 @@ export function Football360Game() {
         cue: config.cue,
         initiate: rally.initiate,
         latencyMs,
+        latencyFromPromptEndMs,
+        ...head,
         targetBearingDeg: playerHeadingDeg(rally.to, config.partners),
       })
       setStage('reject')

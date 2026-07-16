@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSampler } from '../HeadSampler'
 import {
   bearingToXZ,
   discoveryPosition,
@@ -87,6 +88,7 @@ export function Park360Scene(props: Park360SceneProps) {
         <directionalLight position={[10, 20, 6]} intensity={1.0} color="#fff7e0" />
         <directionalLight position={[-8, 9, -10]} intensity={0.3} />
         <LookControls />
+        <HeadSampler />
         <ParkWorld />
         <SceneInner {...props} />
         <VRHud score={props.hudScore} prompt={props.hudPrompt} />

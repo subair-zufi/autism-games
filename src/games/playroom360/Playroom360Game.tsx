@@ -14,6 +14,7 @@ import { prLine, prLines, prSpeak, type Playroom360MessageKey } from './strings'
 import { Playroom360Scene } from './Playroom360Scene'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
+import { beginHeadWindow, headMetrics } from '../headTracking'
 
 const META = GAME_LIST.find((g) => g.id === 'playroom360')!
 
@@ -31,7 +32,7 @@ export function Playroom360Game() {
   const best = useScores((s) => s.best.playroom360)
   const reportScore = useScores((s) => s.reportScore)
   const config = CONFIG[difficulty]
-  const { recordStep, finishGame, resetSession } = useGameAnalytics('playroom360')
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('playroom360', xrStore)
 
   // Speak a line in the chosen language.
   const say = (key: Playroom360MessageKey, params?: Record<string, string>) =>
@@ -116,7 +117,9 @@ export function Playroom360Game() {
         clearTimeout(t2)
       }
     }
-    // child's turn: wait for the tap on their block in the scene
+    // child's turn: open a head-telemetry window (measures where they look
+    // during their own turn and the hand-off) and wait for the tap
+    beginHeadWindow()
   }, [index, phase, handoffTo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // current round number (0-based) for analytics payloads
@@ -127,7 +130,7 @@ export function Playroom360Game() {
     if (phase !== 'playing' || turn === null || turn.kind !== 'child' || handoffTo) return
     playSuccess()
     say('sayNiceBlock')
-    recordStep('place_block', { round, slot: index % config.players, method: 'tap' }, { score: score + 1 })
+    recordStep('place_block', { round, slot: index % config.players, method: 'tap', ...headMetrics() }, { score: score + 1 })
     // Drop the block now (it appears), then require an explicit hand-off to
     // the next player before their turn begins — unless this was the last turn.
     const nextTurn = sequence[index + 1] ?? null
@@ -161,12 +164,14 @@ export function Playroom360Game() {
     playGentle()
     say('sayHandoff', { name: handoffTo.name })
     const toIndex = players.findIndex((p) => p.id === handoffTo.id)
+    const targetBearingDeg = handoffTo.kind === 'peer' ? peerBearingDeg(toIndex, config.players) : 0
     recordStep('hand_off', {
       round,
       to: handoffTo.id,
       // how far the child had to turn to face the next player — the 360
       // attention-shift size, recorded like Football 360's targetBearingDeg
-      targetBearingDeg: handoffTo.kind === 'peer' ? peerBearingDeg(toIndex, config.players) : 0,
+      targetBearingDeg,
+      ...headMetrics(targetBearingDeg),
     })
     setHandoffTo(null)
   }

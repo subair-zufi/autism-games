@@ -24,10 +24,23 @@ describe('useGameAnalytics', () => {
     expect((analytics.recordStep as any).mock.calls[1][3]).toMatchObject({ sessionId: 'sess-1' })
   })
 
+  it('tags every step with xrPresenting=false when no xrStore is passed (flat game)', async () => {
+    const { result } = renderHook(() => useGameAnalytics('emotionrecognition'))
+    await act(async () => { result.current.recordStep('answer', { correct: true }) })
+    expect((analytics.recordStep as any).mock.calls[0][2]).toMatchObject({ correct: true, xrPresenting: false })
+  })
+
+  it('tags steps with xrPresenting=true while an immersive session is active', async () => {
+    const xrStore = { getState: () => ({ session: {} }) }
+    const { result } = renderHook(() => useGameAnalytics('museum360', xrStore))
+    await act(async () => { result.current.recordStep('answer', { correct: true }) })
+    expect((analytics.recordStep as any).mock.calls[0][2]).toMatchObject({ xrPresenting: true })
+  })
+
   it('finishGame records game_over and ends the session', async () => {
     const { result } = renderHook(() => useGameAnalytics('blocks'))
     await act(async () => { result.current.finishGame(7) })
-    expect(analytics.recordStep).toHaveBeenCalledWith('blocks', 'game_over', undefined, expect.objectContaining({ score: 7 }))
+    expect(analytics.recordStep).toHaveBeenCalledWith('blocks', 'game_over', { xrPresenting: false }, expect.objectContaining({ score: 7 }))
     expect(analytics.endSession).toHaveBeenCalledWith('sess-1', 7)
   })
 })

@@ -30,6 +30,7 @@ import { museum360Line, exhibitLabel } from './strings'
 import { Museum360Scene } from './Museum360Scene'
 import { xrStore, vrSupported } from './xrStore'
 import { useGameAnalytics } from '../useGameAnalytics'
+import { beginHeadWindow, headMetrics } from '../headTracking'
 
 const META = GAME_LIST.find((g) => g.id === 'museum360')!
 
@@ -47,7 +48,7 @@ export function Museum360Game() {
   const lang = useSettings((s) => s.language)
   const best = useScores((s) => s.best.museum360)
   const reportScore = useScores((s) => s.reportScore)
-  const { recordStep, finishGame, resetSession } = useGameAnalytics('museum360')
+  const { recordStep, finishGame, resetSession } = useGameAnalytics('museum360', xrStore)
   const goal = GOAL[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
@@ -122,6 +123,9 @@ export function Museum360Game() {
   function handleCueReady() {
     if (cueReadyAt.current !== null) return
     cueReadyAt.current = performance.now()
+    // open the head-telemetry window at cue onset — the child's scan to the
+    // target is measured from here (same zero-point as the latency)
+    beginHeadWindow()
     recordStep('cue_ready', { target: round.target, cue, cueKind, targetBearingDeg: targetBearingDeg(round) })
   }
 
@@ -134,6 +138,8 @@ export function Museum360Game() {
     // inflates it — in 360 the latency *includes* the time spent turning to look,
     // which is exactly the attention-shift the game measures
     const latencyMs = cueReadyAt.current === null ? null : Math.round(performance.now() - cueReadyAt.current)
+    // what the child's head actually did between cue onset and this tap
+    const head = headMetrics(targetBearingDeg(round))
     if (id === round.target) {
       const firstAttempt = wrongPicks.length === 0
       const nextStreak = firstAttempt ? streak + 1 : 0
@@ -151,7 +157,7 @@ export function Museum360Game() {
       recordStep(
         'answer',
         // visibleCount drives the guessing baseline server-side (1/n), same as Museum Look
-        { correct: true, target: round.target, picked: id, cue, cueKind, visibleCount: round.visible.length, targetBearingDeg: targetBearingDeg(round), firstAttempt, latencyMs, points, score: nextScore, found: nextFound },
+        { correct: true, target: round.target, picked: id, cue, cueKind, visibleCount: round.visible.length, targetBearingDeg: targetBearingDeg(round), firstAttempt, latencyMs, ...head, points, score: nextScore, found: nextFound },
         { score: nextScore },
       )
       if (nextFound >= goal) {
@@ -191,6 +197,7 @@ export function Museum360Game() {
         visibleCount: round.visible.length,
         targetBearingDeg: targetBearingDeg(round),
         latencyMs,
+        ...head,
         errorType: errorType(round.visible, round.target, id),
       })
       // least-to-most: an error immediately brings one rung of support back

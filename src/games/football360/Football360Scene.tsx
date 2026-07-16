@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSampler } from '../HeadSampler'
 import {
   bearingToXZ,
   dragDistance,
@@ -67,6 +68,7 @@ export function Football360Scene(props: Football360SceneProps) {
         <directionalLight position={[14, 22, 8]} intensity={1.05} color="#fff7e0" />
         <directionalLight position={[-8, 10, -12]} intensity={0.3} />
         <LookControls />
+        <HeadSampler />
         <FootballGround />
         <SceneInner {...props} />
         <VRHud score={props.hudScore} prompt={props.hudPrompt} />
