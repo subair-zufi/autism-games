@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { Difficulty } from '../../types'
 import {
   CARD_STEP_DEG,
+  CAUSE_RADIUS,
+  CAUSE_STEP_DEG,
   SCREEN_DISTANCE,
   SCREEN_H,
   SCREEN_W,
@@ -9,6 +11,7 @@ import {
   buildQuiz,
   cardBearingDeg,
   cardPosition,
+  causeBearingDeg,
   isDragTail,
   lookDrag,
   pointsFor,
@@ -59,6 +62,27 @@ describe('answer card layout', () => {
     expect(z).toBeLessThan(0) // in front (toward -z)
     // leftmost of three is on the child's left
     expect(x).toBeLessThan(0)
+  })
+})
+
+describe('cause ("why?") card layout — whole sentences, wider spacing', () => {
+  it('centres the cause cards symmetrically on straight-ahead', () => {
+    for (const n of [2, 3]) {
+      const bearings = Array.from({ length: n }, (_, i) => causeBearingDeg(i, n))
+      const sum = bearings.reduce((a, b) => a + b, 0)
+      expect(Math.abs(sum)).toBeLessThan(1e-9)
+      for (let i = 1; i < n; i++) {
+        expect(bearings[i] - bearings[i - 1]).toBeCloseTo(CAUSE_STEP_DEG)
+      }
+    }
+  })
+
+  it('spaces the sentence cards far enough apart that they never overlap', () => {
+    // the cause cards are 1.25 m wide (sentences); adjacent centres must sit
+    // further apart than that on the arc, or they would collide (the bug)
+    const CAUSE_CARD_WIDTH = 1.25
+    const arcGap = CAUSE_RADIUS * ((CAUSE_STEP_DEG * Math.PI) / 180)
+    expect(arcGap).toBeGreaterThan(CAUSE_CARD_WIDTH)
   })
 })
 

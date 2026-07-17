@@ -229,8 +229,9 @@ export function IdentifyEmotionsGame() {
     })
     if (correct) playSuccess()
     else playGentle()
-    // One attempt only — show the correct cause, then move on.
-    setTimeout(() => advance(score), 1500)
+    // One attempt only — show the correct cause, then wait for the child to
+    // tap Next (review: the previous fixed 1.5s timer didn't give a child
+    // extra time to read/process the "why" sentence before moving on).
   }
 
   // Read the freeze prompt aloud (in the chosen language) once frozen.
@@ -254,6 +255,7 @@ export function IdentifyEmotionsGame() {
     )
   }
 
+  const isLast = idx + 1 >= quiz.length
   const langs = displayLangs(lang)
   const promptLines =
     stage === 'cause'
@@ -299,20 +301,29 @@ export function IdentifyEmotionsGame() {
           )}
         </div>
         {stage === 'cause' && q.cause ? (
-          <div className="choice-row">
-            {q.cause.options.map((opt, i) => {
-              let cls = 'choice-btn'
-              if (causePicked !== null && i === q.cause!.answerIndex) cls += ' correct'
-              else if (causePicked === i) cls += ' wrong'
-              return (
-                <button key={i} className={cls} disabled={causePicked !== null} onClick={() => pickCause(i)}>
-                  {displayLangs(lang).map((l) => (
-                    <span key={l} className={`choice-label choice-label-${l}`}>{opt[l]}</span>
-                  ))}
+          <>
+            <div className="choice-row">
+              {q.cause.options.map((opt, i) => {
+                let cls = 'choice-btn'
+                if (causePicked !== null && i === q.cause!.answerIndex) cls += ' correct'
+                else if (causePicked === i) cls += ' wrong'
+                return (
+                  <button key={i} className={cls} disabled={causePicked !== null} onClick={() => pickCause(i)}>
+                    {displayLangs(lang).map((l) => (
+                      <span key={l} className={`choice-label choice-label-${l}`}>{opt[l]}</span>
+                    ))}
+                  </button>
+                )
+              })}
+            </div>
+            {causePicked !== null && (
+              <div className="er-feedback-row">
+                <button className="big-btn er-next" onClick={() => advance(score)}>
+                  {t(isLast ? 'finish' : 'next', lang)}
                 </button>
-              )
-            })}
-          </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="choice-row">
             {q.choices.map((id) => {

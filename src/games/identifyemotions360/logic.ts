@@ -75,6 +75,22 @@ export function cardPosition(i: number, n: number): [number, number] {
   return bearingToXZ((cardBearingDeg(i, n) * Math.PI) / 180, CARD_RADIUS)
 }
 
+/**
+ * The "why?" (cause) options are whole sentences, not single emotion words, so
+ * they get their own wider, roomier layout: bigger cards, spaced far enough
+ * apart that adjacent sentences never overlap, and a little further out so the
+ * wrapped text stays comfortably readable. (The emotion-naming cards above stay
+ * small and tight — one word each.)
+ */
+export const CAUSE_RADIUS = 3.0
+export const CAUSE_Y = 1.05
+export const CAUSE_STEP_DEG = 26
+
+/** Signed bearing of the i-th of n cause cards, centred on straight-ahead. */
+export function causeBearingDeg(i: number, n: number): number {
+  return (i - (n - 1) / 2) * CAUSE_STEP_DEG
+}
+
 /** Clips in a session at each difficulty (the quiz length). */
 export function sessionLength(difficulty: Difficulty): number {
   return VIDEO_COUNT[difficulty]

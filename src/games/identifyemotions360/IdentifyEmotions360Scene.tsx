@@ -11,9 +11,13 @@ import {
   SCREEN_H,
   SCREEN_W,
   SCREEN_Y,
+  CARD_RADIUS,
   CARD_Y,
+  CAUSE_RADIUS,
+  CAUSE_Y,
+  bearingToXZ,
   cardBearingDeg,
-  cardPosition,
+  causeBearingDeg,
   dragDistance,
   isDragTail,
   lookDrag,
@@ -21,7 +25,7 @@ import {
 import { emotionLabel, displayLangs, type Lang, type LocalizedText } from '../../i18n/strings'
 import { emotionMeta, type EmotionId } from '../emotionVocab'
 
-export type CardState = 'idle' | 'correct' | 'wrong' | 'dim'
+export type CardState = 'idle' | 'correct' | 'wrong' | 'dim' | 'go'
 
 export interface IdentifyEmotions360SceneProps {
   /** the shared <video> element the game drives; shown on the big screen */
@@ -43,6 +47,11 @@ export interface IdentifyEmotions360SceneProps {
   causeAnswerIndex: number
   causePicked: number | null
   onPickCause: (i: number) => void
+  /** advance past the cause stage — the DOM Next button is invisible inside a
+   *  headset, so this in-world card is the only way to move on there */
+  onNextFromCause: () => void
+  /** localized "Next ▶" / "Finish ▶" label for the in-world Next card */
+  nextLabel: string
   celebrating: boolean
   lang: Lang
   /** HUD lines mirrored inside VR, where the DOM overlay is invisible */
@@ -266,6 +275,7 @@ function BigScreen({
 function AnswerLayer(props: IdentifyEmotions360SceneProps) {
   const { frozen, stage, choices, answer, wrong, locked, onPickEmotion } = props
   const { causeOptions, causeAnswerIndex, causePicked, onPickCause, lang } = props
+  const { onNextFromCause, nextLabel } = props
   if (!frozen) return null
 
   if (stage === 'cause' && causeOptions) {
@@ -284,10 +294,11 @@ function AnswerLayer(props: IdentifyEmotions360SceneProps) {
           return (
             <TextCard
               key={i}
-              i={i}
-              n={n}
-              width={1.15}
-              height={0.62}
+              bearingDeg={causeBearingDeg(i, n)}
+              radius={CAUSE_RADIUS}
+              y={CAUSE_Y}
+              width={1.25}
+              height={1.0}
               lines={displayLangs(lang).map((l) => opt[l])}
               state={state}
               disabled={causePicked !== null}
@@ -295,6 +306,23 @@ function AnswerLayer(props: IdentifyEmotions360SceneProps) {
             />
           )
         })}
+        {/* the DOM Next button is invisible inside a headset (review V-note),
+            so once the cause is answered this in-world card is the only way
+            to move on in VR — sits low, straight ahead, clear of the
+            sentence cards above it */}
+        {causePicked !== null && (
+          <TextCard
+            bearingDeg={0}
+            radius={CAUSE_RADIUS - 0.6}
+            y={0.4}
+            width={0.9}
+            height={0.42}
+            lines={[nextLabel]}
+            state="go"
+            disabled={false}
+            onTap={onNextFromCause}
+          />
+        )}
       </group>
     )
   }
@@ -308,8 +336,9 @@ function AnswerLayer(props: IdentifyEmotions360SceneProps) {
         return (
           <TextCard
             key={id}
-            i={i}
-            n={n}
+            bearingDeg={cardBearingDeg(i, n)}
+            radius={CARD_RADIUS}
+            y={CARD_Y}
             width={0.66}
             height={0.62}
             emoji={emotionMeta(id).emoji}
@@ -329,11 +358,34 @@ const STATE_BORDER: Record<CardState, string> = {
   correct: '#22c55e',
   wrong: '#ef6a5e',
   dim: '#9aa0ab',
+  go: '#7fb6a4', // matches the DOM Next button's --accent, for the in-world twin
+}
+
+/** Break `text` into lines that each fit `maxWidth` at the current ctx font.
+ *  Words are split on whitespace — Malayalam separates words with spaces too,
+ *  so a long "why?" sentence flows onto several lines instead of one squashed,
+ *  unreadable line. */
+function wrapToWidth(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean)
+  if (words.length === 0) return ['']
+  const out: string[] = []
+  let cur = words[0]
+  for (let i = 1; i < words.length; i++) {
+    const next = `${cur} ${words[i]}`
+    if (ctx.measureText(next).width <= maxWidth) cur = next
+    else {
+      out.push(cur)
+      cur = words[i]
+    }
+  }
+  out.push(cur)
+  return out
 }
 
 function TextCard({
-  i,
-  n,
+  bearingDeg,
+  radius,
+  y,
   width,
   height,
   emoji,
@@ -342,8 +394,10 @@ function TextCard({
   disabled,
   onTap,
 }: {
-  i: number
-  n: number
+  /** signed bearing (deg) and distance (m) of the card, and its centre height */
+  bearingDeg: number
+  radius: number
+  y: number
   width: number
   height: number
   emoji?: string
@@ -352,8 +406,8 @@ function TextCard({
   disabled: boolean
   onTap: () => void
 }) {
-  const [x, z] = cardPosition(i, n)
-  const bearingRad = (cardBearingDeg(i, n) * Math.PI) / 180
+  const bearingRad = (bearingDeg * Math.PI) / 180
+  const [x, z] = bearingToXZ(bearingRad, radius)
 
   const texture = useMemo(() => {
     const cv = document.createElement('canvas')
@@ -370,7 +424,7 @@ function TextCard({
     // card face
     ctx.beginPath()
     ctx.roundRect(6, 6, cv.width - 12, cv.height - 12, r)
-    ctx.fillStyle = state === 'dim' ? 'rgba(244,246,250,0.55)' : '#f8fafc'
+    ctx.fillStyle = state === 'dim' ? 'rgba(244,246,250,0.55)' : state === 'go' ? STATE_BORDER.go : '#f8fafc'
     ctx.fill()
     // colored border by state
     ctx.lineWidth = state === 'idle' ? 8 : 14
@@ -379,32 +433,46 @@ function TextCard({
 
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
+    ctx.fillStyle = state === 'go' ? '#ffffff' : '#2a2f3a'
     const cx = cv.width / 2
-    let top = cv.height * 0.5
+    const pad = Math.round(cv.width * 0.09)
+    const maxW = cv.width - pad * 2
+
+    // emoji (emotion-naming cards) sits up top; the label area is what remains
+    let regionTop = pad
     if (emoji) {
       ctx.font = `${Math.round(cv.height * 0.34)}px "Comic Sans MS", sans-serif`
-      ctx.fillText(emoji, cx, cv.height * 0.34)
-      top = cv.height * 0.72
+      ctx.fillText(emoji, cx, cv.height * 0.32)
+      regionTop = cv.height * 0.52
     }
-    // label line(s), shrunk to fit
-    const lineGap = cv.height * 0.18
-    const startY = top - ((lines.length - 1) * lineGap) / 2
-    lines.forEach((text, li) => {
-      let size = Math.round(cv.height * 0.16)
-      do {
-        ctx.font = `bold ${size}px "Comic Sans MS", "Noto Sans Malayalam", sans-serif`
-        size -= 2
-      } while (ctx.measureText(text).width > cv.width - 48 && size > 12)
-      ctx.fillStyle = '#2a2f3a'
-      ctx.fillText(text, cx, startY + li * lineGap)
-    })
+    const regionH = cv.height - pad - regionTop
+
+    // shrink the font until the word-wrapped block fits the card's width AND
+    // height — so a one-word label stays big, a whole sentence wraps and fits
+    const text = lines.join('  ').trim()
+    let size = Math.round(cv.height * (emoji ? 0.18 : 0.15))
+    let wrapped = [text]
+    for (; size >= 13; size -= 2) {
+      ctx.font = `bold ${size}px "Comic Sans MS", "Noto Sans Malayalam", sans-serif`
+      wrapped = wrapToWidth(ctx, text, maxW)
+      const lh = size * 1.28
+      const fits = wrapped.length * lh <= regionH && wrapped.every((l) => ctx.measureText(l).width <= maxW)
+      if (fits) break
+    }
+    ctx.font = `bold ${size}px "Comic Sans MS", "Noto Sans Malayalam", sans-serif`
+    const lh = size * 1.28
+    let ly = regionTop + (regionH - wrapped.length * lh) / 2 + lh / 2
+    for (const l of wrapped) {
+      ctx.fillText(l, cx, ly)
+      ly += lh
+    }
     texture.needsUpdate = true
   }, [texture, emoji, lines, state])
 
   useEffect(() => () => texture.dispose(), [texture])
 
   return (
-    <group position={[x, CARD_Y, z]} rotation={[0, -bearingRad, 0]}>
+    <group position={[x, y, z]} rotation={[0, -bearingRad, 0]}>
       <mesh
         onClick={(e) => {
           e.stopPropagation()

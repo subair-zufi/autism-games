@@ -31,8 +31,6 @@ const META = GAME_LIST.find((g) => g.id === 'identifyemotions360')!
 const CELEBRATE_MS = 1300
 /** pause before the automatic "let's look again" replay after a wrong pick */
 const REPLAY_DELAY_MS = 900
-/** how long the correct cause is shown before advancing */
-const CAUSE_REVEAL_MS = 1500
 
 /**
  * Emotion Clips 360 — the immersive copy of Emotion Clips. Same quiz (clips,
@@ -270,7 +268,15 @@ export function IdentifyEmotions360Game() {
     })
     if (correct) playSuccess()
     else playGentle()
-    advanceTimer.current = setTimeout(() => advance(score, firstTryCount), CAUSE_REVEAL_MS)
+    // One attempt only — show the correct cause, then wait for the child to
+    // tap Next (review: a fixed timer didn't give a child extra time to
+    // read/process the "why" sentence before the game moved on; the DOM Next
+    // button is invisible in headset, so the scene also gets an in-world one).
+  }
+
+  function nextFromCause() {
+    if (stage !== 'cause' || causePicked === null) return
+    advance(score, firstTryCount)
   }
 
   function advance(nextScore: number, nextFirstTry: number) {
@@ -344,6 +350,8 @@ export function IdentifyEmotions360Game() {
               causeAnswerIndex={q.cause?.answerIndex ?? -1}
               causePicked={causePicked}
               onPickCause={pickCause}
+              onNextFromCause={nextFromCause}
+              nextLabel={t(idx + 1 >= quiz.length ? 'finish' : 'next', lang)}
               celebrating={celebrating}
               lang={lang}
               hudScore={`⭐ ${score}`}
@@ -374,6 +382,11 @@ export function IdentifyEmotions360Game() {
         </div>
         <div className="game-bottom">
           <PromptBanner text={promptText} lang={lang} />
+          {stage === 'cause' && causePicked !== null && (
+            <button className="big-btn er-next" onClick={nextFromCause}>
+              {t(idx + 1 >= quiz.length ? 'finish' : 'next', lang)}
+            </button>
+          )}
         </div>
         {phase === 'over' && (
           <GameOverDialog
