@@ -67,6 +67,14 @@ SKILL_BY_GAME = {
 
 GAMES = tuple(SKILL_BY_GAME.keys())
 
+# Games kept in the codebase but pulled off the Home page (the `hidden` flag in
+# src/types.ts GAME_LIST). They still score for research/composite; they're just
+# not part of the player-facing line-up or the admin per-game breakdown.
+HIDDEN_GAMES = ("rightway", "rightway360", "rulefixer")
+
+# The player-facing line-up (12 games): everything on the Home page.
+VISIBLE_GAMES = tuple(g for g in GAMES if g not in HIDDEN_GAMES)
+
 # --- Per-game guessing baselines (chance level c) ----------------------------
 # Emotion Recognition answer events do not carry a per-item chance, so it is
 # derived from the level (Easy = 2 choices, Moderate/Hard = 3). Emotion Clips

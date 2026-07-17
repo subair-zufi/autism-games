@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_admin
 from ..models import Admin, GameEvent, GameSession, Student, User
-from ..scoring import GAMES, corrected_score, trials_for_game
+from ..scoring import VISIBLE_GAMES, corrected_score, trials_for_game
 from ..schemas import (
     AdminAuthResponse,
     AdminLoginRequest,
@@ -274,7 +274,7 @@ def analytics_games(
             func.count(GameEvent.id),
             func.count(func.distinct(GameEvent.user_id)),
         )
-        .where(GameEvent.game_key.in_(GAMES))
+        .where(GameEvent.game_key.in_(VISIBLE_GAMES))
         .group_by(GameEvent.game_key)
         .order_by(func.count(GameEvent.id).desc())
     ).all()
@@ -286,7 +286,7 @@ def analytics_games(
     scoring_events = db.scalars(
         select(GameEvent)
         .where(
-            GameEvent.game_key.in_(GAMES),
+            GameEvent.game_key.in_(VISIBLE_GAMES),
             GameEvent.event_type.in_(SCORING_EVENT_TYPES),
         )
         .order_by(GameEvent.created_at.asc())
