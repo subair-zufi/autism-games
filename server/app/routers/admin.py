@@ -1,4 +1,5 @@
 """Admin API: authentication, user management and analytics."""
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_admin
 from ..models import Admin, GameEvent, GameSession, Student, User
+from ..scoring import corrected_score, trials_for_game
 from ..schemas import (
     AdminAuthResponse,
     AdminLoginRequest,
@@ -254,6 +256,11 @@ def analytics_summary(
     )
 
 
+# Event types the standardised scorer consumes (see app/scoring.py). Pulling
+# only these keeps the per-game score query light on large event tables.
+SCORING_EVENT_TYPES = ("answer", "roll_return", "place_block", "impatient_tap", "share")
+
+
 @router.get("/analytics/games", response_model=list[GameBreakdownItem])
 def analytics_games(
     db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
@@ -263,17 +270,33 @@ def analytics_games(
             GameEvent.game_key,
             func.count(GameEvent.id),
             func.count(func.distinct(GameEvent.user_id)),
-            func.avg(GameEvent.score),
         )
         .group_by(GameEvent.game_key)
         .order_by(func.count(GameEvent.id).desc())
     ).all()
+
+    # Standardised 0-100 skill score per game: chance-corrected first-attempt
+    # accuracy pooled across every player's scoring events. Comparable across
+    # games (unlike the raw per-game point tallies), so one column reads the same
+    # for a 2-choice quiz and a "wait your turn" scene.
+    scoring_events = db.scalars(
+        select(GameEvent)
+        .where(GameEvent.event_type.in_(SCORING_EVENT_TYPES))
+        .order_by(GameEvent.created_at.asc())
+    ).all()
+    by_game: dict[str, list[GameEvent]] = defaultdict(list)
+    for e in scoring_events:
+        by_game[e.game_key].append(e)
+    score_by_game = {
+        gk: corrected_score(trials_for_game(gk, evs)) for gk, evs in by_game.items()
+    }
+
     return [
         GameBreakdownItem(
             game_key=row[0],
             event_count=row[1],
             user_count=row[2],
-            avg_score=round(float(row[3]), 2) if row[3] is not None else None,
+            skill_score=score_by_game.get(row[0]),
         )
         for row in rows
     ]

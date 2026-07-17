@@ -131,6 +131,57 @@ def test_discovery_spontaneous_shares():
     assert g.median_latency_ms == 5750
 
 
+# --- VR copies score identically to their flat originals -----------------------
+
+
+def test_emotionrecognition360_reads_payload_chance():
+    # Emotion Room 360 records `chance` on every answer (one per round).
+    evs = [ev("emotionrecognition360", "answer", {"correct": i < 3, "chance": 0.5}) for i in range(4)]
+    g = scoring.score_game("emotionrecognition360", evs)
+    assert g.skill == "emotion"
+    assert g.n_trials == 4
+    assert g.score == 50.0  # 3/4 at chance 0.5 -> (0.25)/(0.5) -> 50
+
+
+def test_identifyemotions360_uses_difficulty_key():
+    # Emotion Cinema 360 tags the tier as `difficulty` (not `level`) and drops
+    # retries (attempt>1), just like flat Emotion Clips.
+    evs = [
+        ev("identifyemotions360", "answer", {"correct": False, "attempt": 1, "difficulty": "easy"}),
+        ev("identifyemotions360", "answer", {"correct": True, "attempt": 2, "difficulty": "easy"}),  # retry
+        ev("identifyemotions360", "answer", {"correct": True, "attempt": 1, "difficulty": "easy"}),
+    ]
+    g = scoring.score_game("identifyemotions360", evs)
+    assert g.skill == "emotion"
+    assert g.n_trials == 2  # attempt==2 retry excluded
+    assert g.raw_accuracy == 0.5
+    assert g.score == 0.0  # 1/2 at chance 0.5 (easy = 2 choices) -> chance level
+
+
+def test_playroom360_scores_like_blocks():
+    evs = [ev("playroom360", "place_block", {}) for _ in range(3)] + [ev("playroom360", "impatient_tap", {})]
+    g = scoring.score_game("playroom360", evs)
+    assert g.skill == "turntaking"
+    assert g.n_trials == 4
+    assert g.score == 75.0  # chance 0 -> score == raw accuracy * 100
+
+
+def test_roster_matches_current_games():
+    # Retired games are gone; every VR copy trains the same skill as its flat
+    # original and every roster game routes to a scorer.
+    assert "garden" not in scoring.SKILL_BY_GAME
+    for flat, vr in (
+        ("emotionrecognition", "emotionrecognition360"),
+        ("identifyemotions", "identifyemotions360"),
+        ("blocks", "playroom360"),
+        ("rollback", "football360"),
+        ("rightway", "rightway360"),
+        ("museum", "museum360"),
+        ("discovery", "park360"),
+    ):
+        assert scoring.SKILL_BY_GAME[vr] == scoring.SKILL_BY_GAME[flat]
+
+
 # --- improvement (pre/post) ---------------------------------------------------
 
 

@@ -253,7 +253,10 @@ class GameBreakdownItem(BaseModel):
     game_key: str
     event_count: int
     user_count: int
-    avg_score: float | None
+    # Standardised 0-100 skill score: chance-corrected first-attempt accuracy
+    # pooled across all players (see app/scoring.py). None for games with no
+    # scorable trials yet (or retired games no longer in the roster).
+    skill_score: float | None
 
 
 class TimeseriesPoint(BaseModel):

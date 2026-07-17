@@ -89,7 +89,7 @@
       <div class="panel">
         <h2>Per-game breakdown</h2>
         <table id="games-table">
-          <thead><tr><th>Game</th><th>Events</th><th>Players</th><th>Avg score</th></tr></thead>
+          <thead><tr><th>Game</th><th>Events</th><th>Players</th><th title="Standardised 0–100 skill score: chance-corrected first-attempt accuracy, pooled across all players. Comparable across games.">Skill score</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -201,7 +201,7 @@
         options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: "#64748b" } }, y: { ticks: { color: "#64748b" } } } },
       });
       document.querySelector("#games-table tbody").innerHTML = data
-        .map((g) => `<tr><td>${g.game_key}</td><td>${g.event_count}</td><td>${g.user_count}</td><td>${g.avg_score ?? "—"}</td></tr>`).join("")
+        .map((g) => `<tr><td>${g.game_key}</td><td>${g.event_count}</td><td>${g.user_count}</td><td>${g.skill_score ?? "—"}</td></tr>`).join("")
         || `<tr><td colspan="4" style="color:#64748b">No data yet</td></tr>`;
     }
 

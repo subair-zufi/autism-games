@@ -1,6 +1,6 @@
 """Standardised, cross-game scoring for the research battery.
 
-The nine games emit very different raw numbers (chance-corrected accuracy for
+The games emit very different raw numbers (chance-corrected accuracy for
 the emotion/social quizzes, point tallies with lives for the joint-attention
 and turn-taking scenes, latencies everywhere). To compare a child over time, to
 compare the four target skills, and to compare cohorts, every game has to reduce
@@ -45,10 +45,15 @@ SKILL_LABELS = {
     "jointattention": "Joint Attention",
 }
 
+# The current game roster (keep in sync with src/types.ts GAME_LIST). Each VR
+# copy trains the same skill as its flat original and is listed right after it.
 SKILL_BY_GAME = {
     "emotionrecognition": "emotion",
+    "emotionrecognition360": "emotion",
     "identifyemotions": "emotion",
+    "identifyemotions360": "emotion",
     "blocks": "turntaking",
+    "playroom360": "turntaking",
     "rollback": "turntaking",
     "football360": "turntaking",
     "rightway": "socialnorms",
@@ -56,7 +61,6 @@ SKILL_BY_GAME = {
     "rulefixer": "socialnorms",
     "museum": "jointattention",
     "museum360": "jointattention",
-    "garden": "jointattention",
     "discovery": "jointattention",
     "park360": "jointattention",
 }
@@ -125,6 +129,13 @@ def _is_true(v: object) -> bool:
     return v is True
 
 
+def _level(p: dict) -> str:
+    """Difficulty key, tolerating both ``level`` (flat games) and ``difficulty``
+    (the 360 copies record the same easy/medium/hard tier under that name), so a
+    VR build reads the same chance table as its flat original."""
+    return str(p.get("level", p.get("difficulty", "easy")))
+
+
 # --- Per-game trial extraction ------------------------------------------------
 # Each returns a flat list of Trials. "First attempt only" is enforced per game
 # so that retries (which some games allow as a scaffold) never inflate accuracy.
@@ -139,7 +150,7 @@ def _quiz_trials(events: Iterable[EventLike], chance_by_level: dict[str, float])
         p = _p(e)
         if "correct" not in p:
             continue
-        level = str(p.get("level", "easy"))
+        level = _level(p)
         out.append(
             Trial(
                 correct=_is_true(p["correct"]),
@@ -161,7 +172,7 @@ def _clips_trials(events: Iterable[EventLike]) -> list[Trial]:
         p = _p(e)
         if "correct" not in p or p.get("attempt") not in (None, 1):
             continue
-        level = str(p.get("level", "easy"))
+        level = _level(p)
         out.append(
             Trial(
                 correct=_is_true(p["correct"]),
@@ -288,7 +299,16 @@ def trials_for_game(game_key: str, events: Iterable[EventLike]) -> list[Trial]:
     evs = list(events)
     if game_key == "emotionrecognition":
         return _quiz_trials(evs, EMOTIONREC_CHANCE)
-    if game_key == "identifyemotions":
+    if game_key == "emotionrecognition360":
+        # Emotion Room 360 is the immersive copy of Emotion Recognition. It
+        # records the guessing baseline (`chance`) directly on every answer (one
+        # answer per round), so it scores like the payload-chance games; the flat
+        # original derives chance from the level instead.
+        return _payload_chance_trials(evs)
+    if game_key in ("identifyemotions", "identifyemotions360"):
+        # Emotion Cinema 360 is the immersive copy of Emotion Clips — same
+        # first-attempt answer payloads (chance from the level's choice count),
+        # so the same clips scoring applies.
         return _clips_trials(evs)
     if game_key in ("rightway", "rightway360", "rulefixer"):
         # Schoolyard 360 is the immersive copy of Right or Wrong — same answer
@@ -305,7 +325,9 @@ def trials_for_game(game_key: str, events: Iterable[EventLike]) -> list[Trial]:
         # Football 360 is the immersive copy of Roll-Back Buddy — same
         # roll_return payloads, so the same 1/partners guessing baseline applies.
         return _rollback_trials(evs)
-    if game_key == "blocks":
+    if game_key in ("blocks", "playroom360"):
+        # Playroom 360 is the immersive copy of Block Buddies — same place_block /
+        # impatient_tap turn events, so the same waiting score applies.
         return _blocks_trials(evs)
     if game_key in ("discovery", "park360"):
         # Park 360 is the immersive copy of Look What I Found! — same share

@@ -44,8 +44,15 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 TOTAL_GAMES = len(scoring.GAMES)
 
 # The games whose "answer" events carry emotion ids, and the emotion vocabulary.
-# Keep in sync with src/games/emotionVocab.ts.
-EMOTION_GAMES = ("emotionrecognition", "identifyemotions")
+# Keep in sync with src/games/emotionVocab.ts. The 360 copies record the same
+# answer/picked emotion ids as their flat originals, so they feed the same
+# confusion matrix.
+EMOTION_GAMES = (
+    "emotionrecognition",
+    "emotionrecognition360",
+    "identifyemotions",
+    "identifyemotions360",
+)
 EMOTION_IDS = ("happy", "sad", "angry", "surprised", "scared", "disgust")
 # How many trailing weeks the "Progress Over Time" chart shows.
 WEEKS = 6
