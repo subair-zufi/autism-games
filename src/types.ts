@@ -136,6 +136,10 @@ export const GAME_LIST: GameMeta[] = [
       'Emotion regulation (control), not recognition: a situation stirs up a big feeling and a Feelings Meter climbs — the child names the feeling, chooses a calming tool, and *performs* it (paced balloon breathing, counting to ten, or a guided coping action like asking for help or taking a break) to bring the meter back to calm. Breathing and counting always work and are always offered so the two portable skills are over-learned; the coping actions earn an extra "and it helped!" bonus only when they fit the situation. Harder levels offer more feeling choices, drop the suggested tool, and let the meter creep back up while the child pauses',
     duration: '5–10 min',
     hasLevels: false,
+    // On hold: the meter-based framing tested as too abstract/low-agency for
+    // engagement (esp. ~10yo autistic players) — a re-skin is planned. Kept
+    // in the codebase and routable; remove this flag to bring it back.
+    hidden: true,
   },
   // --- Turn-Taking --------------------------------------------------------
   {
