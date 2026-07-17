@@ -27,6 +27,7 @@ import { RightWay360Game } from './games/rightway360/RightWay360Game'
 import { RuleFixerGame } from './games/rulefixer/RuleFixerGame'
 import { IdentifyEmotionsGame } from './games/identifyemotions/IdentifyEmotionsGame'
 import { IdentifyEmotions360Game } from './games/identifyemotions360/IdentifyEmotions360Game'
+import { CalmCrewGame } from './games/calmcrew/CalmCrewGame'
 import { DiscoveryGame } from './games/discovery/DiscoveryGame'
 import { Park360Game } from './games/park360/Park360Game'
 import { useAuth } from './state/auth'
@@ -45,6 +46,7 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   rulefixer: RuleFixerGame,
   identifyemotions: IdentifyEmotionsGame,
   identifyemotions360: IdentifyEmotions360Game,
+  calmcrew: CalmCrewGame,
   discovery: DiscoveryGame,
   park360: Park360Game,
 }

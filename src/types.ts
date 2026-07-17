@@ -12,6 +12,7 @@ export type GameId =
   | 'rulefixer'
   | 'identifyemotions'
   | 'identifyemotions360'
+  | 'calmcrew'
   | 'discovery'
   | 'park360'
 export type Difficulty = 'easy' | 'medium' | 'hard'
@@ -119,6 +120,20 @@ export const GAME_LIST: GameMeta[] = [
     description: 'Name the feeling on the big screen · സ്ക്രീനിലെ ഭാവം പറയൂ',
     objective:
       'Emotion Clips in an immersive media room: the same clips, freeze-frame, tiered choices and "why does he/she feel …?" follow-up as Emotion Clips, but the clip plays on one big screen sat at a comfortable distance and height, and the child answers by tapping in-world cards; harder levels freeze earlier on a half-formed expression and force confusable choices',
+    duration: '5–10 min',
+    hasLevels: false,
+  },
+  {
+    id: 'calmcrew',
+    title: 'Calm Crew',
+    icon: '🎈',
+    path: '/calm-crew',
+    color: '#0ea5e9',
+    skill: 'emotion',
+    mode: 'desktop',
+    description: 'Cool a big feeling down · വികാരം ശാന്തമാക്കൂ',
+    objective:
+      'Emotion regulation (control), not recognition: a situation stirs up a big feeling and a Feelings Meter climbs — the child names the feeling, chooses a calming tool, and *performs* it (paced balloon breathing, counting to ten, or a guided coping action like asking for help or taking a break) to bring the meter back to calm. Breathing and counting always work and are always offered so the two portable skills are over-learned; the coping actions earn an extra "and it helped!" bonus only when they fit the situation. Harder levels offer more feeling choices, drop the suggested tool, and let the meter creep back up while the child pauses',
     duration: '5–10 min',
     hasLevels: false,
   },

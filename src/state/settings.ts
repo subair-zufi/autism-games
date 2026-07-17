@@ -33,7 +33,7 @@ export const useSettings = create<SettingsState>()(
       voiceOn: true,
       soundOn: true,
       language: 'en',
-      difficulty: { emotionrecognition: 'easy', emotionrecognition360: 'easy', blocks: 'easy', playroom360: 'easy', rollback: 'easy', football360: 'easy', museum: 'easy', museum360: 'easy', rightway: 'easy', rightway360: 'easy', rulefixer: 'easy', identifyemotions: 'easy', identifyemotions360: 'easy', discovery: 'easy', park360: 'easy' },
+      difficulty: { emotionrecognition: 'easy', emotionrecognition360: 'easy', blocks: 'easy', playroom360: 'easy', rollback: 'easy', football360: 'easy', museum: 'easy', museum360: 'easy', rightway: 'easy', rightway360: 'easy', rulefixer: 'easy', identifyemotions: 'easy', identifyemotions360: 'easy', calmcrew: 'easy', discovery: 'easy', park360: 'easy' },
       playMode: 'desktop',
       vrPracticeDone: false,
       setVoiceOn: (voiceOn) => set({ voiceOn }),
