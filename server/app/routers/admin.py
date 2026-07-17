@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..deps import get_current_admin
 from ..models import Admin, GameEvent, GameSession, Student, User
-from ..scoring import corrected_score, trials_for_game
+from ..scoring import GAMES, corrected_score, trials_for_game
 from ..schemas import (
     AdminAuthResponse,
     AdminLoginRequest,
@@ -265,12 +265,16 @@ SCORING_EVENT_TYPES = ("answer", "roll_return", "place_block", "impatient_tap", 
 def analytics_games(
     db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
 ) -> list[GameBreakdownItem]:
+    # Only games still in the roster (src/types.ts GAME_LIST). Retired games
+    # keep their historical events in the table, but the dashboard should show
+    # the current line-up, not garden/zebra/emotions/etc.
     rows = db.execute(
         select(
             GameEvent.game_key,
             func.count(GameEvent.id),
             func.count(func.distinct(GameEvent.user_id)),
         )
+        .where(GameEvent.game_key.in_(GAMES))
         .group_by(GameEvent.game_key)
         .order_by(func.count(GameEvent.id).desc())
     ).all()
@@ -281,7 +285,10 @@ def analytics_games(
     # for a 2-choice quiz and a "wait your turn" scene.
     scoring_events = db.scalars(
         select(GameEvent)
-        .where(GameEvent.event_type.in_(SCORING_EVENT_TYPES))
+        .where(
+            GameEvent.game_key.in_(GAMES),
+            GameEvent.event_type.in_(SCORING_EVENT_TYPES),
+        )
         .order_by(GameEvent.created_at.asc())
     ).all()
     by_game: dict[str, list[GameEvent]] = defaultdict(list)
