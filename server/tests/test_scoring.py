@@ -298,3 +298,94 @@ def test_age_and_iq_bands():
     assert scoring.iq_band(65) == "<70"
     assert scoring.iq_band(90) == "85-99"
     assert scoring.iq_band(None) == "unknown"
+
+
+def test_age_years():
+    today = date(2026, 7, 18)
+    assert scoring.age_years(date(2015, 1, 1), today) == 11
+    assert scoring.age_years(date(2015, 12, 1), today) == 10  # birthday not yet reached
+    assert scoring.age_years(None, today) is None
+
+
+# --- trial-level export -------------------------------------------------------
+
+
+def test_student_trial_records_indices_and_fields():
+    evs = (
+        answers("emotionrecognition", 2, 3, "easy", session="s1")  # 3 emotion trials
+        + [ev("blocks", "place_block", {}, session="s2", offset=20) for _ in range(2)]
+    )
+    rows = scoring.student_trial_records(evs)
+    assert len(rows) == 5
+
+    emo = [r for r in rows if r.game_key == "emotionrecognition"]
+    assert [r.trial_in_game for r in emo] == [1, 2, 3]
+    assert [r.trial_in_session for r in emo] == [1, 2, 3]  # all in session s1
+    assert [r.first_attempt_correct for r in emo] == [1, 1, 0]  # 2 of 3 correct
+    assert all(r.skill == "emotion" and r.session_id == "s1" for r in emo)
+
+    blocks = [r for r in rows if r.game_key == "blocks"]
+    assert all(r.skill == "turntaking" for r in blocks)
+
+
+def test_student_trial_records_ignores_retired_games():
+    # garden is off the roster, so its events produce no export rows.
+    evs = [ev("garden", "answer", {"correct": True, "firstAttempt": True, "visibleCount": 8})]
+    assert scoring.student_trial_records(evs) == []
+
+
+def test_trial_records_carry_process_and_condition_fields():
+    evs = [
+        ev(
+            "emotionrecognition360",
+            "answer",
+            {
+                "correct": True, "chance": 0.5, "latencyMs": 1800,
+                "latencyFromPromptEndMs": 700, "hinted": True, "xrPresenting": True,
+                "headYawTravelDeg": 55.5, "headYawRangeDeg": 42.0,
+                "headReversals": 2, "headToTargetMs": 900,
+            },
+        )
+    ]
+    r = scoring.student_trial_records(evs)[0]
+    assert r.xr_presenting == 1
+    assert r.hinted == 1
+    assert r.latency_from_prompt_end_ms == 700
+    assert (r.head_yaw_travel_deg, r.head_reversals, r.head_to_target_ms) == (55.5, 2, 900)
+    assert r.construct == "" and r.cue == "" and r.visible_count is None  # not this game
+
+
+def test_trial_records_map_construct_cue_and_flat_condition():
+    r = scoring.student_trial_records(
+        [ev("rightway", "answer", {"correct": True, "chance": 0.5, "construct": "sharing", "xrPresenting": False})]
+    )[0]
+    assert r.construct == "sharing"
+    assert r.xr_presenting == 0  # flat-screen condition recorded, not just absent
+    m = scoring.student_trial_records(
+        [ev("museum", "answer", {"correct": True, "firstAttempt": True, "visibleCount": 4, "cue": "hover"})]
+    )[0]
+    assert m.visible_count == 4 and m.cue == "hover"
+
+
+# --- dose (exposure) summary --------------------------------------------------
+
+
+def test_dose_summary_counts_minutes_span_and_gaps():
+    d = scoring.dose_summary(
+        [
+            (datetime(2026, 1, 1, 10, 0), datetime(2026, 1, 1, 10, 20)),  # 20 min
+            (datetime(2026, 1, 4, 10, 0), datetime(2026, 1, 4, 10, 10)),  # 10 min, +3 days
+            (datetime(2026, 1, 8, 10, 0), None),  # unclosed, +4 days
+        ]
+    )
+    assert d.n_sessions == 3
+    assert d.total_minutes == 30.0  # unclosed session adds no minutes
+    assert d.span_days == 7  # Jan 1 -> Jan 8
+    assert d.median_gap_days == 4  # gaps [3, 4] -> median 4
+    assert d.first_session == datetime(2026, 1, 1, 10, 0)
+
+
+def test_dose_summary_empty():
+    d = scoring.dose_summary([])
+    assert d.n_sessions == 0
+    assert d.total_minutes is None and d.span_days is None and d.median_gap_days is None

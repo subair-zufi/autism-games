@@ -123,6 +123,11 @@ class Trial:
     latency_ms: int | None
     session_id: str | None
     ts: datetime
+    # The source event's payload, kept so a trial-level export can surface the
+    # process/condition fields recorded alongside the answer (prompt-end latency,
+    # hint use, VR-vs-flat flag, construct/cue tags, head-scan telemetry). Scoring
+    # itself ignores it.
+    payload: dict = field(default_factory=dict)
 
 
 def _p(e: EventLike) -> dict:
@@ -166,6 +171,7 @@ def _quiz_trials(events: Iterable[EventLike], chance_by_level: dict[str, float])
                 latency_ms=_int_or_none(p.get("latencyMs")),
                 session_id=_sid(e),
                 ts=e.created_at,
+                payload=p,
             )
         )
     return out
@@ -188,6 +194,7 @@ def _clips_trials(events: Iterable[EventLike]) -> list[Trial]:
                 latency_ms=_int_or_none(p.get("latencyMs")),
                 session_id=_sid(e),
                 ts=e.created_at,
+                payload=p,
             )
         )
     return out
@@ -209,6 +216,7 @@ def _payload_chance_trials(events: Iterable[EventLike]) -> list[Trial]:
                 latency_ms=_int_or_none(p.get("latencyMs")),
                 session_id=_sid(e),
                 ts=e.created_at,
+                payload=p,
             )
         )
     return out
@@ -234,6 +242,7 @@ def _pointing_trials(events: Iterable[EventLike], chance_of) -> list[Trial]:
                 latency_ms=_int_or_none(p.get("latencyMs")),
                 session_id=_sid(e),
                 ts=e.created_at,
+                payload=p,
             )
         )
     return out
@@ -257,6 +266,7 @@ def _rollback_trials(events: Iterable[EventLike]) -> list[Trial]:
                 latency_ms=_int_or_none(p.get("latencyMs")),
                 session_id=_sid(e),
                 ts=e.created_at,
+                payload=p,
             )
         )
     return out
@@ -282,6 +292,7 @@ def _discovery_trials(events: Iterable[EventLike]) -> list[Trial]:
                 latency_ms=_int_or_none(p.get("latencyMs")),
                 session_id=_sid(e),
                 ts=e.created_at,
+                payload=p,
             )
         )
     return out
@@ -298,7 +309,9 @@ def _blocks_trials(events: Iterable[EventLike]) -> list[Trial]:
             correct = False
         else:
             continue
-        out.append(Trial(correct=correct, chance=0.0, latency_ms=None, session_id=_sid(e), ts=e.created_at))
+        out.append(
+            Trial(correct=correct, chance=0.0, latency_ms=None, session_id=_sid(e), ts=e.created_at, payload=_p(e))
+        )
     return out
 
 
@@ -519,6 +532,139 @@ def score_participant(events: Iterable[EventLike]) -> ParticipantScores:
     )
 
 
+# --- Trial-level export ------------------------------------------------------
+
+
+def _bool_int(v: object) -> int | None:
+    """1/0 for a real bool, else None (field absent for that game/trial)."""
+    if v is True:
+        return 1
+    if v is False:
+        return 0
+    return None
+
+
+def _num_or_none(v: object) -> float | int | None:
+    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+
+
+@dataclass
+class TrialRecord:
+    """One scored trial flattened for row-wise (CSV) export — the same unit
+    :func:`score_game` aggregates, so an external analysis reproduces the
+    standardised scores exactly. ``first_attempt_correct`` is the scored
+    outcome: 1 if the child got it right on the first attempt (games that allow
+    retries keep only the first), else 0.
+
+    Beyond the scored outcome it carries the process/condition fields recorded on
+    the same event, for mechanism and VR-vs-flat analyses. Fields a given game
+    doesn't record are left None (e.g. head-scan telemetry is VR-only, ``cue``
+    is joint-attention only, ``construct`` is social-norms only).
+    """
+
+    skill: str
+    game_key: str
+    xr_presenting: int | None  # 1 = played in immersive VR, 0 = flat screen
+    session_id: str | None
+    trial_in_game: int  # 1-based index within this game, oldest first
+    trial_in_session: int  # 1-based index within this session
+    first_attempt_correct: int  # 0/1
+    chance: float
+    latency_ms: int | None  # answer latency (may include spoken-prompt time)
+    latency_from_prompt_end_ms: int | None  # cleaner RT: measured from prompt end
+    hinted: int | None  # 1 if a hint had fired before the answer
+    construct: str  # social-norms sub-skill (greetings, sharing, …), else ""
+    cue: str  # joint-attention cue (verbal/gesture/orient, pulse/hover/…), else ""
+    visible_count: int | None  # options on screen (pointing games) → chance = 1/n
+    head_yaw_travel_deg: float | None  # VR scan-path length
+    head_yaw_range_deg: float | None  # VR widest span visited
+    head_reversals: int | None  # VR back-and-forth (hesitation)
+    head_to_target_ms: int | None  # VR time until head first pointed at the target
+    ts: datetime
+
+
+def student_trial_records(
+    events: Iterable[EventLike], games: Iterable[str] = GAMES
+) -> list[TrialRecord]:
+    """Flatten one student's event stream into ordered trial rows for export.
+
+    Buckets events by game (mirroring :func:`score_participant`) and expands each
+    game's normalised trials into rows carrying skill, game, session, both trial
+    indices, and the process/condition fields from the source event's payload.
+    Only roster ``games`` are emitted; events from retired games are ignored so
+    the export matches the current instrument set.
+    """
+    game_set = list(games)
+    by_game: dict[str, list[EventLike]] = {g: [] for g in game_set}
+    for e in events:
+        if e.game_key in by_game:  # type: ignore[attr-defined]
+            by_game[e.game_key].append(e)  # type: ignore[attr-defined]
+
+    rows: list[TrialRecord] = []
+    for game in game_set:
+        per_session: dict[str | None, int] = {}
+        for i, t in enumerate(trials_for_game(game, by_game[game]), start=1):
+            per_session[t.session_id] = per_session.get(t.session_id, 0) + 1
+            p = t.payload
+            rows.append(
+                TrialRecord(
+                    skill=SKILL_BY_GAME.get(game, ""),
+                    game_key=game,
+                    xr_presenting=_bool_int(p.get("xrPresenting")),
+                    session_id=t.session_id,
+                    trial_in_game=i,
+                    trial_in_session=per_session[t.session_id],
+                    first_attempt_correct=int(t.correct),
+                    chance=round(t.chance, 4),
+                    latency_ms=t.latency_ms,
+                    latency_from_prompt_end_ms=_int_or_none(p.get("latencyFromPromptEndMs")),
+                    hinted=_bool_int(p.get("hinted")),
+                    construct=str(p.get("construct")) if p.get("construct") else "",
+                    cue=str(p.get("cue")) if p.get("cue") else "",
+                    visible_count=_int_or_none(p.get("visibleCount")),
+                    head_yaw_travel_deg=_num_or_none(p.get("headYawTravelDeg")),
+                    head_yaw_range_deg=_num_or_none(p.get("headYawRangeDeg")),
+                    head_reversals=_int_or_none(p.get("headReversals")),
+                    head_to_target_ms=_int_or_none(p.get("headToTargetMs")),
+                    ts=t.ts,
+                )
+            )
+    return rows
+
+
+# --- Dose (exposure) summary -------------------------------------------------
+
+
+@dataclass
+class DoseSummary:
+    """Exposure metrics for one participant × game, for dose-response analysis."""
+
+    n_sessions: int
+    total_minutes: float | None  # summed play time over sessions with an end time
+    first_session: datetime | None
+    last_session: datetime | None
+    span_days: int | None  # calendar days from first to last session
+    median_gap_days: int | None  # typical spacing between consecutive sessions
+
+
+def dose_summary(spans: Iterable[tuple[datetime, datetime | None]]) -> DoseSummary:
+    """Reduce a participant's ``(started_at, ended_at)`` session spans for one
+    game to dose metrics. ``ended_at`` may be None (session never closed); those
+    sessions still count toward ``n_sessions`` but contribute no minutes."""
+    spans = list(spans)
+    starts = sorted(s for s, _ in spans)
+    total_secs = sum((e - s).total_seconds() for s, e in spans if e is not None)
+    gaps = [(starts[i] - starts[i - 1]).days for i in range(1, len(starts))]
+    return DoseSummary(
+        n_sessions=len(spans),
+        total_minutes=round(total_secs / 60.0, 1) if total_secs else (0.0 if spans else None),
+        first_session=starts[0] if starts else None,
+        last_session=starts[-1] if starts else None,
+        span_days=(starts[-1] - starts[0]).days if len(starts) >= 2 else (0 if starts else None),
+        median_gap_days=_median(gaps) if gaps else None,
+    )
+
+
 # --- Cohort / demographic aggregation ----------------------------------------
 
 
@@ -591,13 +737,20 @@ def aggregate_group(participants: list[ParticipantScores]) -> list[GroupStat]:
     return stats
 
 
-def age_band(dob: object, today: object) -> str:
-    """Coarse age bands for demographic grouping (8-15 target range)."""
+def age_years(dob: object, today: object) -> int | None:
+    """Whole years between two dates, or None if either isn't a date."""
     from datetime import date
 
     if not isinstance(dob, date) or not isinstance(today, date):
+        return None
+    return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+
+
+def age_band(dob: object, today: object) -> str:
+    """Coarse age bands for demographic grouping (8-15 target range)."""
+    years = age_years(dob, today)
+    if years is None:
         return "unknown"
-    years = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
     if years < 8:
         return "under 8"
     if years <= 10:

@@ -1,19 +1,34 @@
 """Admin API: authentication, user management and analytics."""
+import csv
+import io
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_admin
-from ..models import Admin, GameEvent, GameSession, Student, User
-from ..scoring import VISIBLE_GAMES, corrected_score, trials_for_game
+from ..models import Admin, AssessmentScore, GameEvent, GameSession, Student, User
+from ..scoring import (
+    SKILL_BY_GAME,
+    VISIBLE_GAMES,
+    age_band,
+    age_years,
+    corrected_score,
+    dose_summary,
+    iq_band,
+    student_trial_records,
+    trials_for_game,
+)
 from ..schemas import (
     AdminAuthResponse,
     AdminLoginRequest,
     AnalyticsSummary,
+    AssessmentImportRequest,
+    AssessmentImportResult,
     EventPublic,
     GameBreakdownItem,
     PaginatedEvents,
@@ -335,3 +350,395 @@ def analytics_timeseries(
         )
         for row in rows
     ]
+
+
+# ---------------------------------------------------------------------------
+# Research data export
+# ---------------------------------------------------------------------------
+# De-identified participant columns prefixed on every export: participant_code +
+# opaque student_id, never the child's name.
+DEMO_COLUMNS = (
+    "participant_code",
+    "student_id",
+    "gender",
+    "age_years",
+    "age_band",
+    "autism_level",
+    "iq_score",
+    "iq_band",
+)
+
+
+def _c(v: object) -> object:
+    """Render None as an empty CSV cell; pass everything else through."""
+    return "" if v is None else v
+
+
+def _demo_row(s: Student, today: date) -> list[object]:
+    yrs = age_years(s.date_of_birth, today)
+    return [
+        s.participant_code or "",
+        str(s.id),
+        s.gender or "",
+        _c(yrs),
+        age_band(s.date_of_birth, today),
+        s.autism_level or "",
+        _c(s.iq_score),
+        iq_band(s.iq_score),
+    ]
+
+
+def _csv_response(columns, rows, filename: str) -> StreamingResponse:
+    """Stream a header + pre-materialised rows as an attachment. Rows are built
+    while the DB session is open, so the generator never touches a closed one."""
+
+    def stream():
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(columns)
+        yield buf.getvalue()
+        buf.seek(0)
+        buf.truncate(0)
+        for row in rows:
+            writer.writerow(row)
+            yield buf.getvalue()
+            buf.seek(0)
+            buf.truncate(0)
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+TRIAL_CSV_COLUMNS = DEMO_COLUMNS + (
+    "skill",
+    "game_key",
+    "xr_presenting",  # 1 = immersive VR, 0 = flat screen (same game, two conditions)
+    "session_id",
+    "trial_in_game",
+    "trial_in_session",
+    "first_attempt_correct",
+    "chance",
+    "latency_ms",
+    "latency_from_prompt_end_ms",  # cleaner RT (excludes spoken-prompt time)
+    "hinted",
+    "construct",  # social-norms sub-skill
+    "cue",  # joint-attention cue type
+    "visible_count",  # options on screen (pointing games)
+    "head_yaw_travel_deg",  # VR scan-path length
+    "head_yaw_range_deg",  # VR widest span visited
+    "head_reversals",  # VR back-and-forth (hesitation)
+    "head_to_target_ms",  # VR time until head first on target
+    "timestamp",
+)
+
+
+@router.get("/export/trials.csv")
+def export_trials_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """Trial-level CSV across every participant, for external analysis (R/SPSS).
+
+    One row per scored trial — the same unit the standardised skill score is
+    built from — tagged with demographics, the target skill/game, the VR-vs-flat
+    condition, and the process fields (latency, prompt-end latency, hint use,
+    construct/cue, head-scan telemetry) needed for mechanism analyses. Retired
+    games and mentor-only play (no participant attached) are excluded.
+    """
+    today = date.today()
+    students = db.scalars(select(Student).order_by(Student.created_at.asc())).all()
+
+    rows: list[list[object]] = []
+    for s in students:
+        events = db.scalars(
+            select(GameEvent)
+            .where(GameEvent.student_id == s.id)
+            .order_by(GameEvent.created_at.asc())
+        ).all()
+        records = student_trial_records(events)
+        if not records:
+            continue
+        demo = _demo_row(s, today)
+        for r in records:
+            rows.append(
+                demo
+                + [
+                    r.skill,
+                    r.game_key,
+                    _c(r.xr_presenting),
+                    r.session_id or "",
+                    r.trial_in_game,
+                    r.trial_in_session,
+                    r.first_attempt_correct,
+                    r.chance,
+                    _c(r.latency_ms),
+                    _c(r.latency_from_prompt_end_ms),
+                    _c(r.hinted),
+                    r.construct,
+                    r.cue,
+                    _c(r.visible_count),
+                    _c(r.head_yaw_travel_deg),
+                    _c(r.head_yaw_range_deg),
+                    _c(r.head_reversals),
+                    _c(r.head_to_target_ms),
+                    r.ts.isoformat(),
+                ]
+            )
+
+    return _csv_response(TRIAL_CSV_COLUMNS, rows, f"trials_{today.isoformat()}.csv")
+
+
+DOSE_CSV_COLUMNS = DEMO_COLUMNS + (
+    "skill",
+    "game_key",
+    "n_sessions",
+    "n_scored_trials",
+    "total_minutes",
+    "first_session",
+    "last_session",
+    "span_days",
+    "median_gap_days",
+)
+
+
+@router.get("/export/dose.csv")
+def export_dose_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """Exposure/dose CSV: one row per participant × game, with session count,
+    scored-trial count, total play minutes, first/last play dates, calendar span
+    and typical spacing — the predictors for dose-response and retention
+    analyses. Retired games are excluded."""
+    today = date.today()
+    students = db.scalars(select(Student).order_by(Student.created_at.asc())).all()
+
+    rows: list[list[object]] = []
+    for s in students:
+        sessions = db.scalars(
+            select(GameSession).where(GameSession.student_id == s.id)
+        ).all()
+        events = db.scalars(
+            select(GameEvent)
+            .where(GameEvent.student_id == s.id)
+            .order_by(GameEvent.created_at.asc())
+        ).all()
+        trials_by_game: dict[str, int] = defaultdict(int)
+        for r in student_trial_records(events):
+            trials_by_game[r.game_key] += 1
+        spans_by_game: dict[str, list] = defaultdict(list)
+        for sess in sessions:
+            if sess.game_key in SKILL_BY_GAME:  # roster games only
+                spans_by_game[sess.game_key].append((sess.started_at, sess.ended_at))
+
+        game_keys = sorted(set(trials_by_game) | set(spans_by_game))
+        if not game_keys:
+            continue
+        demo = _demo_row(s, today)
+        for game in game_keys:
+            d = dose_summary(spans_by_game.get(game, []))
+            rows.append(
+                demo
+                + [
+                    SKILL_BY_GAME.get(game, ""),
+                    game,
+                    d.n_sessions,
+                    trials_by_game.get(game, 0),
+                    _c(d.total_minutes),
+                    d.first_session.date().isoformat() if d.first_session else "",
+                    d.last_session.date().isoformat() if d.last_session else "",
+                    _c(d.span_days),
+                    _c(d.median_gap_days),
+                ]
+            )
+
+    return _csv_response(DOSE_CSV_COLUMNS, rows, f"dose_{today.isoformat()}.csv")
+
+
+# ---------------------------------------------------------------------------
+# Outcome battery (blinded pre/post scores) — CSV round-trip
+# ---------------------------------------------------------------------------
+ASSESSMENT_CSV_COLUMNS = (
+    "participant_code",
+    "timepoint",  # pre | post | followup
+    "instrument",  # EIT | TOP | JAP | NCT | VSMS | ATEC | ...
+    "form",  # A | B (parallel forms), else blank
+    "raw_score",
+    "n_options",  # forced-choice options → chance = 1/n_options
+    "max_score",
+    "rater_id",
+    "is_double_coded",
+    "assessed_on",  # YYYY-MM-DD
+    "notes",
+)
+
+# The near-transfer battery + distal measures a blank template pre-lists per
+# participant (edit/extend freely — import accepts any instrument name).
+TEMPLATE_INSTRUMENTS = ("EIT", "TOP", "JAP", "NCT", "VSMS", "ATEC")
+TEMPLATE_TIMEPOINTS = ("pre", "post")
+_VALID_TIMEPOINTS = ("pre", "post", "followup")
+
+
+@router.get("/assessments/template.csv")
+def assessments_template_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """Blank entry template: the battery grid (timepoint × instrument) pre-filled
+    for every participant with a code, ready for a blinded tester to type scores
+    into and re-import."""
+    students = db.scalars(select(Student).order_by(Student.created_at.asc())).all()
+    rows: list[list[object]] = []
+    for s in students:
+        if not s.participant_code:
+            continue
+        for tp in TEMPLATE_TIMEPOINTS:
+            for inst in TEMPLATE_INSTRUMENTS:
+                rows.append([s.participant_code, tp, inst, "", "", "", "", "", "false", "", ""])
+    return _csv_response(ASSESSMENT_CSV_COLUMNS, rows, "assessment_template.csv")
+
+
+@router.get("/assessments.csv")
+def export_assessments_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """Export all stored battery scores (round-trips the import format)."""
+    rows_q = db.execute(
+        select(AssessmentScore, Student.participant_code)
+        .join(Student, AssessmentScore.student_id == Student.id)
+        .order_by(Student.participant_code, AssessmentScore.timepoint, AssessmentScore.instrument)
+    ).all()
+    rows = [
+        [
+            code or "",
+            a.timepoint,
+            a.instrument,
+            a.form or "",
+            a.raw_score,
+            _c(a.n_options),
+            _c(a.max_score),
+            a.rater_id or "",
+            "true" if a.is_double_coded else "false",
+            a.assessed_on.isoformat() if a.assessed_on else "",
+            a.notes or "",
+        ]
+        for a, code in rows_q
+    ]
+    return _csv_response(ASSESSMENT_CSV_COLUMNS, rows, "assessments.csv")
+
+
+def _pf(v: str | None) -> float | None:
+    v = (v or "").strip()
+    return float(v) if v else None
+
+
+def _pi(v: str | None) -> int | None:
+    v = (v or "").strip()
+    return int(float(v)) if v else None
+
+
+def _pbool(v: str | None) -> bool:
+    return (v or "").strip().lower() in ("1", "true", "yes", "y", "t")
+
+
+def _pstr(v: str | None) -> str | None:
+    v = (v or "").strip()
+    return v or None
+
+
+@router.post("/assessments/import", response_model=AssessmentImportResult)
+def import_assessments(
+    req: AssessmentImportRequest,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+) -> AssessmentImportResult:
+    """Upsert blinded battery scores from CSV text (see ASSESSMENT_CSV_COLUMNS).
+
+    Rows are matched to participants by ``participant_code``. A row updates any
+    existing score with the same (participant, timepoint, instrument, form,
+    rater), else inserts. Blank ``raw_score`` rows are skipped (unfilled template
+    cells). Unknown/ambiguous codes and bad values are reported, not fatal.
+    """
+    # Resolve participant codes once. Codes are unique per mentor, so a code
+    # shared across mentors is flagged ambiguous rather than guessed.
+    by_code: dict[str, list[Student]] = defaultdict(list)
+    for s in db.scalars(select(Student)).all():
+        if s.participant_code:
+            by_code[s.participant_code.strip()].append(s)
+
+    created = updated = rows = 0
+    errors: list[str] = []
+    reader = csv.DictReader(io.StringIO(req.csv))
+    for i, raw in enumerate(reader, start=2):  # row 1 is the header
+        rows += 1
+        code = (raw.get("participant_code") or "").strip()
+        if (raw.get("raw_score") or "").strip() == "":
+            continue  # unfilled template cell
+        matches = by_code.get(code, [])
+        if not code:
+            errors.append(f"row {i}: missing participant_code")
+            continue
+        if len(matches) != 1:
+            reason = "unknown" if not matches else "ambiguous"
+            errors.append(f"row {i}: participant_code '{code}' is {reason}")
+            continue
+        timepoint = (raw.get("timepoint") or "").strip().lower()
+        instrument = (raw.get("instrument") or "").strip()
+        if timepoint not in _VALID_TIMEPOINTS:
+            errors.append(f"row {i}: timepoint must be pre/post/followup, got '{timepoint}'")
+            continue
+        if not instrument:
+            errors.append(f"row {i}: missing instrument")
+            continue
+        try:
+            raw_score = _pf(raw.get("raw_score"))
+            n_options = _pi(raw.get("n_options"))
+            max_score = _pf(raw.get("max_score"))
+            assessed_on = None
+            if (raw.get("assessed_on") or "").strip():
+                assessed_on = date.fromisoformat(raw["assessed_on"].strip())
+        except ValueError as exc:
+            errors.append(f"row {i}: {exc}")
+            continue
+        form = _pstr(raw.get("form"))
+        rater_id = _pstr(raw.get("rater_id"))
+        student = matches[0]
+
+        conds = [
+            AssessmentScore.student_id == student.id,
+            AssessmentScore.timepoint == timepoint,
+            AssessmentScore.instrument == instrument,
+            AssessmentScore.form.is_(None) if form is None else AssessmentScore.form == form,
+            AssessmentScore.rater_id.is_(None)
+            if rater_id is None
+            else AssessmentScore.rater_id == rater_id,
+        ]
+        existing = db.scalar(select(AssessmentScore).where(*conds))
+        if existing is None:
+            db.add(
+                AssessmentScore(
+                    student_id=student.id,
+                    timepoint=timepoint,
+                    instrument=instrument,
+                    form=form,
+                    raw_score=raw_score,
+                    n_options=n_options,
+                    max_score=max_score,
+                    rater_id=rater_id,
+                    is_double_coded=_pbool(raw.get("is_double_coded")),
+                    assessed_on=assessed_on,
+                    notes=_pstr(raw.get("notes")),
+                )
+            )
+            created += 1
+        else:
+            existing.raw_score = raw_score
+            existing.n_options = n_options
+            existing.max_score = max_score
+            existing.is_double_coded = _pbool(raw.get("is_double_coded"))
+            existing.assessed_on = assessed_on
+            existing.notes = _pstr(raw.get("notes"))
+            updated += 1
+
+    db.commit()
+    return AssessmentImportResult(rows=rows, created=created, updated=updated, errors=errors)

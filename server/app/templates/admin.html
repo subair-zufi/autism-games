@@ -87,11 +87,34 @@
       </div>
 
       <div class="panel">
-        <h2>Per-game breakdown</h2>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:12px; flex-wrap:wrap;">
+          <h2 style="margin:0;">Per-game breakdown</h2>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-ghost" id="download-csv" title="One row per scored trial, all participants, with demographics + process/VR fields — for R/SPSS">⬇ Trial-level CSV</button>
+            <button class="btn-ghost" id="download-dose" title="One row per participant × game: sessions, trials, minutes, spacing — for dose-response">⬇ Dose CSV</button>
+          </div>
+        </div>
         <table id="games-table">
           <thead><tr><th>Game</th><th>Events</th><th>Players</th><th title="Standardised 0–100 skill score: chance-corrected first-attempt accuracy, pooled across all players. Comparable across games.">Skill score</th></tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; gap:12px; flex-wrap:wrap;">
+          <h2 style="margin:0;">Outcome battery (blinded pre/post)</h2>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button class="btn-ghost" id="dl-assess-template" title="Blank entry grid (timepoint × instrument) for every participant">⬇ Template</button>
+            <button class="btn-ghost" id="dl-assess" title="Download all stored battery scores">⬇ Export scores</button>
+            <label class="btn-ghost" style="cursor:pointer;" title="Import a filled-in battery CSV">⬆ Import
+              <input type="file" id="assess-file" accept=".csv,text/csv" style="display:none;" />
+            </label>
+          </div>
+        </div>
+        <p style="color:var(--muted); font-size:13px; margin:0 0 6px;">
+          EIT · TOP · JAP · NCT (near-transfer) + VSMS · ATEC (distal). Download the template, have the blinded tester fill <code>raw_score</code> (and <code>n_options</code> for forced-choice), then import. Scores live alongside the game data for transfer analysis.
+        </p>
+        <div class="error" id="assess-status" style="color:var(--muted);"></div>
       </div>
 
       <div class="panel">
@@ -243,6 +266,62 @@
         });
       });
     }
+
+    // ---- Research exports ----
+    async function downloadCsv(btn, path, fallbackName) {
+      const label = btn.textContent;
+      btn.disabled = true; btn.textContent = "Preparing…";
+      try {
+        const res = await fetch(API + path, { headers: { "Authorization": "Bearer " + token() } });
+        if (res.status === 401) { logout(); return; }
+        if (!res.ok) throw new Error("Failed (" + res.status + ")");
+        const blob = await res.blob();
+        const cd = res.headers.get("Content-Disposition") || "";
+        const m = cd.match(/filename="?([^"]+)"?/);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url; a.download = m ? m[1] : fallbackName;
+        document.body.appendChild(a); a.click(); a.remove();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        alert("Could not download: " + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = label;
+      }
+    }
+
+    document.getElementById("download-csv").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/trials.csv", "trials.csv"));
+    document.getElementById("download-dose").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/dose.csv", "dose.csv"));
+    document.getElementById("dl-assess-template").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/assessments/template.csv", "assessment_template.csv"));
+    document.getElementById("dl-assess").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/assessments.csv", "assessments.csv"));
+
+    // ---- Outcome battery import ----
+    document.getElementById("assess-file").addEventListener("change", async (e) => {
+      const file = e.target.files && e.target.files[0];
+      const status = document.getElementById("assess-status");
+      if (!file) return;
+      status.style.color = "var(--muted)"; status.textContent = "Importing " + file.name + "…";
+      try {
+        const csv = await file.text();
+        const res = await api("/api/admin/assessments/import", {
+          method: "POST", body: JSON.stringify({ csv }),
+        });
+        const errs = res.errors || [];
+        status.style.color = errs.length ? "var(--danger)" : "var(--ok)";
+        status.textContent =
+          `Imported: ${res.created} new, ${res.updated} updated (of ${res.rows} rows).` +
+          (errs.length ? ` ${errs.length} skipped — ${errs.slice(0, 3).join("; ")}${errs.length > 3 ? " …" : ""}` : "");
+      } catch (err) {
+        status.style.color = "var(--danger)";
+        status.textContent = "Import failed: " + err.message;
+      } finally {
+        e.target.value = "";
+      }
+    });
 
     // ---- Boot ----
     if (token()) showDashboard();

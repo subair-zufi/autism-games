@@ -235,3 +235,50 @@ class LevelProgress(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+
+class AssessmentScore(Base):
+    """A blinded pre/post outcome-battery score for a participant.
+
+    Holds the study's proximal and distal outcome measures — the near-transfer
+    battery (EIT/TOP/JAP/NCT) and standardised instruments (VSMS/ATEC/TRENDS) —
+    alongside the game data, so in-game gains can be tested against transfer and
+    generalisation. These are entered by a blinded tester (imported as CSV), not
+    produced by the app.
+
+    Uniqueness is per (participant, timepoint, instrument, form, rater): a second
+    blinded coder scoring the same probe is a separate row (for inter-rater
+    reliability), and re-importing the same row updates it in place.
+    """
+
+    __tablename__ = "assessment_scores"
+    __table_args__ = (
+        UniqueConstraint(
+            "student_id", "timepoint", "instrument", "form", "rater_id",
+            name="uq_assessment_scope",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
+    student_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("students.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+
+    timepoint: Mapped[str] = mapped_column(String(20), nullable=False)  # pre | post | followup
+    instrument: Mapped[str] = mapped_column(String(40), nullable=False)  # EIT | TOP | JAP | NCT | VSMS | ATEC | ...
+    form: Mapped[str | None] = mapped_column(String(10))  # A | B (parallel forms), else null
+    raw_score: Mapped[float] = mapped_column(Float, nullable=False)
+    # For forced-choice subtests: number of options, so chance (1/n) is recoverable.
+    n_options: Mapped[int | None] = mapped_column(Integer)
+    max_score: Mapped[float | None] = mapped_column(Float)
+    rater_id: Mapped[str | None] = mapped_column(String(80))
+    is_double_coded: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    assessed_on: Mapped[date | None] = mapped_column(Date)
+    notes: Mapped[str | None] = mapped_column(String(1000))
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    student: Mapped["Student"] = relationship()

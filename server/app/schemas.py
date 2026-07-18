@@ -265,6 +265,19 @@ class TimeseriesPoint(BaseModel):
     active_users: int
 
 
+class AssessmentImportRequest(BaseModel):
+    """Raw CSV text of blinded battery scores, parsed and upserted server-side."""
+
+    csv: str
+
+
+class AssessmentImportResult(BaseModel):
+    rows: int  # data rows seen (excluding header)
+    created: int
+    updated: int
+    errors: list[str]  # human-readable "row N: reason" messages for skipped rows
+
+
 # ---------------------------------------------------------------------------
 # Mentor-facing progress reports (per student)
 # ---------------------------------------------------------------------------
