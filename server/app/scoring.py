@@ -532,6 +532,21 @@ def score_participant(events: Iterable[EventLike]) -> ParticipantScores:
     )
 
 
+# --- Raw export --------------------------------------------------------------
+
+
+def raw_payload_columns(events: Iterable[EventLike]) -> list[str]:
+    """Sorted union of every key seen across the events' payloads — the dynamic
+    column set for a raw (unprocessed) event dump. No scoring or filtering: keys
+    from every event type and every game are included exactly as recorded."""
+    keys: set[str] = set()
+    for e in events:
+        p = e.payload
+        if isinstance(p, dict):
+            keys.update(p.keys())
+    return sorted(keys)
+
+
 # --- Trial-level export ------------------------------------------------------
 
 

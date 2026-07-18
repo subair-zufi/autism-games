@@ -389,3 +389,18 @@ def test_dose_summary_empty():
     d = scoring.dose_summary([])
     assert d.n_sessions == 0
     assert d.total_minutes is None and d.span_days is None and d.median_gap_days is None
+
+
+# --- raw export ---------------------------------------------------------------
+
+
+def test_raw_payload_columns_unions_all_keys_unfiltered():
+    evs = [
+        ev("emotionrecognition", "answer", {"correct": True, "level": "easy", "latencyMs": 900}),
+        ev("garden", "answer", {"correct": False, "visibleCount": 8}),  # retired game still included
+        ev("rollback", "cue_ready", {"cue": "gesture", "partner": 2}),
+        ev("blocks", "place_block", {}),  # empty payload contributes no keys
+    ]
+    cols = scoring.raw_payload_columns(evs)
+    # sorted union across every event type and game, nothing dropped
+    assert cols == ["correct", "cue", "latencyMs", "level", "partner", "visibleCount"]

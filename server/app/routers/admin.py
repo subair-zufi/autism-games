@@ -1,6 +1,7 @@
 """Admin API: authentication, user management and analytics."""
 import csv
 import io
+import json
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
@@ -20,6 +21,7 @@ from ..scoring import (
     corrected_score,
     dose_summary,
     iq_band,
+    raw_payload_columns,
     student_trial_records,
     trials_for_game,
 )
@@ -410,6 +412,86 @@ def _csv_response(columns, rows, filename: str) -> StreamingResponse:
         media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+# Fixed (non-payload) columns for the raw event dump. Everything after these is
+# a flattened payload key. Raw participant attributes are joined on for merging;
+# no derived/banded fields (compute age/bands/scores yourself in SPSS/R).
+RAW_FIXED_COLUMNS = (
+    "event_id",
+    "participant_code",
+    "student_id",
+    "user_id",
+    "session_id",
+    "game_key",
+    "event_type",
+    "step_index",
+    "event_score",  # the GameEvent.score column (game_over final tally); payload `score` is separate
+    "client_timestamp",
+    "created_at",
+    "gender",
+    "date_of_birth",
+    "autism_level",
+    "iq_score",
+)
+
+
+def _raw_cell(v: object) -> object:
+    """Render a payload value for a raw CSV cell: None → empty, nested → JSON,
+    everything else verbatim (booleans stay True/False; nothing is recoded)."""
+    if v is None:
+        return ""
+    if isinstance(v, (dict, list)):
+        return json.dumps(v, ensure_ascii=False)
+    return v
+
+
+@router.get("/export/events_raw.csv")
+def export_events_raw_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """RAW event dump for external analysis — one row per recorded event, every
+    payload field flattened to its own column, nothing scored, filtered, banded
+    or aggregated. This is the source data for SPSS/R: define your own scoring,
+    first-attempt rules and groupings from it. All event types and all games
+    (including retired ones) are included; only mentor-only play with no
+    participant attached is left out (it can't be attributed)."""
+    students = {s.id: s for s in db.scalars(select(Student)).all()}
+    events = db.scalars(
+        select(GameEvent)
+        .where(GameEvent.student_id.isnot(None))
+        .order_by(GameEvent.created_at.asc())
+    ).all()
+
+    payload_cols = raw_payload_columns(events)
+    columns = list(RAW_FIXED_COLUMNS) + payload_cols
+
+    rows: list[list[object]] = []
+    for e in events:
+        s = students.get(e.student_id)
+        p = e.payload if isinstance(e.payload, dict) else {}
+        rows.append(
+            [
+                str(e.id),
+                (s.participant_code if s else "") or "",
+                str(e.student_id) if e.student_id else "",
+                str(e.user_id) if e.user_id else "",
+                str(e.session_id) if e.session_id else "",
+                e.game_key,
+                e.event_type,
+                _c(e.step_index),
+                _c(e.score),
+                e.client_timestamp.isoformat() if e.client_timestamp else "",
+                e.created_at.isoformat() if e.created_at else "",
+                (s.gender if s else "") or "",
+                s.date_of_birth.isoformat() if s and s.date_of_birth else "",
+                (s.autism_level if s else "") or "",
+                _c(s.iq_score if s else None),
+            ]
+            + [_raw_cell(p.get(k)) for k in payload_cols]
+        )
+
+    return _csv_response(columns, rows, f"events_raw_{date.today().isoformat()}.csv")
 
 
 TRIAL_CSV_COLUMNS = DEMO_COLUMNS + (
