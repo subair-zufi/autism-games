@@ -159,6 +159,14 @@ const MESSAGES = {
   },
   practiceGreat: { en: 'Great tap! 🌟', ml: 'നല്ല തൊടൽ! 🌟' },
   practiceReady: { en: "You're ready to play! 🎉", ml: 'നിനക്ക് ഇപ്പോൾ കളിക്കാം! 🎉' },
+
+  // --- Emotion Clips (desktop) HUD ------------------------------------------
+  videoCounter: { en: 'Video {n} / {total}', ml: 'വീഡിയോ {n} / {total}' },
+  watchAgain: { en: '↻ Watch again', ml: '↻ വീണ്ടും കാണൂ' },
+  sayGreat: { en: 'Great job!', ml: 'കൊള്ളാം!' },
+  sayLookAgain: { en: "Let's look again.", ml: 'നമുക്ക് ഒന്നുകൂടി നോക്കാം.' },
+  // aria-label on the 🔊 repeat-the-prompt button
+  sayAgain: { en: 'Say it again', ml: 'വീണ്ടും പറയൂ' },
 } satisfies Record<string, Entry>
 
 export type MessageKey = keyof typeof MESSAGES

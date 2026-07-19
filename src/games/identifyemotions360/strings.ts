@@ -14,7 +14,8 @@ const MESSAGES = {
   watch: { en: 'Watch the screen…', ml: 'സ്ക്രീനിലേക്ക് നോക്കൂ…' },
   sayGreat: { en: 'Great job!', ml: 'കൊള്ളാം!' },
   sayLookAgain: { en: "Let's look again.", ml: 'നമുക്ക് ഒന്നുകൂടി നോക്കാം.' },
-  sayWin: { en: 'You named every feeling! Wonderful!', ml: 'എല്ലാ ഭാവങ്ങളും പറഞ്ഞു! മിടുക്കൻ/മിടുക്കി!' },
+  // Gender-neutral praise — TTS reads a "മിടുക്കൻ/മിടുക്കി" slash out loud.
+  sayWin: { en: 'You named every feeling! Wonderful!', ml: 'എല്ലാ ഭാവങ്ങളും പറഞ്ഞു! വളരെ നന്നായി!' },
   // Level-picker captions — surface the intensity + confusability manipulation.
   noteEasy: { en: 'Clear peak faces, two choices', ml: 'വ്യക്തമായ ഭാവങ്ങൾ, രണ്ട് ഉത്തരം' },
   noteMedium: { en: 'Peak faces, three choices', ml: 'വ്യക്തമായ ഭാവങ്ങൾ, മൂന്ന് ഉത്തരം' },

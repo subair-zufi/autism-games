@@ -184,7 +184,7 @@ export function IdentifyEmotionsGame() {
       setLocked(true)
       setCelebrating(true)
       playSuccess()
-      speak('Great job!')
+      speak(t('sayGreat', lang), lang)
       // Positive reinforcement, then resume the clip before moving on.
       void videoRef.current?.play()
       const nextScore = score + (firstTryRef.current ? 1 : 0)
@@ -204,7 +204,7 @@ export function IdentifyEmotionsGame() {
     } else {
       recordStep('answer', { ...base, correct: false })
       playGentle()
-      speak("Let's look again.")
+      speak(t('sayLookAgain', lang), lang)
       firstTryRef.current = false
       setWrong((w) => [...w, id])
       // Make "let's look again" literal: automatically replay the clip up to
@@ -269,7 +269,7 @@ export function IdentifyEmotionsGame() {
   return (
     <div className="game-page">
       <div className="game-canvas">
-        <div className="quiz-progress">Video {idx + 1} / {quiz.length}</div>
+        <div className="quiz-progress">{t('videoCounter', lang, { n: idx + 1, total: quiz.length })}</div>
         <div className="video-stage">
           <video
             key={q.clip.slug}
@@ -282,7 +282,7 @@ export function IdentifyEmotionsGame() {
             onEnded={onEnded}
           />
           {stage === 'emotion' && (
-            <button className="replay-btn" onClick={replay} disabled={locked}>↻ Watch again</button>
+            <button className="replay-btn" onClick={replay} disabled={locked}>{t('watchAgain', lang)}</button>
           )}
         </div>
         {celebrating && <div className="celebrate">⭐</div>}
@@ -297,7 +297,7 @@ export function IdentifyEmotionsGame() {
             ))}
           </div>
           {(frozen || stage === 'cause') && speechAvailable() && (
-            <button aria-label="Say it again" onClick={() => speak(promptSpeak, lang)}>🔊</button>
+            <button aria-label={t('sayAgain', lang)} onClick={() => speak(promptSpeak, lang)}>🔊</button>
           )}
         </div>
         {stage === 'cause' && q.cause ? (

@@ -19,7 +19,8 @@ const MESSAGES = {
   hintLook: { en: 'Look around — find the face.', ml: 'ചുറ്റും നോക്കൂ — ആ മുഖം കണ്ടെത്തൂ.' },
   sayWin: {
     en: 'You found every feeling! Wonderful looking!',
-    ml: 'എല്ലാ ഭാവങ്ങളും കണ്ടെത്തി! മിടുക്കൻ/മിടുക്കി!',
+    // Gender-neutral praise — TTS reads a "മിടുക്കൻ/മിടുക്കി" slash out loud.
+    ml: 'എല്ലാ ഭാവങ്ങളും കണ്ടെത്തി! വളരെ നന്നായി!',
   },
   // Level-picker captions — surface the fading-scaffold + confusability manipulation.
   noteEasy: { en: 'Two faces, easy to tell apart, gentle hints', ml: 'രണ്ട് മുഖങ്ങൾ, എളുപ്പം, സൂചനകൾ' },

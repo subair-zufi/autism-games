@@ -86,7 +86,7 @@ export function Profile() {
         <div className="settings-row">
           <div className="settings-label">
             <span className="settings-label-title">Language · ഭാഷ</span>
-            <span className="settings-label-sub">Prompts and voice use this language only</span>
+            <span className="settings-label-sub">Game prompts and voice use this language</span>
           </div>
           <div className="settings-toggles">
             <button

@@ -267,7 +267,7 @@ function PromptBanner({ trial, lang }: { trial: Behavior; lang: Lang }) {
         <span className={`er-prompt-line er-prompt-${lang}`}>{text}</span>
       </div>
       {speechAvailable() && (
-        <button aria-label="Say it again" onClick={() => speak(text, lang)}>🔊</button>
+        <button aria-label={t('sayAgain', lang)} onClick={() => speak(text, lang)}>🔊</button>
       )}
     </div>
   )

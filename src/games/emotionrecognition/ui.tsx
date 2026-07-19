@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react'
 import { emotionMeta, type EmotionId } from '../emotionVocab'
 import { speak, speechAvailable } from '../../services/speech'
-import { emotionLabel, type Lang, displayLangs } from '../../i18n/strings'
+import { emotionLabel, t, type Lang, displayLangs } from '../../i18n/strings'
 import type { GroupPhoto } from './content'
 
 /** <img> that shows a spinner until the (possibly slow) photo has loaded.
@@ -68,7 +68,7 @@ export function BilingualPrompt({
         ))}
       </div>
       {speechAvailable() && (
-        <button aria-label="Say it again" onClick={() => speak(speakText, speakLang)}>🔊</button>
+        <button aria-label={t('sayAgain', speakLang)} onClick={() => speak(speakText, speakLang)}>🔊</button>
       )}
     </div>
   )

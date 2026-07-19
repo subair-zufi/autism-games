@@ -20,6 +20,7 @@ import {
   type Rally,
 } from './logic'
 import { RollBackScene } from './RollBackScene'
+import { t } from '../../i18n/strings'
 import { rbLine, rbLines, rbSpeak, type RollBackMessageKey } from './strings'
 import { useGameAnalytics } from '../useGameAnalytics'
 
@@ -309,7 +310,7 @@ export function RollBackGame() {
               ))}
             </div>
             {speechAvailable() && (
-              <button aria-label="Say it again" onClick={() => say(promptKey, promptParams)}>
+              <button aria-label={t('sayAgain', lang)} onClick={() => say(promptKey, promptParams)}>
                 🔊
               </button>
             )}

@@ -412,7 +412,7 @@ export function Football360Game() {
               ))}
             </div>
             {speechAvailable() && (
-              <button aria-label="Say it again" onClick={() => say(promptKey, promptParams)}>
+              <button aria-label={t('sayAgain', lang)} onClick={() => say(promptKey, promptParams)}>
                 🔊
               </button>
             )}

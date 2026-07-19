@@ -7,6 +7,8 @@ import { NavLink, Outlet } from 'react-router-dom'
 import { ChartIcon, CohortIcon, HomeIcon, PeopleIcon, ProfileIcon } from './icons'
 import { useSettings } from '../state/settings'
 
+// Mentor-facing chrome stays English; the language setting only localizes
+// in-game content (prompts, buttons, speech).
 const TABS = [
   { to: '/', label: 'Home', Icon: HomeIcon, end: true },
   { to: '/participants', label: 'Participants', Icon: PeopleIcon, end: false },

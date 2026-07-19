@@ -7,6 +7,8 @@ import { ProgressBar } from '../components/ProgressBar'
 import { BackIcon, HomeIcon, PlayIcon } from '../components/icons'
 import { playTap } from '../services/sounds'
 
+// Mentor-facing page — stays English; the language setting only localizes
+// in-game content (prompts, buttons, speech).
 const LEVELS: { key: string; label: string; blurb: string; tone: string }[] = [
   { key: 'easy', label: 'Easy', blurb: 'Basic recognition with visual cues', tone: 'green' },
   { key: 'medium', label: 'Moderate', blurb: 'Contextual scenarios with partial cues', tone: 'amber' },

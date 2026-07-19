@@ -28,7 +28,8 @@ export const JUDGMENTS: Array<{ saidFine: boolean; emoji: string; label: Entry }
 const MESSAGES = {
   sayWin: {
     en: 'You judged every one! Wonderful watching!',
-    ml: 'എല്ലാം ശരിയായി നോക്കിപ്പറഞ്ഞു! മിടുക്കൻ/മിടുക്കി!',
+    // Gender-neutral praise — TTS reads a "മിടുക്കൻ/മിടുക്കി" slash out loud.
+    ml: 'എല്ലാം ശരിയായി നോക്കിപ്പറഞ്ഞു! വളരെ നന്നായി!',
   },
   // Level-picker captions — surface the stimulus-tier manipulation.
   noteEasy: { en: 'Clear behaviours — easy to judge', ml: 'വ്യക്തമായ പെരുമാറ്റങ്ങൾ' },

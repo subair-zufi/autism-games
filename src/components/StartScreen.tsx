@@ -26,6 +26,8 @@ export function StartScreen({
   return (
     <div className="start-screen">
       <div className="start-icon">{game.icon}</div>
+      {/* Game titles stay English (matches the Home cards); the level labels
+          and Play button below are game instruction, so they localize. */}
       <h1>{game.title}</h1>
       <span className="start-choose">{t('chooseLevel', lang)}</span>
       <div className="level-row">
