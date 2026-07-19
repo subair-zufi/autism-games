@@ -66,7 +66,9 @@ export function IdentifyEmotions360Game() {
   // one <video> element drives the on-screen texture for the whole session
   const [videoEl] = useState<HTMLVideoElement>(() => {
     const v = document.createElement('video')
-    v.muted = true // muted so autoplay is always allowed; clips carry no needed audio
+    // unmuted, like the flat Emotion Clips game — the clips' audio (reactions,
+    // exclamations) is part of the cue. Every play() call chains off a user
+    // gesture (Start / answer tap), so unmuted autoplay is allowed.
     v.playsInline = true
     v.setAttribute('playsinline', '')
     v.preload = 'auto'
