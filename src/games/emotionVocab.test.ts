@@ -23,6 +23,12 @@ test('emotionMeta returns the matching entry', () => {
   expect(emotionMeta('scared').label).toBe('Scared')
 })
 
+test('emotionMeta falls back to a placeholder for unknown server ids', () => {
+  const meta = emotionMeta('fear' as EmotionId)
+  expect(meta.label).toBe('fear')
+  expect(meta.emoji.length).toBeGreaterThan(0)
+})
+
 test('shuffle keeps the same elements and does not mutate input', () => {
   const input = [1, 2, 3, 4, 5]
   const out = shuffle(input, () => 0)

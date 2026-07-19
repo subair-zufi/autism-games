@@ -405,6 +405,37 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .field input:disabled { background: #f1f4f9; color: #8a97ad; }
 .link-accent { background: none; border: none; color: var(--m-accent); font-weight: 700; cursor: pointer; text-decoration: none; font-size: 0.85rem; padding: 0; }
 
+/* ---- crash recovery screen (top-level error boundary) ---- */
+.crash-screen {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--m-bg);
+  font-family: var(--m-font);
+  color: var(--m-ink);
+}
+.crash-card {
+  background: var(--m-card);
+  border: 1px solid var(--m-line);
+  border-radius: 18px;
+  padding: 32px clamp(20px, 6vw, 40px);
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  box-shadow: 0 12px 40px rgba(31, 42, 68, 0.1);
+}
+.crash-emoji { font-size: 2.6rem; }
+.crash-card h1 { margin: 0; font-size: 1.4rem; }
+.crash-card p { margin: 0; color: var(--m-muted); font-size: 0.95rem; }
+.crash-card .btn-primary { margin-top: 6px; padding: 12px 28px; }
+.crash-detail { font-size: 0.72rem; color: #a3adc0; word-break: break-word; }
+
 /* ---- auth pages (Login / Register) ---- */
 .auth-page { min-height: 100%; background: var(--m-bg); display: flex; flex-direction: column; }
 .auth-hero { background: var(--m-gradient); color: #fff; padding: 44px 24px 30px; border-radius: 0 0 26px 26px; }

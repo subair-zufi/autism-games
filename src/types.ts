@@ -37,7 +37,9 @@ export const SKILLS: SkillMeta[] = [
 ]
 
 export function skillMeta(id: Skill): SkillMeta {
-  return SKILLS.find((s) => s.id === id)!
+  // Report data comes from the server, so an unknown id must degrade to a
+  // placeholder instead of crashing the whole dashboard.
+  return SKILLS.find((s) => s.id === id) ?? { id, label: id, icon: '❓', color: '#6b7a99' }
 }
 
 /** Which play surface a game targets — drives the Home page VR/Desktop toggle. */

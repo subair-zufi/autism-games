@@ -16,7 +16,9 @@ export const EMOTIONS: EmotionMeta[] = [
 ]
 
 export function emotionMeta(id: EmotionId): EmotionMeta {
-  return EMOTIONS.find((e) => e.id === id)!
+  // Report data comes from the server, so an unknown id must degrade to a
+  // placeholder instead of crashing the whole dashboard.
+  return EMOTIONS.find((e) => e.id === id) ?? { id, label: id, emoji: '❓' }
 }
 
 export const ALL_EMOTION_IDS: EmotionId[] = EMOTIONS.map((e) => e.id)
