@@ -10,6 +10,9 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { margin: 0; height: 100%; }
+/* Keep centred layouts from shifting when a classic (Windows) scrollbar
+   appears, and slim that scrollbar down so it reads like the macOS overlay. */
+html { scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #c3cad9 transparent; -webkit-text-size-adjust: 100%; }
 body { background: var(--bg); color: var(--ink); user-select: none; -webkit-user-select: none; }
 button { font: inherit; cursor: pointer; border: none; border-radius: var(--radius); }
 
@@ -31,23 +34,26 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   top: 0; left: 0; right: 0;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 16px;
+  flex-wrap: nowrap; /* the game page reserves 64px — the bar must stay one line */
+  gap: clamp(6px, 2.5vw, 16px);
+  padding: 10px clamp(8px, 2.5vw, 16px);
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(6px);
   z-index: 10;
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 4vw, 1.5rem);
+  white-space: nowrap;
 }
 .home-btn {
   text-decoration: none;
-  font-size: 1.7rem;
+  font-size: clamp(1.2rem, 4.5vw, 1.7rem);
   background: var(--card);
   border-radius: 16px;
-  padding: 6px 14px;
+  padding: 6px clamp(8px, 2.5vw, 14px);
   box-shadow: 0 3px 0 rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
 }
 .score { font-weight: 700; }
-.lives { margin-left: auto; font-size: 1.3rem; letter-spacing: 4px; }
+.lives { margin-left: auto; font-size: clamp(0.95rem, 3.5vw, 1.3rem); letter-spacing: clamp(1px, 1vw, 4px); }
 
 /* ---- instruction banner ---- */
 .prompt-banner {
@@ -81,7 +87,8 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .dialog {
   background: var(--card);
   border-radius: var(--radius);
-  padding: 32px 48px;
+  max-width: min(92vw, 480px);
+  padding: 28px clamp(20px, 6vw, 48px);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -330,7 +337,7 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   --m-line: #eef0f5;
   --m-card: #ffffff;
   --m-gradient: linear-gradient(135deg, #4a76d4 0%, #6d5ac0 100%);
-  --m-font: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+  --m-font: 'Inter Variable', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
 }
 
 .shell,
@@ -580,7 +587,7 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 @media (min-width: 768px) {
   .shell { flex-direction: row; }
   .shell-nav {
-    position: sticky; top: 0; height: 100vh; flex-direction: column; align-items: stretch;
+    position: sticky; top: 0; height: 100vh; height: 100dvh; flex-direction: column; align-items: stretch;
     width: 224px; border-top: none; border-right: 1px solid #e6e9f0; padding: 22px 12px; gap: 4px;
   }
   .shell-brand { display: block; font-weight: 800; font-size: 1.15rem; color: var(--m-accent); padding: 6px 12px 18px; }
@@ -590,8 +597,10 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   .game-grid { grid-template-columns: repeat(3, 1fr); }
   .fab { position: fixed; right: calc((100% - 820px) / 2 + 28px); bottom: 28px; }
 }
-@media (min-width: 900px) {
-  .auth-page, .profile-setup, .detail { max-width: 520px; margin: 0 auto; min-height: 100vh; box-shadow: 0 0 80px rgba(31, 42, 68, 0.08); }
+/* Same breakpoint as the shell's sidebar switch, so the detail/auth pages
+   don't stay in stretched phone layout while the tabs are already a sidebar. */
+@media (min-width: 768px) {
+  .auth-page, .profile-setup, .detail { max-width: 520px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; box-shadow: 0 0 80px rgba(31, 42, 68, 0.08); }
 }
 
 /* ---- fixed-question quiz games (Emotion Recognition / Identify Emotions) ---- */
@@ -949,12 +958,14 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 10px;
+  width: 100%;
   max-width: 380px;
 }
 .count-num {
-  width: 62px;
-  height: 62px;
-  font-size: 1.6rem;
+  width: 100%;
+  max-width: 62px;
+  aspect-ratio: 1;
+  font-size: clamp(1.15rem, 4vw, 1.6rem);
   font-weight: 700;
   background: var(--card);
   color: var(--ink);
