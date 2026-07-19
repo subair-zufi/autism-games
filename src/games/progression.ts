@@ -18,7 +18,7 @@ import type { Difficulty, GameId } from '../types'
 
 export const LEVELS: Difficulty[] = ['easy', 'medium', 'hard']
 
-/** Accuracy needed to unlock the next level. */
+/** Accuracy that marks a level "passed". */
 export const PASS_THRESHOLD = 0.7
 /** Accuracy that marks a level "mastered" (fully complete). */
 export const MASTERY_THRESHOLD = 0.8
@@ -56,6 +56,7 @@ export function scoreLevel(correct: number, total: number, chance = 0): LevelSum
 }
 
 export interface LevelState {
+  /** Always true — every level is freely selectable. */
   unlocked: boolean
   attempts: number
   bestScore: number
@@ -65,20 +66,17 @@ export interface LevelState {
 }
 
 /**
- * Server-backed unlock/progress state for one game.
+ * Server-backed progress state for one game.
  *
- * Loads the active student's saved rows, exposes per-level state (unlocked /
- * best / attempts / passed / mastered), and submits finished attempts. When
- * logged out, progression lives only in memory for the current session (easy
- * unlocked; passing unlocks the next level).
+ * Loads the active student's saved rows and exposes per-level state (best /
+ * attempts / passed / mastered) plus a submit for finished attempts. All levels
+ * are always unlocked; `highestUnlocked` only decides which level the picker
+ * defaults to so a returning learner resumes where they left off.
  */
 export function useLevelProgress(gameKey: GameId) {
   const activeStudentId = useAuth((s) => s.activeStudentId)
   const isLoggedIn = useAuth((s) => s.isLoggedIn)
   const [rows, setRows] = useState<LevelProgress[]>([])
-  // Levels unlocked this session (logged-out play, and instant feedback before
-  // the server round-trip returns). Easy is always unlocked.
-  const [localUnlocked, setLocalUnlocked] = useState<Set<Difficulty>>(() => new Set(['easy']))
   const [loading, setLoading] = useState(false)
 
   const refresh = useCallback(async () => {
@@ -97,7 +95,7 @@ export function useLevelProgress(gameKey: GameId) {
     (level: Difficulty): LevelState => {
       const r = rows.find((x) => x.level === level)
       return {
-        unlocked: level === 'easy' || localUnlocked.has(level) || !!r?.unlocked,
+        unlocked: true,
         attempts: r?.attempts ?? 0,
         bestScore: r?.best_score ?? 0,
         bestAccuracy: r?.best_accuracy ?? 0,
@@ -105,27 +103,28 @@ export function useLevelProgress(gameKey: GameId) {
         mastered: r?.mastered ?? false,
       }
     },
-    [rows, localUnlocked],
+    [rows],
   )
 
-  /** Highest unlocked level — where the level picker resumes the learner. */
+  /**
+   * Level the picker defaults to: the one after the last level the learner
+   * passed (capped at hard), so a returning learner resumes where they left off.
+   * Every level stays selectable regardless.
+   */
   const highestUnlocked = useCallback((): Difficulty => {
-    let highest: Difficulty = 'easy'
-    for (const l of LEVELS) if (stateFor(l).unlocked) highest = l
-    return highest
+    let resume: Difficulty = 'easy'
+    for (const l of LEVELS) {
+      if (stateFor(l).passed) {
+        const idx = LEVELS.indexOf(l)
+        if (idx + 1 < LEVELS.length) resume = LEVELS[idx + 1]
+      }
+    }
+    return resume
   }, [stateFor])
 
-  /** Persist a finished attempt and unlock the next level if it passed. */
+  /** Persist a finished attempt. */
   const submit = useCallback(
     async (level: Difficulty, score: number, total: number) => {
-      const accuracy = total > 0 ? score / total : 0
-      if (accuracy >= PASS_THRESHOLD) {
-        const idx = LEVELS.indexOf(level)
-        if (idx + 1 < LEVELS.length) {
-          const next = LEVELS[idx + 1]
-          setLocalUnlocked((s) => new Set(s).add(next))
-        }
-      }
       const data = await analytics.submitProgress({ game_key: gameKey, level, score, total })
       if (data.length) setRows(data)
     },

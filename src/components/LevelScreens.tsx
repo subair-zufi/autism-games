@@ -14,7 +14,7 @@ const LEVEL_KEY: Record<Difficulty, 'levelEasy' | 'levelMedium' | 'levelHard'> =
   hard: 'levelHard',
 }
 
-/** Level picker that locks levels the learner has not unlocked yet. */
+/** Level picker — every level is freely selectable. */
 export function LevelSelect({
   title,
   icon,
@@ -46,11 +46,10 @@ export function LevelSelect({
           return (
             <button
               key={l}
-              className={`level-btn${isSel ? ' selected' : ''}${st.unlocked ? '' : ' locked'}`}
-              disabled={!st.unlocked}
+              className={`level-btn${isSel ? ' selected' : ''}`}
               onClick={() => onSelect(l)}
             >
-              <span>{st.unlocked ? '' : '🔒 '}{t(LEVEL_KEY[l], lang)}</span>
+              <span>{t(LEVEL_KEY[l], lang)}</span>
               {st.attempts > 0 && (
                 <span className="level-best">
                   {st.mastered ? '🏆 ' : st.passed ? '✅ ' : ''}
@@ -61,7 +60,7 @@ export function LevelSelect({
           )
         })}
       </div>
-      <button className="big-btn" onClick={onStart} disabled={!stateFor(selected).unlocked}>
+      <button className="big-btn" onClick={onStart}>
         {t('play', lang)}
       </button>
       <Link to="/" className="big-btn home-link">{t('home', lang)}</Link>

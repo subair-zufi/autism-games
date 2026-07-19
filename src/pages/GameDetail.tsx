@@ -117,10 +117,9 @@ export function GameDetail() {
           <h3>Choose Difficulty</h3>
           {LEVELS.map((lv) => {
             const r = rowFor(lv.key)
-            const unlocked = lv.key === 'easy' || !!r?.unlocked
             const pct = r ? Math.round(r.best_accuracy * 100) : 0
             return (
-              <div key={lv.key} className={`difficulty-card tone-${lv.tone}${unlocked ? '' : ' locked'}`}>
+              <div key={lv.key} className={`difficulty-card tone-${lv.tone}`}>
                 <span className={`dot dot-${lv.tone}`} aria-hidden />
                 <div className="difficulty-body">
                   <span className="difficulty-name">{lv.label}</span>
@@ -129,15 +128,13 @@ export function GameDetail() {
                     <ProgressBar value={pct} />
                   </div>
                   <span className="difficulty-stats">
-                    {unlocked ? `${r?.attempts ?? 0} attempts · best ${r?.best_score ?? 0}` : 'Locked'}
+                    {`${r?.attempts ?? 0} attempts · best ${r?.best_score ?? 0}`}
                     <span className="difficulty-pct">{pct}%</span>
                   </span>
                 </div>
-                {unlocked && (
-                  <button className="play-btn" onClick={play}>
-                    <PlayIcon /> Play
-                  </button>
-                )}
+                <button className="play-btn" onClick={play}>
+                  <PlayIcon /> Play
+                </button>
               </div>
             )
           })}

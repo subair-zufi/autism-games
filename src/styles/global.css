@@ -519,7 +519,6 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .difficulty-card.tone-green { background: #f0faf3; border-color: #d6f0de; }
 .difficulty-card.tone-amber { background: #fdf8ec; border-color: #f6ecd0; }
 .difficulty-card.tone-red { background: #fdf0f0; border-color: #f6dada; }
-.difficulty-card.locked { opacity: 0.6; }
 .dot { width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; align-self: flex-start; margin-top: 3px; }
 .dot-green { background: #22c55e; } .dot-amber { background: #f5b715; } .dot-red { background: #ef4444; }
 .difficulty-body { flex: 1; min-width: 0; }
@@ -779,8 +778,6 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .er-feedback.correct { color: #2d6a4f; }
 .er-feedback.wrong { color: #9d0208; }
 .er-next { min-width: 180px; }
-/* Locked level button in the picker. */
-.level-btn.locked { opacity: 0.5; cursor: not-allowed; }
 .level-best { display: block; font-size: 0.85rem; font-weight: 700; margin-top: 2px; }
 /* Result dialog. */
 .big-btn.secondary { background: var(--card); color: var(--ink); box-shadow: 0 5px 0 rgba(0, 0, 0, 0.1); }

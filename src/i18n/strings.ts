@@ -137,15 +137,15 @@ const MESSAGES = {
   playAgain: { en: 'Play again', ml: 'വീണ്ടും കളിക്കൂ' },
   changeLevel: { en: '🎚️ Choose level', ml: '🎚️ ലെവൽ തിരഞ്ഞെടുക്കൂ' },
   home: { en: '🏠 Home', ml: '🏠 ഹോം' },
-  // Mastery (≥80%): fully complete + next level open.
+  // Mastery (≥80%): level fully complete.
   resultMastered: {
-    en: 'Congratulations! Next level unlocked.',
-    ml: 'അഭിനന്ദനങ്ങൾ! അടുത്ത ലെവൽ തുറന്നു.',
+    en: 'Congratulations! You mastered this level.',
+    ml: 'അഭിനന്ദനങ്ങൾ! നിങ്ങൾ ഈ ലെവൽ പൂർത്തിയാക്കി.',
   },
-  // Passed (≥70%, <80%): next level opened, encourage reaching mastery.
+  // Passed (≥70%, <80%): encourage reaching mastery.
   resultPassed: {
-    en: 'Next level unlocked! Reach 80% to master this level.',
-    ml: 'അടുത്ത ലെവൽ തുറന്നു! ഈ ലെവൽ പൂർത്തിയാക്കാൻ 80% എത്തിക്കൂ.',
+    en: 'Well done! Reach 80% to master this level.',
+    ml: 'നന്നായി! ഈ ലെവൽ പൂർത്തിയാക്കാൻ 80% എത്തിക്കൂ.',
   },
   // Failed (<70%): stay on this level, retry next session.
   resultFailed: {
