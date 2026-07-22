@@ -20,7 +20,7 @@ export default defineConfig({
       // The ~270MB media is cached on demand by offlineCache, NOT precached
       // here — exclude it from the shell precache manifest.
       injectManifest: {
-        globPatterns: ['**/*.{js,css,html,woff2}'],
+        globPatterns: ['**/*.{js,css,html,woff2,json}'],
         maximumFileSizeToCacheInBytes: 5_000_000,
       },
       devOptions: { enabled: false },

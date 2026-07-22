@@ -81,7 +81,8 @@ async function fetchWithRetry(req: Request, attempts: number): Promise<Response>
       lastErr = err
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error('fetch failed')
+  const reason = lastErr instanceof Error ? lastErr.message : String(lastErr)
+  throw new Error(`failed to fetch ${req.url}: ${reason}`)
 }
 
 function totalBytes(manifest: AssetManifest): number {
