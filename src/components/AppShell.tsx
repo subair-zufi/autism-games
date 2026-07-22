@@ -3,9 +3,10 @@
  * a bottom bar on mobile and a left sidebar on wider (web) viewports. Child
  * routes render through <Outlet/>.
  */
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { ChartIcon, CohortIcon, HomeIcon, PeopleIcon, ProfileIcon } from './icons'
 import { useSettings } from '../state/settings'
+import { useOffline } from '../state/offline'
 
 // Mentor-facing chrome stays English; the language setting only localizes
 // in-game content (prompts, buttons, speech).
@@ -18,11 +19,16 @@ const TABS = [
 ] as const
 
 export function AppShell() {
+  const offlineMode = useOffline((s) => s.offlineMode)
+  const setOfflineMode = useOffline((s) => s.setOfflineMode)
+  const navigate = useNavigate()
+  // Offline mode is anonymous — only Home is meaningful; the rest need a server.
+  const tabs = offlineMode ? TABS.filter((t) => t.to === '/') : TABS
   return (
     <div className="shell">
       <nav className="shell-nav" aria-label="Main">
         <div className="shell-brand">SocialSpark VR</div>
-        {TABS.map(({ to, label, Icon, end }) => (
+        {tabs.map(({ to, label, Icon, end }) => (
           <NavLink
             key={to}
             to={to}
@@ -33,6 +39,18 @@ export function AppShell() {
             <span className="tab-label">{label}</span>
           </NavLink>
         ))}
+        {offlineMode && (
+          <button
+            type="button"
+            className="tab"
+            onClick={() => {
+              setOfflineMode(false)
+              navigate('/login', { replace: true })
+            }}
+          >
+            <span className="tab-label">Exit Offline</span>
+          </button>
+        )}
       </nav>
       <main className="shell-main">
         <PlayModeToggle />
