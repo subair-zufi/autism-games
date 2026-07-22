@@ -1,3 +1,5 @@
+import '@testing-library/jest-dom/vitest'
+
 // Node 25 defines a non-functional `localStorage` global (it warns about
 // --localstorage-file) that shadows jsdom's implementation in vitest.
 // Replace it with a working in-memory Storage for tests.
