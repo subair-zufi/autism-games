@@ -53,6 +53,10 @@ export function Home() {
   return (
     <div className="page home">
       {!offlineMode && (
+        <Link to="/play-offline" className="link-accent home-offline-link">Play Offline</Link>
+      )}
+
+      {!offlineMode && (
         <header className="participant-banner">
           {active ? (
             <>
