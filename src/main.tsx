@@ -17,3 +17,11 @@ createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </StrictMode>,
 )
+
+// Register the offline service worker (production build only; disabled in dev
+// via VitePWA devOptions so HMR isn't affected).
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {})
+  })
+}
