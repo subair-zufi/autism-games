@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
+import { XRCameraHome } from '../XRCameraHome'
 import { VRInputSwitch } from '../VRInputSwitch'
 import {
   CARD_Y,
@@ -65,6 +66,7 @@ export function RightWay360Scene(props: RightWay360SceneProps) {
         <directionalLight position={[-6, 8, -5]} intensity={0.22} color="#e8f0ff" />
         <LookControls />
         <HeadSelect />
+        <XRCameraHome />
         <SchoolYard />
         {props.active && (
           <>

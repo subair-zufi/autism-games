@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
+import { XRCameraHome } from '../XRCameraHome'
 import { HeadSampler } from '../HeadSampler'
 import { angDiffDeg, latestYawDeg } from '../headTracking'
 import { VRQuitButton } from '../VRQuitButton'
@@ -64,6 +65,7 @@ export function Museum360Scene(props: Museum360SceneProps) {
         <ambientLight intensity={0.55} color="#fff3e0" />
         <LookControls />
         <HeadSelect />
+        <XRCameraHome />
         <HeadSampler />
         <RotundaRoom />
         <SceneInner {...props} />

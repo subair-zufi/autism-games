@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
+import { XRCameraHome } from '../XRCameraHome'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
@@ -94,6 +95,7 @@ export function Park360Scene(props: Park360SceneProps) {
         <directionalLight position={[-8, 9, -10]} intensity={0.3} />
         <LookControls />
         <HeadSelect />
+        <XRCameraHome />
         <HeadSampler />
         <ParkWorld />
         <SceneInner {...props} />

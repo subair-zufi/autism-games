@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
+import { XRCameraHome } from '../XRCameraHome'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
@@ -68,6 +69,7 @@ export function EmotionRecognition360Scene(props: EmotionRecognition360SceneProp
         <directionalLight position={[-6, 8, -6]} intensity={0.25} />
         <LookControls />
         <HeadSelect />
+        <XRCameraHome />
         <HeadSampler />
         <GalleryRoom />
         <BoardRow {...props} />

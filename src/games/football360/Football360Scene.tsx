@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
+import { XRCameraHome } from '../XRCameraHome'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
@@ -74,6 +75,7 @@ export function Football360Scene(props: Football360SceneProps) {
         <directionalLight position={[-8, 10, -12]} intensity={0.3} />
         <LookControls />
         <HeadSelect />
+        <XRCameraHome />
         <HeadSampler />
         <FootballGround />
         <SceneInner {...props} />

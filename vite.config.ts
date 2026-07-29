@@ -5,6 +5,14 @@ import basicSsl from '@vitejs/plugin-basic-ssl'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // Stamped into the bundle and shown at the bottom of Profile. With an
+  // offline service worker in front of the app, "is this headset actually
+  // running the build I just deployed?" is otherwise unanswerable on-device.
+  define: {
+    __BUILD_STAMP__: JSON.stringify(
+      new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC',
+    ),
+  },
   // relative paths so the build works on GitHub Pages' /<repo>/ subpath
   base: './',
   // `npm run dev:vr` serves HTTPS on the LAN so a Quest headset can enter

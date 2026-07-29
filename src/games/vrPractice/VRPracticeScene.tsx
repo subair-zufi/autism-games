@@ -9,6 +9,7 @@ import { t } from '../../i18n/strings'
 import { playSuccess, playTap } from '../../services/sounds'
 import { xrStore, vrSupported } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
+import { XRCameraHome } from '../XRCameraHome'
 import { VRInputSwitch } from '../VRInputSwitch'
 import {
   PRACTICE_BEARINGS_DEG,
@@ -100,6 +101,7 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
               <directionalLight position={[2, 6, 3]} intensity={0.5} />
               <LookControls />
               <HeadSelect />
+              <XRCameraHome />
               <Ground />
               {!ready && <Star bearingDeg={PRACTICE_BEARINGS_DEG[step]} onTap={tapStar} />}
               <VRInstruction

@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
+import { XRCameraHome } from '../XRCameraHome'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
@@ -84,6 +85,7 @@ export function IdentifyEmotions360Scene(props: IdentifyEmotions360SceneProps) {
         <directionalLight position={[-5, 7, -3]} intensity={0.22} color="#eaf1ff" />
         <LookControls />
         <HeadSelect />
+        <XRCameraHome />
         <HeadSampler />
         <MediaRoom />
         <BigScreen videoEl={props.videoEl} clipSlug={props.clipSlug} frozen={props.frozen} />

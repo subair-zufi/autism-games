@@ -613,6 +613,7 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 .settings-label-sub { font-size: 0.75rem; color: var(--m-muted); }
 /* facilitator guidance under a setting — wraps full width, unlike the inline sub-label */
 .settings-note { margin: -6px 0 16px; font-size: 0.75rem; line-height: 1.5; color: var(--m-muted); }
+.build-stamp { margin: 18px 0 0; text-align: center; font-size: 0.7rem; color: var(--m-muted); opacity: 0.75; }
 .profile .auth-form { padding: 0; max-width: none; margin: 0 0 14px; }
 
 /* ---- responsive: phone bottom-nav → sidebar + wider content on web ---- */

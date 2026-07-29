@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
+import { XRCameraHome } from '../XRCameraHome'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
@@ -82,6 +83,7 @@ export function Playroom360Scene(props: Playroom360SceneProps) {
         <pointLight position={[0, 2.7, -TABLE_RADIUS]} intensity={22} color="#ffe9c4" distance={9} />
         <LookControls />
         <HeadSelect />
+        <XRCameraHome />
         <HeadSampler />
         <PlayroomRoom />
         <SceneInner {...props} />

@@ -150,6 +150,10 @@ export function Profile() {
       </section>
 
       <button className="btn-danger" onClick={onLogout}>Log out</button>
+
+      {/* Check this against the build you deployed before reporting that a fix
+          did not take — the offline cache can otherwise serve an older app. */}
+      <p className="build-stamp">Build {__BUILD_STAMP__}</p>
     </div>
   )
 }
