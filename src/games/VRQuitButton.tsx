@@ -10,10 +10,15 @@ import * as THREE from 'three'
  * in handheld AR, not immersive-vr — and every game's *only* other way to end
  * a session is reaching the "over" phase at the end of a round. A child who
  * never gets there (idles mid-round, or just wants out) previously had no way
- * to leave VR at all (review V3). Ending the session here drops back to the
- * flat page exactly where the game left off, so the existing Home
- * link/GameOverDialog take over from there — this button only ever leaves
- * the headset, it never resets or skips the game itself.
+ * to leave VR at all (review V3).
+ *
+ * Quit ends the session *and* returns to the app's Home page. Ending the
+ * session alone is not enough in practice: the Quest drops the child into its
+ * own home environment ("Loft"), and the browser panel waiting behind it was
+ * still sitting on the game, mid-round — so Quit read as not having gone back
+ * anywhere. Landing on Home makes it an unambiguous way out for a facilitator
+ * mid-session. It still never resets or skips the game itself; the run is
+ * simply abandoned, and nothing about it is scored differently.
  *
  * Placed by BEARING, not raw coordinates: each game passes a `bearingDeg` just
  * outside its own left-most interactive element (boards / cards / players /
@@ -85,7 +90,20 @@ export function VRQuitButton({
       userData={{ headSelect: true }}
       onClick={(e) => {
         e.stopPropagation()
-        void session.end()
+        // End the session first, then go Home: unmounting the Canvas while a
+        // session is still presenting would tear the scene out from under it.
+        // `finally` so a rejected end() still gets the child back to Home.
+        //
+        // The app is a HashRouter, so setting the hash IS a router navigation
+        // — it fires hashchange and the router re-renders normally. Done this
+        // way rather than with `useNavigate` because this component only ever
+        // mounts inside a live headset session, which is the one environment
+        // that cannot be exercised here; a hook that depended on React context
+        // reaching across r3f's separate reconciler root would fail, if it
+        // failed at all, exactly where it could not be caught before shipping.
+        void session.end().finally(() => {
+          window.location.hash = '#/'
+        })
       }}
       onPointerOver={() => (document.body.style.cursor = 'pointer')}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
