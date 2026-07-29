@@ -31,6 +31,8 @@ import { CalmCrewGame } from './games/calmcrew/CalmCrewGame'
 import { DiscoveryGame } from './games/discovery/DiscoveryGame'
 import { Park360Game } from './games/park360/Park360Game'
 import { useAuth } from './state/auth'
+import { useOffline } from './state/offline'
+import { PlayOffline } from './pages/PlayOffline'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   emotionrecognition: EmotionRecognitionGame,
@@ -51,11 +53,13 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   park360: Park360Game,
 }
 
-/** Gate a route behind a logged-in mentor; bounce to /login otherwise. */
-function RequireAuth({ children }: { children: ReactNode }) {
+/** Gate a route behind a logged-in mentor OR active offline mode. */
+export function RequireAuth({ children }: { children: ReactNode }) {
   const isLoggedIn = useAuth((s) => s.isLoggedIn)
+  const offlineMode = useOffline((s) => s.offlineMode)
   const location = useLocation()
-  if (!isLoggedIn) return <Navigate to="/login" replace state={{ from: location.pathname }} />
+  if (!isLoggedIn && !offlineMode)
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />
   return <>{children}</>
 }
 
@@ -69,6 +73,7 @@ export default function App() {
       {/* Public auth screens */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
+      <Route path="/play-offline" element={<PlayOffline />} />
 
       {/* Full-screen authed screens (own header, no tab bar) */}
       <Route path="/complete-profile" element={<RequireAuth><CompleteProfile /></RequireAuth>} />

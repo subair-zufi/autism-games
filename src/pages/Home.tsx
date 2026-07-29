@@ -8,6 +8,7 @@ import { playTap } from '../services/sounds'
 import { analytics } from '../services/analytics'
 import { ProgressBar } from '../components/ProgressBar'
 import { initials, participantMeta } from '../lib/participant'
+import { useOffline } from '../state/offline'
 
 export function Home() {
   const navigate = useNavigate()
@@ -16,6 +17,7 @@ export function Home() {
   const loadStudents = useAuth((s) => s.loadStudents)
   const best = useScores((s) => s.best)
   const playMode = useSettings((s) => s.playMode)
+  const offlineMode = useOffline((s) => s.offlineMode)
 
   const active = students.find((s) => s.id === activeStudentId) ?? null
 
@@ -24,9 +26,11 @@ export function Home() {
   // them silently mis-reports the others. Recomputed per active student.
   const [percents, setPercents] = useState<Partial<Record<GameId, number>>>({})
   useEffect(() => {
+    if (offlineMode) return
     void loadStudents().catch(() => {})
-  }, [loadStudents])
+  }, [loadStudents, offlineMode])
   useEffect(() => {
+    if (offlineMode) return
     let cancelled = false
     const levelGames = GAME_LIST.filter((g) => g.hasLevels)
     void Promise.all(
@@ -44,36 +48,42 @@ export function Home() {
     return () => {
       cancelled = true
     }
-  }, [activeStudentId])
+  }, [activeStudentId, offlineMode])
 
   return (
     <div className="page home">
-      <header className="participant-banner">
-        {active ? (
-          <>
-            <span className="pb-avatar">{active.avatar ? active.avatar : initials(active.full_name)}</span>
-            <div className="pb-info">
-              <span className="pb-eyebrow">Current Participant</span>
-              <h1>{active.full_name}</h1>
-              <span className="pb-meta">
-                {participantMeta(active)}
-                {active.autism_level ? ` · ${active.autism_level}` : ''}
-              </span>
-            </div>
-            <Link to="/participants" className="pb-change">⟳ Change</Link>
-          </>
-        ) : (
-          <>
-            <span className="pb-avatar">＋</span>
-            <div className="pb-info">
-              <span className="pb-eyebrow">No participant selected</span>
-              <h1>Choose a participant</h1>
-              <span className="pb-meta">Progress is saved to the selected participant</span>
-            </div>
-            <Link to="/participants" className="pb-change">Select</Link>
-          </>
-        )}
-      </header>
+      {!offlineMode && (
+        <Link to="/play-offline" className="link-accent home-offline-link">Play Offline</Link>
+      )}
+
+      {!offlineMode && (
+        <header className="participant-banner">
+          {active ? (
+            <>
+              <span className="pb-avatar">{active.avatar ? active.avatar : initials(active.full_name)}</span>
+              <div className="pb-info">
+                <span className="pb-eyebrow">Current Participant</span>
+                <h1>{active.full_name}</h1>
+                <span className="pb-meta">
+                  {participantMeta(active)}
+                  {active.autism_level ? ` · ${active.autism_level}` : ''}
+                </span>
+              </div>
+              <Link to="/participants" className="pb-change">⟳ Change</Link>
+            </>
+          ) : (
+            <>
+              <span className="pb-avatar">＋</span>
+              <div className="pb-info">
+                <span className="pb-eyebrow">No participant selected</span>
+                <h1>Choose a participant</h1>
+                <span className="pb-meta">Progress is saved to the selected participant</span>
+              </div>
+              <Link to="/participants" className="pb-change">Select</Link>
+            </>
+          )}
+        </header>
+      )}
 
       {GAMES_BY_SKILL.map(({ skill, games: allGames }) => {
         const games = allGames.filter((g) => g.mode === playMode)

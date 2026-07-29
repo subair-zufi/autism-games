@@ -77,6 +77,10 @@ export function Login() {
         <p className="auth-trouble">
           Having trouble? <span className="link-accent">Contact your administrator</span>
         </p>
+
+        <p className="auth-alt">
+          <Link to="/play-offline" className="link-accent">Play Offline</Link>
+        </p>
       </form>
 
       <footer className="auth-footer">SocialSpark VR · HIPAA Compliant</footer>
