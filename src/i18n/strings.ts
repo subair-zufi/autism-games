@@ -171,8 +171,8 @@ const MESSAGES = {
     ml: 'നക്ഷത്രത്തിലേക്ക് ചൂണ്ടി ട്രിഗർ അമർത്തൂ.',
   },
   practiceIntroDwell: {
-    en: 'Look at the star and keep looking — the ring fills up.',
-    ml: 'നക്ഷത്രത്തിലേക്ക് നോക്കി അങ്ങനെ തന്നെ നോക്കിനിൽക്കൂ — വളയം നിറയും.',
+    en: 'Look at the star, then look at the ✓ below it.',
+    ml: 'നക്ഷത്രത്തിലേക്ക് നോക്കൂ, എന്നിട്ട് അതിനു താഴെയുള്ള ✓ നോക്കൂ.',
   },
   practiceGreat: { en: 'Great tap! 🌟', ml: 'നല്ല തൊടൽ! 🌟' },
   practiceReady: { en: "You're ready to play! 🎉", ml: 'നിനക്ക് ഇപ്പോൾ കളിക്കാം! 🎉' },

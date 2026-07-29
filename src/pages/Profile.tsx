@@ -111,7 +111,7 @@ export function Profile() {
             <span className="settings-label-title">Selection · VR games</span>
             <span className="settings-label-sub">
               {inputMethod === 'dwell'
-                ? 'Look at the answer and hold your gaze on it'
+                ? 'Look at the answer, then look at the ✓ that appears below it'
                 : 'Point the controller at the answer and press the trigger'}
             </span>
           </div>
@@ -132,7 +132,9 @@ export function Profile() {
         </div>
         <p className="settings-note">
           You can also switch inside the headset — the two buttons under the in-world Quit
-          control. Gaze dwell needs nothing held, which is the point; the controller stays
+          control. Gaze dwell needs nothing held, and takes two steps on purpose: resting on
+          something marks it and floats a ✓ beneath it, and only looking at that ✓ answers, so
+          a child can study every face without picking one by accident. The controller stays
           available in both modes, so choosing Controller only turns gaze selection{' '}
           <em>off</em> — useful when an adult is driving the session and should not answer just
           by looking around.

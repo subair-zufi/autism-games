@@ -3,15 +3,25 @@ import type { Object3D } from 'three'
 /**
  * Gaze selection for the 360 games — the pure part.
  *
- * The child looks at a target and keeps looking; once the gaze has rested on it
- * for `DWELL_MS` it is selected. Nothing is held and nothing is pressed, which
- * is the whole point — see `InputMethod` in `types.ts`. The r3f half lives in
- * `HeadSelect.tsx`; everything here is plain data so the arming and re-arming
+ * Selection is deliberately **two-stage**. Resting the gaze on something makes
+ * it the *candidate* and pops a confirm chip just beneath it; only dwelling on
+ * that chip answers. A single-stage dwell cannot work in these games, because
+ * looking at the options **is the task** — Emotion Room asks the child to scan
+ * faces to find an emotion, so the first face they examined was being scored as
+ * their answer. Separating "I am looking at this" from "I choose this" is the
+ * standard fix for that (the Midas-touch problem), and it also makes the
+ * in-world Quit and mode switch impossible to trip by accident.
+ *
+ * The r3f half lives in `HeadSelect.tsx`; everything here is plain data so the
  * rules are unit-testable without a headset (there is no way to drive a real
  * head pose from a test).
  */
 
-/** How long the child must hold their gaze on a target to select it. */
+/** How long a steady gaze makes something the candidate. Short — this is only
+ *  meant to stop the chip flickering between targets as the gaze sweeps past. */
+export const ARM_MS = 320
+
+/** How long the gaze must rest on the confirm chip to actually answer. */
 export const DWELL_MS = 1600
 
 /**
@@ -22,6 +32,18 @@ export const DWELL_MS = 1600
  */
 export const HEAD_SELECT_FLAG = 'headSelect'
 
+/** The confirm chip `HeadSelect` renders under the candidate. */
+export const HEAD_CONFIRM_FLAG = 'headConfirm'
+
+function hasFlag(object: Object3D | null | undefined, flag: string): Object3D | null {
+  let node: Object3D | null | undefined = object
+  while (node != null) {
+    if (node.userData?.[flag] === true) return node
+    node = node.parent
+  }
+  return null
+}
+
 /**
  * Walks up from the intersected object to the nearest ancestor marked
  * selectable. The scenes hang their click handlers on wrapper groups and hit
@@ -29,67 +51,108 @@ export const HEAD_SELECT_FLAG = 'headSelect'
  * is usually a child of the thing we care about.
  */
 export function findSelectTarget(object: Object3D | null | undefined): Object3D | null {
-  let node: Object3D | null | undefined = object
-  while (node != null) {
-    if (node.userData?.[HEAD_SELECT_FLAG] === true) return node
-    node = node.parent
-  }
-  return null
+  return hasFlag(object, HEAD_SELECT_FLAG)
+}
+
+/** Whether the ray is resting on the confirm chip. */
+export function isConfirmChip(object: Object3D | null | undefined): boolean {
+  return hasFlag(object, HEAD_CONFIRM_FLAG) != null
 }
 
 export interface AimState {
-  /** the selectable object under the reticle right now, if any */
-  target: Object3D | null
-  /** how long it has been continuously under the reticle, ms */
-  heldMs: number
-  /**
-   * The target a selection last fired on. It stays locked out until the gaze
-   * moves elsewhere, so a child who keeps staring after a dwell completes does
-   * not fire the same answer over and over. Cleared by looking away — including
-   * looking at nothing — which is a gesture every child makes naturally.
-   */
-  firedOn: Object3D | null
+  /** the target the ray is currently resting on, for the arming timer */
+  hover: Object3D | null
+  hoverMs: number
+  /** the chosen-but-unconfirmed target; the confirm chip sits under this */
+  candidate: Object3D | null
+  /** dwell accumulated on the confirm chip */
+  confirmMs: number
 }
 
 export function createAimState(): AimState {
-  return { target: null, heldMs: 0, firedOn: null }
+  return { hover: null, hoverMs: 0, candidate: null, confirmMs: 0 }
+}
+
+export interface AimInput {
+  /** the selectable object under the ray, if any */
+  target: Object3D | null
+  /** the ray is resting on the confirm chip */
+  onConfirm: boolean
 }
 
 export interface AimResult {
-  /** 0–1 dwell ring fill; 0 while locked out */
+  /** what the confirm chip should currently sit under, if anything */
+  candidate: Object3D | null
+  /** 0–1 confirm fill, shown on the reticle while dwelling on the chip */
   progress: number
-  /** the reticle is on a live target and a selection would land */
+  /** 0–1 arming fill, while a steady gaze claims a new candidate */
+  armProgress: number
+  /** the reticle is resting on something that means anything */
   armed: boolean
-  /** dwell completed this frame — fire the click */
+  /** confirmed this frame — fire the click on `AimState.candidate` */
   fire: boolean
 }
 
 /** Advances the aim state by one frame. */
 export function advanceAim(
   state: AimState,
-  target: Object3D | null,
+  input: AimInput,
   dtMs: number,
   dwellMs: number = DWELL_MS,
+  armMs: number = ARM_MS,
 ): AimResult {
-  // any move off the last-fired target re-arms it
-  if (state.firedOn != null && target !== state.firedOn) state.firedOn = null
+  if (input.onConfirm) {
+    // looking at the chip is not looking at a target: drop the arming timer so
+    // glancing back up starts it cleanly
+    state.hover = null
+    state.hoverMs = 0
 
-  if (target !== state.target) {
-    state.target = target
-    state.heldMs = 0
+    if (state.candidate == null) {
+      state.confirmMs = 0
+      return { candidate: null, progress: 0, armProgress: 0, armed: false, fire: false }
+    }
+
+    state.confirmMs += dtMs
+    const progress = Math.min(1, state.confirmMs / dwellMs)
+    const fire = state.confirmMs >= dwellMs
+    if (fire) {
+      // the caller reads `state.candidate` to know what to click, then clears
+      state.confirmMs = 0
+      return { candidate: state.candidate, progress: 1, armProgress: 0, armed: true, fire: true }
+    }
+    return { candidate: state.candidate, progress, armProgress: 0, armed: true, fire: false }
   }
 
-  if (target == null) return { progress: 0, armed: false, fire: false }
-  // still staring at what we just selected — hold everything until they move on
-  if (target === state.firedOn) return { progress: 0, armed: false, fire: false }
+  state.confirmMs = 0
 
-  state.heldMs += dtMs
-
-  const progress = Math.min(1, state.heldMs / dwellMs)
-  const fire = state.heldMs >= dwellMs
-  if (fire) {
-    state.firedOn = target
-    state.heldMs = 0
+  if (input.target == null) {
+    state.hover = null
+    state.hoverMs = 0
+    // the candidate deliberately survives looking at nothing — the child has to
+    // cross empty scenery to get from the face down to the chip beneath it
+    return { candidate: state.candidate, progress: 0, armProgress: 0, armed: false, fire: false }
   }
-  return { progress, armed: true, fire }
+
+  if (input.target !== state.hover) {
+    state.hover = input.target
+    state.hoverMs = 0
+  }
+  state.hoverMs += dtMs
+  if (state.hoverMs >= armMs) state.candidate = input.target
+
+  return {
+    candidate: state.candidate,
+    progress: 0,
+    armProgress: Math.min(1, state.hoverMs / armMs),
+    armed: true,
+    fire: false,
+  }
+}
+
+/** Called after a fired selection has been dispatched. */
+export function clearCandidate(state: AimState): void {
+  state.candidate = null
+  state.hover = null
+  state.hoverMs = 0
+  state.confirmMs = 0
 }
