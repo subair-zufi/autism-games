@@ -14,9 +14,9 @@ interface SettingsState {
   // Which build of each skill's games Home shows — flipped from the
   // persistent header toggle so the choice survives navigation and reloads.
   playMode: PlayMode
-  // How the child confirms a choice inside the 360 games — poking an in-reach
-  // pad or dwelling on the target with their gaze. Neither needs a controller,
-  // so this is set once per child at intake and left alone.
+  // How the child selects inside the 360 games — resting their gaze on the
+  // target, or the controller ray. Set once per child at intake, and also
+  // switchable in-world (the headset hides this page).
   inputMethod: InputMethod
   // Whether the child has completed the one-time shared VR/360 practice
   // scene (look-around + tap gesture) — every 360 game checks this before its
@@ -40,9 +40,8 @@ export const useSettings = create<SettingsState>()(
       language: 'en',
       difficulty: { emotionrecognition: 'easy', emotionrecognition360: 'easy', blocks: 'easy', playroom360: 'easy', rollback: 'easy', football360: 'easy', museum: 'easy', museum360: 'easy', rightway: 'easy', rightway360: 'easy', rulefixer: 'easy', identifyemotions: 'easy', identifyemotions360: 'easy', calmcrew: 'easy', discovery: 'easy', park360: 'easy' },
       playMode: 'desktop',
-      // poke by default: it needs a deliberate act to select, so a child who
-      // is simply looking around can never trip an answer
-      inputMethod: 'poke',
+      // gaze by default: nothing to hold, which is the point of the whole feature
+      inputMethod: 'dwell',
       vrPracticeDone: false,
       setVoiceOn: (voiceOn) => set({ voiceOn }),
       setSoundOn: (soundOn) => set({ soundOn }),
@@ -64,6 +63,13 @@ export const useSettings = create<SettingsState>()(
           ...current,
           ...p,
           difficulty: { ...current.difficulty, ...(p.difficulty ?? {}) },
+          // 'poke' (bare-hand poke of an in-reach pad) was removed after Quest
+          // testing. Devices that ran that build still have it persisted, and
+          // it would otherwise leave them with no working selection at all.
+          inputMethod:
+            p.inputMethod === 'dwell' || p.inputMethod === 'controller'
+              ? p.inputMethod
+              : current.inputMethod,
         }
       },
     },

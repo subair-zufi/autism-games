@@ -46,22 +46,26 @@ export function skillMeta(id: Skill): SkillMeta {
 export type PlayMode = 'desktop' | 'vr'
 
 /**
- * How the child commits a selection inside a 360 game, chosen per child in
- * Profile → Selection. Both aim the same way — a head-direction reticle, so no
- * controller is ever held and no pinch is ever required — and differ only in
- * what confirms the choice:
+ * How the child selects inside a 360 game, chosen per child in Profile →
+ * Selection.
  *
- * - `poke`  the child pokes a large pad floating within arm's reach (bare-hand
- *           tracking); deliberate, so no accidental selections.
- * - `dwell` the child simply keeps looking at the target for `DWELL_MS`; no
- *           hands at all, for children who cannot sustain hand tracking.
+ * - `dwell`      the child looks at the target and keeps looking for
+ *                `DWELL_MS`; nothing is held, nothing is pressed. This is what
+ *                answers the expert's objection that controllers are too hard.
+ * - `controller` the controller ray only, with no gaze selection at all — for
+ *                a child who can manage a controller, and so that a facilitator
+ *                driving the session cannot trip a dwell just by looking around.
  *
- * Note for analysis: both make head direction *instrumental*, so head-yaw from
- * the joint attention games is selection-contaminated — every recorded step
- * carries `inputMethod`, and the two JA games additionally carry
+ * A third method, a bare-hand poke of an in-reach pad, was built and then
+ * removed after Quest testing: dwell worked, and hand tracking added a device
+ * prerequisite (controllers down, Hand Tracking enabled) for no gain.
+ *
+ * Note for analysis: `dwell` makes head direction *instrumental*, so head-yaw
+ * from the joint attention games is selection-contaminated — every recorded
+ * step carries `inputMethod`, and the two JA games additionally carry
  * `headYawContaminated` (see `useGameAnalytics`).
  */
-export type InputMethod = 'poke' | 'dwell'
+export type InputMethod = 'dwell' | 'controller'
 
 export interface GameMeta {
   id: GameId

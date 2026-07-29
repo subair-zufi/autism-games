@@ -479,8 +479,8 @@ function TextCard({
   return (
     <group position={[x, y, z]} rotation={[0, -bearingRad, 0]}>
       <mesh
-        // a spent card must not arm the reticle or light the poke pad, or the
-        // child gets a "ready" signal for a tap that does nothing
+        // a spent card must not arm the gaze reticle, or the child gets a
+        // "ready" signal for a selection that does nothing
         userData={{ headSelect: !disabled }}
         onClick={(e) => {
           e.stopPropagation()

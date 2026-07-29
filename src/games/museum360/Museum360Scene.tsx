@@ -844,7 +844,7 @@ function Exhibit({
         <ExhibitModel id={id} />
         <mesh
           visible={false}
-          // a locked exhibit must not arm the reticle or light the poke pad
+          // a locked exhibit must not arm the gaze reticle
           userData={{ headSelect: !disabled }}
           onClick={(e) => {
             e.stopPropagation()

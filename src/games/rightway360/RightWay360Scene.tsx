@@ -874,7 +874,7 @@ function JudgmentCard({
   return (
     <group position={[x, CARD_Y, z]} rotation={[0, -bearingRad, 0]}>
       <mesh
-        // a spent card must not arm the reticle or light the poke pad
+        // a spent card must not arm the gaze reticle
         userData={{ headSelect: !disabled }}
         onClick={(e) => {
           e.stopPropagation()

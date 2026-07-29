@@ -35,8 +35,8 @@ const READY_MS = 1800
  * analytics are recorded; this never counts toward any score or session.
  *
  * Inside a headset it teaches the child's own selection method (Profile →
- * Selection): `HeadSelect` supplies the reticle and either the poke pad or the
- * dwell ring, and the instruction here names that act. That is the whole point
+ * Selection): `HeadSelect` supplies the gaze reticle and dwell ring where that
+ * is the method, and the instruction here names the act. That is the whole point
  * of the warm-up — the first time a child meets an unfamiliar way of choosing
  * should not be inside a scored trial.
  */
@@ -58,7 +58,7 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
     return () => clearTimeout(timer)
   }, [ready, onComplete])
 
-  // Short "that worked" beat between targets. A child meeting poke or dwell for
+  // Short "that worked" beat between targets. A child meeting gaze dwell for
   // the first time has no idea whether their attempt registered, and the star
   // simply moving is a weak signal.
   useEffect(() => {
@@ -235,7 +235,7 @@ function VRInstruction({ text }: { text: string }) {
     ctx.fillStyle = '#f2f8fc'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    // wrap to two lines: the poke/dwell instructions are full sentences, and a
+    // wrap to two lines: the per-method instructions are full sentences, and a
     // single line would shrink past readability inside the headset
     const font = 'bold 58px "Comic Sans MS", "Noto Sans Malayalam", sans-serif'
     ctx.font = font

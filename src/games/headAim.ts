@@ -1,17 +1,17 @@
 import type { Object3D } from 'three'
 
 /**
- * Controller-free selection for the 360 games — the pure part.
+ * Gaze selection for the 360 games — the pure part.
  *
- * Both input methods (Profile → Selection) aim with the head: a reticle sits
- * wherever the child is looking, so nothing is ever held and no pinch is ever
- * needed. They differ only in what *confirms* the choice — see `InputMethod`
- * in `types.ts`. The r3f half lives in `HeadSelect.tsx`; everything here is
- * plain data so the arming and re-arming rules are unit-testable without a
- * headset (there is no way to drive a real head pose from a test).
+ * The child looks at a target and keeps looking; once the gaze has rested on it
+ * for `DWELL_MS` it is selected. Nothing is held and nothing is pressed, which
+ * is the whole point — see `InputMethod` in `types.ts`. The r3f half lives in
+ * `HeadSelect.tsx`; everything here is plain data so the arming and re-arming
+ * rules are unit-testable without a headset (there is no way to drive a real
+ * head pose from a test).
  */
 
-/** How long the child must hold their gaze on a target to select it, in `dwell`. */
+/** How long the child must hold their gaze on a target to select it. */
 export const DWELL_MS = 1600
 
 /**
@@ -21,10 +21,6 @@ export const DWELL_MS = 1600
  * because the flag is visible when reading a scene file.
  */
 export const HEAD_SELECT_FLAG = 'headSelect'
-
-/** Meshes making up the poke pad itself — the gaze ray filters these out so
- *  glancing down at the pad never drops the lock on the real target. */
-export const HEAD_SELECT_PAD_FLAG = 'headSelectPad'
 
 /**
  * Walks up from the intersected object to the nearest ancestor marked
@@ -39,16 +35,6 @@ export function findSelectTarget(object: Object3D | null | undefined): Object3D 
     node = node.parent
   }
   return null
-}
-
-/** True if the intersected object belongs to the poke pad. */
-export function isPadObject(object: Object3D | null | undefined): boolean {
-  let node: Object3D | null | undefined = object
-  while (node != null) {
-    if (node.userData?.[HEAD_SELECT_PAD_FLAG] === true) return true
-    node = node.parent
-  }
-  return false
 }
 
 export interface AimState {
@@ -70,7 +56,7 @@ export function createAimState(): AimState {
 }
 
 export interface AimResult {
-  /** 0–1 dwell ring fill; always 0 in `poke`, and 0 while locked out */
+  /** 0–1 dwell ring fill; 0 while locked out */
   progress: number
   /** the reticle is on a live target and a selection would land */
   armed: boolean
@@ -78,14 +64,7 @@ export interface AimResult {
   fire: boolean
 }
 
-/**
- * Advances the aim state by one frame.
- *
- * `dwellMs` of `Infinity` disables the timer entirely, which is how `poke`
- * runs: the same arming and lock-out rules apply, but only a poke of the pad
- * can fire. That keeps one state machine behind both methods instead of two
- * that can drift apart.
- */
+/** Advances the aim state by one frame. */
 export function advanceAim(
   state: AimState,
   target: Object3D | null,
@@ -106,8 +85,6 @@ export function advanceAim(
 
   state.heldMs += dtMs
 
-  if (!Number.isFinite(dwellMs)) return { progress: 0, armed: true, fire: false }
-
   const progress = Math.min(1, state.heldMs / dwellMs)
   const fire = state.heldMs >= dwellMs
   if (fire) {
@@ -115,16 +92,4 @@ export function advanceAim(
     state.heldMs = 0
   }
   return { progress, armed: true, fire }
-}
-
-/**
- * Called when the child pokes the pad. Fires only if the reticle is on a live
- * target, so a poke made while looking at the sky is simply ignored rather
- * than scored against whatever the ray happened to graze.
- */
-export function pokeAim(state: AimState): boolean {
-  if (state.target == null || state.target === state.firedOn) return false
-  state.firedOn = state.target
-  state.heldMs = 0
-  return true
 }

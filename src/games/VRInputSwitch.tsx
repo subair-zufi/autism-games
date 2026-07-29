@@ -5,7 +5,7 @@ import { useSettings } from '../state/settings'
 import { t } from '../i18n/strings'
 
 /**
- * In-world switch between the controller-free selection methods.
+ * In-world switch between the selection methods (gaze dwell / controller).
  *
  * Profile → Selection sets this too, but the page is invisible inside an
  * immersive session, so without this the only way to try the other method is
@@ -14,10 +14,10 @@ import { t } from '../i18n/strings'
  * centres.
  *
  * Both buttons are ordinary `headSelect` targets, so whichever method is
- * currently active can operate them: gaze dwells on them, poke aims and taps
- * the pad, and the controller ray works in either case (controllers stay live
- * in both modes as the facilitator's fallback). That matters — the switch must
- * never be unreachable from the mode you are trying to leave.
+ * currently active can operate them: a gaze dwells on them, and the controller
+ * ray works in either mode since controllers stay live throughout. That
+ * matters — the switch must never be unreachable from the mode you are trying
+ * to leave.
  *
  * Placed by BEARING like `VRQuitButton`, and normally directly below it at the
  * same bearing, so both live in one "controls corner" already outside the
@@ -53,16 +53,16 @@ export function VRInputSwitch({
   return (
     <group position={[x, height, z]} rotation={[0, rotY, 0]}>
       <SwitchButton
-        label={t('vrInputPoke', lang)}
-        active={inputMethod === 'poke'}
-        offsetX={-0.39}
-        onPick={() => setInputMethod('poke')}
-      />
-      <SwitchButton
         label={t('vrInputGaze', lang)}
         active={inputMethod === 'dwell'}
-        offsetX={0.39}
+        offsetX={-0.39}
         onPick={() => setInputMethod('dwell')}
+      />
+      <SwitchButton
+        label={t('vrInputController', lang)}
+        active={inputMethod === 'controller'}
+        offsetX={0.39}
+        onPick={() => setInputMethod('controller')}
       />
     </group>
   )

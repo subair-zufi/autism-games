@@ -28,22 +28,22 @@ export const PRACTICE_FEEDBACK_MS = 900
 /** The instruction keys the warm-up can show (see `i18n/strings.ts`). */
 export type PracticePromptKey =
   | 'practiceIntro'
-  | 'practiceIntroPoke'
   | 'practiceIntroDwell'
+  | 'practiceIntroController'
   | 'practiceGreat'
   | 'practiceReady'
 
 /**
  * Which instruction to show right now.
  *
- * Inside a headset the child selects with whichever controller-free method is
- * set in Profile → Selection, and those are different physical acts — poking a
- * pad is not holding a gaze — so the warm-up has to name the one they will
- * actually use. Outside a session the mouse selects and the generic "tap"
- * wording is still the right one.
+ * Inside a headset the child selects with whichever method is set in Profile →
+ * Selection, and those are different physical acts — resting a gaze is not
+ * pulling a trigger — so the warm-up has to name the one they will actually
+ * use. Outside a session the mouse selects and the generic "tap" wording is
+ * still the right one.
  *
  * Confirming a target is exactly what a new input method makes uncertain
- * ("did my poke land?"), so a success beat takes priority over the standing
+ * ("did that count?"), so a success beat takes priority over the standing
  * instruction.
  */
 export function practicePromptKey(opts: {
@@ -56,7 +56,7 @@ export function practicePromptKey(opts: {
   if (opts.ready) return 'practiceReady'
   if (opts.celebrating) return 'practiceGreat'
   if (!opts.inVR) return 'practiceIntro'
-  return opts.inputMethod === 'poke' ? 'practiceIntroPoke' : 'practiceIntroDwell'
+  return opts.inputMethod === 'dwell' ? 'practiceIntroDwell' : 'practiceIntroController'
 }
 
 /**

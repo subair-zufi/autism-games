@@ -110,33 +110,32 @@ export function Profile() {
           <div className="settings-label">
             <span className="settings-label-title">Selection · VR games</span>
             <span className="settings-label-sub">
-              {inputMethod === 'poke'
-                ? 'Look at the answer, then tap the pad in front of you'
-                : 'Look at the answer and hold your gaze on it'}
+              {inputMethod === 'dwell'
+                ? 'Look at the answer and hold your gaze on it'
+                : 'Point the controller at the answer and press the trigger'}
             </span>
           </div>
           <div className="settings-toggles">
-            <button
-              className={inputMethod === 'poke' ? 'toggle-pill on' : 'toggle-pill'}
-              onClick={() => setInputMethod('poke')}
-            >
-              👆 Hand poke
-            </button>
             <button
               className={inputMethod === 'dwell' ? 'toggle-pill on' : 'toggle-pill'}
               onClick={() => setInputMethod('dwell')}
             >
               👀 Gaze dwell
             </button>
+            <button
+              className={inputMethod === 'controller' ? 'toggle-pill on' : 'toggle-pill'}
+              onClick={() => setInputMethod('controller')}
+            >
+              🎮 Controller
+            </button>
           </div>
         </div>
         <p className="settings-note">
-          Neither needs a controller, and you can also switch inside the headset — the two
-          buttons under the in-world Quit control. Hand poke suits most children; use gaze dwell
-          if hand tracking will not hold (poor lighting, long sleeves, or difficulty holding the
-          arm up). <strong>Hand poke needs the controllers put down</strong> and Hand Tracking
-          turned on in the headset&rsquo;s own settings — while a controller is held, the headset
-          reports no hands. Controllers keep working in both modes as your fallback.
+          You can also switch inside the headset — the two buttons under the in-world Quit
+          control. Gaze dwell needs nothing held, which is the point; the controller stays
+          available in both modes, so choosing Controller only turns gaze selection{' '}
+          <em>off</em> — useful when an adult is driving the session and should not answer just
+          by looking around.
         </p>
 
         <div className="settings-toggles">

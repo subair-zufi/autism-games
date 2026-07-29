@@ -31,6 +31,26 @@ test('persists to localStorage', () => {
   expect(JSON.parse(localStorage.getItem('autism-settings')!).state.voiceOn).toBe(false)
 })
 
+test('a headset still holding the removed "poke" method falls back to gaze', async () => {
+  // devices that ran the build with bare-hand poke have it persisted; left
+  // as-is it is no longer a valid method and would select nothing at all
+  localStorage.setItem(
+    'autism-settings',
+    JSON.stringify({ state: { inputMethod: 'poke' }, version: 0 }),
+  )
+  await useSettings.persist.rehydrate()
+  expect(useSettings.getState().inputMethod).toBe('dwell')
+})
+
+test('a saved selection method that is still valid is kept', async () => {
+  localStorage.setItem(
+    'autism-settings',
+    JSON.stringify({ state: { inputMethod: 'controller' }, version: 0 }),
+  )
+  await useSettings.persist.rehydrate()
+  expect(useSettings.getState().inputMethod).toBe('controller')
+})
+
 test('stale saved state (missing newer game keys) still gets defaults', async () => {
   // simulate a store saved before the emotionrecognition game existed
   localStorage.setItem(

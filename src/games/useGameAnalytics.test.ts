@@ -16,7 +16,7 @@ import { useSettings } from '../state/settings'
 describe('useGameAnalytics', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    useSettings.getState().setInputMethod('poke')
+    useSettings.getState().setInputMethod('dwell')
   })
 
   it('starts a session lazily on the first recordStep, then reuses it', async () => {
@@ -47,20 +47,20 @@ describe('useGameAnalytics', () => {
     expect(analytics.recordStep).toHaveBeenCalledWith(
       'blocks',
       'game_over',
-      { xrPresenting: false, inputMethod: 'poke', headYawContaminated: false },
+      { xrPresenting: false, inputMethod: 'dwell', headYawContaminated: false },
       expect.objectContaining({ score: 7 }),
     )
     expect(analytics.endSession).toHaveBeenCalledWith('sess-1', 7)
   })
 
-  it('tags every step with the selection method, so poke and dwell latencies are separable', async () => {
+  it('tags every step with the selection method, so gaze and controller latencies are separable', async () => {
     const { result } = renderHook(() => useGameAnalytics('emotionrecognition'))
     await act(async () => { result.current.recordStep('answer', { correct: true }) })
-    expect((analytics.recordStep as any).mock.calls[0][2]).toMatchObject({ inputMethod: 'poke' })
+    expect((analytics.recordStep as any).mock.calls[0][2]).toMatchObject({ inputMethod: 'dwell' })
 
-    useSettings.getState().setInputMethod('dwell')
+    useSettings.getState().setInputMethod('controller')
     await act(async () => { result.current.recordStep('answer', { correct: true }) })
-    expect((analytics.recordStep as any).mock.calls[1][2]).toMatchObject({ inputMethod: 'dwell' })
+    expect((analytics.recordStep as any).mock.calls[1][2]).toMatchObject({ inputMethod: 'controller' })
   })
 
   it('flags head yaw as selection-contaminated only for the JA games in a headset', async () => {

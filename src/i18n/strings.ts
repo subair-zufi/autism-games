@@ -121,16 +121,11 @@ const MESSAGES = {
   // this is the in-world equivalent — ends the session, drops back to the
   // flat page right where the game was.
   vrQuit: { en: 'Quit', ml: 'നിർത്തുക' },
-  // Label on the in-reach poke pad (Profile → Selection = "Hand poke"). Two
-  // states: lit once the child's reticle is resting on something choosable,
-  // dimmed while it is not, so a poke is never made into empty space.
-  vrPokeReady: { en: 'Tap!', ml: 'തൊടൂ!' },
-  vrPokeLook: { en: 'Look first', ml: 'ആദ്യം നോക്കൂ' },
   // In-world switch between the two selection methods, so the mode can be
   // changed without taking the headset off (the Profile page is invisible
-  // inside a session). Kept to one word each — the panels are small.
-  vrInputPoke: { en: '👆 Poke', ml: '👆 തൊടൽ' },
+  // inside a session). Kept short — the panels are small.
   vrInputGaze: { en: '👀 Gaze', ml: '👀 നോട്ടം' },
+  vrInputController: { en: '🎮 Controller', ml: '🎮 കൺട്രോളർ' },
 
   // --- Game-over dialog (shared across the arcade-style games) ---------------
   greatPlaying: { en: 'Great playing! 🎉', ml: 'നന്നായി കളിച്ചു! 🎉' },
@@ -171,9 +166,9 @@ const MESSAGES = {
   // Selection, so the warm-up names the act they will actually perform. The
   // generic `practiceIntro` above still covers the flat screen, where the
   // mouse selects and neither method is active.
-  practiceIntroPoke: {
-    en: 'Look at the star, then tap the pad in front of you.',
-    ml: 'നക്ഷത്രത്തിലേക്ക് നോക്കൂ, എന്നിട്ട് മുന്നിലുള്ള പാഡിൽ തൊടൂ.',
+  practiceIntroController: {
+    en: 'Point at the star and press the trigger.',
+    ml: 'നക്ഷത്രത്തിലേക്ക് ചൂണ്ടി ട്രിഗർ അമർത്തൂ.',
   },
   practiceIntroDwell: {
     en: 'Look at the star and keep looking — the ring fills up.',

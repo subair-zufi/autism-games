@@ -25,19 +25,19 @@ describe('practice sequence', () => {
 })
 
 describe('practicePromptKey', () => {
-  const base = { ready: false, celebrating: false, inVR: true, inputMethod: 'poke' } as const
-
-  it('teaches the poke pad when that is the child\'s method', () => {
-    expect(practicePromptKey(base)).toBe('practiceIntroPoke')
-  })
+  const base = { ready: false, celebrating: false, inVR: true, inputMethod: 'dwell' } as const
 
   it('teaches the dwell ring when that is the child\'s method', () => {
-    expect(practicePromptKey({ ...base, inputMethod: 'dwell' })).toBe('practiceIntroDwell')
+    expect(practicePromptKey(base)).toBe('practiceIntroDwell')
+  })
+
+  it('teaches the trigger when the child is on the controller', () => {
+    expect(practicePromptKey({ ...base, inputMethod: 'controller' })).toBe('practiceIntroController')
   })
 
   it('keeps the generic tap wording outside a session, where the mouse selects', () => {
     expect(practicePromptKey({ ...base, inVR: false })).toBe('practiceIntro')
-    expect(practicePromptKey({ ...base, inVR: false, inputMethod: 'dwell' })).toBe('practiceIntro')
+    expect(practicePromptKey({ ...base, inVR: false, inputMethod: 'controller' })).toBe('practiceIntro')
   })
 
   it('confirms a landed selection before repeating the instruction', () => {

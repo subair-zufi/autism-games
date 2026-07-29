@@ -1,13 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { Object3D } from 'three'
-import {
-  DWELL_MS,
-  advanceAim,
-  createAimState,
-  findSelectTarget,
-  isPadObject,
-  pokeAim,
-} from './headAim'
+import { DWELL_MS, advanceAim, createAimState, findSelectTarget } from './headAim'
 
 /** a marked target with a plain child, like the scenes' hit volumes */
 function target(): { root: Object3D; hit: Object3D } {
@@ -37,17 +30,6 @@ describe('findSelectTarget', () => {
     expect(findSelectTarget(sky.children[0])).toBeNull()
     expect(findSelectTarget(null)).toBeNull()
     expect(findSelectTarget(undefined)).toBeNull()
-  })
-})
-
-describe('isPadObject', () => {
-  it('recognises the pad and its children so the gaze ray can skip them', () => {
-    const pad = new Object3D()
-    pad.userData.headSelectPad = true
-    const face = new Object3D()
-    pad.add(face)
-    expect(isPadObject(face)).toBe(true)
-    expect(isPadObject(new Object3D())).toBe(false)
   })
 })
 
@@ -103,43 +85,5 @@ describe('advanceAim · dwell', () => {
     const s = createAimState()
     const r = advanceAim(s, null, DWELL_MS * 5)
     expect(r).toEqual({ progress: 0, armed: false, fire: false })
-  })
-})
-
-describe('advanceAim · poke', () => {
-  it('arms but never fires on its own, however long the child looks', () => {
-    const s = createAimState()
-    const { root } = target()
-    const r = advanceAim(s, root, DWELL_MS * 20, Infinity)
-    expect(r.armed).toBe(true)
-    expect(r.fire).toBe(false)
-    expect(r.progress).toBe(0)
-  })
-})
-
-describe('pokeAim', () => {
-  it('selects whatever the reticle is resting on', () => {
-    const s = createAimState()
-    const { root } = target()
-    advanceAim(s, root, 16, Infinity)
-    expect(pokeAim(s)).toBe(true)
-  })
-
-  it('ignores a poke made while looking at nothing', () => {
-    const s = createAimState()
-    advanceAim(s, null, 16, Infinity)
-    expect(pokeAim(s)).toBe(false)
-  })
-
-  it('ignores a double poke until the child looks somewhere else', () => {
-    const s = createAimState()
-    const { root } = target()
-    advanceAim(s, root, 16, Infinity)
-    expect(pokeAim(s)).toBe(true)
-    expect(pokeAim(s)).toBe(false)
-
-    advanceAim(s, null, 16, Infinity)
-    advanceAim(s, root, 16, Infinity)
-    expect(pokeAim(s)).toBe(true)
   })
 })

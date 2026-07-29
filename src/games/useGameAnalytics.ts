@@ -40,8 +40,8 @@ export function useGameAnalytics(gameKey: GameId, xrStore?: XrStoreLike) {
   // flat screen); without this flag they are indistinguishable in the dataset.
   const xrPresenting = useCallback(() => (xrStore ? !!xrStore.getState().session : false), [xrStore])
 
-  // Poke and dwell produce very different response latencies — a dwell answer
-  // cannot arrive faster than DWELL_MS — so they must never be pooled. Read
+  // Gaze and controller produce very different response latencies — a dwell
+  // answer cannot arrive faster than DWELL_MS — so they must never be pooled. Read
   // from the store rather than subscribed to: the value only matters at the
   // moment a step is written, and it does not change mid-session.
   const inputContext = useCallback(() => {
