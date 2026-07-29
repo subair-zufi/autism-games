@@ -131,9 +131,12 @@ export function Profile() {
           </div>
         </div>
         <p className="settings-note">
-          Neither needs a controller. Set this once per child — hand poke suits most children;
-          switch to gaze dwell if hand tracking will not hold (poor lighting, long sleeves, or
-          difficulty holding the arm up).
+          Neither needs a controller, and you can also switch inside the headset — the two
+          buttons under the in-world Quit control. Hand poke suits most children; use gaze dwell
+          if hand tracking will not hold (poor lighting, long sleeves, or difficulty holding the
+          arm up). <strong>Hand poke needs the controllers put down</strong> and Hand Tracking
+          turned on in the headset&rsquo;s own settings — while a controller is held, the headset
+          reports no hands. Controllers keep working in both modes as your fallback.
         </p>
 
         <div className="settings-toggles">

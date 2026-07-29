@@ -6,6 +6,7 @@ import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
+import { VRInputSwitch } from '../VRInputSwitch'
 import {
   bearingToXZ,
   dragDistance,
@@ -166,6 +167,8 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
       <TextPanel text={prompt} position={[0, 3.8, -8.2]} width={4.8} height={0.8} font={64} />
       {/* just left of the outermost teammate (≈−50°) — clear of the players */}
       <VRQuitButton bearingDeg={-64} label={quit} />
+      {/* selection-method switch, directly under Quit in the same controls corner */}
+      <VRInputSwitch bearingDeg={-64} />
     </group>
   )
 }

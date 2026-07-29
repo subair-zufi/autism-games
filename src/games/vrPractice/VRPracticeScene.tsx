@@ -9,6 +9,7 @@ import { t } from '../../i18n/strings'
 import { playSuccess, playTap } from '../../services/sounds'
 import { xrStore, vrSupported } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
+import { VRInputSwitch } from '../VRInputSwitch'
 import {
   PRACTICE_BEARINGS_DEG,
   PRACTICE_FEEDBACK_MS,
@@ -104,6 +105,10 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
               <VRInstruction
                 text={t(practicePromptKey({ ready, celebrating, inVR: true, inputMethod }), lang)}
               />
+              {/* the warm-up is exactly where a facilitator works out which
+                  method a child can use, so the switch matters most here.
+                  Well outside the ±30° star arc. */}
+              <VRInputSwitch bearingDeg={-62} />
             </XR>
           </Canvas>
           {canVR && (

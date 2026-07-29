@@ -6,6 +6,7 @@ import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
+import { VRInputSwitch } from '../VRInputSwitch'
 import {
   BLOCK_H,
   BLOCK_W,
@@ -175,6 +176,8 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
       <TextPanel text={prompt} position={[0, 2.45, -6.4]} width={4.4} height={0.72} font={64} />
       {/* just left of the outermost seated peer (≈−31°) — clear of the table */}
       <VRQuitButton bearingDeg={-48} label={quit} />
+      {/* selection-method switch, directly under Quit in the same controls corner */}
+      <VRInputSwitch bearingDeg={-48} />
     </group>
   )
 }

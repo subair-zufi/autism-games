@@ -126,6 +126,11 @@ const MESSAGES = {
   // dimmed while it is not, so a poke is never made into empty space.
   vrPokeReady: { en: 'Tap!', ml: 'തൊടൂ!' },
   vrPokeLook: { en: 'Look first', ml: 'ആദ്യം നോക്കൂ' },
+  // In-world switch between the two selection methods, so the mode can be
+  // changed without taking the headset off (the Profile page is invisible
+  // inside a session). Kept to one word each — the panels are small.
+  vrInputPoke: { en: '👆 Poke', ml: '👆 തൊടൽ' },
+  vrInputGaze: { en: '👀 Gaze', ml: '👀 നോട്ടം' },
 
   // --- Game-over dialog (shared across the arcade-style games) ---------------
   greatPlaying: { en: 'Great playing! 🎉', ml: 'നന്നായി കളിച്ചു! 🎉' },

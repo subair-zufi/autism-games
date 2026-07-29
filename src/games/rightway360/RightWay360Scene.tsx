@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
+import { VRInputSwitch } from '../VRInputSwitch'
 import {
   CARD_Y,
   cardBearingDeg,
@@ -911,10 +912,15 @@ function VRHud({
   const x = Math.sin(rad) * STAGE_RADIUS
   const z = -Math.cos(rad) * STAGE_RADIUS
   return (
-    <group position={[x, 0, z]} rotation={[0, -rad, 0]}>
-      <TextPanel text={prompt} position={[0, 3.15, 0]} width={4.4} height={0.72} font={64} />
-      <TextPanel text={progress} position={[0, 3.8, 0]} width={1.7} height={0.46} font={88} />
-    </group>
+    <>
+      <group position={[x, 0, z]} rotation={[0, -rad, 0]}>
+        <TextPanel text={prompt} position={[0, 3.15, 0]} width={4.4} height={0.72} font={64} />
+        <TextPanel text={progress} position={[0, 3.8, 0]} width={1.7} height={0.46} font={88} />
+      </group>
+      {/* fixed bearing, not the stage's — stages roam ±50°, so the switch sits
+          just outside that arc where it can never cover a scene */}
+      <VRInputSwitch bearingDeg={-70} />
+    </>
   )
 }
 

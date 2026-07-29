@@ -6,6 +6,7 @@ import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
+import { VRInputSwitch } from '../VRInputSwitch'
 import {
   bearingToXZ,
   discoveryPosition,
@@ -188,6 +189,8 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
       <TextPanel text={prompt} position={[0, 3.15, -7.4]} width={4.6} height={0.8} font={64} />
       {/* just left of the outermost discovery (flower ≈−52°) — clear of the play area */}
       <VRQuitButton bearingDeg={-66} label={quit} />
+      {/* selection-method switch, directly under Quit in the same controls corner */}
+      <VRInputSwitch bearingDeg={-66} />
     </group>
   )
 }
