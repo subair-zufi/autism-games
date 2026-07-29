@@ -1,22 +1,22 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
 import { useXR } from '@react-three/xr'
+import { captureCameraHome, restoreCameraHome } from './cameraHome'
 
 /**
- * Puts the camera back where the scene put it when an immersive session ends.
+ * Restores the flat camera when an immersive session ends.
  *
- * While a session is presenting, three's WebXRManager overwrites the camera's
- * position and orientation from the headset pose on every frame. Each scene's
- * `LookControls` re-asserts *rotation* once the session ends — it writes
- * `camera.rotation` every frame — but nothing restores *position*, so the flat
- * view is left standing wherever the child's head happened to be: offset by
- * however far they leaned or stepped, and at the headset's floor-relative
- * height rather than the scene's designed eye height.
+ * three's `WebXRManager.updateUserCamera` drives the app camera from the
+ * headset every frame while presenting, and puts nothing back afterwards. It
+ * leaves behind the head pose *and* — the part that actually breaks things —
+ * the XR camera's projection matrix, which on a headset is the union frustum
+ * of two eyes: wide, and off-axis. r3f only recomputes projection on resize,
+ * so the flat canvas goes on rendering through that frustum indefinitely.
  *
- * The visible result is quitting a game and landing in what looks like an empty
- * world — the camera is below the ground plane or inside scenery, so the whole
- * frame is one flat colour. Restoring the spawn position on session end fixes
- * it, and is harmless when the child never moved.
+ * The visible result is quitting a game into what looks like an empty world
+ * with a few things still drifting about in it: the scene is running fine, it
+ * is just being viewed through a frustum that puts nearly all of it off-frame.
+ * Restoring position alone does not fix it — the projection has to be rebuilt.
  *
  * Renders nothing — drop one inside each game's `<XR>`, next to `<HeadSelect>`.
  */
@@ -24,9 +24,9 @@ export function XRCameraHome() {
   const camera = useThree((s) => s.camera)
   const session = useXR((s) => s.session)
 
-  // Captured on mount, before any session can have touched it, so this is the
-  // position the scene declared on its <Canvas camera={{ position }}>.
-  const home = useMemo(() => camera.position.clone(), [camera])
+  // Captured on mount, before any session can have touched it, so this is what
+  // the scene declared on its <Canvas camera={{ ... }}>.
+  const home = useMemo(() => captureCameraHome(camera), [camera])
   const wasPresenting = useRef(false)
 
   useEffect(() => {
@@ -36,8 +36,7 @@ export function XRCameraHome() {
     }
     if (!wasPresenting.current) return
     wasPresenting.current = false
-    camera.position.copy(home)
-    camera.updateMatrixWorld()
+    restoreCameraHome(camera, home)
   }, [session, camera, home])
 
   return null

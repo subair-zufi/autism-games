@@ -79,6 +79,10 @@ export function VRQuitButton({
     <mesh
       position={[x, height, z]}
       rotation={[0, rotY, 0]}
+      // gaze-selectable, or a child set to dwell has no way out of the headset
+      // at all. Safe to dwell on: it sits outside every game's activity arc,
+      // so a wandering gaze does not land here on the way to an answer.
+      userData={{ headSelect: true }}
       onClick={(e) => {
         e.stopPropagation()
         void session.end()
