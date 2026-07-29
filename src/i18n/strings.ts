@@ -121,6 +121,11 @@ const MESSAGES = {
   // this is the in-world equivalent — ends the session, drops back to the
   // flat page right where the game was.
   vrQuit: { en: 'Quit', ml: 'നിർത്തുക' },
+  // Label on the in-reach poke pad (Profile → Selection = "Hand poke"). Two
+  // states: lit once the child's reticle is resting on something choosable,
+  // dimmed while it is not, so a poke is never made into empty space.
+  vrPokeReady: { en: 'Tap!', ml: 'തൊടൂ!' },
+  vrPokeLook: { en: 'Look first', ml: 'ആദ്യം നോക്കൂ' },
 
   // --- Game-over dialog (shared across the arcade-style games) ---------------
   greatPlaying: { en: 'Great playing! 🎉', ml: 'നന്നായി കളിച്ചു! 🎉' },

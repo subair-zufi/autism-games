@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSelect } from '../HeadSelect'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import {
@@ -65,6 +66,7 @@ export function EmotionRecognition360Scene(props: EmotionRecognition360SceneProp
         <directionalLight position={[3, 14, 4]} intensity={0.7} color="#fff6e4" />
         <directionalLight position={[-6, 8, -6]} intensity={0.25} />
         <LookControls />
+        <HeadSelect />
         <HeadSampler />
         <GalleryRoom />
         <BoardRow {...props} />
@@ -435,6 +437,7 @@ function FaceBoard({
       <mesh
         position={[0, BOARD_Y, 0.05]}
         visible={false}
+        userData={{ headSelect: true }}
         onClick={(e) => {
           e.stopPropagation()
           // a drag that ends on the board is looking around, not a tap. XR

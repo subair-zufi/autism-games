@@ -14,9 +14,11 @@ export function Profile() {
   const voiceOn = useSettings((s) => s.voiceOn)
   const soundOn = useSettings((s) => s.soundOn)
   const language = useSettings((s) => s.language)
+  const inputMethod = useSettings((s) => s.inputMethod)
   const setVoiceOn = useSettings((s) => s.setVoiceOn)
   const setSoundOn = useSettings((s) => s.setSoundOn)
   const setLanguage = useSettings((s) => s.setLanguage)
+  const setInputMethod = useSettings((s) => s.setInputMethod)
 
   const [editing, setEditing] = useState(false)
   const [fullName, setFullName] = useState(user?.full_name ?? '')
@@ -103,6 +105,36 @@ export function Profile() {
             </button>
           </div>
         </div>
+
+        <div className="settings-row">
+          <div className="settings-label">
+            <span className="settings-label-title">Selection · VR games</span>
+            <span className="settings-label-sub">
+              {inputMethod === 'poke'
+                ? 'Look at the answer, then tap the pad in front of you'
+                : 'Look at the answer and hold your gaze on it'}
+            </span>
+          </div>
+          <div className="settings-toggles">
+            <button
+              className={inputMethod === 'poke' ? 'toggle-pill on' : 'toggle-pill'}
+              onClick={() => setInputMethod('poke')}
+            >
+              👆 Hand poke
+            </button>
+            <button
+              className={inputMethod === 'dwell' ? 'toggle-pill on' : 'toggle-pill'}
+              onClick={() => setInputMethod('dwell')}
+            >
+              👀 Gaze dwell
+            </button>
+          </div>
+        </div>
+        <p className="settings-note">
+          Neither needs a controller. Set this once per child — hand poke suits most children;
+          switch to gaze dwell if hand tracking will not hold (poor lighting, long sleeves, or
+          difficulty holding the arm up).
+        </p>
 
         <div className="settings-toggles">
           <button className={voiceOn ? 'toggle-pill on' : 'toggle-pill'} onClick={() => setVoiceOn(!voiceOn)}>

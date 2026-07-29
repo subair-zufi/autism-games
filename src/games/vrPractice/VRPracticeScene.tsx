@@ -8,6 +8,7 @@ import { useSettings } from '../../state/settings'
 import { t } from '../../i18n/strings'
 import { playSuccess, playTap } from '../../services/sounds'
 import { xrStore, vrSupported } from './xrStore'
+import { HeadSelect } from '../HeadSelect'
 import { PRACTICE_BEARINGS_DEG, dragDistance, isDragTail, isPracticeComplete, lookDrag } from './logic'
 
 const EYE_Y = 1.6
@@ -68,6 +69,7 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
               <ambientLight intensity={0.9} color="#ffffff" />
               <directionalLight position={[2, 6, 3]} intensity={0.5} />
               <LookControls />
+              <HeadSelect />
               <Ground />
               {!ready && <Star bearingDeg={PRACTICE_BEARINGS_DEG[step]} onTap={tapStar} />}
             </XR>
@@ -198,6 +200,7 @@ function Star({ bearingDeg, onTap }: { bearingDeg: number; onTap: () => void }) 
       {/* transparent tap target, comfortably larger than the star */}
       <mesh
         visible={false}
+        userData={{ headSelect: true }}
         onClick={(e) => {
           e.stopPropagation()
           if (isDragTail() || dragDistance(e) > 8) return

@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSelect } from '../HeadSelect'
 import { HeadSampler } from '../HeadSampler'
 import { angDiffDeg, latestYawDeg } from '../headTracking'
 import { VRQuitButton } from '../VRQuitButton'
@@ -61,6 +62,7 @@ export function Museum360Scene(props: Museum360SceneProps) {
         {/* soft warm ambient so nothing is pitch black */}
         <ambientLight intensity={0.55} color="#fff3e0" />
         <LookControls />
+        <HeadSelect />
         <HeadSampler />
         <RotundaRoom />
         <SceneInner {...props} />
@@ -837,6 +839,8 @@ function Exhibit({
         <ExhibitModel id={id} />
         <mesh
           visible={false}
+          // a locked exhibit must not arm the reticle or light the poke pad
+          userData={{ headSelect: !disabled }}
           onClick={(e) => {
             e.stopPropagation()
             // a drag that ends on a pedestal is looking around, not a pick.

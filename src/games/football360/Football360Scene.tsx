@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSelect } from '../HeadSelect'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import {
@@ -71,6 +72,7 @@ export function Football360Scene(props: Football360SceneProps) {
         <directionalLight position={[14, 22, 8]} intensity={1.05} color="#fff7e0" />
         <directionalLight position={[-8, 10, -12]} intensity={0.3} />
         <LookControls />
+        <HeadSelect />
         <HeadSampler />
         <FootballGround />
         <SceneInner {...props} />
@@ -797,6 +799,7 @@ function Kid({
         <mesh
           visible={false}
           position={[0, 0.95, 0]}
+          userData={{ headSelect: true }}
           onClick={(e) => {
             e.stopPropagation()
             if (isDragTail() || dragDistance(e) > 8) return

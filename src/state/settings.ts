@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Difficulty, GameId, PlayMode } from '../types'
+import type { Difficulty, GameId, InputMethod, PlayMode } from '../types'
 import type { Lang } from '../i18n/strings'
 
 interface SettingsState {
@@ -14,6 +14,10 @@ interface SettingsState {
   // Which build of each skill's games Home shows — flipped from the
   // persistent header toggle so the choice survives navigation and reloads.
   playMode: PlayMode
+  // How the child confirms a choice inside the 360 games — poking an in-reach
+  // pad or dwelling on the target with their gaze. Neither needs a controller,
+  // so this is set once per child at intake and left alone.
+  inputMethod: InputMethod
   // Whether the child has completed the one-time shared VR/360 practice
   // scene (look-around + tap gesture) — every 360 game checks this before its
   // very first real session so headset novelty isn't confounded with the
@@ -24,6 +28,7 @@ interface SettingsState {
   setLanguage: (lang: Lang) => void
   setDifficulty: (game: GameId, d: Difficulty) => void
   setPlayMode: (mode: PlayMode) => void
+  setInputMethod: (m: InputMethod) => void
   setVrPracticeDone: (v: boolean) => void
 }
 
@@ -35,6 +40,9 @@ export const useSettings = create<SettingsState>()(
       language: 'en',
       difficulty: { emotionrecognition: 'easy', emotionrecognition360: 'easy', blocks: 'easy', playroom360: 'easy', rollback: 'easy', football360: 'easy', museum: 'easy', museum360: 'easy', rightway: 'easy', rightway360: 'easy', rulefixer: 'easy', identifyemotions: 'easy', identifyemotions360: 'easy', calmcrew: 'easy', discovery: 'easy', park360: 'easy' },
       playMode: 'desktop',
+      // poke by default: it needs a deliberate act to select, so a child who
+      // is simply looking around can never trip an answer
+      inputMethod: 'poke',
       vrPracticeDone: false,
       setVoiceOn: (voiceOn) => set({ voiceOn }),
       setSoundOn: (soundOn) => set({ soundOn }),
@@ -42,6 +50,7 @@ export const useSettings = create<SettingsState>()(
       setDifficulty: (game, d) =>
         set((s) => ({ difficulty: { ...s.difficulty, [game]: d } })),
       setPlayMode: (playMode) => set({ playMode }),
+      setInputMethod: (inputMethod) => set({ inputMethod }),
       setVrPracticeDone: (vrPracticeDone) => set({ vrPracticeDone }),
     }),
     {

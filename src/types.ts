@@ -45,6 +45,24 @@ export function skillMeta(id: Skill): SkillMeta {
 /** Which play surface a game targets — drives the Home page VR/Desktop toggle. */
 export type PlayMode = 'desktop' | 'vr'
 
+/**
+ * How the child commits a selection inside a 360 game, chosen per child in
+ * Profile → Selection. Both aim the same way — a head-direction reticle, so no
+ * controller is ever held and no pinch is ever required — and differ only in
+ * what confirms the choice:
+ *
+ * - `poke`  the child pokes a large pad floating within arm's reach (bare-hand
+ *           tracking); deliberate, so no accidental selections.
+ * - `dwell` the child simply keeps looking at the target for `DWELL_MS`; no
+ *           hands at all, for children who cannot sustain hand tracking.
+ *
+ * Note for analysis: both make head direction *instrumental*, so head-yaw from
+ * the joint attention games is selection-contaminated — every recorded step
+ * carries `inputMethod`, and the two JA games additionally carry
+ * `headYawContaminated` (see `useGameAnalytics`).
+ */
+export type InputMethod = 'poke' | 'dwell'
+
 export interface GameMeta {
   id: GameId
   title: string

@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSelect } from '../HeadSelect'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import {
@@ -91,6 +92,7 @@ export function Park360Scene(props: Park360SceneProps) {
         <directionalLight position={[10, 20, 6]} intensity={1.0} color="#fff7e0" />
         <directionalLight position={[-8, 9, -10]} intensity={0.3} />
         <LookControls />
+        <HeadSelect />
         <HeadSampler />
         <ParkWorld />
         <SceneInner {...props} />
@@ -501,6 +503,7 @@ function Surprise({
         {/* transparent tap target, comfortably larger than the model */}
         <mesh
           visible={false}
+          userData={{ headSelect: true }}
           onClick={(e) => {
             e.stopPropagation()
             // a drag that ends on the surprise is looking around, not a tap.
@@ -748,6 +751,7 @@ function FriendKid({
     <group
       ref={g}
       position={[x, 0, z]}
+      userData={{ headSelect: true }}
       onClick={(e) => {
         e.stopPropagation()
         if (isDragTail() || dragDistance(e) > 8) return

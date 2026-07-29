@@ -1,6 +1,19 @@
 import { useCallback, useRef } from 'react'
 import { analytics } from '../services/analytics'
-import type { GameId } from '../types'
+import { useSettings } from '../state/settings'
+import { GAME_LIST, type GameId } from '../types'
+
+/**
+ * The two joint attention games measure the child's head yaw as the outcome —
+ * where they looked, and how long it took them to get there. Both controller-free
+ * input methods aim with the head, which makes looking *instrumental*: the child
+ * turns toward a target in order to select it, not only to share attention. Steps
+ * from these games are flagged so the analysis can exclude or adjust them rather
+ * than silently pooling contaminated yaw with the rest.
+ */
+const HEAD_YAW_OUTCOME_GAMES = new Set<GameId>(
+  GAME_LIST.filter((g) => g.skill === 'jointattention' && g.mode === 'vr').map((g) => g.id),
+)
 
 /** Minimal shape of an `@react-three/xr` store — enough to tell whether an
  *  immersive session is currently presenting. Passed by the 360 games so every
@@ -27,19 +40,35 @@ export function useGameAnalytics(gameKey: GameId, xrStore?: XrStoreLike) {
   // flat screen); without this flag they are indistinguishable in the dataset.
   const xrPresenting = useCallback(() => (xrStore ? !!xrStore.getState().session : false), [xrStore])
 
+  // Poke and dwell produce very different response latencies — a dwell answer
+  // cannot arrive faster than DWELL_MS — so they must never be pooled. Read
+  // from the store rather than subscribed to: the value only matters at the
+  // moment a step is written, and it does not change mid-session.
+  const inputContext = useCallback(() => {
+    const presenting = xrPresenting()
+    const inputMethod = useSettings.getState().inputMethod
+    return {
+      xrPresenting: presenting,
+      inputMethod,
+      // only meaningful in a headset — on a flat screen the mouse selects and
+      // head yaw is drag-to-look, which the child is not steering to answer
+      headYawContaminated: presenting && HEAD_YAW_OUTCOME_GAMES.has(gameKey),
+    }
+  }, [xrPresenting, gameKey])
+
   const recordStep = useCallback(
     (eventType: string, payload?: Record<string, unknown>, opts?: { stepIndex?: number; score?: number }) => {
-      const enriched = { ...(payload ?? {}), xrPresenting: xrPresenting() }
+      const enriched = { ...(payload ?? {}), ...inputContext() }
       void ensureSession().then((id) =>
         analytics.recordStep(gameKey, eventType, enriched, { ...opts, sessionId: id ?? undefined }),
       )
     },
-    [gameKey, ensureSession, xrPresenting],
+    [gameKey, ensureSession, inputContext],
   )
 
   const finishGame = useCallback(
     (finalScore: number) => {
-      const enriched = { xrPresenting: xrPresenting() }
+      const enriched = inputContext()
       void ensureSession().then(async (id) => {
         await analytics.recordStep(gameKey, 'game_over', enriched, { score: finalScore, sessionId: id ?? undefined })
         if (id) await analytics.endSession(id, finalScore)
@@ -47,7 +76,7 @@ export function useGameAnalytics(gameKey: GameId, xrStore?: XrStoreLike) {
         starting.current = null
       })
     },
-    [gameKey, ensureSession, xrPresenting],
+    [gameKey, ensureSession, inputContext],
   )
 
   const resetSession = useCallback(() => {

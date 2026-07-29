@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSelect } from '../HeadSelect'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import {
@@ -79,6 +80,7 @@ export function Playroom360Scene(props: Playroom360SceneProps) {
         {/* the pendant lamp over the play table */}
         <pointLight position={[0, 2.7, -TABLE_RADIUS]} intensity={22} color="#ffe9c4" distance={9} />
         <LookControls />
+        <HeadSelect />
         <HeadSampler />
         <PlayroomRoom />
         <SceneInner {...props} />
@@ -699,6 +701,9 @@ function ChildBlock({
     <mesh
       ref={ref}
       position={[homeX, restY, homeZ]}
+      // stays selectable even when it is not this child's turn: tapping out of
+      // turn is a real answer here, scored as an illegal move
+      userData={{ headSelect: true }}
       onClick={(e) => {
         e.stopPropagation()
         if (isDragTail() || dragDistance(e) > 8) return
@@ -938,6 +943,7 @@ function Kid360({
           <mesh
             visible={false}
             position={[0, 0.85, 0]}
+            userData={{ headSelect: true }}
             onClick={(e) => {
               e.stopPropagation()
               if (isDragTail() || dragDistance(e) > 8) return

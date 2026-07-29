@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { HeadSelect } from '../HeadSelect'
 import {
   CARD_Y,
   cardBearingDeg,
@@ -62,6 +63,7 @@ export function RightWay360Scene(props: RightWay360SceneProps) {
         <directionalLight position={[4, 12, 6]} intensity={0.65} color="#fff6e0" />
         <directionalLight position={[-6, 8, -5]} intensity={0.22} color="#e8f0ff" />
         <LookControls />
+        <HeadSelect />
         <SchoolYard />
         {props.active && (
           <>
@@ -869,6 +871,8 @@ function JudgmentCard({
   return (
     <group position={[x, CARD_Y, z]} rotation={[0, -bearingRad, 0]}>
       <mesh
+        // a spent card must not arm the reticle or light the poke pad
+        userData={{ headSelect: !disabled }}
         onClick={(e) => {
           e.stopPropagation()
           // a drag that ends on the card is looking around, not a tap. XR
