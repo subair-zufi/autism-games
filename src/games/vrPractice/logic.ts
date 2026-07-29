@@ -9,6 +9,8 @@
  * before any real session starts, and never runs again once completed.
  */
 
+import type { InputMethod } from '../../types'
+
 /**
  * Practice targets in order: straight ahead first (the tap gesture alone,
  * no turn needed), then one to each side — a real look-around turn, same
@@ -18,6 +20,43 @@ export const PRACTICE_BEARINGS_DEG = [0, -30, 30]
 
 export function isPracticeComplete(tappedCount: number): boolean {
   return tappedCount >= PRACTICE_BEARINGS_DEG.length
+}
+
+/** How long the "Great tap!" beat shows after each successful target. */
+export const PRACTICE_FEEDBACK_MS = 900
+
+/** The instruction keys the warm-up can show (see `i18n/strings.ts`). */
+export type PracticePromptKey =
+  | 'practiceIntro'
+  | 'practiceIntroPoke'
+  | 'practiceIntroDwell'
+  | 'practiceGreat'
+  | 'practiceReady'
+
+/**
+ * Which instruction to show right now.
+ *
+ * Inside a headset the child selects with whichever controller-free method is
+ * set in Profile → Selection, and those are different physical acts — poking a
+ * pad is not holding a gaze — so the warm-up has to name the one they will
+ * actually use. Outside a session the mouse selects and the generic "tap"
+ * wording is still the right one.
+ *
+ * Confirming a target is exactly what a new input method makes uncertain
+ * ("did my poke land?"), so a success beat takes priority over the standing
+ * instruction.
+ */
+export function practicePromptKey(opts: {
+  ready: boolean
+  celebrating: boolean
+  /** true only while an immersive session is actually presenting */
+  inVR: boolean
+  inputMethod: InputMethod
+}): PracticePromptKey {
+  if (opts.ready) return 'practiceReady'
+  if (opts.celebrating) return 'practiceGreat'
+  if (!opts.inVR) return 'practiceIntro'
+  return opts.inputMethod === 'poke' ? 'practiceIntroPoke' : 'practiceIntroDwell'
 }
 
 /**

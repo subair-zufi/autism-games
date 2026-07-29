@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { XR } from '@react-three/xr'
+import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { WebGLGate } from '../../components/WebGLGate'
 import { PromptBanner } from '../../components/PromptBanner'
@@ -9,7 +9,15 @@ import { t } from '../../i18n/strings'
 import { playSuccess, playTap } from '../../services/sounds'
 import { xrStore, vrSupported } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
-import { PRACTICE_BEARINGS_DEG, dragDistance, isDragTail, isPracticeComplete, lookDrag } from './logic'
+import {
+  PRACTICE_BEARINGS_DEG,
+  PRACTICE_FEEDBACK_MS,
+  dragDistance,
+  isDragTail,
+  isPracticeComplete,
+  lookDrag,
+  practicePromptKey,
+} from './logic'
 
 const EYE_Y = 1.6
 const STAR_Y = 1.6
@@ -21,13 +29,21 @@ const READY_MS = 1800
 /**
  * One-time, unscored warm-up shown before a child's very first real 360-game
  * session (review U2): tap the star straight ahead, then one each side — the
- * same drag-to-look-or-real-head-turn + tap model every 360 game uses. No
+ * same drag-to-look-or-real-head-turn + select model every 360 game uses. No
  * analytics are recorded; this never counts toward any score or session.
+ *
+ * Inside a headset it teaches the child's own selection method (Profile →
+ * Selection): `HeadSelect` supplies the reticle and either the poke pad or the
+ * dwell ring, and the instruction here names that act. That is the whole point
+ * of the warm-up — the first time a child meets an unfamiliar way of choosing
+ * should not be inside a scored trial.
  */
 export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
   const lang = useSettings((s) => s.language)
+  const inputMethod = useSettings((s) => s.inputMethod)
   const [step, setStep] = useState(0)
   const [ready, setReady] = useState(false)
+  const [celebrating, setCelebrating] = useState(false)
   const [canVR, setCanVR] = useState(false)
 
   useEffect(() => {
@@ -40,6 +56,15 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
     return () => clearTimeout(timer)
   }, [ready, onComplete])
 
+  // Short "that worked" beat between targets. A child meeting poke or dwell for
+  // the first time has no idea whether their attempt registered, and the star
+  // simply moving is a weak signal.
+  useEffect(() => {
+    if (!celebrating) return
+    const timer = setTimeout(() => setCelebrating(false), PRACTICE_FEEDBACK_MS)
+    return () => clearTimeout(timer)
+  }, [celebrating])
+
   function tapStar() {
     if (ready) return
     playTap()
@@ -49,10 +74,14 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
       setReady(true)
     } else {
       setStep(next)
+      setCelebrating(true)
     }
   }
 
-  const promptText = ready ? t('practiceReady', lang) : t('practiceIntro', lang)
+  // The DOM banner is only ever seen outside a session — WebXR immersive mode
+  // hides the page — so it keeps the flat-screen wording; the in-world panel
+  // below carries the method-specific instruction.
+  const promptText = t(practicePromptKey({ ready, celebrating, inVR: false, inputMethod }), lang)
 
   return (
     <WebGLGate>
@@ -72,6 +101,9 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
               <HeadSelect />
               <Ground />
               {!ready && <Star bearingDeg={PRACTICE_BEARINGS_DEG[step]} onTap={tapStar} />}
+              <VRInstruction
+                text={t(practicePromptKey({ ready, celebrating, inVR: true, inputMethod }), lang)}
+              />
             </XR>
           </Canvas>
           {canVR && (
@@ -163,6 +195,75 @@ function LookControls() {
     camera.rotation.set(v.pitch, -v.yaw, 0)
   })
   return null
+}
+
+/**
+ * The warm-up's instruction, inside the world.
+ *
+ * Every 360 game mirrors its DOM prompt onto a floating panel because an
+ * immersive session hides the page entirely — and here it matters more than
+ * usual, since this text is the only place the child is told *how* to choose.
+ * Sits at bearing 0, above the straight-ahead star, so it is in view at the
+ * first target and only a small glance away at the two side ones.
+ */
+function VRInstruction({ text }: { text: string }) {
+  const inSession = useXR((s) => !!s.session)
+
+  const texture = useMemo(() => {
+    const cv = document.createElement('canvas')
+    cv.width = 1024
+    cv.height = 256
+    return new THREE.CanvasTexture(cv)
+  }, [])
+
+  useEffect(() => {
+    const cv = texture.image as HTMLCanvasElement
+    const ctx = cv.getContext('2d')
+    if (ctx == null) return
+    ctx.clearRect(0, 0, cv.width, cv.height)
+    ctx.beginPath()
+    ctx.roundRect(6, 6, cv.width - 12, cv.height - 12, 40)
+    ctx.fillStyle = 'rgba(38, 54, 68, 0.86)'
+    ctx.fill()
+    ctx.fillStyle = '#f2f8fc'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    // wrap to two lines: the poke/dwell instructions are full sentences, and a
+    // single line would shrink past readability inside the headset
+    const font = 'bold 58px "Comic Sans MS", "Noto Sans Malayalam", sans-serif'
+    ctx.font = font
+    const words = text.split(' ')
+    const lines: string[] = []
+    let line = ''
+    for (const w of words) {
+      const next = line ? `${line} ${w}` : w
+      if (ctx.measureText(next).width > cv.width - 90 && line) {
+        lines.push(line)
+        line = w
+      } else {
+        line = next
+      }
+    }
+    if (line) lines.push(line)
+
+    const lh = 70
+    let y = cv.height / 2 - ((lines.length - 1) * lh) / 2
+    for (const l of lines) {
+      ctx.fillText(l, cv.width / 2, y)
+      y += lh
+    }
+    texture.needsUpdate = true
+  }, [text, texture])
+
+  useEffect(() => () => texture.dispose(), [texture])
+
+  if (!inSession) return null
+  return (
+    <mesh position={[0, 2.75, -STAR_RADIUS]}>
+      <planeGeometry args={[3.2, 0.8]} />
+      <meshBasicMaterial map={texture} transparent />
+    </mesh>
+  )
 }
 
 function Ground() {

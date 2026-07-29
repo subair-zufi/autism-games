@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { PRACTICE_BEARINGS_DEG, isDragTail, isPracticeComplete, lookDrag } from './logic'
+import {
+  PRACTICE_BEARINGS_DEG,
+  isDragTail,
+  isPracticeComplete,
+  lookDrag,
+  practicePromptKey,
+} from './logic'
 
 describe('practice sequence', () => {
   it('starts straight ahead (tap alone, no turn needed)', () => {
@@ -15,6 +21,32 @@ describe('practice sequence', () => {
   it('is complete once every target has been tapped', () => {
     expect(isPracticeComplete(PRACTICE_BEARINGS_DEG.length - 1)).toBe(false)
     expect(isPracticeComplete(PRACTICE_BEARINGS_DEG.length)).toBe(true)
+  })
+})
+
+describe('practicePromptKey', () => {
+  const base = { ready: false, celebrating: false, inVR: true, inputMethod: 'poke' } as const
+
+  it('teaches the poke pad when that is the child\'s method', () => {
+    expect(practicePromptKey(base)).toBe('practiceIntroPoke')
+  })
+
+  it('teaches the dwell ring when that is the child\'s method', () => {
+    expect(practicePromptKey({ ...base, inputMethod: 'dwell' })).toBe('practiceIntroDwell')
+  })
+
+  it('keeps the generic tap wording outside a session, where the mouse selects', () => {
+    expect(practicePromptKey({ ...base, inVR: false })).toBe('practiceIntro')
+    expect(practicePromptKey({ ...base, inVR: false, inputMethod: 'dwell' })).toBe('practiceIntro')
+  })
+
+  it('confirms a landed selection before repeating the instruction', () => {
+    expect(practicePromptKey({ ...base, celebrating: true })).toBe('practiceGreat')
+    expect(practicePromptKey({ ...base, celebrating: true, inVR: false })).toBe('practiceGreat')
+  })
+
+  it('shows the finish line above everything else', () => {
+    expect(practicePromptKey({ ...base, ready: true, celebrating: true })).toBe('practiceReady')
   })
 })
 

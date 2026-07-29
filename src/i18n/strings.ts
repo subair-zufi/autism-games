@@ -162,6 +162,18 @@ const MESSAGES = {
     en: "Let's practice first! Look around and tap the star.",
     ml: 'നമുക്ക് ആദ്യം പരിശീലിക്കാം! ചുറ്റും നോക്കി നക്ഷത്രം തൊടൂ.',
   },
+  // Inside a headset the child selects with the method set in Profile →
+  // Selection, so the warm-up names the act they will actually perform. The
+  // generic `practiceIntro` above still covers the flat screen, where the
+  // mouse selects and neither method is active.
+  practiceIntroPoke: {
+    en: 'Look at the star, then tap the pad in front of you.',
+    ml: 'നക്ഷത്രത്തിലേക്ക് നോക്കൂ, എന്നിട്ട് മുന്നിലുള്ള പാഡിൽ തൊടൂ.',
+  },
+  practiceIntroDwell: {
+    en: 'Look at the star and keep looking — the ring fills up.',
+    ml: 'നക്ഷത്രത്തിലേക്ക് നോക്കി അങ്ങനെ തന്നെ നോക്കിനിൽക്കൂ — വളയം നിറയും.',
+  },
   practiceGreat: { en: 'Great tap! 🌟', ml: 'നല്ല തൊടൽ! 🌟' },
   practiceReady: { en: "You're ready to play! 🎉", ml: 'നിനക്ക് ഇപ്പോൾ കളിക്കാം! 🎉' },
 
