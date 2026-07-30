@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { gameById } from '../types'
+import { gameById, type Difficulty } from '../types'
+import { useSettings } from '../state/settings'
 import { analytics, type LevelProgress } from '../services/analytics'
 import { useAuth } from '../state/auth'
 import { ProgressBar } from '../components/ProgressBar'
@@ -9,7 +10,10 @@ import { playTap } from '../services/sounds'
 
 // Mentor-facing page — stays English; the language setting only localizes
 // in-game content (prompts, buttons, speech).
-const LEVELS: { key: string; label: string; blurb: string; tone: string }[] = [
+// `blurb` is only the fallback for a game that declares no `levelNotes` — it
+// was written for the recognition quizzes and says nothing true about, say,
+// following a pointing cue or reading who is ready for a pass.
+const LEVELS: { key: Difficulty; label: string; blurb: string; tone: string }[] = [
   { key: 'easy', label: 'Easy', blurb: 'Basic recognition with visual cues', tone: 'green' },
   { key: 'medium', label: 'Moderate', blurb: 'Contextual scenarios with partial cues', tone: 'amber' },
   { key: 'hard', label: 'Hard', blurb: 'Complex real-world social situations', tone: 'red' },
@@ -22,6 +26,17 @@ export function GameDetail() {
   const students = useAuth((s) => s.students)
   const activeStudentId = useAuth((s) => s.activeStudentId)
   const active = students.find((s) => s.id === activeStudentId) ?? null
+  const setDifficulty = useSettings((s) => s.setDifficulty)
+
+  // With no participant selected, sessions/steps are recorded without a
+  // student_id and the data is effectively lost for the study. Block play until
+  // the facilitator either selects a participant or explicitly opts to play
+  // unrecorded — otherwise a whole session can be lost invisibly.
+  //
+  // Declared up here with the other hooks: it used to sit below the "unknown
+  // game" early return, so navigating from a real game to a bad :gameId changed
+  // the hook count between renders.
+  const [dismissedGuard, setDismissedGuard] = useState(false)
 
   const [rows, setRows] = useState<LevelProgress[]>([])
   useEffect(() => {
@@ -47,13 +62,20 @@ export function GameDetail() {
     ? Math.round((rows.reduce((a, r) => a + r.best_accuracy, 0) / rows.length) * 100)
     : 0
 
-  // With no participant selected, sessions/steps are recorded without a
-  // student_id and the data is effectively lost for the study. Block play until
-  // the facilitator either selects a participant or explicitly opts to play
-  // unrecorded — otherwise a whole session can be lost invisibly.
-  const [dismissedGuard, setDismissedGuard] = useState(false)
-
-  const play = () => {
+  /**
+   * Start the game, optionally at a chosen level.
+   *
+   * The difficulty panel's three Play buttons used to be the same button: each
+   * navigated without saying which level it was, so the game simply opened at
+   * whatever tier was last picked on its own start screen. Setting it here
+   * makes the per-level button mean what it says (and the start screen then
+   * opens with that level already selected).
+   *
+   * Set before the participant guard returns, so the choice survives the
+   * "play without recording" second click, which carries no level of its own.
+   */
+  const play = (level?: Difficulty) => {
+    if (level) setDifficulty(game.id, level)
     if (!active && !dismissedGuard) {
       setDismissedGuard(true) // reveal the explicit "play unrecorded" escape
       return
@@ -82,7 +104,7 @@ export function GameDetail() {
             <div className="detail-guard-actions">
               <Link to="/participants" className="detail-guard-select">Select participant</Link>
               {dismissedGuard && (
-                <button className="detail-guard-anyway" onClick={play}>Play without recording</button>
+                <button className="detail-guard-anyway" onClick={() => play()}>Play without recording</button>
               )}
             </div>
           </div>
@@ -123,7 +145,7 @@ export function GameDetail() {
                 <span className={`dot dot-${lv.tone}`} aria-hidden />
                 <div className="difficulty-body">
                   <span className="difficulty-name">{lv.label}</span>
-                  <span className="difficulty-blurb">{lv.blurb}</span>
+                  <span className="difficulty-blurb">{game.levelNotes?.[lv.key] ?? lv.blurb}</span>
                   <div className="difficulty-progress">
                     <ProgressBar value={pct} />
                   </div>
@@ -132,7 +154,7 @@ export function GameDetail() {
                     <span className="difficulty-pct">{pct}%</span>
                   </span>
                 </div>
-                <button className="play-btn" onClick={play}>
+                <button className="play-btn" onClick={() => play(lv.key)}>
                   <PlayIcon /> Play
                 </button>
               </div>
@@ -141,7 +163,7 @@ export function GameDetail() {
         </section>
       ) : (
         <section className="detail-play">
-          <button className="btn-primary" onClick={play}>
+          <button className="btn-primary" onClick={() => play()}>
             <PlayIcon /> Play
           </button>
         </section>

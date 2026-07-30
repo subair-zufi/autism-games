@@ -10,6 +10,7 @@ import { speakAll, speechAvailable } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { CONFIG, buildPlayers, makeSequence, peerBearingDeg, type Player, type TurnSpec } from './logic'
+import { useLevelProgress } from '../progression'
 import { prLine, prLines, prSpeak, type Playroom360MessageKey } from './strings'
 import { Playroom360Scene } from './Playroom360Scene'
 import { xrStore, vrSupported } from './xrStore'
@@ -36,6 +37,17 @@ export function Playroom360Game() {
   const reportScore = useScores((s) => s.reportScore)
   const config = CONFIG[difficulty]
   const { recordStep, finishGame, resetSession } = useGameAnalytics('playroom360', xrStore)
+  /**
+   * Per-level progression: blocks placed is NOT a measure here — the child
+   * always gets exactly one turn per round, so it is `config.rounds` every
+   * session and would read as 100% mastered every time. What varies, and what
+   * the game actually trains, is *waiting*: the reported accuracy is
+   * placements / (placements + out-of-turn taps), matching how the server's
+   * `_blocks_trials` already scores Block Buddies (a placement is a success,
+   * an impatient tap a failure).
+   */
+  const { submit } = useLevelProgress('playroom360')
+  const [impatientTaps, setImpatientTaps] = useState(0)
 
   // Speak a line in the chosen language.
   const say = (key: Playroom360MessageKey, params?: Record<string, string>) =>
@@ -89,6 +101,7 @@ export function Playroom360Game() {
     setReaching(false)
     setHandoffTo(null)
     setHintSeen(false)
+    setImpatientTaps(0)
     setPhase('playing')
   }
 
@@ -98,6 +111,7 @@ export function Playroom360Game() {
     if (turn === null) {
       const finalScore = sequence.filter((t) => t.kind === 'child').length
       reportScore('playroom360', finalScore)
+      void submit(difficulty, finalScore, finalScore + impatientTaps)
       finishGame(finalScore)
       say('sayWin')
       playSuccess()
@@ -146,6 +160,7 @@ export function Playroom360Game() {
   function impatient() {
     if (phase !== 'playing') return
     playGentle()
+    setImpatientTaps((n) => n + 1)
     if (handoffTo) {
       // tapped the block mid hand-off: remind them to pass first
       say('sayPassFirst', { name: handoffTo.name })
@@ -185,7 +200,19 @@ export function Playroom360Game() {
   // there's no headset novelty and it's just friction, so it's skipped.
   if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
-  if (phase === 'start') return <StartScreen game={META} onStart={start} />
+  if (phase === 'start') {
+    return (
+      <StartScreen
+        game={META}
+        onStart={start}
+        levelNotes={{
+          easy: prLine('noteEasy', lang),
+          medium: prLine('noteMedium', lang),
+          hard: prLine('noteHard', lang),
+        }}
+      />
+    )
+  }
 
   // Which bilingual line the banner shows for the current state (and its 🔊).
   let promptKey: Playroom360MessageKey

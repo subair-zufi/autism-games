@@ -85,6 +85,17 @@ export interface GameMeta {
   duration: string
   /** True for games with an easy/medium/hard progression (server-tracked). */
   hasLevels: boolean
+  /**
+   * Mentor-facing caption per level for the game detail page's difficulty
+   * panel — what actually changes at this tier, in this game's own terms.
+   *
+   * English only, like the rest of that page (the child-facing equivalents are
+   * the localized `note*` keys in each game's `strings.ts`, shown on the
+   * in-game level picker). Optional: without it the panel falls back to a
+   * generic blurb, which is accurate for the recognition quizzes it was
+   * written for and misleading for anything else.
+   */
+  levelNotes?: Partial<Record<Difficulty, string>>
   /** True to keep the game in the codebase but pull it off the Home page. Remove this flag to bring it back. */
   hidden?: boolean
 }
@@ -118,7 +129,12 @@ export const GAME_LIST: GameMeta[] = [
     objective:
       'Emotion recognition in an immersive first-person gallery: the same "Who feels ___?" question as Emotion Recognition, but the faces stand on framed boards across the front arc and the child turns the view — a head turn in VR — to scan them and tap the right person; distractor faces get more confusable and hints fade to nothing at harder levels, and each answer records how far the child had to turn to reach the correct face',
     duration: '5–10 min',
-    hasLevels: false,
+    hasLevels: true,
+    levelNotes: {
+      easy: '2 faces, easy to tell apart · look-around hint after 5s · 6 rounds',
+      medium: '3 faces, mixed similarity · hint after 9s · 8 rounds',
+      hard: '3 confusable faces (fear/surprise, anger/disgust) · no hints · 10 rounds',
+    },
   },
   {
     id: 'identifyemotions',
@@ -145,7 +161,12 @@ export const GAME_LIST: GameMeta[] = [
     objective:
       'Emotion Clips in an immersive media room: the same clips, freeze-frame, tiered choices and "why does he/she feel …?" follow-up as Emotion Clips, but the clip plays on one big screen sat at a comfortable distance and height, and the child answers by tapping in-world cards; harder levels freeze earlier on a half-formed expression and force confusable choices',
     duration: '5–10 min',
-    hasLevels: false,
+    hasLevels: true,
+    levelNotes: {
+      easy: '6 clips · frozen on the peak expression · 2 choices',
+      medium: '9 clips · frozen on the peak expression · 3 choices',
+      hard: '12 clips · frozen half-formed · 4 choices, plus a “why?” follow-up',
+    },
   },
   {
     id: 'calmcrew',
@@ -191,7 +212,12 @@ export const GAME_LIST: GameMeta[] = [
     objective:
       'Turn-taking · sharing and waiting in an immersive first-person playroom: the same build-wait-hand-off exchange as Block Buddies (fixed rotation → shuffled order → grab-and-place), but the child sits at the play table and turns the view — a head turn in VR — to watch each friend build, tap their own block on their turn, and pass the turn by tapping the next friend',
     duration: '5–10 min',
-    hasLevels: false,
+    hasLevels: true,
+    levelNotes: {
+      easy: '3 builders · same turn order every round · 5 rounds',
+      medium: '4 builders · same turn order every round · 7 rounds',
+      hard: '5 builders · order reshuffled each round · 10 rounds',
+    },
   },
   {
     id: 'rollback',
@@ -218,7 +244,12 @@ export const GAME_LIST: GameMeta[] = [
     objective:
       'Turn-taking · reciprocity in an immersive first-person football ground: the same read-who-is-ready exchange as Roll-Back Buddy (voice → gesture → body cue, with child-initiated rallies on hard), but the child stands on the centre spot and turns the view — a head turn in VR — to find the teammate who is ready and pass the ball back',
     duration: '5–10 min',
-    hasLevels: false,
+    hasLevels: true,
+    levelNotes: {
+      easy: '1 teammate · asks out loud for the ball · 5 rallies',
+      medium: '2 teammates · hands-up gesture, no words · 7 rallies',
+      hard: '3 teammates · body and gaze only · 10 rallies, some child-started',
+    },
   },
   // --- Social Norms ---------------------------------------------------------
   {
@@ -293,7 +324,12 @@ export const GAME_LIST: GameMeta[] = [
     objective:
       'Joint attention · step 1 (responding) in an immersive first-person gallery: the exhibits sit in a row in front of the child with the helper avatar facing them, and the child turns the view to follow the same fading point and gaze cues as Museum Look — a headset-friendly head turn along the row, closer to a real-world "look where I point" exchange',
     duration: '5–10 min',
-    hasLevels: false,
+    hasLevels: true,
+    levelNotes: {
+      easy: '3 exhibits · point with a glowing target · 5 finds',
+      medium: '4 exhibits · point with a sparkle trail · 7 finds',
+      hard: '5 exhibits · plain point, fading to gaze alone · 10 finds',
+    },
   },
   {
     id: 'discovery',
@@ -321,7 +357,12 @@ export const GAME_LIST: GameMeta[] = [
     objective:
       'Joint attention · step 2 (initiating) in an immersive first-person park: the same spontaneous two-tap share loop as Look What I Found! (tap the surprise, tap the friend, in either order — spontaneous shares score more, hints fade to nothing on hard), but the child stands on the lawn and turns the view — a head turn in VR — to spot the surprise; everything playable stays in the front half-circle so the search is a comfortable head turn, never a spin',
     duration: '5–10 min',
-    hasLevels: false,
+    hasLevels: true,
+    levelNotes: {
+      easy: 'Big, obvious surprises · helper nudge after 4s · 5 shares',
+      medium: 'Quieter surprises · nudge after 8s · 6 shares',
+      hard: 'Tiny surprises · no nudges at all · 8 shares',
+    },
   },
 ]
 

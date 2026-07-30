@@ -18,6 +18,7 @@ import {
   starsFor,
   type VideoQuestion,
 } from './logic'
+import { useLevelProgress } from '../progression'
 import { clipLine } from './strings'
 import { IdentifyEmotions360Scene } from './IdentifyEmotions360Scene'
 import { xrStore, vrSupported } from './xrStore'
@@ -48,6 +49,10 @@ export function IdentifyEmotions360Game() {
   const best = useScores((s) => s.best.identifyemotions360)
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('identifyemotions360', xrStore)
+  // Per-level progression: FIRST-TRY correct namings out of the quiz length —
+  // the same pair the `level_result` step records, and what the server's
+  // `_clips_trials` counts (it keeps `attempt: 1` answers only).
+  const { submit } = useLevelProgress('identifyemotions360')
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [quiz, setQuiz] = useState<VideoQuestion[]>([])
@@ -289,6 +294,7 @@ export function IdentifyEmotions360Game() {
       setStars(earned)
       speak(clipLine('sayWin', lang), lang)
       reportScore('identifyemotions360', nextScore)
+      void submit(difficulty, nextFirstTry, total)
       recordStep('level_result', {
         difficulty,
         firstTryCorrect: nextFirstTry,

@@ -21,6 +21,7 @@ import {
   starsFor,
   type Round,
 } from './logic'
+import { useLevelProgress } from '../progression'
 import { roomLine } from './strings'
 import { EmotionRecognition360Scene } from './EmotionRecognition360Scene'
 import { xrStore, vrSupported } from './xrStore'
@@ -52,6 +53,9 @@ export function EmotionRecognition360Game() {
   const best = useScores((s) => s.best.emotionrecognition360)
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('emotionrecognition360', xrStore)
+  // Per-level progression: correct answers out of the session's rounds — the
+  // same pair the `level_result` step already records.
+  const { submit } = useLevelProgress('emotionrecognition360')
   const cfg = CONFIG[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
@@ -230,6 +234,7 @@ export function EmotionRecognition360Game() {
       setStars(earned)
       speak(roomLine('sayWin', lang), lang)
       reportScore('emotionrecognition360', nextScore)
+      void submit(difficulty, nextCorrect, targets.length)
       recordStep('level_result', {
         difficulty,
         correct: nextCorrect,

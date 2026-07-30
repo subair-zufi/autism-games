@@ -95,6 +95,13 @@ const MESSAGES = {
     ml: 'കൊള്ളാം, നല്ല ശ്രമം! കാത്തിരിക്കുന്നത് പ്രയാസാ, പക്ഷേ നീ നന്നായി ചെയ്തു!',
   },
 
+  // --- level-picker captions ---------------------------------------------------
+  // Surface the cue-fading ladder on the picker, like the other 360 games:
+  // how many teammates there are, and how the ready teammate signals.
+  noteEasy: { en: 'One teammate, asks out loud', ml: 'ഒരു കൂട്ടുകാരൻ, ഉറക്കെ ചോദിക്കും' },
+  noteMedium: { en: 'Two teammates, hands up — no words', ml: 'രണ്ട് കൂട്ടുകാർ, കൈ ഉയർത്തും, വാക്കില്ല' },
+  noteHard: { en: 'Three teammates, just body and look', ml: 'മൂന്ന് കൂട്ടുകാർ, നോട്ടം മാത്രം' },
+
   // --- 3D bubble & overlays ----------------------------------------------------
   bubbleAsk: { en: 'Pass it to me!', ml: 'എനിക്ക് പാസ് താ!' },
   hintLook: { en: 'Drag to look around the ground', ml: 'ഗ്രൗണ്ട് ചുറ്റും കാണാൻ വലിച്ചു നോക്കൂ' },

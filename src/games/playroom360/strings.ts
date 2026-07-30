@@ -60,6 +60,13 @@ const MESSAGES = {
     ml: '{name} പണിയുന്നു. നിന്റെ ഊഴം വരെ കാത്തിരിക്കൂ.',
   },
 
+  // --- level-picker captions ---------------------------------------------------
+  // Surface the turn-taking ladder on the picker, like the other 360 games:
+  // how many builders share the tower, and whether the order can be anticipated.
+  noteEasy: { en: 'Three builders, same turn order', ml: 'മൂന്ന് പേർ, ഒരേ ഊഴക്രമം' },
+  noteMedium: { en: 'Four builders, same turn order', ml: 'നാല് പേർ, ഒരേ ഊഴക്രമം' },
+  noteHard: { en: 'Five builders, order changes each round', ml: 'അഞ്ച് പേർ, ഊഴക്രമം മാറും' },
+
   // --- 3D overlays -------------------------------------------------------------
   hintLook: { en: 'Drag to look around the playroom', ml: 'മുറി ചുറ്റും കാണാൻ വലിച്ചു നോക്കൂ' },
   enterVR: { en: 'Enter VR', ml: 'VR-ൽ കളിക്കൂ' },

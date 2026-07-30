@@ -21,6 +21,7 @@ import {
   type Player,
   type Rally,
 } from './logic'
+import { useLevelProgress } from '../progression'
 import { Football360Scene } from './Football360Scene'
 import { fbLine, fbLines, fbSpeak, type Football360MessageKey } from './strings'
 import { xrStore, vrSupported } from './xrStore'
@@ -58,6 +59,11 @@ export function Football360Game() {
   const config = CONFIG[difficulty]
   const goal = GOAL[difficulty]
   const { recordStep, finishGame, resetSession } = useGameAnalytics('football360', xrStore)
+  // Per-level progression: FIRST-ATTEMPT correct returns out of the level's
+  // goal — the same numerator the server's `_rollback_trials` counts. The
+  // denominator stays `goal` (never the rallies actually reached), so a
+  // session that ends early on lives reads as the partial level it was.
+  const { submit } = useLevelProgress('football360')
 
   // Speak a line in the chosen language. `onEnd` (used for the ready cue) fires
   // when the spoken line finishes, so latency can also be measured from there.
@@ -74,6 +80,7 @@ export function Football360Game() {
   const [lastPicked, setLastPicked] = useState<number | null>(null)
   const [score, setScore] = useState(0) // child-facing points
   const [returned, setReturned] = useState(0) // correct returns this session
+  const [firstTries, setFirstTries] = useState(0) // returns made on the first attempt
   const [streak, setStreak] = useState(0) // consecutive first-attempt returns
   const [attempts, setAttempts] = useState(0) // failed tries this rally
   const [lives, setLives] = useState(MAX_LIVES)
@@ -116,6 +123,7 @@ export function Football360Game() {
     setLastPicked(null)
     setScore(0)
     setReturned(0)
+    setFirstTries(0)
     setStreak(0)
     setAttempts(0)
     setLives(MAX_LIVES)
@@ -201,6 +209,7 @@ export function Football360Game() {
         setStars(starsFor(true, lives))
         say('sayWin')
         reportScore('football360', score)
+        void submit(difficulty, firstTries, goal)
         finishGame(score)
         setPhase('over')
         return
@@ -224,6 +233,9 @@ export function Football360Game() {
       setStars(starsFor(false, 0))
       say('sayLose')
       reportScore('football360', score)
+      // out of lives: the level was still attempted, so it is reported against
+      // the full goal rather than silently dropped
+      void submit(difficulty, firstTries, goal)
       finishGame(score)
       setPhase('over')
     }
@@ -268,6 +280,7 @@ export function Football360Game() {
       setBallOwner(i)
       setScore(nextScore)
       setReturned(nextReturned)
+      if (firstAttempt) setFirstTries((f) => f + 1)
       setStreak(nextStreak)
       recordStep(
         'roll_return',
@@ -321,7 +334,19 @@ export function Football360Game() {
   // there's no headset novelty and it's just friction, so it's skipped.
   if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
-  if (phase === 'start') return <StartScreen game={META} onStart={start} />
+  if (phase === 'start') {
+    return (
+      <StartScreen
+        game={META}
+        onStart={start}
+        levelNotes={{
+          easy: fbLine('noteEasy', lang),
+          medium: fbLine('noteMedium', lang),
+          hard: fbLine('noteHard', lang),
+        }}
+      />
+    )
+  }
 
   // Which bilingual line the banner shows for the current stage (and its 🔊).
   let promptKey: Football360MessageKey

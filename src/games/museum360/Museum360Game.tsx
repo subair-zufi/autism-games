@@ -26,6 +26,7 @@ import {
   type ExhibitId,
   type Round,
 } from './logic'
+import { useLevelProgress } from '../progression'
 import { museum360Line, exhibitLabel } from './strings'
 import { Museum360Scene } from './Museum360Scene'
 import { xrStore, vrSupported } from './xrStore'
@@ -52,6 +53,10 @@ export function Museum360Game() {
   const best = useScores((s) => s.best.museum360)
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('museum360', xrStore)
+  // Per-level progression: a finished session reports first-attempt finds out
+  // of the level's goal, the same numerator `starsFor` and the server's
+  // `_pointing_trials` already treat as success.
+  const { submit } = useLevelProgress('museum360')
   const goal = GOAL[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
@@ -167,6 +172,7 @@ export function Museum360Game() {
         setStars(starsFor(nextFirstTries, goal))
         say('sayWin')
         reportScore('museum360', nextScore)
+        void submit(difficulty, nextFirstTries, goal)
         finishGame(nextScore)
         setTimeout(() => setPhase('over'), 1200)
         return

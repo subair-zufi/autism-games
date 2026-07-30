@@ -22,6 +22,7 @@ import {
   type Friend,
   type Round,
 } from './logic'
+import { useLevelProgress } from '../progression'
 import { discoveryLabel, parkLine } from './strings'
 import { Park360Scene } from './Park360Scene'
 import { xrStore, vrSupported } from './xrStore'
@@ -47,6 +48,10 @@ export function Park360Game() {
   const best = useScores((s) => s.best.park360)
   const reportScore = useScores((s) => s.reportScore)
   const { recordStep, finishGame, resetSession } = useGameAnalytics('park360', xrStore)
+  // Per-level progression: a finished session reports SPONTANEOUS (un-nudged)
+  // shares out of the level's goal — the same numerator `starsFor` and the
+  // server's `_discovery_trials` treat as success, not shares completed.
+  const { submit } = useLevelProgress('park360')
   const cfg = CONFIG[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
@@ -279,6 +284,7 @@ export function Park360Game() {
       setStars(starsFor(nextSpont, cfg.goal))
       say('sayWin')
       reportScore('park360', nextScore)
+      void submit(difficulty, nextSpont, cfg.goal)
       finishGame(nextScore)
       setTimeout(() => setPhase('over'), 1600)
       return
