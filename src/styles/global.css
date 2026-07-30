@@ -684,9 +684,44 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   outline: none;
 }
 .tap-region:disabled { cursor: default; }
+/* "How does he/she feel?" asks about ONE person in a group photo. The others
+   were never part of the item, so a child who reads the wrong face produces an
+   error that measures nothing. The referent therefore has to be unmistakable:
+   the other faces are dimmed so the target is the only bright one, the ring is
+   kept as the familiar marker, and `.face-pointer` adds an arrow so the cue is
+   not carried by colour alone.
+
+   No amber wash over the target any more: it sat directly on the face being
+   judged, and a colour cast on a face is the last thing an expression-reading
+   task wants. Dimming the others achieves the same contrast without touching
+   the pixels the child is being asked to read. */
 .tap-region.highlight {
-  background: rgba(246, 193, 119, 0.22);
-  box-shadow: inset 0 0 0 5px #f6c177;
+  background: transparent;
+  box-shadow: inset 0 0 0 6px #f6c177;
+  border-radius: 8px;
+}
+.tap-region.dimmed {
+  background: rgba(12, 16, 24, 0.62);
+}
+/* The arrow: centred over the target's column, clear of the faces, never a hit
+   target of its own.
+
+   Drawn rather than an emoji glyph. An emoji arrow renders in whatever colour
+   the platform chooses — navy on one device, black on another — so it would
+   vanish against dark hair or a dark background, and it would not read as part
+   of the same cue as the ring. This is the ring's own amber, on every device,
+   with a shadow so it holds up over a light wall too. */
+.face-pointer {
+  position: absolute;
+  top: 2%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: clamp(9px, 2.2vw, 15px) solid transparent;
+  border-right: clamp(9px, 2.2vw, 15px) solid transparent;
+  border-top: clamp(13px, 3.2vw, 22px) solid #f6c177;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
 }
 .video-stage {
   display: flex;
