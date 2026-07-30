@@ -358,6 +358,7 @@ export function Football360Game() {
             childTurn={stage === 'hold'}
             shake={shake}
             onPickPartner={pick}
+            lang={lang}
             hudScore={`⭐ ${score} · ⚽ ${returned} / ${goal} · ❤️ ${lives}`}
             hudPrompt={fbLine(promptKey, lang, promptParams)}
             hudQuit={t('vrQuit', lang)}

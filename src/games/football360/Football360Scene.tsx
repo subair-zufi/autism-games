@@ -18,6 +18,7 @@ import {
   type Player,
 } from './logic'
 import { fbLine } from './strings'
+import type { Lang } from '../../i18n/strings'
 
 /** the child's eye height — the camera stands here, on the centre spot */
 const EYE_Y = 1.6
@@ -47,6 +48,9 @@ export interface Football360SceneProps {
   /** increments on a premature pass — shakes the ball */
   shake: number
   onPickPartner: (index: number) => void
+  /** the chosen play language — the in-world name tags and the teammate's
+   *  "pass it to me!" bubble are child-facing text and must follow it */
+  lang: Lang
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
@@ -481,7 +485,7 @@ function ballSpot(index: number, players: Player[]): [number, number] {
 }
 
 function SceneInner(props: Football360SceneProps) {
-  const { players, cue, ballOwner, readyIndex, rollerIndex, rejectIndex, celebrateIndex, childTurn, shake, onPickPartner } = props
+  const { players, cue, ballOwner, readyIndex, rollerIndex, rejectIndex, celebrateIndex, childTurn, shake, onPickPartner, lang } = props
   const partners = players.length - 1
 
   return (
@@ -511,6 +515,7 @@ function SceneInner(props: Football360SceneProps) {
             rejecting={i === rejectIndex}
             celebrating={i === celebrateIndex}
             onPick={() => onPickPartner(i)}
+            lang={lang}
           />
         )
       })}
@@ -632,6 +637,7 @@ function Kid({
   rejecting,
   celebrating,
   onPick,
+  lang,
 }: {
   player: Player
   x: number
@@ -643,6 +649,7 @@ function Kid({
   rejecting: boolean
   celebrating: boolean
   onPick: () => void
+  lang: Lang
 }) {
   const g = useRef<THREE.Group>(null)
   const body = useRef<THREE.Group>(null)
@@ -774,9 +781,12 @@ function Kid({
           </mesh>
         </group>
 
-        {/* name tag — a canvas panel (visible in VR too), turned to the child */}
+        {/* name tag — a canvas panel (visible in VR too), turned to the child.
+            Malayalam script in an English session is unreadable to the child,
+            so the tag follows the play language like every other child-facing
+            label (`name` is Malayalam, `nameEn` the romanization). */}
         <TextPanel
-          text={player.name}
+          text={lang === 'ml' ? player.name : player.nameEn}
           position={[0, 1.92, 0]}
           width={0.9}
           height={0.28}
@@ -788,7 +798,7 @@ function Kid({
         {/* verbal cue only: the teammate literally asks for the ball */}
         {ready && cue === 'verbal' && (
           <TextPanel
-            text={fbLine('bubbleAsk', 'ml')}
+            text={fbLine('bubbleAsk', lang)}
             position={[0, 2.28, 0]}
             width={1.5}
             height={0.4}
