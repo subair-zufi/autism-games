@@ -64,6 +64,31 @@ export const CONFIG: Record<Difficulty, BlockConfig> = {
   hard: { players: 5, rounds: 10, peerTurnMs: 2400, shuffle: true },
 }
 
+/**
+ * Stars for a finished session, from how well the child WAITED.
+ *
+ * Blocks placed cannot be the measure: the child gets exactly one turn per
+ * round, so it is always `config.rounds` and every session would earn three
+ * stars. What varies — and what this game trains — is not grabbing a turn that
+ * is not yours, so the ratio is placements over placements-plus-out-of-turn
+ * taps. Deliberately the same pair reported to `game_progress` and the same
+ * one the server's `_blocks_trials` scores, so the stars the child sees and the
+ * accuracy the study records cannot drift apart.
+ *
+ * 3 stars ≥80% of actions were in turn, 2 ≥50%, else 1 — the same thresholds as
+ * the other 360 games, and every finished session earns at least one. The
+ * tolerance therefore scales with session length: on Easy (5 rounds) one
+ * impatient tap still earns three stars, on Hard (10 rounds) two do. No-fail
+ * stands — an impatient tap is coached, never punished; it only means fewer
+ * stars, and the game itself never ends early.
+ */
+export function starsFor(placements: number, actions: number): number {
+  const ratio = actions > 0 ? placements / actions : 0
+  if (ratio >= 0.8) return 3
+  if (ratio >= 0.5) return 2
+  return 1
+}
+
 /** Blocks per tower before it is set aside and a new one begins — with the
  * small 360 blocks this also caps the stack below every friend's face. */
 export const TOWER_MAX = 8

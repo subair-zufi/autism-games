@@ -10,6 +10,7 @@ import {
   TOWER_MAX,
   blockY,
   buildPlayers,
+  starsFor,
   makeSequence,
   peerBearingDeg,
   peerPosition,
@@ -104,5 +105,34 @@ describe('playroom360 logic (same rotation as Block Buddies)', () => {
     expect(peerBearingDeg(2, 4)).toBe(0)
     expect(x).toBeCloseTo(0)
     expect(z).toBeLessThan(0) // in front of the child
+  })
+})
+
+describe('stars reward waiting, not placing', () => {
+  it('gives three stars for a session with no out-of-turn taps', () => {
+    // 10 rounds on Hard, every action in turn
+    expect(starsFor(10, 10)).toBe(3)
+  })
+
+  it('scales tolerance with session length', () => {
+    // Easy is 5 rounds: one slip still clears 80%, two does not
+    expect(starsFor(5, 6)).toBe(3)
+    expect(starsFor(5, 7)).toBe(2)
+    // Hard is 10 rounds: two slips clear it, three do not
+    expect(starsFor(10, 12)).toBe(3)
+    expect(starsFor(10, 13)).toBe(2)
+  })
+
+  it('never drops below one star, however impatient the child was', () => {
+    expect(starsFor(5, 50)).toBe(1)
+    expect(starsFor(0, 0)).toBe(1) // degenerate: no actions at all
+  })
+
+  /**
+   * The point of the measure: placements alone are fixed by the rotation, so
+   * every session would look identical. Only the impatient taps separate them.
+   */
+  it('does not vary with rounds played when nothing was rushed', () => {
+    expect(starsFor(5, 5)).toBe(starsFor(10, 10))
   })
 })

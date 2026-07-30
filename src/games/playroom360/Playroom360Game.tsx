@@ -9,7 +9,7 @@ import { WebGLGate } from '../../components/WebGLGate'
 import { speakAll, speechAvailable } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
-import { CONFIG, buildPlayers, makeSequence, peerBearingDeg, type Player, type TurnSpec } from './logic'
+import { CONFIG, buildPlayers, makeSequence, peerBearingDeg, starsFor, type Player, type TurnSpec } from './logic'
 import { useLevelProgress } from '../progression'
 import { prLine, prLines, prSpeak, type Playroom360MessageKey } from './strings'
 import { Playroom360Scene } from './Playroom360Scene'
@@ -48,6 +48,9 @@ export function Playroom360Game() {
    */
   const { submit } = useLevelProgress('playroom360')
   const [impatientTaps, setImpatientTaps] = useState(0)
+  /** 1–3 stars for the finished session; the other five 360 games all show
+   *  them, and Playroom was the only one ending on a bare score. */
+  const [stars, setStars] = useState(0)
 
   // Speak a line in the chosen language.
   const say = (key: Playroom360MessageKey, params?: Record<string, string>) =>
@@ -102,6 +105,7 @@ export function Playroom360Game() {
     setHandoffTo(null)
     setHintSeen(false)
     setImpatientTaps(0)
+    setStars(0)
     setPhase('playing')
   }
 
@@ -111,7 +115,10 @@ export function Playroom360Game() {
     if (turn === null) {
       const finalScore = sequence.filter((t) => t.kind === 'child').length
       reportScore('playroom360', finalScore)
+      // same placements/actions pair the stars are computed from, so the
+      // child's reward and the recorded accuracy can never disagree
       void submit(difficulty, finalScore, finalScore + impatientTaps)
+      setStars(starsFor(finalScore, finalScore + impatientTaps))
       finishGame(finalScore)
       say('sayWin')
       playSuccess()
@@ -313,6 +320,7 @@ export function Playroom360Game() {
           <GameOverDialog
             score={score}
             best={Math.max(best, score)}
+            stars={stars}
             message={t('greatPlaying', lang)}
             lang={lang}
             onRestart={start}
