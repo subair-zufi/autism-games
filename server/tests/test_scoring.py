@@ -116,6 +116,21 @@ def test_blocks_placements_vs_impatient():
     assert g.score == 75.0  # chance 0 -> score == raw accuracy * 100
 
 
+def test_blocks_counts_hand_offs_as_successes():
+    # The reciprocal half of the exchange: a tap during a hand-off already
+    # counted against the child, so the hand-offs they passed correctly have
+    # to count for them too, or only the slips are ever visible.
+    evs = [
+        ev("blocks", "place_block", {"round": 0}),
+        ev("blocks", "hand_off", {"round": 0, "to": "peer-1"}),
+        ev("blocks", "impatient_tap", {"round": 1, "during": "handoff"}),
+        ev("blocks", "hand_off", {"round": 1, "to": "peer-2"}),
+    ]
+    g = scoring.score_game("blocks", evs)
+    assert g.n_trials == 4
+    assert g.raw_accuracy == 0.75  # was 1 correct of 2 before hand-offs counted
+
+
 def test_discovery_spontaneous_shares():
     evs = [
         ev("discovery", "event_ready", {"discovery": "gem", "saliency": "big"}),  # not a trial
@@ -129,6 +144,56 @@ def test_discovery_spontaneous_shares():
     assert g.raw_accuracy == 0.5
     assert g.score == 50.0  # chance 0 -> score == raw accuracy * 100
     assert g.median_latency_ms == 5750
+
+
+def test_discovery_timeout_is_a_failed_round():
+    # Hard fires no nudges, so a round sat out produces only `no_share`. It
+    # used to yield no trial at all — the non-initiating child simply vanished.
+    evs = [
+        # round 1: sat out, then finally completed -> one failed round
+        ev("park360", "event_ready", {"discovery": "bunny"}, offset=0),
+        ev("park360", "no_share", {"discovery": "bunny", "timedOutAfterMs": 20000}, offset=1),
+        ev("park360", "share", {"correct": True, "spontaneous": True, "nudges": 0, "latencyMs": 38000}, offset=2),
+        # round 2: initiated promptly -> one clean round
+        ev("park360", "event_ready", {"discovery": "gem"}, offset=3),
+        ev("park360", "share", {"correct": True, "spontaneous": True, "nudges": 0, "latencyMs": 1500}, offset=4),
+    ]
+    g = scoring.score_game("park360", evs)
+    assert g.n_trials == 2  # the timed-out round, plus the clean one
+    assert g.raw_accuracy == 0.5
+
+
+def test_discovery_late_completion_does_not_erase_its_timeout():
+    # Completing a round after the timeout still counts as sitting it out: on
+    # Hard nothing nudges, so `spontaneous` stays true however long it took.
+    evs = [
+        ev("park360", "no_share", {"discovery": "gem", "timedOutAfterMs": 20000}, offset=0),
+        ev("park360", "share", {"correct": True, "spontaneous": True, "nudges": 0, "latencyMs": 41000}, offset=1),
+    ]
+    g = scoring.score_game("park360", evs)
+    assert g.n_trials == 1  # one round played, not two
+    assert g.raw_accuracy == 0.0
+    assert g.score == 0.0
+
+
+def test_discovery_timeout_never_completed_still_scores():
+    evs = [ev("park360", "no_share", {"discovery": "bird", "timedOutAfterMs": 20000})]
+    g = scoring.score_game("park360", evs)
+    assert g.n_trials == 1
+    assert g.raw_accuracy == 0.0
+
+
+def test_discovery_pairs_timeouts_within_their_own_session():
+    # Two sessions interleaved in the event stream: a timeout in one must not
+    # be closed by a share from the other.
+    evs = [
+        ev("park360", "no_share", {"discovery": "gem"}, session="a", offset=0),
+        ev("park360", "share", {"correct": True, "spontaneous": True, "latencyMs": 1200}, session="b", offset=1),
+        ev("park360", "share", {"correct": True, "spontaneous": True, "latencyMs": 1300}, session="a", offset=2),
+    ]
+    g = scoring.score_game("park360", evs)
+    assert g.n_trials == 2
+    assert g.raw_accuracy == 0.5  # session b clean, session a timed out
 
 
 # --- VR copies score identically to their flat originals -----------------------

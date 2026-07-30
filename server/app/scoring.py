@@ -277,13 +277,60 @@ def _discovery_trials(events: Iterable[EventLike]) -> list[Trial]:
     (the child tapped both the surprise and the friend). A share is a success
     iff it was ``spontaneous`` — completed before any helper nudge fired.
     Initiation has no guessing baseline, so chance is 0 (like Blocks), and
-    ``latencyMs`` is surprise-onset -> friend-tap (the initiation latency)."""
+    ``latencyMs`` is surprise-onset -> friend-tap (the initiation latency).
+
+    Hard fires no nudges at all, so on that tier ``spontaneous`` is true for
+    ANY completion however long it took — a child who initiated after 45s
+    scored identically to one who initiated in two. The client marks that case
+    with a one-off ``no_share`` timeout event (NO_SHARE_TIMEOUT_MS), which this
+    used to ignore entirely: a child who never initiated produced no trial at
+    all, and the round they eventually completed counted as a clean success.
+    Both directions flattered exactly the non-initiating child the game exists
+    to identify.
+
+    A timeout now opens a failed round. If the child completes it afterwards
+    the completion is folded into that same round rather than adding a second
+    trial, so the round count still matches the rounds actually played and the
+    late initiation cannot score as spontaneous. A timeout never followed by a
+    share (session abandoned) stands on its own as the failure it was.
+
+    Sorted here rather than trusting the caller: pairing a timeout with the
+    share that closes it is the only order-dependent rule in this module.
+    """
     out: list[Trial] = []
-    for e in events:
+    pending: dict[str | None, EventLike] = {}  # session -> unclosed timeout
+
+    def _fail(e: EventLike) -> Trial:
+        return Trial(
+            correct=False,
+            chance=0.0,
+            latency_ms=None,  # a round that timed out has no initiation latency
+            session_id=_sid(e),
+            ts=e.created_at,
+            payload=_p(e),
+        )
+
+    for e in sorted(events, key=lambda x: (str(_sid(x)), x.created_at)):
+        if e.event_type == "no_share":
+            sid = _sid(e)
+            # A round only advances by being completed, so a session can never
+            # hold two open timeouts at once. If one somehow arrives, close the
+            # older out as the failure it already was rather than letting a
+            # later share pair with the wrong round.
+            stale = pending.get(sid)
+            if stale is not None:
+                out.append(_fail(stale))
+            pending[sid] = e
+            continue
         if e.event_type != "share":
             continue
         p = _p(e)
         if "correct" not in p:
+            continue
+        timed_out = pending.pop(_sid(e), None)
+        if timed_out is not None:
+            # completed, but only after the round had already been sat out
+            out.append(_fail(timed_out))
             continue
         out.append(
             Trial(
@@ -295,15 +342,28 @@ def _discovery_trials(events: Iterable[EventLike]) -> list[Trial]:
                 payload=p,
             )
         )
-    return out
+    # timeouts still open at the end were never completed at all
+    out.extend(_fail(e) for e in pending.values())
+    return sorted(out, key=lambda t: t.ts)
 
 
 def _blocks_trials(events: Iterable[EventLike]) -> list[Trial]:
     """Block Buddies: waiting for one's turn has no guessing baseline. Each block
-    placed is a success; each out-of-turn (impatient) tap is a failure."""
+    placed is a success, each completed hand-off is a success, and each
+    out-of-turn (impatient) tap is a failure.
+
+    Hand-offs used to be dropped, which scored the exchange one-sidedly: a tap
+    on the block *during* a hand-off is an ``impatient_tap`` and counted
+    against the child, but the hand-offs they passed correctly counted for
+    nothing. Only the slips were visible, so a child who handed off cleanly
+    twenty times and fumbled twice scored the two fumbles and none of the
+    twenty. Both games emit ``hand_off``, so this reads the same on the flat
+    original and on Playroom 360 — and it is the reciprocal half of the
+    exchange Playroom 360 was built to add.
+    """
     out: list[Trial] = []
     for e in events:
-        if e.event_type == "place_block":
+        if e.event_type in ("place_block", "hand_off"):
             correct = True
         elif e.event_type == "impatient_tap":
             correct = False
