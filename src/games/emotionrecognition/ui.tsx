@@ -151,6 +151,10 @@ export function GroupPhotoStage({
   onReady?: () => void
 }) {
   const colWidth = 100 / photo.emotions.length
+  // Whether this activity singles out one face to ask about. Guarded on the
+  // index too: without it, `highlightIndex === undefined` would dim every face
+  // and point the arrow at NaN.
+  const marksOneFace = mode === 'nameFace' && highlightIndex !== undefined
   return (
     <div className="game-canvas">
       <div className="video-stage">
@@ -162,8 +166,14 @@ export function GroupPhotoStage({
             onReady={onReady}
           />
           {photo.emotions.map((_, i) => {
+            const asksAboutThisFace = mode === 'nameFace' && i === highlightIndex
             let cls = 'tap-region'
-            if (mode === 'nameFace' && i === highlightIndex) cls += ' highlight'
+            if (asksAboutThisFace) cls += ' highlight'
+            // Dim every other face so the one being asked about is the only
+            // bright one. `nameFace` only — in `whoFeels` the child has to
+            // compare all the faces to find the target, so dimming any of them
+            // would break the task rather than clarify it.
+            if (marksOneFace && !asksAboutThisFace) cls += ' dimmed'
             if (mode === 'whoFeels' && answered && i === correctIndex) cls += ' correct'
             if (mode === 'whoFeels' && answered && i === pickedIndex && i !== correctIndex) cls += ' wrong'
             return (
@@ -172,11 +182,21 @@ export function GroupPhotoStage({
                 className={cls}
                 style={{ left: `${i * colWidth}%`, width: `${colWidth}%` }}
                 disabled={mode !== 'whoFeels' || answered}
-                aria-label={`person ${i + 1}`}
+                aria-label={asksAboutThisFace ? `person ${i + 1}, the one being asked about` : `person ${i + 1}`}
                 onClick={() => onPick?.(i)}
               />
             )
           })}
+          {/* Points at the person the question is about, so the cue is not
+              carried by colour and brightness alone. Decorative: the same fact
+              is in the highlighted region's aria-label above. */}
+          {marksOneFace && (
+            <span
+              className="face-pointer"
+              style={{ left: `${highlightIndex! * colWidth + colWidth / 2}%` }}
+              aria-hidden
+            />
+          )}
         </div>
       </div>
     </div>
