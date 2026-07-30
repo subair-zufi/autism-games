@@ -8,6 +8,7 @@ import { XRCameraHome } from '../XRCameraHome'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
+import { VRHudAnchor } from '../VRHudAnchor'
 import {
   BLOCK_H,
   BLOCK_W,
@@ -173,14 +174,14 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
-    <group>
+    <VRHudAnchor designEyeY={EYE_Y}>
       <TextPanel text={score} position={[0, 3.02, -6.4]} width={2.2} height={0.5} font={110} />
       <TextPanel text={prompt} position={[0, 2.45, -6.4]} width={4.4} height={0.72} font={64} />
       {/* just left of the outermost seated peer (≈−31°) — clear of the table */}
       <VRQuitButton bearingDeg={-48} label={quit} />
       {/* selection-method switch, directly under Quit in the same controls corner */}
       <VRInputSwitch bearingDeg={-48} />
-    </group>
+    </VRHudAnchor>
   )
 }
 

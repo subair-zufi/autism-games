@@ -8,6 +8,7 @@ import { XRCameraHome } from '../XRCameraHome'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
+import { VRHudAnchor } from '../VRHudAnchor'
 import {
   bearingToXZ,
   discoveryPosition,
@@ -186,14 +187,14 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
-    <group>
+    <VRHudAnchor designEyeY={EYE_Y}>
       <TextPanel text={score} position={[0, 3.9, -7.4]} width={2.6} height={0.62} font={110} />
       <TextPanel text={prompt} position={[0, 3.15, -7.4]} width={4.6} height={0.8} font={64} />
       {/* just left of the outermost discovery (flower ≈−52°) — clear of the play area */}
       <VRQuitButton bearingDeg={-66} label={quit} />
       {/* selection-method switch, directly under Quit in the same controls corner */}
       <VRInputSwitch bearingDeg={-66} />
-    </group>
+    </VRHudAnchor>
   )
 }
 
