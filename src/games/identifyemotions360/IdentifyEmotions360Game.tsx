@@ -140,6 +140,26 @@ export function IdentifyEmotions360Game() {
     [videoEl],
   )
 
+  // Hold the clip when the page goes out of sight. A <video> is NOT throttled
+  // while hidden — it plays on with no renderer drawing it — so a child who
+  // takes the headset off mid-clip used to come back to a picture already
+  // frozen on an expressive frame they never saw, with the latency clock
+  // started. Resume only if the clip had not reached its freeze yet.
+  useEffect(() => {
+    const onChange = () => {
+      if (document.visibilityState === 'hidden') {
+        if (!videoEl.paused) videoEl.pause()
+        return
+      }
+      // pausedRef marks the FREEZE pause, which must never be resumed here
+      if (!pausedRef.current && phase === 'playing' && videoEl.src) {
+        void videoEl.play().catch(() => {})
+      }
+    }
+    document.addEventListener('visibilitychange', onChange)
+    return () => document.removeEventListener('visibilitychange', onChange)
+  }, [videoEl, phase])
+
   // Leave immersive VR when the session ends so the DOM results dialog shows.
   useEffect(() => {
     if (phase === 'over') void xrStore.getState().session?.end()

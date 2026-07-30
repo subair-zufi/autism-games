@@ -84,6 +84,27 @@ export function IdentifyEmotionsGame() {
     if (phase === 'select') setSelectedLevel(highest)
   }, [highest, phase])
 
+  // Hold the clip when the page goes out of sight. A <video> is NOT throttled
+  // while hidden — it plays on with nothing drawing it — so a child who looks
+  // away mid-clip used to return to a picture already frozen on an expressive
+  // frame they never saw, with the latency clock started. Fixed here as well as
+  // in Emotion Cinema 360 on purpose: the flat and immersive builds are the two
+  // arms of the 2D↔VR comparison, and repairing only one would bias it.
+  useEffect(() => {
+    const onChange = () => {
+      const v = videoRef.current
+      if (!v) return
+      if (document.visibilityState === 'hidden') {
+        if (!v.paused) v.pause()
+        return
+      }
+      // pausedRef marks the FREEZE pause, which must never be resumed here
+      if (!pausedRef.current && phase === 'playing' && v.src) void v.play().catch(() => {})
+    }
+    document.addEventListener('visibilitychange', onChange)
+    return () => document.removeEventListener('visibilitychange', onChange)
+  }, [phase])
+
   function start(lvl: Difficulty) {
     resetSession()
     setLevel(lvl)

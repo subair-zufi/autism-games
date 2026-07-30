@@ -10,6 +10,8 @@ vi.mock('../services/analytics', () => ({
 }))
 
 import { useGameAnalytics } from './useGameAnalytics'
+import { beginHeadWindow } from './headTracking'
+import { notePageHidden, notePageVisible, resetVisibilityForTest } from '../services/visibility'
 import { analytics } from '../services/analytics'
 import { useSettings } from '../state/settings'
 
@@ -17,6 +19,7 @@ describe('useGameAnalytics', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     useSettings.getState().setInputMethod('dwell')
+    resetVisibilityForTest()
   })
 
   it('starts a session lazily on the first recordStep, then reuses it', async () => {
@@ -47,7 +50,10 @@ describe('useGameAnalytics', () => {
     expect(analytics.recordStep).toHaveBeenCalledWith(
       'blocks',
       'game_over',
-      { xrPresenting: false, inputMethod: 'dwell', headYawContaminated: false },
+      // objectContaining, not an exact match: this is the shared context every
+      // step carries, and it grows (visibility metrics, and whatever comes
+      // next). Pinning the whole shape here just breaks on every addition.
+      expect.objectContaining({ xrPresenting: false, inputMethod: 'dwell', headYawContaminated: false }),
       expect.objectContaining({ score: 7 }),
     )
     expect(analytics.endSession).toHaveBeenCalledWith('sess-1', 7)
@@ -81,5 +87,26 @@ describe('useGameAnalytics', () => {
     const other = renderHook(() => useGameAnalytics('football360', inXr))
     await act(async () => { other.result.current.recordStep('answer') })
     expect((analytics.recordStep as any).mock.calls[2][2]).toMatchObject({ headYawContaminated: false })
+  })
+
+  it('tags every step with how much of the trial the page was hidden', async () => {
+    const { result } = renderHook(() => useGameAnalytics('museum360'))
+
+    beginHeadWindow(0) // trial opens (this also opens the visibility window)
+    await act(async () => { result.current.recordStep('answer') })
+    expect((analytics.recordStep as any).mock.calls[0][2]).toMatchObject({
+      pageWasHidden: false,
+      pageHideCount: 0,
+    })
+
+    // the child takes the headset off mid-trial and comes back
+    beginHeadWindow(1000)
+    notePageHidden(1500)
+    notePageVisible(4000)
+    await act(async () => { result.current.recordStep('answer') })
+    const p = (analytics.recordStep as any).mock.calls[1][2]
+    expect(p.pageWasHidden).toBe(true)
+    expect(p.pageHideCount).toBe(1)
+    expect(p.pageHiddenMs).toBeGreaterThanOrEqual(2500)
   })
 })

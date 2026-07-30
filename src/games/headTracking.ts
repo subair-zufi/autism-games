@@ -22,6 +22,8 @@
  * is unit-testable without a WebGL context.
  */
 
+import { beginVisibilityWindow } from '../services/visibility'
+
 /** how often <HeadSampler> writes a pose (Hz) */
 export const HEAD_SAMPLE_HZ = 10
 
@@ -49,10 +51,18 @@ export function angDiffDeg(a: number, b: number): number {
   return d
 }
 
-/** Open a fresh telemetry window at stimulus/cue onset. */
+/**
+ * Open a fresh telemetry window at stimulus/cue onset.
+ *
+ * Also opens the page-visibility window. Every game already calls this at the
+ * exact moment a trial begins, so it is the one place that knows where a trial
+ * starts — and `useGameAnalytics` reports how much of that window the child
+ * spent with the page hidden, alongside these head metrics.
+ */
 export function beginHeadWindow(now: number = performance.now()): void {
   buf.length = 0
   windowStart = now
+  beginVisibilityWindow(now)
 }
 
 /** The most recent sampled yaw (deg), or 0 before any sample has arrived —

@@ -32,6 +32,7 @@ import { DiscoveryGame } from './games/discovery/DiscoveryGame'
 import { Park360Game } from './games/park360/Park360Game'
 import { useAuth } from './state/auth'
 import { useOffline } from './state/offline'
+import { installVisibilityTracking } from './services/visibility'
 import { PlayOffline } from './pages/PlayOffline'
 
 const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
@@ -66,6 +67,9 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 export default function App() {
   useEffect(() => {
     useAuth.getState().hydrate()
+    // Watch for the page going out of sight, so every trial can record how
+    // much of itself the child was not present for (services/visibility.ts).
+    installVisibilityTracking()
   }, [])
 
   return (

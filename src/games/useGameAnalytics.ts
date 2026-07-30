@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { analytics } from '../services/analytics'
 import { useSettings } from '../state/settings'
+import { visibilityMetrics } from '../services/visibility'
 import { GAME_LIST, type GameId } from '../types'
 
 /**
@@ -53,6 +54,11 @@ export function useGameAnalytics(gameKey: GameId, xrStore?: XrStoreLike) {
       // only meaningful in a headset — on a flat screen the mouse selects and
       // head yaw is drag-to-look, which the child is not steering to answer
       headYawContaminated: presenting && HEAD_YAW_OUTCOME_GAMES.has(gameKey),
+      // How much of this trial the child could not see. Timers and
+      // performance.now() run on wall clock while the page is hidden, so a
+      // trial spanning a headset break otherwise looks like a very slow
+      // response. Recorded on every step so such trials can be excluded.
+      ...visibilityMetrics(),
     }
   }, [xrPresenting, gameKey])
 
