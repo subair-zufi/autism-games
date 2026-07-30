@@ -96,11 +96,22 @@ export function sessionLength(difficulty: Difficulty): number {
   return VIDEO_COUNT[difficulty]
 }
 
-/** Child-facing points: a correct FIRST-try naming is worth this. */
-export const POINTS_PER_CORRECT = 10
+/**
+ * Child-facing points. A first-try naming is worth full marks; getting there
+ * after a "let's look again" replay still earns half, the same first/retry
+ * split every other 360 game uses.
+ *
+ * It used to pay 0 for a corrected answer, which made this the one game in the
+ * set that punished a retry — against the no-fail principle the others state
+ * explicitly, and odd next to a scaffold whose whole job is to invite a second
+ * look. Only the child-facing score changes: stars, the level row submitted to
+ * `game_progress` and the server's `_clips_trials` all count FIRST-try answers
+ * and are unaffected.
+ */
+export const POINTS = { first: 10, retry: 5 }
 
 export function pointsFor(firstTryCorrect: boolean): number {
-  return firstTryCorrect ? POINTS_PER_CORRECT : 0
+  return firstTryCorrect ? POINTS.first : POINTS.retry
 }
 
 /**

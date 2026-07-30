@@ -28,7 +28,7 @@ import {
 import { emotionLabel, displayLangs, type Lang, type LocalizedText } from '../../i18n/strings'
 import { emotionMeta, type EmotionId } from '../emotionVocab'
 
-export type CardState = 'idle' | 'correct' | 'wrong' | 'dim' | 'go'
+export type CardState = 'idle' | 'correct' | 'wrong' | 'dim' | 'go' | 'tool'
 
 export interface IdentifyEmotions360SceneProps {
   /** the shared <video> element the game drives; shown on the big screen */
@@ -55,6 +55,16 @@ export interface IdentifyEmotions360SceneProps {
   onNextFromCause: () => void
   /** localized "Next ▶" / "Finish ▶" label for the in-world Next card */
   nextLabel: string
+  /**
+   * Re-watch the clip up to its freeze. The flat game has always had a
+   * "Watch again" button; in here the DOM is invisible, so without this card
+   * the only way to see the clip twice inside a headset was to answer wrongly
+   * and take the automatic replay — the child had to pay an error to look
+   * again at the thing they are being asked about.
+   */
+  onReplay: () => void
+  /** localized "↻ Watch again" label for that card */
+  replayLabel: string
   celebrating: boolean
   lang: Lang
   /** HUD lines mirrored inside VR, where the DOM overlay is invisible */
@@ -280,7 +290,7 @@ function BigScreen({
 function AnswerLayer(props: IdentifyEmotions360SceneProps) {
   const { frozen, stage, choices, answer, wrong, locked, onPickEmotion } = props
   const { causeOptions, causeAnswerIndex, causePicked, onPickCause, lang } = props
-  const { onNextFromCause, nextLabel } = props
+  const { onNextFromCause, nextLabel, onReplay, replayLabel } = props
   if (!frozen) return null
 
   if (stage === 'cause' && causeOptions) {
@@ -354,6 +364,21 @@ function AnswerLayer(props: IdentifyEmotions360SceneProps) {
           />
         )
       })}
+      {/* "Watch again", just outside the answer row on the right — the Quit
+          button and mode switch own the left corner, so this side is clear.
+          Sits at the answer cards' own height so reaching it is a turn, not a
+          look down, and 4 choices only reach +31.5° so it never crowds them. */}
+      <TextCard
+        bearingDeg={42}
+        radius={CARD_RADIUS}
+        y={CARD_Y}
+        width={0.72}
+        height={0.34}
+        lines={[replayLabel]}
+        state="tool"
+        disabled={locked}
+        onTap={onReplay}
+      />
     </group>
   )
 }
@@ -364,6 +389,9 @@ const STATE_BORDER: Record<CardState, string> = {
   wrong: '#ef6a5e',
   dim: '#9aa0ab',
   go: '#7fb6a4', // matches the DOM Next button's --accent, for the in-world twin
+  // "Watch again" is a tool, not an answer — a distinct blue so a child
+  // scanning the row never reads it as one more feeling to choose from
+  tool: '#5b8bc4',
 }
 
 /** Break `text` into lines that each fit `maxWidth` at the current ctx font.

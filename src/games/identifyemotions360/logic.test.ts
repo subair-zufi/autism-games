@@ -107,9 +107,11 @@ describe('reused quiz (delegates to the flat Emotion Clips)', () => {
 })
 
 describe('scoring', () => {
-  it('rewards first-try correctness only', () => {
-    expect(pointsFor(true)).toBeGreaterThan(0)
-    expect(pointsFor(false)).toBe(0)
+  it('pays a first try more than a corrected one, but never nothing', () => {
+    // no-fail: a child who gets there after "let's look again" is still paid,
+    // like every other 360 game. Only the ordering is load-bearing.
+    expect(pointsFor(true)).toBeGreaterThan(pointsFor(false))
+    expect(pointsFor(false)).toBeGreaterThan(0)
   })
 
   it('awards stars by first-try accuracy, always at least one', () => {

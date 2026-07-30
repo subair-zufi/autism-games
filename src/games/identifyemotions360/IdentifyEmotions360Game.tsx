@@ -360,6 +360,8 @@ export function IdentifyEmotions360Game() {
               onPickCause={pickCause}
               onNextFromCause={nextFromCause}
               nextLabel={t(idx + 1 >= quiz.length ? 'finish' : 'next', lang)}
+              onReplay={replay}
+              replayLabel={t('watchAgain', lang)}
               celebrating={celebrating}
               lang={lang}
               hudScore={`⭐ ${score}`}
@@ -389,6 +391,14 @@ export function IdentifyEmotions360Game() {
           )}
         </div>
         <div className="game-bottom">
+          {/* flat-screen twin of the in-world "Watch again" card (same button
+              the flat game has); inside a headset the DOM is invisible and the
+              scene card is the one that does the work */}
+          {stage === 'emotion' && frozen && (
+            <button className="replay-btn" onClick={replay} disabled={locked}>
+              {t('watchAgain', lang)}
+            </button>
+          )}
           <PromptBanner text={promptText} lang={lang} />
           {stage === 'cause' && causePicked !== null && (
             <button className="big-btn er-next" onClick={nextFromCause}>
