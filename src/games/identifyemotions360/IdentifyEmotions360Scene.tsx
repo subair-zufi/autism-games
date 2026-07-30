@@ -8,6 +8,7 @@ import { XRCameraHome } from '../XRCameraHome'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
+import { VRHudAnchor } from '../VRHudAnchor'
 import {
   EYE_Y,
   SCREEN_DISTANCE,
@@ -554,14 +555,14 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
   const topY = SCREEN_Y + SCREEN_H / 2
   const z = -SCREEN_DISTANCE + 0.2
   return (
-    <group>
+    <VRHudAnchor designEyeY={EYE_Y}>
       <TextPanel text={prompt} position={[0, topY + 0.45, z]} width={3.8} height={0.64} font={64} />
       <TextPanel text={score} position={[0, topY + 1.08, z]} width={1.8} height={0.44} font={88} />
       {/* just left of the outermost answer card (≈−24°) — clear of screen & cards */}
       <VRQuitButton bearingDeg={-42} label={quit} />
       {/* selection-method switch, directly under Quit in the same controls corner */}
       <VRInputSwitch bearingDeg={-42} />
-    </group>
+    </VRHudAnchor>
   )
 }
 
