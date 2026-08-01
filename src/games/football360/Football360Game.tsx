@@ -115,6 +115,8 @@ export function Football360Game() {
     best: Math.max(best, score),
     stars,
     lang,
+    gameId: 'football360',
+    level: difficulty,
     onRestart: start,
   })
 

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useVrGameOver, useVrGameOverPanel } from './gameOverPanel'
+import { useSettings } from '../state/settings'
 
 const base = {
   headline: 'Great playing! 🎉',
@@ -8,9 +9,15 @@ const base = {
   best: 12,
   stars: 2,
   lang: 'en' as const,
+  gameId: 'museum360' as const,
+  level: 'medium' as const,
 }
 
-beforeEach(() => useVrGameOver.getState().hide())
+beforeEach(() => {
+  useVrGameOver.getState().hide()
+  useSettings.getState().setDifficulty('museum360', 'easy')
+  useSettings.getState().setDifficulty('park360', 'easy')
+})
 
 describe('useVrGameOverPanel', () => {
   it('publishes nothing while a round is still being played', () => {
@@ -27,8 +34,13 @@ describe('useVrGameOverPanel', () => {
     // built from the same keys the flat dialog uses
     expect(info.scoreLine).toContain('7')
     expect(info.bestLine).toContain('12')
-    expect(info.playAgainLabel).toBeTruthy()
-    expect(info.finishLabel).toBeTruthy()
+    expect(info.labels.playAgain).toBeTruthy()
+    expect(info.labels.chooseLevel).toBeTruthy()
+    expect(info.labels.home).toBeTruthy()
+    // the in-world picker mirrors the flat StartScreen: three levels, with the
+    // game's current one marked
+    expect(info.levels.map((l) => l.id)).toEqual(['easy', 'medium', 'hard'])
+    expect(info.currentLevel).toBe('medium')
   })
 
   it('clears the panel when a new round starts', () => {
@@ -54,10 +66,23 @@ describe('useVrGameOverPanel', () => {
     )
 
     rerender(second)
-    useVrGameOver.getState().info!.onRestart()
+    useVrGameOver.getState().info!.onPlay()
 
     expect(first).not.toHaveBeenCalled()
     expect(second).toHaveBeenCalledTimes(1)
+  })
+
+  it('changes the level for that game only, without starting a round', () => {
+    const start = vi.fn()
+    renderHook(() => useVrGameOverPanel({ ...base, over: true, onRestart: start }))
+
+    useVrGameOver.getState().info!.onSelectLevel('hard')
+
+    expect(useSettings.getState().difficulty.museum360).toBe('hard')
+    expect(useSettings.getState().difficulty.park360).toBe('easy')
+    // selecting must not begin the round — `start` closes over the level from
+    // the previous render, so it would run on the old one
+    expect(start).not.toHaveBeenCalled()
   })
 
   it('does not leave a finished panel behind for the next game', () => {

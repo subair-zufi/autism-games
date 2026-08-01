@@ -103,6 +103,8 @@ export function Park360Game() {
     best: Math.max(best, score),
     stars,
     lang,
+    gameId: 'park360',
+    level: difficulty,
     onRestart: start,
   })
 

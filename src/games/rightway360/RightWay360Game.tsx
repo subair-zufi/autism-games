@@ -96,6 +96,8 @@ export function RightWay360Game() {
     best: Math.max(best, score),
     stars,
     lang,
+    gameId: 'rightway360',
+    level: difficulty,
     onRestart: start,
   })
 

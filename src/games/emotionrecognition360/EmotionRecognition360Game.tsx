@@ -109,6 +109,8 @@ export function EmotionRecognition360Game() {
     best: Math.max(best, score),
     stars,
     lang,
+    gameId: 'emotionrecognition360',
+    level: difficulty,
     onRestart: start,
   })
 

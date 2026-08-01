@@ -100,6 +100,8 @@ export function Playroom360Game() {
     best: Math.max(best, score),
     stars,
     lang,
+    gameId: 'playroom360',
+    level: difficulty,
     onRestart: start,
   })
 

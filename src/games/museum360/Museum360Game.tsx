@@ -97,6 +97,8 @@ export function Museum360Game() {
     best: Math.max(best, score),
     stars,
     lang,
+    gameId: 'museum360',
+    level: difficulty,
     onRestart: start,
   })
 

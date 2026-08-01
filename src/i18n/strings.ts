@@ -140,10 +140,6 @@ const MESSAGES = {
   numCorrect: { en: 'Correct', ml: 'ശരി' },
   numIncorrect: { en: 'Incorrect', ml: 'തെറ്റ്' },
   playAgain: { en: 'Play again', ml: 'വീണ്ടും കളിക്കൂ' },
-  // In-world results only: ends the headset session for good. Everything else
-  // in VR now keeps the session alive, because ending one costs the browser
-  // window on Quest — so this is the single deliberate way out.
-  vrFinish: { en: '✓ Finish', ml: '✓ അവസാനിപ്പിക്കൂ' },
   changeLevel: { en: '🎚️ Choose level', ml: '🎚️ ലെവൽ തിരഞ്ഞെടുക്കൂ' },
   home: { en: '🏠 Home', ml: '🏠 ഹോം' },
   // Mastery (≥80%): level fully complete.
