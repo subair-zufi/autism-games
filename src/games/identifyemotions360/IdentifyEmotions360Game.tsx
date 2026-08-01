@@ -22,6 +22,7 @@ import { useLevelProgress } from '../progression'
 import { clipLine } from './strings'
 import { IdentifyEmotions360Scene } from './IdentifyEmotions360Scene'
 import { xrStore, vrSupported } from './xrStore'
+import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
 import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
@@ -160,10 +161,18 @@ export function IdentifyEmotions360Game() {
     return () => document.removeEventListener('visibilitychange', onChange)
   }, [videoEl, phase])
 
-  // Leave immersive VR when the session ends so the DOM results dialog shows.
-  useEffect(() => {
-    if (phase === 'over') void xrStore.getState().session?.end()
-  }, [phase])
+  // Results stay inside VR. Ending the session here (as this used to) is
+  // what dropped the child into the Quest home environment with no window
+  // to come back to — every completed game, not just Quit.
+  useVrGameOverPanel({
+    over: phase === 'over',
+    headline: t('greatPlaying', lang),
+    score,
+    best: Math.max(best, score),
+    stars,
+    lang,
+    onRestart: start,
+  })
 
   // Read the freeze prompt aloud once frozen (naming stage), stamping when it
   // finishes so latency can also be measured from prompt end (item 4).

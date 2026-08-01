@@ -30,6 +30,7 @@ import { useLevelProgress } from '../progression'
 import { museum360Line, exhibitLabel } from './strings'
 import { Museum360Scene } from './Museum360Scene'
 import { xrStore, vrSupported } from './xrStore'
+import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
 import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
@@ -86,11 +87,18 @@ export function Museum360Game() {
     void vrSupported().then(setCanVR)
   }, [])
 
-  // When the session ends, leave immersive VR so the (DOM) results dialog and
-  // level picker are visible again on the headset's browser.
-  useEffect(() => {
-    if (phase === 'over') void xrStore.getState().session?.end()
-  }, [phase])
+  // Results stay inside VR. Ending the session here (as this used to) is
+  // what dropped the child into the Quest home environment with no window
+  // to come back to — every completed game, not just Quit.
+  useVrGameOverPanel({
+    over: phase === 'over',
+    headline: t('greatPlaying', lang),
+    score,
+    best: Math.max(best, score),
+    stars,
+    lang,
+    onRestart: start,
+  })
 
   // Which trials show the gaze doll vs the pointing hand — a fixed, evenly-spread
   // share of gaze trials per session, same schedule as Museum Look.

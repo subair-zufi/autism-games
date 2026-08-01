@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
+import { VRGameOver } from '../VRGameOver'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
@@ -71,6 +72,7 @@ export function EmotionRecognition360Scene(props: EmotionRecognition360SceneProp
         <LookControls />
         <HeadSelect />
         <XRCameraHome />
+        <VRGameOver />
         <HeadSampler />
         <GalleryRoom />
         <BoardRow {...props} />

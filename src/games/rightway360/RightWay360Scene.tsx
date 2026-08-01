@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
+import { VRGameOver } from '../VRGameOver'
 import { VRInputSwitch } from '../VRInputSwitch'
 import {
   CARD_Y,
@@ -67,6 +68,7 @@ export function RightWay360Scene(props: RightWay360SceneProps) {
         <LookControls />
         <HeadSelect />
         <XRCameraHome />
+        <VRGameOver />
         <SchoolYard />
         {props.active && (
           <>

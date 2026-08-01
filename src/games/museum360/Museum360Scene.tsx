@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
+import { VRGameOver } from '../VRGameOver'
 import { HeadSampler } from '../HeadSampler'
 import { angDiffDeg, latestYawDeg } from '../headTracking'
 import { VRQuitButton } from '../VRQuitButton'
@@ -67,6 +68,7 @@ export function Museum360Scene(props: Museum360SceneProps) {
         <LookControls />
         <HeadSelect />
         <XRCameraHome />
+        <VRGameOver />
         <HeadSampler />
         <RotundaRoom />
         <SceneInner {...props} />

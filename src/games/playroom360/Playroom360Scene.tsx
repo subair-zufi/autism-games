@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
+import { VRGameOver } from '../VRGameOver'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
@@ -85,6 +86,7 @@ export function Playroom360Scene(props: Playroom360SceneProps) {
         <LookControls />
         <HeadSelect />
         <XRCameraHome />
+        <VRGameOver />
         <HeadSampler />
         <PlayroomRoom />
         <SceneInner {...props} />

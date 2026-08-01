@@ -25,6 +25,7 @@ import { useLevelProgress } from '../progression'
 import { Football360Scene } from './Football360Scene'
 import { fbLine, fbLines, fbSpeak, type Football360MessageKey } from './strings'
 import { xrStore, vrSupported } from './xrStore'
+import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
 import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
@@ -104,11 +105,18 @@ export function Football360Game() {
     void vrSupported().then(setCanVR)
   }, [])
 
-  // When the session ends, leave immersive VR so the (DOM) results dialog and
-  // level picker are visible again on the headset's browser.
-  useEffect(() => {
-    if (phase === 'over') void xrStore.getState().session?.end()
-  }, [phase])
+  // Results stay inside VR. Ending the session here (as this used to) is
+  // what dropped the child into the Quest home environment with no window
+  // to come back to — every completed game, not just Quit.
+  useVrGameOverPanel({
+    over: phase === 'over',
+    headline: completed ? `${fbLine('overWin', lang)} 🎉` : `${fbLine('overTry', lang)} 🌟`,
+    score,
+    best: Math.max(best, score),
+    stars,
+    lang,
+    onRestart: start,
+  })
 
   function start() {
     resetSession()
