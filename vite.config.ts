@@ -29,6 +29,10 @@ export default defineConfig({
       // here — exclude it from the shell precache manifest.
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,woff2,json}'],
+        // a hardware diagnostic, not part of the app — keeping it out of the
+        // precache means it is always fetched fresh, so it cannot report on a
+        // stale copy of itself
+        globIgnores: ['xr-exit-test.html'],
         maximumFileSizeToCacheInBytes: 5_000_000,
       },
       devOptions: { enabled: false },

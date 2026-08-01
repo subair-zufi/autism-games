@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WebXR exit test</title>
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; margin: 0; padding: 24px; background: #10151c; color: #e8eef6; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  p.sub { margin: 0 0 20px; color: #9fb0c4; }
+  button { font: inherit; font-weight: 700; padding: 14px 20px; margin: 0 8px 10px 0;
+           border: none; border-radius: 10px; background: #2f7fd4; color: #fff; cursor: pointer; }
+  button:disabled { background: #3a4453; color: #8b98a8; cursor: default; }
+  #banner { display: none; margin: 16px 0; padding: 14px 16px; border-radius: 10px;
+            background: #1d5c3a; border: 2px solid #46c07f; font-weight: 700; font-size: 1.1rem; }
+  #log { margin-top: 18px; padding: 12px; background: #0a0e14; border: 1px solid #263041;
+         border-radius: 8px; white-space: pre-wrap; font: 13px/1.5 ui-monospace, monospace; color: #b7c6d8; }
+  .note { color: #9fb0c4; font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<h1>WebXR exit test</h1>
+<p class="sub">Plain WebXR — no framework, no router, no app code. It does exactly one thing on exit:
+calls <code>XRSession.end()</code>, the same call the game's Quit button makes.</p>
+
+<div id="banner">✓ You are back on the page — the window survived the exit.</div>
+
+<p>
+  <button id="plain">Enter VR — exit ends the session only</button>
+  <button id="nav">Enter VR — exit ends the session, then navigates</button>
+</p>
+<p class="note">Inside VR: <strong>pull the controller trigger</strong> to exit.
+The screen will be plain blue — that is expected, it is only there to prove a session is running.</p>
+
+<div id="log">ready</div>
+
+<script>
+(function () {
+  var logEl = document.getElementById('log');
+  var banner = document.getElementById('banner');
+  var lines = [];
+
+  function log(msg) {
+    var t = new Date().toTimeString().slice(0, 8);
+    lines.push(t + '  ' + msg);
+    logEl.textContent = lines.join('\n');
+  }
+
+  // If we came back from the "then navigates" run, the query string proves the
+  // page navigated after the session ended and is still alive.
+  if (location.search.indexOf('returned=1') !== -1) {
+    banner.style.display = 'block';
+    log('page navigated after exiting VR, and is running — window survived');
+  }
+
+  log('secure context: ' + window.isSecureContext);
+  log('navigator.xr present: ' + !!navigator.xr);
+  log('controlled by a service worker: ' +
+      !!(navigator.serviceWorker && navigator.serviceWorker.controller));
+
+  if (!navigator.xr) {
+    log('this browser exposes no WebXR — open on the headset');
+    document.getElementById('plain').disabled = true;
+    document.getElementById('nav').disabled = true;
+    return;
+  }
+
+  navigator.xr.isSessionSupported('immersive-vr').then(function (ok) {
+    log('immersive-vr supported: ' + ok);
+    document.getElementById('plain').disabled = !ok;
+    document.getElementById('nav').disabled = !ok;
+  });
+
+  function start(navigateAfter) {
+    log('requesting session…');
+    navigator.xr.requestSession('immersive-vr').then(function (session) {
+      log('session started');
+
+      var canvas = document.createElement('canvas');
+      var gl = canvas.getContext('webgl', { xrCompatible: true });
+      session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
+
+      session.requestReferenceSpace('local').then(function () {
+        session.requestAnimationFrame(function onFrame(time, frame) {
+          var layer = session.renderState.baseLayer;
+          gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
+          gl.clearColor(0.12, 0.42, 0.72, 1);
+          gl.clear(gl.COLOR_BUFFER_BIT);
+          session.requestAnimationFrame(onFrame);
+        });
+      });
+
+      // the trigger is the exit, so this never depends on seeing any 2D UI
+      session.addEventListener('select', function () {
+        log('trigger pulled — calling session.end()');
+        session.end();
+      });
+
+      session.addEventListener('end', function () {
+        log('session ended');
+        if (navigateAfter) {
+          log('navigating…');
+          location.search = '?returned=1';
+        } else {
+          banner.style.display = 'block';
+          log('still running after exit — window survived');
+        }
+      });
+    }, function (err) {
+      log('requestSession failed: ' + err);
+    });
+  }
+
+  document.getElementById('plain').addEventListener('click', function () { start(false); });
+  document.getElementById('nav').addEventListener('click', function () { start(true); });
+})();
+</script>
+
+</body>
+</html>
