@@ -30,8 +30,10 @@ calls <code>XRSession.end()</code>, the same call the game's Quit button makes.<
   <button id="plain">Enter VR — exit ends the session only</button>
   <button id="nav">Enter VR — exit ends the session, then navigates</button>
 </p>
-<p class="note">Inside VR: <strong>pull the controller trigger</strong> to exit.
-The screen will be plain blue — that is expected, it is only there to prove a session is running.</p>
+<p class="note">Inside VR you do not have to press anything: the session <strong>ends itself after
+10 seconds</strong>. The screen flashes white once per second so you can count it down, and shifts
+from blue towards green as it goes. Pulling a trigger, or pinching with hand tracking, exits
+early — but neither is needed, which matters when the headset has no controller awake.</p>
 
 <div id="log">ready</div>
 
@@ -81,21 +83,55 @@ The screen will be plain blue — that is expected, it is only there to prove a 
       var gl = canvas.getContext('webgl', { xrCompatible: true });
       session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl) });
 
+      // How many input sources the headset reports. With controllers asleep and
+      // hand tracking off there are none at all — which is exactly why the exit
+      // below must not depend on input.
+      function reportInputs(why) {
+        log(why + ': ' + session.inputSources.length + ' input source(s)');
+      }
+      reportInputs('at start');
+      session.addEventListener('inputsourceschange', function () { reportInputs('changed'); });
+
+      var AUTO_MS = 10000;
+      var startedAt = null;
+      var ending = false;
+
+      function finish(reason) {
+        if (ending) return;
+        ending = true;
+        log(reason + ' — calling session.end()');
+        session.end();
+      }
+
       session.requestReferenceSpace('local').then(function () {
         session.requestAnimationFrame(function onFrame(time, frame) {
           var layer = session.renderState.baseLayer;
           gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
-          gl.clearColor(0.12, 0.42, 0.72, 1);
+
+          if (startedAt === null) startedAt = time;
+          var elapsed = time - startedAt;
+          var p = Math.min(1, elapsed / AUTO_MS);
+          // a white flash on each whole second, so the countdown is visible
+          // without drawing any text
+          var intoSecond = (elapsed / 1000) % 1;
+          if (intoSecond < 0.12) {
+            gl.clearColor(1, 1, 1, 1);
+          } else {
+            gl.clearColor(0.12 + 0.0 * p, 0.42 + 0.3 * p, 0.72 - 0.4 * p, 1);
+          }
           gl.clear(gl.COLOR_BUFFER_BIT);
+
+          if (elapsed >= AUTO_MS) {
+            finish('10s elapsed');
+            return;
+          }
           session.requestAnimationFrame(onFrame);
         });
       });
 
-      // the trigger is the exit, so this never depends on seeing any 2D UI
-      session.addEventListener('select', function () {
-        log('trigger pulled — calling session.end()');
-        session.end();
-      });
+      // Early exits if any input happens to exist — never required.
+      session.addEventListener('select', function () { finish('trigger/pinch'); });
+      session.addEventListener('squeeze', function () { finish('grip'); });
 
       session.addEventListener('end', function () {
         log('session ended');
