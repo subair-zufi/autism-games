@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { HashRouter } from 'react-router-dom'
 import App from './App'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { whenXrIdle } from './services/xrPresence'
 // Bundled font so the mentor UI renders identically on Mac and Windows
 // (otherwise Windows falls to Segoe UI and macOS to SF Pro).
 import '@fontsource-variable/inter'
@@ -32,7 +33,11 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     // first-ever registration also fires this; only an *update* needs a reload
     if (!hadController || reloading) return
     reloading = true
-    window.location.reload()
+    // NEVER reload while a headset session is presenting. The Quest browser
+    // sees the immersive page vanish instead of handing control back, and
+    // minimises itself — the child lands in the Quest home environment with no
+    // browser window at all. Wait for the session to end.
+    whenXrIdle(() => window.location.reload())
   })
 
   window.addEventListener('load', () => {

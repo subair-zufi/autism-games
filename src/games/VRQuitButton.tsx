@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useXR } from '@react-three/xr'
 import * as THREE from 'three'
+import { exitVrToHome } from './exitVr'
 
 /**
  * In-world "Quit" control for immersive VR sessions.
@@ -90,20 +91,19 @@ export function VRQuitButton({
       userData={{ headSelect: true }}
       onClick={(e) => {
         e.stopPropagation()
-        // End the session first, then go Home: unmounting the Canvas while a
-        // session is still presenting would tear the scene out from under it.
-        // `finally` so a rejected end() still gets the child back to Home.
+        // Ends the session, waits for the flat page to be painting again, and
+        // only then goes Home — see `exitVr.ts` for why that order is what
+        // keeps the Quest from minimising the browser.
         //
-        // The app is a HashRouter, so setting the hash IS a router navigation
-        // — it fires hashchange and the router re-renders normally. Done this
-        // way rather than with `useNavigate` because this component only ever
-        // mounts inside a live headset session, which is the one environment
-        // that cannot be exercised here; a hook that depended on React context
-        // reaching across r3f's separate reconciler root would fail, if it
-        // failed at all, exactly where it could not be caught before shipping.
-        void session.end().finally(() => {
-          window.location.hash = '#/'
-        })
+        // Home is reached by a hash change: the app is a HashRouter, so this is
+        // a router navigation inside a still-running SPA, never a page load —
+        // exactly the "keep the web app alive" requirement. Done this way
+        // rather than with `useNavigate` because this component only ever
+        // mounts inside a live headset session, the one environment that
+        // cannot be exercised here; a hook depending on React context reaching
+        // across r3f's separate reconciler root would fail, if it failed at
+        // all, precisely where it could not be caught before shipping.
+        void exitVrToHome(session)
       }}
       onPointerOver={() => (document.body.style.cursor = 'pointer')}
       onPointerOut={() => (document.body.style.cursor = 'auto')}
