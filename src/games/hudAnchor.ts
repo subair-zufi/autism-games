@@ -3,7 +3,7 @@
  * without a headset.
  *
  * Every 360 game lays its HUD out in absolute world Y: Museum 360's score panel
- * sits at y = 4.35, Emotion Room's at 3.5, and so on. Those numbers were tuned
+ * sits at y = 4.35, Emotion Room's at 3.8, and so on. Those numbers were tuned
  * against the flat camera each scene declares (`EYE_Y`, 1.5–1.7 m — an adult
  * sitting at a desk).
  *
@@ -14,9 +14,12 @@
  * assumes — and because the angle is measured over a fixed panel distance, the
  * shortfall turns straight into extra neck extension. It bites hardest in the
  * two games whose HUD is closest: Emotion Room (z ≈ −4.2) and Emotion Cinema
- * (z ≈ −4.3), whose score panels already sit near 25–27° up for a 1.5 m eye and
- * pass 29–30° for a small child. Sustained upward gaze past ~20–25° is the
- * uncomfortable direction; downward is the restful one.
+ * (z ≈ −4.3), whose score panels already sit near 27–29° up for a 1.5 m eye and
+ * pass 30° for a small child. Sustained upward gaze past ~20–25° is the
+ * uncomfortable direction; downward is the restful one. Emotion Room's panels
+ * also sit close above its face boards (top ≈ 2.41 m), so `VRHudAnchor`'s
+ * `minOffsetY` there stops the drop early rather than letting a short
+ * wearer's HUD sink into the boards.
  *
  * The fix is to slide the WHOLE HUD group vertically by the difference between
  * the wearer's real eye height and the height the layout was drawn for. Every
@@ -44,12 +47,31 @@ export const MAX_EYE_Y = 2.1
  * Returns 0 for any reading that isn't a believable eye height, which leaves
  * the HUD exactly where it sits today. Failing back to the shipped layout is
  * always safe; flinging the panels somewhere unreachable is not.
+ *
+ * `minOffsetY`, if given, floors how far the drop can go — for a scene whose
+ * HUD hangs close above something tall (Emotion Room's face boards), this
+ * stops the panels short of it instead of letting a short wearer's HUD sink
+ * into the object it's floating above.
  */
-export function hudEyeOffset(actualEyeY: number, designEyeY: number): number {
+export function hudEyeOffset(actualEyeY: number, designEyeY: number, minOffsetY?: number): number {
   if (!Number.isFinite(actualEyeY)) return 0
   if (actualEyeY < MIN_EYE_Y || actualEyeY > MAX_EYE_Y) return 0
-  return actualEyeY - designEyeY
+  const offset = actualEyeY - designEyeY
+  return minOffsetY !== undefined ? Math.max(offset, minOffsetY) : offset
 }
+
+/**
+ * Default floor on the HUD's drop, used whenever a scene doesn't pass its own
+ * (stricter) `minOffsetY`.
+ *
+ * Every 360 game's HUD carries a `VRInputSwitch` (panel centre 0.62 m up,
+ * 0.38 m tall) as its lowest element — drop it past 0.62 − 0.38/2 = 0.43 m
+ * and the panel's bottom edge sinks through the floor and gets swallowed by
+ * it (review V4: reported as the gaze/controller buttons "partially
+ * invisible" in several games). −0.35 leaves an 8 cm buffer above that line
+ * while still passing most of the shorter-wearer comfort gain through.
+ */
+export const DEFAULT_MIN_OFFSET_Y = -0.35
 
 /**
  * Seconds to wait after the HUD mounts before sampling the head pose.

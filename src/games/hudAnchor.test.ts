@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MAX_EYE_Y, MIN_EYE_Y, hudEyeOffset } from './hudAnchor'
+import { DEFAULT_MIN_OFFSET_Y, MAX_EYE_Y, MIN_EYE_Y, hudEyeOffset } from './hudAnchor'
 
 describe('hudEyeOffset', () => {
   it('drops the HUD by however much shorter the wearer is', () => {
@@ -51,5 +51,37 @@ describe('hudEyeOffset', () => {
 
     expect(childUnshifted).toBeGreaterThan(designed)
     expect(childShifted).toBeCloseTo(designed, 6)
+  })
+
+  it('with a floor, never drops the HUD below it — however short the wearer', () => {
+    // Emotion Room 360: designed for a 1.5 m eye, prompt panel bottom at
+    // design 2.79 m, face-board frame top at 2.41 m. minOffsetY=-0.25 is the
+    // floor EmotionRecognition360Scene passes in.
+    const promptBottomAtDesign = 2.79
+    const boardFrameTop = 2.41
+    const minOffsetY = -0.25
+
+    for (const eye of [1.5, 1.2, 1.1, MIN_EYE_Y, 0.5, MAX_EYE_Y]) {
+      const offset = hudEyeOffset(eye, 1.5, minOffsetY)
+      expect(promptBottomAtDesign + offset).toBeGreaterThanOrEqual(boardFrameTop)
+    }
+  })
+
+  /**
+   * `VRInputSwitch` (panel centre 0.62 m, panel height 0.38 m) is the lowest
+   * element every 360 game hangs from its `VRHudAnchor`. Its own bottom edge
+   * sits at 0.62 − 0.19 = 0.43 m at design height — `DEFAULT_MIN_OFFSET_Y`
+   * must never let that edge reach the floor (0 m), for any game's
+   * `designEyeY` and any wearer in the plausible range, so the buttons never
+   * sink into the floor and go dark (review V4).
+   */
+  it('the default floor keeps every game\'s input switch above the floor', () => {
+    const switchBottomAtDesign = 0.62 - 0.38 / 2
+    for (const designEyeY of [1.5, 1.6, 1.7]) {
+      for (const eye of [designEyeY, 1.1, MIN_EYE_Y, MAX_EYE_Y]) {
+        const offset = hudEyeOffset(eye, designEyeY, DEFAULT_MIN_OFFSET_Y)
+        expect(switchBottomAtDesign + offset).toBeGreaterThan(0)
+      }
+    }
   })
 })

@@ -1,7 +1,7 @@
 import { useRef, type ReactNode } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { HUD_SETTLE_S, hudEyeOffset } from './hudAnchor'
+import { DEFAULT_MIN_OFFSET_Y, HUD_SETTLE_S, hudEyeOffset } from './hudAnchor'
 
 const pos = new THREE.Vector3()
 
@@ -23,10 +23,19 @@ const pos = new THREE.Vector3()
  */
 export function VRHudAnchor({
   designEyeY,
+  minOffsetY = DEFAULT_MIN_OFFSET_Y,
   children,
 }: {
   /** the scene's declared flat camera height — what the HUD was laid out for */
   designEyeY: number
+  /**
+   * Floor on how far the HUD may drop for a short wearer. Defaults to
+   * `DEFAULT_MIN_OFFSET_Y`, which keeps every scene's `VRInputSwitch` above
+   * the floor. A scene whose HUD also hangs close above something taller
+   * (Emotion Room's face boards) passes a stricter (less negative) value of
+   * its own so the panel stops descending before it reaches that object too.
+   */
+  minOffsetY?: number
   children: ReactNode
 }) {
   const ref = useRef<THREE.Group>(null)
@@ -43,7 +52,7 @@ export function VRHudAnchor({
     // world position, not camera.position: on a headset the camera sits under
     // the XR origin group, so its local y is not the height above the floor
     camera.getWorldPosition(pos)
-    g.position.y = hudEyeOffset(pos.y, designEyeY)
+    g.position.y = hudEyeOffset(pos.y, designEyeY, minOffsetY)
     latched.current = true
   })
 

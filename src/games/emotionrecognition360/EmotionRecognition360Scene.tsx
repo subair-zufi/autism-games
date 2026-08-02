@@ -246,13 +246,19 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
-    <VRHudAnchor designEyeY={EYE_Y}>
-      <TextPanel text={prompt} position={[0, 2.85, -4.2]} width={4.2} height={0.72} font={70} />
-      <TextPanel text={score} position={[0, 3.5, -4.2]} width={2.4} height={0.55} font={96} />
-      {/* just left of the outermost board (≈−32°) — clear of the faces */}
-      <VRQuitButton bearingDeg={-52} label={quit} />
+    // Boards run up to y≈2.41 (BOARD_Y + BOARD_H/2 + frame), and this HUD sits
+    // right above them at nearly the same depth — the closest pairing of any
+    // 360 game (see hudAnchor.ts). minOffsetY stops the panels short of the
+    // boards for a short wearer instead of letting the two overlap.
+    <VRHudAnchor designEyeY={EYE_Y} minOffsetY={-0.25}>
+      <TextPanel text={prompt} position={[0, 3.15, -4.2]} width={4.2} height={0.72} font={70} />
+      <TextPanel text={score} position={[0, 3.8, -4.2]} width={2.4} height={0.55} font={96} />
+      {/* left of the outermost board (≈−32°) — clear of the faces, with a bit
+          more margin than the board's own edge so it reads as outside the
+          play area, not just past it */}
+      <VRQuitButton bearingDeg={-60} label={quit} />
       {/* selection-method switch, directly under Quit in the same controls corner */}
-      <VRInputSwitch bearingDeg={-52} />
+      <VRInputSwitch bearingDeg={-60} />
     </VRHudAnchor>
   )
 }
