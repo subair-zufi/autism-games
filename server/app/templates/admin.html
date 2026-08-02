@@ -36,6 +36,9 @@
     .panel h2 { font-size:15px; margin:0 0 16px; }
     .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
     @media (max-width:880px){ .grid2{ grid-template-columns:1fr; } }
+    /* Wide tables scroll inside their panel rather than clipping columns. */
+    .tscroll { overflow-x:auto; }
+    .tscroll table { min-width:760px; }
     table { width:100%; border-collapse:collapse; font-size:13px; }
     th, td { text-align:left; padding:9px 10px; border-bottom:1px solid #334155; }
     th { color:var(--muted); font-weight:600; }
@@ -119,7 +122,28 @@
       </div>
 
       <div class="panel">
-        <h2>Players</h2>
+        <h2>Participants</h2>
+        <p style="color:var(--muted); font-size:13px; margin:-8px 0 14px;">
+          One row per child. <strong>Composite</strong> is the standardised 0–100
+          social-emotional score (chance-corrected first-attempt accuracy) — the same
+          number the mentor app shows on that child's Progress page.
+        </p>
+        <div class="tscroll">
+          <table id="students-table">
+            <thead><tr>
+              <th>Code</th><th>Name</th><th>Mentor</th><th>Age</th><th>Level</th>
+              <th title="Distinct play sessions recorded for this child">Sessions</th>
+              <th title="Scorable trials recorded for this child">Trials</th>
+              <th title="Standardised 0-100 social-emotional composite">Composite</th>
+              <th>Last played</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>Mentor accounts</h2>
         <div class="toolbar">
           <input type="search" id="user-search" placeholder="Search email or name…" />
         </div>
@@ -186,15 +210,42 @@
       } catch (_) { return; }
       document.getElementById("login-view").classList.add("hidden");
       document.getElementById("dash-view").classList.remove("hidden");
-      loadSummary(); loadTimeseries(); loadGames(); loadUsers();
+      loadSummary(); loadTimeseries(); loadGames(); loadStudents(); loadUsers();
+    }
+
+    async function loadStudents() {
+      const tbody = document.querySelector("#students-table tbody");
+      let rows;
+      try {
+        rows = await api("/api/admin/students/overview?limit=200");
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="9" style="color:var(--danger)">Could not load participants: ${e.message}</td></tr>`;
+        return;
+      }
+      const dash = (v) => (v === null || v === undefined || v === "" ? "—" : v);
+      tbody.innerHTML = rows.map((s) => `
+        <tr>
+          <td>${dash(s.participant_code)}</td>
+          <td>${s.full_name}</td>
+          <td style="color:var(--muted)">${dash(s.mentor_email)}</td>
+          <td>${dash(s.age_years)}</td>
+          <td>${dash(s.autism_level)}</td>
+          <td>${s.n_sessions}</td>
+          <td>${s.n_trials}</td>
+          <td>${s.composite === null || s.composite === undefined
+                 ? '<span style="color:#64748b">no trials yet</span>'
+                 : "<strong>" + s.composite.toFixed(1) + "</strong>"}</td>
+          <td style="color:var(--muted)">${s.last_played ? new Date(s.last_played).toLocaleDateString() : "never"}</td>
+        </tr>`).join("")
+        || `<tr><td colspan="9" style="color:#64748b">No participants yet</td></tr>`;
     }
 
     async function loadSummary() {
       const s = await api("/api/admin/analytics/summary");
       const cards = [
-        ["Total players", s.total_users], ["Active players", s.active_users],
+        ["Mentor accounts", s.total_users], ["Participants", s.total_students],
         ["Total events", s.total_events], ["Sessions", s.total_sessions],
-        ["Events (7d)", s.events_last_7_days], ["New players (7d)", s.new_users_last_7_days],
+        ["Events (7d)", s.events_last_7_days], ["New accounts (7d)", s.new_users_last_7_days],
       ];
       document.getElementById("stat-cards").innerHTML = cards
         .map(([l, v]) => `<div class="stat"><div class="v">${v}</div><div class="l">${l}</div></div>`).join("");
