@@ -50,11 +50,21 @@ export function GameDetail() {
 
   // Level choice lives on the game's own start screen (LevelSelect/StartScreen),
   // not here — this page only decides whether the session is recordable.
+  //
+  // The ordinary Play button always re-shows the guard when nobody is active —
+  // it must never fall through unrecorded on a repeat tap. Only the explicit
+  // "Play without recording" button (rendered once the guard has been shown)
+  // is allowed to proceed unrecorded.
   const play = () => {
-    if (!active && !dismissedGuard) {
+    if (!active) {
       setDismissedGuard(true) // reveal the explicit "play unrecorded" escape
       return
     }
+    playTap()
+    navigate(game.path)
+  }
+
+  const playUnrecorded = () => {
     playTap()
     navigate(game.path)
   }
@@ -79,7 +89,7 @@ export function GameDetail() {
             <div className="detail-guard-actions">
               <Link to="/participants" className="detail-guard-select">Select participant</Link>
               {dismissedGuard && (
-                <button className="detail-guard-anyway" onClick={() => play()}>Play without recording</button>
+                <button className="detail-guard-anyway" onClick={() => playUnrecorded()}>Play without recording</button>
               )}
             </div>
           </div>

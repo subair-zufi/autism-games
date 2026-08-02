@@ -33,6 +33,9 @@ export function useGameAnalytics(gameKey: GameId, xrStore?: XrStoreLike) {
     if (!starting.current) starting.current = analytics.startSession(gameKey)
     const id = await starting.current
     sessionId.current = id
+    // A null id (session failed to start) must not be cached as "in flight" —
+    // otherwise every later step in this game silently no-ops instead of retrying.
+    if (!id) starting.current = null
     return id
   }, [gameKey])
 

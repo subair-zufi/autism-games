@@ -63,7 +63,8 @@ export function Participants() {
               <div className="pc-actions">
                 <button
                   className={isActive ? 'select-btn selected' : 'select-btn'}
-                  onClick={() => switchStudent(isActive ? null : s.id)}
+                  disabled={isActive}
+                  onClick={() => switchStudent(s.id)}
                 >
                   {isActive ? 'Selected' : 'Select'}
                 </button>
