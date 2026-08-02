@@ -80,7 +80,7 @@ export function Football360Scene(props: Football360SceneProps) {
         <directionalLight position={[14, 22, 8]} intensity={1.05} color="#fff7e0" />
         <directionalLight position={[-8, 10, -12]} intensity={0.3} />
         <LookControls />
-        <HeadSelect />
+        <HeadSelect confirmSide="above" />
         <XRCameraHome />
         <VRGameOver />
         <HeadSampler />

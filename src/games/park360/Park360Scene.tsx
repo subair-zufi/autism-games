@@ -96,7 +96,7 @@ export function Park360Scene(props: Park360SceneProps) {
         <directionalLight position={[10, 20, 6]} intensity={1.0} color="#fff7e0" />
         <directionalLight position={[-8, 9, -10]} intensity={0.3} />
         <LookControls />
-        <HeadSelect />
+        <HeadSelect confirmSide="above" />
         <XRCameraHome />
         <VRGameOver />
         <HeadSampler />

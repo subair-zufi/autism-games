@@ -70,7 +70,7 @@ export function EmotionRecognition360Scene(props: EmotionRecognition360SceneProp
         <directionalLight position={[3, 14, 4]} intensity={0.7} color="#fff6e4" />
         <directionalLight position={[-6, 8, -6]} intensity={0.25} />
         <LookControls />
-        <HeadSelect />
+        <HeadSelect confirmGap={0.55} />
         <XRCameraHome />
         <VRGameOver />
         <HeadSampler />

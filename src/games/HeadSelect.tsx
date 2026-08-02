@@ -20,12 +20,18 @@ import {
  *
  * Selection is two-stage, because in these games looking at the options *is*
  * the task — see `headAim.ts`. Resting the gaze on something marks it as the
- * candidate and floats a ✓ chip just beneath it; dwelling on that chip is what
+ * candidate and floats a ✓ chip just beside it; dwelling on that chip is what
  * answers. Scanning across faces never answers.
  *
  * Targets opt in with `userData={{ headSelect: true }}`. A confirmed selection
  * is re-emitted as an ordinary click on the candidate, so every game's existing
  * `onClick` handlers work untouched.
+ *
+ * `confirmSide` picks which side of the candidate the chip parks on. Sustained
+ * downward neck flexion under headset weight is the uncomfortable direction,
+ * and in the joint-attention/turn-taking games it also means looking away from
+ * the very thing the trial is about right after correctly orienting to it — so
+ * those games pass `"above"` instead of the default `"below"`.
  */
 
 /** Reticle size as a fraction of its distance — ~2.5° wide at any range. */
@@ -39,14 +45,33 @@ const ARMED_COLOR = '#ffd95e'
 const PROGRESS_COLOR = '#5ce08a'
 const IDLE_COLOR = '#ffffff'
 
-export function HeadSelect() {
+/** Default clearance (× chip scale) past the candidate's edge, per side. */
+const DEFAULT_GAP_BELOW = 1.1
+const DEFAULT_GAP_ABOVE = 0.6
+
+export function HeadSelect({
+  confirmSide = 'below',
+  confirmGap,
+}: {
+  confirmSide?: 'below' | 'above'
+  /** Override the clearance past the candidate's edge, in chip-scale units.
+   *  Smaller sits closer to (or just touching) the candidate. */
+  confirmGap?: number
+}) {
   const session = useXR((s) => s.session)
   const inputMethod = useSettings((s) => s.inputMethod)
   if (!session || inputMethod !== 'dwell') return null
-  return <HeadSelectActive />
+  const gap = confirmGap ?? (confirmSide === 'above' ? DEFAULT_GAP_ABOVE : DEFAULT_GAP_BELOW)
+  return <HeadSelectActive confirmSide={confirmSide} confirmGap={gap} />
 }
 
-function HeadSelectActive() {
+function HeadSelectActive({
+  confirmSide,
+  confirmGap,
+}: {
+  confirmSide: 'below' | 'above'
+  confirmGap: number
+}) {
   const camera = useThree((s) => s.camera)
 
   // The ray pointer's "space" is the head itself: its world matrix is the head
@@ -124,7 +149,7 @@ function HeadSelectActive() {
       arcGeo.current.setDrawRange(0, Math.round(r.progress * ARC_SEGMENTS) * 6)
     }
 
-    // --- confirm chip, parked under the candidate -------------------------
+    // --- confirm chip, parked beside the candidate -------------------------
     if (chip.current != null) {
       if (r.candidate != null) {
         // the marked object is usually an oversized invisible hit volume, which
@@ -133,7 +158,10 @@ function HeadSelectActive() {
         box.getCenter(centre)
         const dist = Math.max(camPos.distanceTo(centre), 0.3)
         const scale = dist * CHIP_ANGULAR
-        chip.current.position.set(centre.x, box.min.y - scale * 1.1, centre.z)
+        // x/z stay pinned to the candidate's own bearing — only the pitch
+        // changes, so confirming never asks for a head turn, only a nod.
+        const y = confirmSide === 'above' ? box.max.y + scale * confirmGap : box.min.y - scale * confirmGap
+        chip.current.position.set(centre.x, y, centre.z)
         chip.current.quaternion.copy(camera.quaternion)
         chip.current.scale.setScalar(scale)
         chip.current.visible = true

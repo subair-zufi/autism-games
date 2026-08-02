@@ -96,7 +96,7 @@ export function IdentifyEmotions360Scene(props: IdentifyEmotions360SceneProps) {
         <directionalLight position={[3, 10, 4]} intensity={0.5} color="#fff2dc" />
         <directionalLight position={[-5, 7, -3]} intensity={0.22} color="#eaf1ff" />
         <LookControls />
-        <HeadSelect />
+        <HeadSelect confirmGap={0.55} />
         <XRCameraHome />
         <VRGameOver />
         <HeadSampler />
