@@ -100,6 +100,14 @@ function HeadSelectActive({
   const centre = useMemo(() => new THREE.Vector3(), [])
   const size = useMemo(() => new THREE.Vector3(), [])
   const toCam = useMemo(() => new THREE.Vector3(), [])
+  // Where the gaze actually lands on the candidate's surface, kept fresh every
+  // frame the ray is still on it. Hit volumes are deliberately oversized (the
+  // park's "surprise" props are a 1.1m cube around a much smaller model), so
+  // the box's geometric centre can sit well off whatever surface the child is
+  // actually looking at — anchoring "on" mode there left the chip floating
+  // somewhere the ray never re-crossed once the gaze held past arming, which
+  // is why the confirm ring seemed to just never fill in for some objects.
+  const armPoint = useMemo(() => new THREE.Vector3(), [])
 
   /**
    * Fires the answer on the candidate, not on the chip the gaze is actually
@@ -125,6 +133,7 @@ function HeadSelectActive({
     const inter = pointer.getIntersection()
     const onConfirm = isConfirmChip(inter?.object)
     const target = onConfirm ? null : findSelectTarget(inter?.object)
+    if (target != null && inter != null) armPoint.copy(inter.point)
     const r = advanceAim(aim, { target, onConfirm }, dt * 1000)
 
     camera.getWorldPosition(camPos)
@@ -161,28 +170,34 @@ function HeadSelectActive({
         // the marked object is usually an oversized invisible hit volume, which
         // is exactly the extent we want the chip to clear
         box.setFromObject(r.candidate)
-        box.getCenter(centre)
-        const dist = Math.max(camPos.distanceTo(centre), 0.3)
-        const scale = dist * CHIP_ANGULAR
 
         if (confirmSide === 'on') {
-          // Hover the chip in front of the candidate's own surface, along the
-          // same ray the gaze is already resting on — same apparent screen
-          // position, so confirming needs no head movement at all. `size`'s
-          // largest axis is a distance-independent stand-in for "how far off
-          // the hit volume's surface can be toward the camera" regardless of
-          // which face the gaze actually landed on.
+          // Hover the chip in front of wherever the gaze actually landed on
+          // the candidate (`armPoint`), not the hit box's geometric centre —
+          // hit volumes are oversized and often off-centre from the visible
+          // surface (see `armPoint`'s declaration), so anchoring on the box
+          // centre could park the chip somewhere the ray, still resting on
+          // the real surface, would never cross again. Offsetting along the
+          // same ray keeps the same apparent screen position, so confirming
+          // needs no head movement at all.
+          const dist = Math.max(camPos.distanceTo(armPoint), 0.3)
+          const scale = dist * CHIP_ANGULAR
           box.getSize(size)
           const clearance = Math.max(size.x, size.y, size.z) * 0.5 + scale * confirmGap
-          toCam.copy(camPos).sub(centre).normalize()
-          chip.current.position.copy(centre).addScaledVector(toCam, clearance)
+          toCam.copy(camPos).sub(armPoint).normalize()
+          chip.current.position.copy(armPoint).addScaledVector(toCam, clearance)
+          chip.current.quaternion.copy(camera.quaternion)
+          chip.current.scale.setScalar(scale)
         } else {
+          box.getCenter(centre)
+          const dist = Math.max(camPos.distanceTo(centre), 0.3)
+          const scale = dist * CHIP_ANGULAR
           // x/z stay pinned to the candidate's own bearing — only the pitch
           // changes, so confirming never asks for a head turn, only a nod.
           chip.current.position.set(centre.x, box.min.y - scale * confirmGap, centre.z)
+          chip.current.quaternion.copy(camera.quaternion)
+          chip.current.scale.setScalar(scale)
         }
-        chip.current.quaternion.copy(camera.quaternion)
-        chip.current.scale.setScalar(scale)
         chip.current.visible = true
       } else {
         // `visible = false` is not enough on its own: raycasting ignores it, so
