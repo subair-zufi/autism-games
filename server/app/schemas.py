@@ -271,12 +271,23 @@ class StudentOverviewItem(BaseModel):
     participant_code: str | None
     full_name: str
     mentor_email: str | None
+    # Clinical / demographic profile, as captured on the New Participant form.
     gender: str | None
-    autism_level: str | None
+    date_of_birth: date | None
     age_years: int | None
+    autism_level: str | None
+    iq_score: int | None
+    rehabilitation_centre: str | None
+    parent_guardian_name: str | None
+    parent_contact: str | None
+    notes: str | None
+    is_active: bool
+    created_at: datetime
+    # Performance
     n_sessions: int
     n_trials: int
     composite: float | None
+    composite_delta: float | None
     last_played: datetime | None
 
 
@@ -397,6 +408,19 @@ class ParticipantSkillReport(BaseModel):
     composite_delta: float | None
     n_sessions: int
     n_trials: int
+    skills: list[SkillScoreOut]
+
+
+class StudentProfileOut(BaseModel):
+    """Everything held on one child: the full record plus the complete
+    standardised profile (composite, four skills, every game with its
+    secondary metrics and pre/post delta). Fetched when a dashboard row is
+    expanded, so the summary table stays cheap for large cohorts.
+
+    Defined below SkillScoreOut because it embeds it.
+    """
+
+    student: StudentOverviewItem
     skills: list[SkillScoreOut]
 
 

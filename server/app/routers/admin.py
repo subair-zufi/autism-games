@@ -16,6 +16,7 @@ from ..models import Admin, AssessmentScore, GameEvent, GameSession, Student, Us
 from ..scoring import (
     SKILL_BY_GAME,
     VISIBLE_GAMES,
+    ParticipantScores,
     age_band,
     age_years,
     corrected_score,
@@ -37,7 +38,9 @@ from ..schemas import (
     PaginatedEvents,
     PaginatedStudents,
     PaginatedUsers,
+    SkillScoreOut,
     StudentOverviewItem,
+    StudentProfileOut,
     StudentPublic,
     TimeseriesPoint,
     UserPublic,
@@ -186,6 +189,43 @@ def list_students(
     return PaginatedStudents(total=total, items=[StudentPublic.model_validate(s) for s in rows])
 
 
+def _overview_row(
+    s: Student,
+    mentor_email: str | None,
+    events: list[GameEvent],
+    today: date,
+    scores: ParticipantScores | None = None,
+) -> StudentOverviewItem:
+    """One participant row: the full record plus their headline scores.
+
+    ``scores`` lets a caller that has already run the scorer pass it in rather
+    than paying for a second pass.
+    """
+    ps = scores if scores is not None else score_participant(events)
+    return StudentOverviewItem(
+        student_id=s.id,
+        participant_code=s.participant_code,
+        full_name=s.full_name,
+        mentor_email=mentor_email,
+        gender=s.gender,
+        date_of_birth=s.date_of_birth,
+        age_years=age_years(s.date_of_birth, today),
+        autism_level=s.autism_level,
+        iq_score=s.iq_score,
+        rehabilitation_centre=s.rehabilitation_centre,
+        parent_guardian_name=s.parent_guardian_name,
+        parent_contact=s.parent_contact,
+        notes=s.notes,
+        is_active=s.is_active,
+        created_at=s.created_at,
+        n_sessions=ps.n_sessions,
+        n_trials=ps.n_trials,
+        composite=ps.composite,
+        composite_delta=ps.composite_delta,
+        last_played=max((e.created_at for e in events), default=None),
+    )
+
+
 # NOTE: must stay above /students/{student_id} — FastAPI matches in definition
 # order, and that route takes a plain `str`, so it would otherwise swallow
 # "overview" as a student id and 404.
@@ -227,26 +267,46 @@ def students_overview(
         by_student[e.student_id].append(e)
 
     today = date.today()
-    out: list[StudentOverviewItem] = []
-    for s in students:
-        evs = by_student.get(s.id, [])
-        ps = score_participant(evs)
-        out.append(
-            StudentOverviewItem(
-                student_id=s.id,
-                participant_code=s.participant_code,
-                full_name=s.full_name,
-                mentor_email=mentor_emails.get(s.mentor_id),
-                gender=s.gender,
-                autism_level=s.autism_level,
-                age_years=age_years(s.date_of_birth, today),
-                n_sessions=ps.n_sessions,
-                n_trials=ps.n_trials,
-                composite=ps.composite,
-                last_played=max((e.created_at for e in evs), default=None),
-            )
+    return [
+        _overview_row(
+            s,
+            mentor_emails.get(s.mentor_id),
+            by_student.get(s.id, []),
+            today,
         )
-    return out
+        for s in students
+    ]
+
+
+@router.get("/students/{student_id}/profile", response_model=StudentProfileOut)
+def student_profile(
+    student_id: str,
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+) -> StudentProfileOut:
+    """Everything held on one child, for the expanded dashboard row.
+
+    Kept separate from the overview so listing a large cohort stays cheap: the
+    per-game breakdown is only assembled for the participant actually opened.
+    """
+    student = db.get(Student, student_id)
+    if student is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Student not found.")
+
+    events = db.scalars(
+        select(GameEvent)
+        .where(GameEvent.student_id == student.id)
+        .order_by(GameEvent.created_at.asc())
+    ).all()
+    mentor = db.get(User, student.mentor_id)
+    ps = score_participant(events)
+    return StudentProfileOut(
+        student=_overview_row(
+            student, mentor.email if mentor else None, events, date.today(), scores=ps
+        ),
+        # SkillScore.as_dict() already matches SkillScoreOut field-for-field.
+        skills=[SkillScoreOut.model_validate(s.as_dict()) for s in ps.skills],
+    )
 
 
 @router.get("/students/{student_id}", response_model=StudentPublic)
