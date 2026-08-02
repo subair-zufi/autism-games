@@ -105,6 +105,7 @@ export const useAuth = create<AuthState>()((set, get) => ({
   addStudent: async (input) => {
     const student = await analytics.createStudent(input)
     set((s) => ({ students: [...s.students, student] }))
+    get().switchStudent(student.id)
     return student
   },
 

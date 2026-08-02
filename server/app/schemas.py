@@ -259,6 +259,27 @@ class GameBreakdownItem(BaseModel):
     skill_score: float | None
 
 
+class StudentOverviewItem(BaseModel):
+    """One row per child for the dashboard's Participants table.
+
+    The Players table lists mentor *accounts*; this is the participant-level
+    companion — the unit the study actually reports on. Scores are the same
+    chance-corrected 0-100 metric used everywhere else (see app/scoring.py).
+    """
+
+    student_id: uuid.UUID
+    participant_code: str | None
+    full_name: str
+    mentor_email: str | None
+    gender: str | None
+    autism_level: str | None
+    age_years: int | None
+    n_sessions: int
+    n_trials: int
+    composite: float | None
+    last_played: datetime | None
+
+
 class TimeseriesPoint(BaseModel):
     date: str
     events: int

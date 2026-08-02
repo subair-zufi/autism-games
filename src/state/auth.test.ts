@@ -81,6 +81,13 @@ describe('useAuth', () => {
     expect(useAuth.getState().students.map((s) => s.full_name)).toContain('Cy')
   })
 
+  it('addStudent makes the new student active, so their gameplay is attributed to them', async () => {
+    useAuth.getState().switchStudent('s1')
+    const created = await useAuth.getState().addStudent({ full_name: 'Cy' })
+    expect(analytics.setActiveStudent).toHaveBeenCalledWith(created?.id)
+    expect(useAuth.getState().activeStudentId).toBe(created?.id)
+  })
+
   it('switchStudent updates state and the client', () => {
     useAuth.getState().switchStudent('s2')
     expect(analytics.setActiveStudent).toHaveBeenCalledWith('s2')

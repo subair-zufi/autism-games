@@ -22,6 +22,7 @@ from ..scoring import (
     dose_summary,
     iq_band,
     raw_payload_columns,
+    score_participant,
     student_trial_records,
     trials_for_game,
 )
@@ -36,6 +37,7 @@ from ..schemas import (
     PaginatedEvents,
     PaginatedStudents,
     PaginatedUsers,
+    StudentOverviewItem,
     StudentPublic,
     TimeseriesPoint,
     UserPublic,
@@ -182,6 +184,69 @@ def list_students(
         stmt.order_by(Student.created_at.desc()).limit(limit).offset(offset)
     ).all()
     return PaginatedStudents(total=total, items=[StudentPublic.model_validate(s) for s in rows])
+
+
+# NOTE: must stay above /students/{student_id} — FastAPI matches in definition
+# order, and that route takes a plain `str`, so it would otherwise swallow
+# "overview" as a student id and 404.
+@router.get("/students/overview", response_model=list[StudentOverviewItem])
+def students_overview(
+    db: Session = Depends(get_db),
+    _: Admin = Depends(get_current_admin),
+    limit: int = Query(default=200, le=500, ge=1),
+) -> list[StudentOverviewItem]:
+    """Per-participant scores — the child-level view the dashboard was missing.
+
+    Every other dashboard panel aggregates by mentor account or by game, so a
+    participant who has played is invisible there. This reduces each child's own
+    event stream with the same scorer the mentor-facing reports use, so the
+    dashboard and the app agree.
+    """
+    students = db.scalars(
+        select(Student).order_by(Student.created_at.asc()).limit(limit)
+    ).all()
+    if not students:
+        return []
+
+    mentor_emails = {
+        u.id: u.email
+        for u in db.scalars(
+            select(User).where(User.id.in_({s.mentor_id for s in students}))
+        ).all()
+    }
+
+    # One pass over the events for these children, bucketed in Python — cheaper
+    # than a per-student query and keeps the scorer's "whole stream" contract.
+    events = db.scalars(
+        select(GameEvent)
+        .where(GameEvent.student_id.in_([s.id for s in students]))
+        .order_by(GameEvent.created_at.asc())
+    ).all()
+    by_student: dict[object, list[GameEvent]] = defaultdict(list)
+    for e in events:
+        by_student[e.student_id].append(e)
+
+    today = date.today()
+    out: list[StudentOverviewItem] = []
+    for s in students:
+        evs = by_student.get(s.id, [])
+        ps = score_participant(evs)
+        out.append(
+            StudentOverviewItem(
+                student_id=s.id,
+                participant_code=s.participant_code,
+                full_name=s.full_name,
+                mentor_email=mentor_emails.get(s.mentor_id),
+                gender=s.gender,
+                autism_level=s.autism_level,
+                age_years=age_years(s.date_of_birth, today),
+                n_sessions=ps.n_sessions,
+                n_trials=ps.n_trials,
+                composite=ps.composite,
+                last_played=max((e.created_at for e in evs), default=None),
+            )
+        )
+    return out
 
 
 @router.get("/students/{student_id}", response_model=StudentPublic)

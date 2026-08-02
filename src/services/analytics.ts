@@ -462,19 +462,29 @@ class AnalyticsClient {
    */
   async startSession(gameKey: string): Promise<string | null> {
     if (!this.token) return null;
-    const s = await this.request<{ id: string }>("/api/sessions", {
-      method: "POST",
-      body: JSON.stringify({ game_key: gameKey, student_id: this.studentId }),
-    });
-    return s.id;
+    try {
+      const s = await this.request<{ id: string }>("/api/sessions", {
+        method: "POST",
+        body: JSON.stringify({ game_key: gameKey, student_id: this.studentId }),
+      });
+      return s.id;
+    } catch (err) {
+      // Never let analytics break gameplay.
+      console.warn("[analytics] failed to start session:", err);
+      return null;
+    }
   }
 
   async endSession(sessionId: string, finalScore?: number): Promise<void> {
     if (!this.token) return;
-    await this.request(`/api/sessions/${sessionId}/end`, {
-      method: "POST",
-      body: JSON.stringify({ final_score: finalScore ?? null }),
-    });
+    try {
+      await this.request(`/api/sessions/${sessionId}/end`, {
+        method: "POST",
+        body: JSON.stringify({ final_score: finalScore ?? null }),
+      });
+    } catch (err) {
+      console.warn("[analytics] failed to end session:", err);
+    }
   }
 
   /**
