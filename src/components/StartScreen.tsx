@@ -1,3 +1,4 @@
+import { Link, useNavigate } from 'react-router-dom'
 import { useSettings } from '../state/settings'
 import { t, type MessageKey } from '../i18n/strings'
 import type { Difficulty, GameMeta } from '../types'
@@ -23,6 +24,7 @@ export function StartScreen({
   const difficulty = useSettings((s) => s.difficulty[game.id])
   const setDifficulty = useSettings((s) => s.setDifficulty)
   const lang = useSettings((s) => s.language)
+  const navigate = useNavigate()
   return (
     <div className="start-screen">
       <div className="start-icon">{game.icon}</div>
@@ -43,6 +45,8 @@ export function StartScreen({
         ))}
       </div>
       <button className="big-btn" onClick={onStart}>{t('play', lang)}</button>
+      <button className="big-btn secondary" onClick={() => navigate(-1)}>{t('back', lang)}</button>
+      <Link to="/" className="big-btn home-link">{t('home', lang)}</Link>
     </div>
   )
 }
