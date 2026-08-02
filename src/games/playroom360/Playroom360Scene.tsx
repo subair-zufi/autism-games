@@ -84,7 +84,7 @@ export function Playroom360Scene(props: Playroom360SceneProps) {
         {/* the pendant lamp over the play table */}
         <pointLight position={[0, 2.7, -TABLE_RADIUS]} intensity={22} color="#ffe9c4" distance={9} />
         <LookControls />
-        <HeadSelect confirmSide="above" />
+        <HeadSelect confirmSide="on" />
         <XRCameraHome />
         <VRGameOver />
         <HeadSampler />

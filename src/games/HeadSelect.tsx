@@ -27,11 +27,13 @@ import {
  * is re-emitted as an ordinary click on the candidate, so every game's existing
  * `onClick` handlers work untouched.
  *
- * `confirmSide` picks which side of the candidate the chip parks on. Sustained
- * downward neck flexion under headset weight is the uncomfortable direction,
- * and in the joint-attention/turn-taking games it also means looking away from
- * the very thing the trial is about right after correctly orienting to it — so
- * those games pass `"above"` instead of the default `"below"`.
+ * `confirmSide` picks where the chip parks. `"below"` (the default) floats it
+ * under the candidate. `"on"` instead hovers it just in front of the
+ * candidate's own surface, along the same ray the gaze already used to arm
+ * it — so confirming needs no head movement at all, not even a nod. That
+ * matters most in the joint-attention/turn-taking games: any extra move
+ * requires looking away from the very thing the trial is about right after
+ * correctly orienting to it, on top of the neck strain of a sustained tilt.
  */
 
 /** Reticle size as a fraction of its distance — ~2.5° wide at any range. */
@@ -45,23 +47,25 @@ const ARMED_COLOR = '#ffd95e'
 const PROGRESS_COLOR = '#5ce08a'
 const IDLE_COLOR = '#ffffff'
 
-/** Default clearance (× chip scale) past the candidate's edge, per side. */
+/** Default clearance (× chip scale) past the candidate's edge, "below" mode. */
 const DEFAULT_GAP_BELOW = 1.1
-const DEFAULT_GAP_ABOVE = 0.6
+/** Default clearance (× chip scale) in front of the candidate, "on" mode. */
+const DEFAULT_GAP_ON = 0.5
 
 export function HeadSelect({
   confirmSide = 'below',
   confirmGap,
 }: {
-  confirmSide?: 'below' | 'above'
-  /** Override the clearance past the candidate's edge, in chip-scale units.
-   *  Smaller sits closer to (or just touching) the candidate. */
+  confirmSide?: 'below' | 'on'
+  /** Override the clearance past the candidate's edge (or surface, in "on"
+   *  mode), in chip-scale units. Smaller sits closer to (or just touching)
+   *  the candidate. */
   confirmGap?: number
 }) {
   const session = useXR((s) => s.session)
   const inputMethod = useSettings((s) => s.inputMethod)
   if (!session || inputMethod !== 'dwell') return null
-  const gap = confirmGap ?? (confirmSide === 'above' ? DEFAULT_GAP_ABOVE : DEFAULT_GAP_BELOW)
+  const gap = confirmGap ?? (confirmSide === 'on' ? DEFAULT_GAP_ON : DEFAULT_GAP_BELOW)
   return <HeadSelectActive confirmSide={confirmSide} confirmGap={gap} />
 }
 
@@ -69,7 +73,7 @@ function HeadSelectActive({
   confirmSide,
   confirmGap,
 }: {
-  confirmSide: 'below' | 'above'
+  confirmSide: 'below' | 'on'
   confirmGap: number
 }) {
   const camera = useThree((s) => s.camera)
@@ -94,6 +98,8 @@ function HeadSelectActive({
   const camPos = useMemo(() => new THREE.Vector3(), [])
   const box = useMemo(() => new THREE.Box3(), [])
   const centre = useMemo(() => new THREE.Vector3(), [])
+  const size = useMemo(() => new THREE.Vector3(), [])
+  const toCam = useMemo(() => new THREE.Vector3(), [])
 
   /**
    * Fires the answer on the candidate, not on the chip the gaze is actually
@@ -149,7 +155,7 @@ function HeadSelectActive({
       arcGeo.current.setDrawRange(0, Math.round(r.progress * ARC_SEGMENTS) * 6)
     }
 
-    // --- confirm chip, parked beside the candidate -------------------------
+    // --- confirm chip, parked on or beside the candidate --------------------
     if (chip.current != null) {
       if (r.candidate != null) {
         // the marked object is usually an oversized invisible hit volume, which
@@ -158,10 +164,23 @@ function HeadSelectActive({
         box.getCenter(centre)
         const dist = Math.max(camPos.distanceTo(centre), 0.3)
         const scale = dist * CHIP_ANGULAR
-        // x/z stay pinned to the candidate's own bearing — only the pitch
-        // changes, so confirming never asks for a head turn, only a nod.
-        const y = confirmSide === 'above' ? box.max.y + scale * confirmGap : box.min.y - scale * confirmGap
-        chip.current.position.set(centre.x, y, centre.z)
+
+        if (confirmSide === 'on') {
+          // Hover the chip in front of the candidate's own surface, along the
+          // same ray the gaze is already resting on — same apparent screen
+          // position, so confirming needs no head movement at all. `size`'s
+          // largest axis is a distance-independent stand-in for "how far off
+          // the hit volume's surface can be toward the camera" regardless of
+          // which face the gaze actually landed on.
+          box.getSize(size)
+          const clearance = Math.max(size.x, size.y, size.z) * 0.5 + scale * confirmGap
+          toCam.copy(camPos).sub(centre).normalize()
+          chip.current.position.copy(centre).addScaledVector(toCam, clearance)
+        } else {
+          // x/z stay pinned to the candidate's own bearing — only the pitch
+          // changes, so confirming never asks for a head turn, only a nod.
+          chip.current.position.set(centre.x, box.min.y - scale * confirmGap, centre.z)
+        }
         chip.current.quaternion.copy(camera.quaternion)
         chip.current.scale.setScalar(scale)
         chip.current.visible = true

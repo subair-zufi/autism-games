@@ -66,7 +66,7 @@ export function Museum360Scene(props: Museum360SceneProps) {
         {/* soft warm ambient so nothing is pitch black */}
         <ambientLight intensity={0.55} color="#fff3e0" />
         <LookControls />
-        <HeadSelect confirmSide="above" />
+        <HeadSelect confirmSide="on" />
         <XRCameraHome />
         <VRGameOver />
         <HeadSampler />

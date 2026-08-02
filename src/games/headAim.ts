@@ -4,9 +4,10 @@ import type { Object3D } from 'three'
  * Gaze selection for the 360 games — the pure part.
  *
  * Selection is deliberately **two-stage**. Resting the gaze on something makes
- * it the *candidate* and pops a confirm chip beside it (below, or above in
- * the games that pass `confirmSide="above"`); only dwelling on that chip
- * answers. A single-stage dwell cannot work in these games, because
+ * it the *candidate* and pops a confirm chip near it — below by default, or
+ * hovering right on its surface in the games that pass `confirmSide="on"`;
+ * only dwelling on that chip answers. A single-stage dwell cannot work in
+ * these games, because
  * looking at the options **is the task** — Emotion Room asks the child to scan
  * faces to find an emotion, so the first face they examined was being scored as
  * their answer. Separating "I am looking at this" from "I choose this" is the
