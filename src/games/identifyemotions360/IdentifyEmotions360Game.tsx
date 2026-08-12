@@ -22,6 +22,7 @@ import { useLevelProgress } from '../progression'
 import { clipLine } from './strings'
 import { IdentifyEmotions360Scene } from './IdentifyEmotions360Scene'
 import { xrStore, vrSupported } from './xrStore'
+import { EnterVRButton } from '../EnterVRButton'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
@@ -401,24 +402,7 @@ export function IdentifyEmotions360Game() {
             />
           )}
           {canVR && (
-            <button
-              onClick={() => xrStore.enterVR()}
-              style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                padding: '10px 16px',
-                borderRadius: 22,
-                border: 'none',
-                background: 'rgba(139, 92, 246, 0.94)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '1rem',
-                cursor: 'pointer',
-              }}
-            >
-              🥽 {clipLine('enterVR', lang)}
-            </button>
+            <EnterVRButton store={xrStore} accent="rgba(139, 92, 246, 0.94)" label={clipLine('enterVR', lang)} />
           )}
         </div>
         <div className="game-bottom">

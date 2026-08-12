@@ -25,6 +25,7 @@ import { useLevelProgress } from '../progression'
 import { Football360Scene } from './Football360Scene'
 import { fbLine, fbLines, fbSpeak, type Football360MessageKey } from './strings'
 import { xrStore, vrSupported } from './xrStore'
+import { EnterVRButton } from '../EnterVRButton'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
@@ -399,24 +400,7 @@ export function Football360Game() {
             hudQuit={t('vrQuit', lang)}
           />
           {canVR && (
-            <button
-              onClick={() => xrStore.enterVR()}
-              style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                padding: '10px 16px',
-                borderRadius: 22,
-                border: 'none',
-                background: 'rgba(22, 163, 74, 0.92)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '1rem',
-                cursor: 'pointer',
-              }}
-            >
-              🥽 {fbLine('enterVR', lang)}
-            </button>
+            <EnterVRButton store={xrStore} accent="rgba(22, 163, 74, 0.92)" label={fbLine('enterVR', lang)} />
           )}
           {!hintSeen && (
             <div

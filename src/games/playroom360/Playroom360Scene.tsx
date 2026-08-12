@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { FLAT_SCREEN_DPR } from '../xrInput'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRGameOver } from '../VRGameOver'
@@ -66,6 +67,7 @@ export interface Playroom360SceneProps {
 export function Playroom360Scene(props: Playroom360SceneProps) {
   return (
     <Canvas
+      dpr={FLAT_SCREEN_DPR}
       camera={{ position: [0, EYE_Y, 0], fov: 60, near: 0.1, far: 60 }}
       onCreated={({ camera }) => {
         // yaw-then-pitch so dragging sideways always spins the room level

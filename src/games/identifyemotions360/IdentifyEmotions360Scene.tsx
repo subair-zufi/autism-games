@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { FLAT_SCREEN_DPR } from '../xrInput'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRGameOver } from '../VRGameOver'
@@ -79,6 +80,7 @@ export interface IdentifyEmotions360SceneProps {
 export function IdentifyEmotions360Scene(props: IdentifyEmotions360SceneProps) {
   return (
     <Canvas
+      dpr={FLAT_SCREEN_DPR}
       camera={{ position: [0, EYE_Y, 0], fov: 60, near: 0.1, far: 100 }}
       onCreated={({ camera, gl }) => {
         camera.rotation.order = 'YXZ'

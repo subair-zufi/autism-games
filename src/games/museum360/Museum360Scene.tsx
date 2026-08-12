@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { FLAT_SCREEN_DPR } from '../xrInput'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRGameOver } from '../VRGameOver'
@@ -52,6 +53,7 @@ export interface Museum360SceneProps {
 export function Museum360Scene(props: Museum360SceneProps) {
   return (
     <Canvas
+      dpr={FLAT_SCREEN_DPR}
       camera={{ position: [0, EYE_Y, 0], fov: 60, near: 0.1, far: 60 }}
       onCreated={({ camera }) => {
         // yaw-then-pitch so dragging sideways always spins the room level
@@ -337,41 +339,65 @@ function MuseumSign() {
   )
 }
 
-/** spells MUSEUM with little extruded gold blocks (no font dependency). */
-function SignLetters() {
-  // 5x7 pixel patterns per letter, rows top->bottom
-  const FONT: Record<string, string[]> = {
-    M: ['10001', '11011', '10101', '10001', '10001', '10001', '10001'],
-    U: ['10001', '10001', '10001', '10001', '10001', '10001', '01110'],
-    S: ['01111', '10000', '10000', '01110', '00001', '00001', '11110'],
-    E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
-  }
-  const word = 'MUSEUM'
-  const px = 0.07 // pixel size
-  const letterW = 5 * px
-  const gap = px * 1.6
-  const totalW = word.length * letterW + (word.length - 1) * gap
+// 5x7 pixel patterns per letter, rows top->bottom
+const SIGN_FONT: Record<string, string[]> = {
+  M: ['10001', '11011', '10101', '10001', '10001', '10001', '10001'],
+  U: ['10001', '10001', '10001', '10001', '10001', '10001', '01110'],
+  S: ['01111', '10000', '10000', '01110', '00001', '00001', '11110'],
+  E: ['11111', '10000', '10000', '11110', '10000', '10000', '11111'],
+}
+const SIGN_WORD = 'MUSEUM'
+const SIGN_PX = 0.07 // pixel size
+
+/** where every lit block of the word sits, worked out once at module load */
+const SIGN_BLOCKS: { x: number; y: number }[] = (() => {
+  const letterW = 5 * SIGN_PX
+  const gap = SIGN_PX * 1.6
+  const totalW = SIGN_WORD.length * letterW + (SIGN_WORD.length - 1) * gap
   const blocks: { x: number; y: number }[] = []
   let cursor = -totalW / 2
-  for (const ch of word) {
-    const pat = FONT[ch]
+  for (const ch of SIGN_WORD) {
+    const pat = SIGN_FONT[ch]
     for (let r = 0; r < pat.length; r++) {
       for (let c = 0; c < 5; c++) {
-        if (pat[r][c] === '1') {
-          blocks.push({ x: cursor + c * px, y: (3 - r) * px })
-        }
+        if (pat[r][c] === '1') blocks.push({ x: cursor + c * SIGN_PX, y: (3 - r) * SIGN_PX })
       }
     }
     cursor += letterW + gap
   }
+  return blocks
+})()
+
+/**
+ * Spells MUSEUM with little extruded gold blocks (no font dependency).
+ *
+ * All 97 blocks are one `InstancedMesh`, so the sign costs a single draw call
+ * rather than 97. It was 97 separate `<mesh>`es, each with its own geometry and
+ * material — well over half of everything the rotunda drew each frame, doubled
+ * again per eye inside a headset, for a decorative word above the helper. A
+ * headset that misses its frame deadline samples input late, so scenery like
+ * this was directly buying the lag on every pick and every button press.
+ */
+function SignLetters() {
+  const ref = useRef<THREE.InstancedMesh>(null)
+
+  useEffect(() => {
+    const mesh = ref.current
+    if (!mesh) return
+    const m = new THREE.Matrix4()
+    SIGN_BLOCKS.forEach((b, i) => {
+      m.setPosition(b.x + SIGN_PX / 2, b.y, 0)
+      mesh.setMatrixAt(i, m)
+    })
+    mesh.instanceMatrix.needsUpdate = true
+  }, [])
+
   return (
     <group position={[0, 0, 0.09]}>
-      {blocks.map((b, i) => (
-        <mesh key={i} position={[b.x + px / 2, b.y, 0]}>
-          <boxGeometry args={[px * 0.95, px * 0.95, 0.04]} />
-          <meshStandardMaterial color="#e9c66b" emissive="#9c7a1f" emissiveIntensity={0.3} metalness={0.5} roughness={0.4} />
-        </mesh>
-      ))}
+      <instancedMesh ref={ref} args={[undefined, undefined, SIGN_BLOCKS.length]}>
+        <boxGeometry args={[SIGN_PX * 0.95, SIGN_PX * 0.95, 0.04]} />
+        <meshStandardMaterial color="#e9c66b" emissive="#9c7a1f" emissiveIntensity={0.3} metalness={0.5} roughness={0.4} />
+      </instancedMesh>
     </group>
   )
 }

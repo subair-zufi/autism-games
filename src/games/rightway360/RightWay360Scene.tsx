@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { FLAT_SCREEN_DPR } from '../xrInput'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRGameOver } from '../VRGameOver'
@@ -49,6 +50,7 @@ export interface RightWay360SceneProps {
 export function RightWay360Scene(props: RightWay360SceneProps) {
   return (
     <Canvas
+      dpr={FLAT_SCREEN_DPR}
       camera={{ position: [0, EYE_Y, 0], fov: 60, near: 0.1, far: 100 }}
       onCreated={({ camera, gl }) => {
         // yaw-then-pitch so dragging sideways always spins the yard level

@@ -26,6 +26,7 @@ import {
 import { IS_IT_OKAY, yardLine } from './strings'
 import { RightWay360Scene } from './RightWay360Scene'
 import { xrStore, vrSupported } from './xrStore'
+import { EnterVRButton } from '../EnterVRButton'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 
@@ -270,24 +271,7 @@ export function RightWay360Game() {
             />
           )}
           {canVR && (
-            <button
-              onClick={() => xrStore.enterVR()}
-              style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                padding: '10px 16px',
-                borderRadius: 22,
-                border: 'none',
-                background: 'rgba(22, 163, 74, 0.94)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '1rem',
-                cursor: 'pointer',
-              }}
-            >
-              🥽 {yardLine('enterVR', lang)}
-            </button>
+            <EnterVRButton store={xrStore} accent="rgba(22, 163, 74, 0.94)" label={yardLine('enterVR', lang)} />
           )}
           {!hintSeen && (
             <div

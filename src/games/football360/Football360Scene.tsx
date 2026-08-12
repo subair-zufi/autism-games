@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
+import { FLAT_SCREEN_DPR } from '../xrInput'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRGameOver } from '../VRGameOver'
@@ -63,6 +64,7 @@ export interface Football360SceneProps {
 export function Football360Scene(props: Football360SceneProps) {
   return (
     <Canvas
+      dpr={FLAT_SCREEN_DPR}
       camera={{ position: [0, EYE_Y, 0], fov: 60, near: 0.1, far: 120 }}
       onCreated={({ camera }) => {
         // yaw-then-pitch so dragging sideways always spins the ground level
@@ -295,8 +297,11 @@ function crowdColor(i: number, tier: number): string {
   return palette[(i * 7 + tier * 3) % palette.length]
 }
 
+/** the four grandstand decks, from pitch-side outward */
+const TIERS = [0, 1, 2, 3]
+
 function Grandstand() {
-  const tiers = [0, 1, 2, 3]
+  const tiers = TIERS
   return (
     <group>
       {/* perimeter wall closing the world behind the top tier */}
@@ -319,26 +324,75 @@ function Grandstand() {
               <ringGeometry args={[r - 0.05, r + 2.15, 64]} />
               <meshStandardMaterial color={t % 2 ? '#8b97a6' : '#96a2b2'} side={THREE.DoubleSide} />
             </mesh>
-            {/* the crowd: rings of bright spectators on every deck */}
-            {Array.from({ length: 36 }, (_, i) => {
-              const a = ((i + t * 0.5) / 36) * Math.PI * 2
-              const [x, z] = bearingToXZ(a, r + 1.1)
-              return (
-                <group key={i} position={[x, stepY, z]}>
-                  <mesh position={[0, 0.28, 0]}>
-                    <capsuleGeometry args={[0.16, 0.3, 4, 8]} />
-                    <meshStandardMaterial color={crowdColor(i, t)} />
-                  </mesh>
-                  <mesh position={[0, 0.68, 0]}>
-                    <sphereGeometry args={[0.13, 8, 8]} />
-                    <meshStandardMaterial color="#e8b888" />
-                  </mesh>
-                </group>
-              )
-            })}
           </group>
         )
       })}
+      {/* the crowd: rings of bright spectators on every deck */}
+      <Crowd tiers={tiers} />
+    </group>
+  )
+}
+
+/** spectators per deck */
+const CROWD_PER_TIER = 36
+
+/**
+ * The whole crowd in two draw calls — one for the bodies, one for the heads.
+ *
+ * This used to be a `<mesh>` per body and a `<mesh>` per head: 4 decks × 36
+ * spectators × 2 = 288 separate meshes, each with its own geometry and its own
+ * material, so 288 draw calls every single frame. In an immersive session the
+ * scene is drawn once per eye, which made it 576 — for scenery the child never
+ * interacts with. That is the bulk of what the headset was spending its frame
+ * budget on, and a headset that misses its frame deadline is a headset that
+ * samples the controller late, which is what makes a press feel unanswered.
+ *
+ * `InstancedMesh` draws all of them from one geometry and one material in a
+ * single call. The bodies vary in colour, which instancing handles through a
+ * per-instance colour attribute; the heads are all one skin tone. Nothing about
+ * the crowd moves, so the transforms are written once on mount.
+ */
+function Crowd({ tiers }: { tiers: number[] }) {
+  const bodies = useRef<THREE.InstancedMesh>(null)
+  const heads = useRef<THREE.InstancedMesh>(null)
+  const count = tiers.length * CROWD_PER_TIER
+
+  useEffect(() => {
+    const b = bodies.current
+    const h = heads.current
+    if (!b || !h) return
+    const m = new THREE.Matrix4()
+    const colour = new THREE.Color()
+    let n = 0
+    for (const t of tiers) {
+      const r = STAND_R + t * 2.1
+      const stepY = 0.9 + t * 1.15
+      for (let i = 0; i < CROWD_PER_TIER; i++) {
+        const a = ((i + t * 0.5) / CROWD_PER_TIER) * Math.PI * 2
+        const [x, z] = bearingToXZ(a, r + 1.1)
+        m.setPosition(x, stepY + 0.28, z)
+        b.setMatrixAt(n, m)
+        b.setColorAt(n, colour.set(crowdColor(i, t)))
+        m.setPosition(x, stepY + 0.68, z)
+        h.setMatrixAt(n, m)
+        n++
+      }
+    }
+    b.instanceMatrix.needsUpdate = true
+    if (b.instanceColor) b.instanceColor.needsUpdate = true
+    h.instanceMatrix.needsUpdate = true
+  }, [tiers])
+
+  return (
+    <group>
+      <instancedMesh ref={bodies} args={[undefined, undefined, count]}>
+        <capsuleGeometry args={[0.16, 0.3, 4, 8]} />
+        <meshStandardMaterial />
+      </instancedMesh>
+      <instancedMesh ref={heads} args={[undefined, undefined, count]}>
+        <sphereGeometry args={[0.13, 8, 8]} />
+        <meshStandardMaterial color="#e8b888" />
+      </instancedMesh>
     </group>
   )
 }

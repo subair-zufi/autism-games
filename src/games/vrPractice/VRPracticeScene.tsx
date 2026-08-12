@@ -8,6 +8,8 @@ import { useSettings } from '../../state/settings'
 import { t } from '../../i18n/strings'
 import { playSuccess, playTap } from '../../services/sounds'
 import { xrStore, vrSupported } from './xrStore'
+import { FLAT_SCREEN_DPR } from '../xrInput'
+import { EnterVRButton } from '../EnterVRButton'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRInputSwitch } from '../VRInputSwitch'
@@ -90,6 +92,7 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
       <div className="game-page">
         <div className="game-canvas">
           <Canvas
+            dpr={FLAT_SCREEN_DPR}
             camera={{ position: [0, EYE_Y, 0], fov: 60, near: 0.1, far: 60 }}
             onCreated={({ camera }) => {
               camera.rotation.order = 'YXZ'
@@ -114,24 +117,7 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
             </XR>
           </Canvas>
           {canVR && (
-            <button
-              onClick={() => xrStore.enterVR()}
-              style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                padding: '10px 16px',
-                borderRadius: 22,
-                border: 'none',
-                background: 'rgba(59, 130, 246, 0.92)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '1rem',
-                cursor: 'pointer',
-              }}
-            >
-              🥽 {lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'}
-            </button>
+            <EnterVRButton store={xrStore} accent="rgba(59, 130, 246, 0.92)" label={lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'} />
           )}
         </div>
         <div className="game-bottom">

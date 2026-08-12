@@ -16,6 +16,20 @@ html { scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #c3cad9
 body { background: var(--bg); color: var(--ink); user-select: none; -webkit-user-select: none; }
 button { font: inherit; cursor: pointer; border: none; border-radius: var(--radius); }
 
+/* Every tappable control acknowledges a press instantly.
+ *
+ * In the headset the next screen can take a moment to appear (a 360 scene has
+ * to build), and a control that looks identical the whole time reads as broken
+ * — so the facilitator presses again, and again. A press state costs nothing
+ * and is drawn by the compositor, so it lands even while the main thread is
+ * busy putting the next screen together.
+ *
+ * `touch-action: manipulation` opts every control out of double-tap-to-zoom
+ * gesture detection, which is what a browser otherwise waits on before it will
+ * commit to a tap. */
+button, a, [role='button'] { touch-action: manipulation; }
+button:active, a:active, [role='button']:active { filter: brightness(0.93); }
+
 .big-btn {
   min-height: 72px;
   min-width: 140px;
@@ -135,6 +149,8 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   gap: 4px;
   max-width: 150px;
 }
+.level-btn { transition: transform 0.1s ease, box-shadow 0.1s ease; }
+.level-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.08); }
 .level-btn.selected { background: var(--accent); color: #fff; }
 .level-btn-name { font-weight: 700; }
 .level-btn-note { font-size: 0.8rem; line-height: 1.15; opacity: 0.8; }
@@ -252,6 +268,19 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+/* shown while a game's code is fetched (App.tsx's lazy routes) */
+.game-loading {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  background: var(--bg); color: var(--ink-soft); font-size: 1.15rem;
+}
+.game-loading .spinner {
+  width: 56px; height: 56px;
+  border: 5px solid rgba(127, 182, 164, 0.25);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
 }
 /* ---- mirror game ---- */
 .mirror-canvas {
@@ -389,7 +418,9 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   background: var(--m-accent); color: #fff; border-radius: 14px; padding: 14px;
   font-size: 1rem; font-weight: 700; box-shadow: 0 6px 16px rgba(61, 123, 214, 0.28);
 }
-.btn-primary:disabled { opacity: 0.55; box-shadow: none; }
+.btn-primary { transition: transform 0.1s ease, box-shadow 0.1s ease; }
+.btn-primary:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(61, 123, 214, 0.28); }
+.btn-primary:disabled { opacity: 0.55; box-shadow: none; transform: none; }
 .btn-primary svg { width: 18px; height: 18px; }
 .btn-ghost { background: transparent; color: var(--m-muted); font-weight: 600; padding: 10px; border-radius: 12px; }
 .btn-outline { background: #fff; border: 1px solid #dbe1ec; color: #33405c; border-radius: 12px; padding: 12px; font-weight: 700; width: 100%; }
@@ -479,6 +510,7 @@ button { font: inherit; cursor: pointer; border: none; border-radius: var(--radi
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .game-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(30, 40, 80, 0.1); }
+.game-card:active { transform: scale(0.97); box-shadow: 0 2px 8px rgba(30, 40, 80, 0.12); }
 .game-icon { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-size: 1.5rem; margin-bottom: 4px; background: color-mix(in srgb, var(--card-accent, var(--m-accent)) 16%, #fff); }
 .game-name { font-weight: 700; font-size: 0.98rem; }
 .game-desc { font-size: 0.78rem; color: #7a86a0; line-height: 1.3; }

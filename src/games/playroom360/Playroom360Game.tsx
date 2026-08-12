@@ -14,6 +14,7 @@ import { useLevelProgress } from '../progression'
 import { prLine, prLines, prSpeak, type Playroom360MessageKey } from './strings'
 import { Playroom360Scene } from './Playroom360Scene'
 import { xrStore, vrSupported } from './xrStore'
+import { EnterVRButton } from '../EnterVRButton'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
@@ -271,24 +272,7 @@ export function Playroom360Game() {
             bubbleTap={prLine('bubbleMyTurn', lang)}
           />
           {canVR && (
-            <button
-              onClick={() => xrStore.enterVR()}
-              style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                padding: '10px 16px',
-                borderRadius: 22,
-                border: 'none',
-                background: 'rgba(234, 88, 12, 0.92)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '1rem',
-                cursor: 'pointer',
-              }}
-            >
-              🥽 {prLine('enterVR', lang)}
-            </button>
+            <EnterVRButton store={xrStore} accent="rgba(234, 88, 12, 0.92)" label={prLine('enterVR', lang)} />
           )}
           {!hintSeen && (
             <div

@@ -25,6 +25,7 @@ import { useLevelProgress } from '../progression'
 import { roomLine } from './strings'
 import { EmotionRecognition360Scene } from './EmotionRecognition360Scene'
 import { xrStore, vrSupported } from './xrStore'
+import { EnterVRButton } from '../EnterVRButton'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
@@ -303,24 +304,7 @@ export function EmotionRecognition360Game() {
             />
           )}
           {canVR && (
-            <button
-              onClick={() => xrStore.enterVR()}
-              style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                padding: '10px 16px',
-                borderRadius: 22,
-                border: 'none',
-                background: 'rgba(245, 158, 11, 0.94)',
-                color: '#fff',
-                fontWeight: 700,
-                fontSize: '1rem',
-                cursor: 'pointer',
-              }}
-            >
-              🥽 {roomLine('enterVR', lang)}
-            </button>
+            <EnterVRButton store={xrStore} accent="rgba(245, 158, 11, 0.94)" label={roomLine('enterVR', lang)} />
           )}
           {!hintSeen && (
             <div
