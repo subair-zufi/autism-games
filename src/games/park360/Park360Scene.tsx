@@ -268,8 +268,6 @@ function TextPanel({
  * half-circle, so the game itself never asks for more than a head turn.
  */
 function ParkWorld() {
-  // a loose ring of trees all around the lawn (decor only, out of the play arc's radius)
-  const treeRing = [15, 48, 80, 112, 145, 178, 210, 243, 275, 308, 340]
   return (
     <group>
       {/* the lawn */}
@@ -288,148 +286,229 @@ function ParkWorld() {
         <meshStandardMaterial color="#e3d3a6" />
       </mesh>
 
-      {/* distant tree line wrapping the full 360° */}
-      {treeRing.map((deg, i) => {
-        const a = (deg * Math.PI) / 180
-        const r = 13 + (i % 3) * 3
-        const [x, z] = bearingToXZ(a, r)
-        return <Tree key={deg} x={x} z={z} scale={1.6 + (i % 2) * 0.5} />
-      })}
-      {/* nearer trees framing the play arc from the sides (outside it) */}
-      <Tree x={bearingToXZ((-72 * Math.PI) / 180, 8)[0]} z={bearingToXZ((-72 * Math.PI) / 180, 8)[1]} scale={1.3} />
-      <Tree x={bearingToXZ((70 * Math.PI) / 180, 8.5)[0]} z={bearingToXZ((70 * Math.PI) / 180, 8.5)[1]} scale={1.2} />
-      <Bush x={-3.4} z={-3.2} />
-      <Bush x={2.6} z={-4.6} />
-      <Bush x={4.4} z={1.8} />
-      <Bush x={-4.2} z={2.6} />
+      {/* Every repeated bit of scenery below is drawn as ONE instanced mesh per
+          shape instead of one mesh per object. The park was 115 meshes with 115
+          separate geometries and 115 separate materials — nothing shared with
+          anything — and scenery the child never touches was most of it. The
+          eight instanced meshes here replace 89 of those. */}
+
+      {/* the tree line wrapping the full 360°, plus two nearer trees framing
+          the play arc from the sides */}
+      <Instanced items={TREE_TRUNKS}>
+        <cylinderGeometry args={[0.16, 0.24, 1.6, 8]} />
+        <meshStandardMaterial color="#8a5a33" />
+      </Instanced>
+      <Instanced items={TREE_CROWNS}>
+        <sphereGeometry args={[1.05, 14, 14]} />
+        <meshStandardMaterial color="#5da44e" />
+      </Instanced>
+
+      <Instanced items={BUSHES}>
+        <sphereGeometry args={[0.5, 12, 12]} />
+        <meshStandardMaterial color="#6fb35d" />
+      </Instanced>
 
       {/* the low picket fence arcs across the front — the bird's landing spot */}
-      <FrontFence />
+      <Instanced items={FENCE_POSTS}>
+        <boxGeometry args={[0.1, 1.0, 0.07]} />
+        <meshStandardMaterial color="#c8b08a" />
+      </Instanced>
+      <Instanced items={FENCE_RAILS}>
+        <boxGeometry args={[0.06, 0.08, FENCE_RAIL_LEN]} />
+        <meshStandardMaterial color="#c8b08a" />
+      </Instanced>
 
       {/* the friend's flowerbed — what they are busy looking at */}
-      <FlowerBed bearingDeg={53} radius={4.9} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[FLOWERBED[0], 0.01, FLOWERBED[2]]}>
+        <circleGeometry args={[0.9, 24]} />
+        <meshStandardMaterial color="#9a7a52" />
+      </mesh>
+      <Instanced items={FLOWER_STEMS}>
+        <cylinderGeometry args={[0.025, 0.025, 0.4, 6]} />
+        <meshStandardMaterial color="#4d8a3d" />
+      </Instanced>
+      {/* the blooms differ only in colour, which instancing carries per-instance */}
+      <Instanced items={FLOWER_BLOOMS}>
+        <sphereGeometry args={[0.11, 10, 10]} />
+        <meshStandardMaterial />
+      </Instanced>
 
       {/* sun + a few drifting-still clouds */}
       <mesh position={[16, 22, -26]}>
         <sphereGeometry args={[2.6, 16, 16]} />
         <meshBasicMaterial color="#fff3c2" />
       </mesh>
-      <Cloud x={-14} y={14} z={-24} s={1.4} />
-      <Cloud x={9} y={17} z={-30} s={1.9} />
-      <Cloud x={-2} y={15} z={26} s={1.6} />
-      <Cloud x={20} y={13} z={10} s={1.3} />
+      {/* one unit sphere per puff, sized by the instance's own scale */}
+      <Instanced items={CLOUD_PUFFS}>
+        <sphereGeometry args={[1, 12, 12]} />
+        <meshBasicMaterial color="#ffffff" />
+      </Instanced>
     </group>
   )
 }
 
-function Tree({ x, z, scale = 1 }: { x: number; z: number; scale?: number }) {
+/* ---- instanced scenery ----------------------------------------------------
+ * Every placement below is fixed for the life of the game, so it is worked out
+ * once at module load and written into the instance matrices on mount. Nothing
+ * here animates.
+ */
+
+/** one placed copy of an instanced shape */
+interface Placement {
+  pos: [number, number, number]
+  /** yaw in radians */
+  rotY?: number
+  /** uniform scale */
+  scale?: number
+  /** per-instance tint; only meaningful when the material is left uncoloured */
+  color?: string
+}
+
+const UP_AXIS = new THREE.Vector3(0, 1, 0)
+
+/**
+ * Draws `items.length` copies of the child geometry/material in one call.
+ *
+ * The children are the ordinary `<geometry>` / `<material>` elements the mesh
+ * would have had, so converting a group of meshes to instances is a local
+ * change: the shape and the look stay written exactly where they were.
+ */
+function Instanced({ items, children }: { items: Placement[]; children: React.ReactNode }) {
+  const ref = useRef<THREE.InstancedMesh>(null)
+
+  useEffect(() => {
+    const mesh = ref.current
+    if (!mesh) return
+    const m = new THREE.Matrix4()
+    const p = new THREE.Vector3()
+    const q = new THREE.Quaternion()
+    const s = new THREE.Vector3()
+    const c = new THREE.Color()
+    items.forEach((it, i) => {
+      p.set(it.pos[0], it.pos[1], it.pos[2])
+      q.setFromAxisAngle(UP_AXIS, it.rotY ?? 0)
+      s.setScalar(it.scale ?? 1)
+      mesh.setMatrixAt(i, m.compose(p, q, s))
+      if (it.color != null) mesh.setColorAt(i, c.set(it.color))
+    })
+    mesh.instanceMatrix.needsUpdate = true
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+  }, [items])
+
   return (
-    <group position={[x, 0, z]} scale={scale}>
-      <mesh position={[0, 0.8, 0]}>
-        <cylinderGeometry args={[0.16, 0.24, 1.6, 8]} />
-        <meshStandardMaterial color="#8a5a33" />
-      </mesh>
-      <mesh position={[0, 2.1, 0]}>
-        <sphereGeometry args={[1.05, 14, 14]} />
-        <meshStandardMaterial color="#5da44e" />
-      </mesh>
-    </group>
+    <instancedMesh ref={ref} args={[undefined, undefined, items.length]}>
+      {children}
+    </instancedMesh>
   )
 }
 
-function Bush({ x, z }: { x: number; z: number }) {
-  return (
-    <mesh position={[x, 0.32, z]}>
-      <sphereGeometry args={[0.5, 12, 12]} />
-      <meshStandardMaterial color="#6fb35d" />
-    </mesh>
-  )
-}
+/** trunk and crown offsets within a tree, in un-scaled units */
+const TRUNK_Y = 0.8
+const CROWN_Y = 2.1
 
-/** low picket fence arcing across the front of the play area (bird perch at bearing 0) */
-function FrontFence() {
-  const posts: number[] = []
-  for (let deg = -58; deg <= 58; deg += 7.25) posts.push(deg)
-  const R = 6.2
-  return (
-    <group>
-      {posts.map((deg) => {
-        const a = (deg * Math.PI) / 180
-        const [x, z] = bearingToXZ(a, R)
-        return (
-          <mesh key={deg} position={[x, 0.5, z]} rotation={[0, -a, 0]}>
-            <boxGeometry args={[0.1, 1.0, 0.07]} />
-            <meshStandardMaterial color="#c8b08a" />
-          </mesh>
-        )
-      })}
-      {/* the rail, as short straight segments between posts */}
-      {posts.slice(0, -1).map((deg) => {
-        const a1 = (deg * Math.PI) / 180
-        const a2 = ((deg + 7.25) * Math.PI) / 180
-        const [x1, z1] = bearingToXZ(a1, R)
-        const [x2, z2] = bearingToXZ(a2, R)
-        const mx = (x1 + x2) / 2
-        const mz = (z1 + z2) / 2
-        const len = Math.hypot(x2 - x1, z2 - z1)
-        const yaw = Math.atan2(x2 - x1, z2 - z1)
-        return (
-          <mesh key={deg} position={[mx, 0.92, mz]} rotation={[0, yaw, 0]}>
-            <boxGeometry args={[0.06, 0.08, len]} />
-            <meshStandardMaterial color="#c8b08a" />
-          </mesh>
-        )
-      })}
-    </group>
-  )
-}
+/** a loose ring of trees all around the lawn (decor only, outside the play arc) */
+const TREES: { x: number; z: number; scale: number }[] = (() => {
+  const ring = [15, 48, 80, 112, 145, 178, 210, 243, 275, 308, 340]
+  const out = ring.map((deg, i) => {
+    const a = (deg * Math.PI) / 180
+    const [x, z] = bearingToXZ(a, 13 + (i % 3) * 3)
+    return { x, z, scale: 1.6 + (i % 2) * 0.5 }
+  })
+  // nearer trees framing the play arc from the sides (outside it)
+  const [nlx, nlz] = bearingToXZ((-72 * Math.PI) / 180, 8)
+  const [nrx, nrz] = bearingToXZ((70 * Math.PI) / 180, 8.5)
+  out.push({ x: nlx, z: nlz, scale: 1.3 }, { x: nrx, z: nrz, scale: 1.2 })
+  return out
+})()
 
-function FlowerBed({ bearingDeg, radius }: { bearingDeg: number; radius: number }) {
-  const [x, z] = bearingToXZ((bearingDeg * Math.PI) / 180, radius)
-  const colors = ['#e2554c', '#f5c542', '#b07fe0', '#f473b9', '#5aa9e6']
-  return (
-    <group position={[x, 0, z]}>
-      {/* a soil patch under the flowers */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-        <circleGeometry args={[0.9, 24]} />
-        <meshStandardMaterial color="#9a7a52" />
-      </mesh>
-      {colors.map((c, i) => {
-        const a = (i / colors.length) * Math.PI * 2
-        return (
-          <group key={c} position={[Math.cos(a) * 0.45, 0, Math.sin(a) * 0.45]}>
-            <mesh position={[0, 0.2, 0]}>
-              <cylinderGeometry args={[0.025, 0.025, 0.4, 6]} />
-              <meshStandardMaterial color="#4d8a3d" />
-            </mesh>
-            <mesh position={[0, 0.44, 0]}>
-              <sphereGeometry args={[0.11, 10, 10]} />
-              <meshStandardMaterial color={c} />
-            </mesh>
-          </group>
-        )
-      })}
-    </group>
-  )
-}
+const TREE_TRUNKS: Placement[] = TREES.map((t) => ({
+  pos: [t.x, TRUNK_Y * t.scale, t.z],
+  scale: t.scale,
+}))
+const TREE_CROWNS: Placement[] = TREES.map((t) => ({
+  pos: [t.x, CROWN_Y * t.scale, t.z],
+  scale: t.scale,
+}))
 
-function Cloud({ x, y, z, s }: { x: number; y: number; z: number; s: number }) {
-  return (
-    <group position={[x, y, z]} scale={s}>
-      {[
-        [0, 0, 0, 1.1],
-        [1.2, 0.25, 0.2, 0.85],
-        [-1.1, 0.15, -0.1, 0.8],
-        [0.3, 0.55, 0, 0.7],
-      ].map(([cx, cy, cz, r], i) => (
-        <mesh key={i} position={[cx, cy, cz]}>
-          <sphereGeometry args={[r, 12, 12]} />
-          <meshBasicMaterial color="#ffffff" />
-        </mesh>
-      ))}
-    </group>
-  )
-}
+const BUSHES: Placement[] = [
+  [-3.4, -3.2],
+  [2.6, -4.6],
+  [4.4, 1.8],
+  [-4.2, 2.6],
+].map(([x, z]) => ({ pos: [x, 0.32, z] as [number, number, number] }))
+
+/** the picket fence: posts on a constant radius, rails bridging each pair */
+const FENCE_R = 6.2
+const FENCE_STEP_DEG = 7.25
+const FENCE_BEARINGS: number[] = (() => {
+  const out: number[] = []
+  for (let deg = -58; deg <= 58; deg += FENCE_STEP_DEG) out.push(deg)
+  return out
+})()
+
+const FENCE_POSTS: Placement[] = FENCE_BEARINGS.map((deg) => {
+  const a = (deg * Math.PI) / 180
+  const [x, z] = bearingToXZ(a, FENCE_R)
+  return { pos: [x, 0.5, z], rotY: -a }
+})
+
+// the posts sit at equal angles on one radius, so every rail spans the same
+// chord — one length covers them all, and the geometry can be shared
+const FENCE_RAIL_LEN = (() => {
+  const [x1, z1] = bearingToXZ(0, FENCE_R)
+  const [x2, z2] = bearingToXZ((FENCE_STEP_DEG * Math.PI) / 180, FENCE_R)
+  return Math.hypot(x2 - x1, z2 - z1)
+})()
+
+const FENCE_RAILS: Placement[] = FENCE_BEARINGS.slice(0, -1).map((deg) => {
+  const a1 = (deg * Math.PI) / 180
+  const a2 = ((deg + FENCE_STEP_DEG) * Math.PI) / 180
+  const [x1, z1] = bearingToXZ(a1, FENCE_R)
+  const [x2, z2] = bearingToXZ(a2, FENCE_R)
+  return {
+    pos: [(x1 + x2) / 2, 0.92, (z1 + z2) / 2],
+    rotY: Math.atan2(x2 - x1, z2 - z1),
+  }
+})
+
+/** where the friend's flowerbed sits */
+const FLOWERBED: [number, number, number] = (() => {
+  const [x, z] = bearingToXZ((53 * Math.PI) / 180, 4.9)
+  return [x, 0, z]
+})()
+
+const FLOWER_COLORS = ['#e2554c', '#f5c542', '#b07fe0', '#f473b9', '#5aa9e6']
+const FLOWER_OFFSETS = FLOWER_COLORS.map((_, i) => {
+  const a = (i / FLOWER_COLORS.length) * Math.PI * 2
+  return [Math.cos(a) * 0.45, Math.sin(a) * 0.45] as const
+})
+const FLOWER_STEMS: Placement[] = FLOWER_OFFSETS.map(([ox, oz]) => ({
+  pos: [FLOWERBED[0] + ox, 0.2, FLOWERBED[2] + oz],
+}))
+const FLOWER_BLOOMS: Placement[] = FLOWER_OFFSETS.map(([ox, oz], i) => ({
+  pos: [FLOWERBED[0] + ox, 0.44, FLOWERBED[2] + oz],
+  color: FLOWER_COLORS[i],
+}))
+
+/** four puffs make a cloud; the instance scale carries both the puff's own
+ *  radius and the cloud's overall size */
+const CLOUD_PUFF_SHAPE: [number, number, number, number][] = [
+  [0, 0, 0, 1.1],
+  [1.2, 0.25, 0.2, 0.85],
+  [-1.1, 0.15, -0.1, 0.8],
+  [0.3, 0.55, 0, 0.7],
+]
+const CLOUD_PUFFS: Placement[] = [
+  [-14, 14, -24, 1.4],
+  [9, 17, -30, 1.9],
+  [-2, 15, 26, 1.6],
+  [20, 13, 10, 1.3],
+].flatMap(([cx, cy, cz, s]) =>
+  CLOUD_PUFF_SHAPE.map(([px, py, pz, r]) => ({
+    pos: [cx + px * s, cy + py * s, cz + pz * s] as [number, number, number],
+    scale: r * s,
+  })),
+)
 
 /* ---- the play layer -------------------------------------------------------- */
 
