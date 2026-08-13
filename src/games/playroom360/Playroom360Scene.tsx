@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
+import { Instanced, type Placement } from '../Instanced'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRGameOver } from '../VRGameOver'
@@ -397,6 +398,47 @@ function FloorBall({ bearingDeg, radius }: { bearingDeg: number; radius: number 
   )
 }
 
+/* ---- instanced room decor -------------------------------------------------
+ * The playroom's scenery was 148 meshes with 148 separate geometries and 148
+ * separate materials. The three families below never move, so their placements
+ * are worked out once at module load and written into the instance matrices on
+ * mount — 24 meshes become 3 draw calls.
+ *
+ * The four friends around the table are deliberately NOT instanced: they are
+ * articulated (arms reach, heads turn, blocks are handed over), so each needs
+ * its own transform hierarchy every frame.
+ */
+
+/** party bunting swooping across the front wall */
+const BUNTING: Placement[] = Array.from({ length: 13 }, (_, i) => {
+  const a = ((-54 + i * 9) * Math.PI) / 180
+  const [x, z] = bearingToXZ(a, ROOM_R - 0.12)
+  const droop = Math.abs(Math.sin((i / 12) * Math.PI * 2)) * 0.16
+  return {
+    pos: [x, 2.55 - droop, z] as [number, number, number],
+    // each flag tips downward and turns to face the room centre, so this needs
+    // a full euler, not the yaw the other families use
+    rot: [Math.PI, Math.atan2(-x, -z), 0] as [number, number, number],
+    color: ['#e2554c', '#f5c542', '#5aa9e6', '#7ac74f', '#b06fd6'][i % 5],
+  }
+})
+
+/** soft plank stripes across the wooden floor */
+const FLOOR_PLANKS: Placement[] = Array.from({ length: 8 }, (_, i) => ({
+  pos: [0, 0.004, -ROOM_R + 1 + i * 1.9] as [number, number, number],
+  rot: [-Math.PI / 2, 0, 0] as [number, number, number],
+  color: i % 2 ? '#d3b184' : '#e0c093',
+}))
+
+/** a few blocks left lying about the back half — decor only */
+const STRAY_BLOCKS: Placement[] = [0, 1, 2].map((i) => {
+  const [x, z] = bearingToXZ(((150 - i * 4) * Math.PI) / 180, 6.2)
+  return {
+    pos: [x + i * 0.1, 0.09 + (i === 2 ? 0.18 : 0), z] as [number, number, number],
+    color: ['#5aa9e6', '#f5c542', '#7ac74f'][i],
+  }
+})
+
 function PlayroomRoom() {
   const door = wallSpot(180)
   const posterA = wallSpot(126)
@@ -408,12 +450,11 @@ function PlayroomRoom() {
         <circleGeometry args={[ROOM_R + 0.5, 56]} />
         <meshStandardMaterial color="#d9b98a" roughness={0.9} />
       </mesh>
-      {Array.from({ length: 8 }, (_, i) => (
-        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.004, -ROOM_R + 1 + i * 1.9]}>
-          <planeGeometry args={[ROOM_R * 2, 0.95]} />
-          <meshStandardMaterial color={i % 2 ? '#d3b184' : '#e0c093'} roughness={0.9} />
-        </mesh>
-      ))}
+      {/* the plank stripes, alternating two tones from one instanced mesh */}
+      <Instanced items={FLOOR_PLANKS}>
+        <planeGeometry args={[ROOM_R * 2, 0.95]} />
+        <meshStandardMaterial roughness={0.9} />
+      </Instanced>
 
       {/* round play rug under the table */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, -TABLE_RADIUS]}>
@@ -459,22 +500,12 @@ function PlayroomRoom() {
         </mesh>
       </group>
 
-      {/* party bunting swooping across the front wall, over the friends */}
-      {Array.from({ length: 13 }, (_, i) => {
-        const b = -54 + i * 9
-        const a = (b * Math.PI) / 180
-        const [x, z] = bearingToXZ(a, ROOM_R - 0.12)
-        const droop = Math.abs(Math.sin((i / 12) * Math.PI * 2)) * 0.16
-        return (
-          <mesh key={i} position={[x, 2.55 - droop, z]} rotation={[Math.PI, Math.atan2(-x, -z), 0]}>
-            <coneGeometry args={[0.11, 0.26, 3]} />
-            <meshStandardMaterial
-              color={['#e2554c', '#f5c542', '#5aa9e6', '#7ac74f', '#b06fd6'][i % 5]}
-              side={THREE.DoubleSide}
-            />
-          </mesh>
-        )
-      })}
+      {/* party bunting swooping across the front wall, over the friends —
+          one instanced mesh, its five colours carried per-instance */}
+      <Instanced items={BUNTING}>
+        <coneGeometry args={[0.11, 0.26, 3]} />
+        <meshStandardMaterial side={THREE.DoubleSide} />
+      </Instanced>
 
       {/* sunny windows on both sides */}
       <Window bearingDeg={-95} />
@@ -525,15 +556,10 @@ function PlayroomRoom() {
       {/* toys resting around the back half — decor only */}
       <Teddy bearingDeg={-165} radius={6.1} />
       <FloorBall bearingDeg={162} radius={5.9} />
-      {[0, 1, 2].map((i) => {
-        const [x, z] = bearingToXZ(((150 - i * 4) * Math.PI) / 180, 6.2)
-        return (
-          <mesh key={i} position={[x + i * 0.1, 0.09 + (i === 2 ? 0.18 : 0), z]}>
-            <boxGeometry args={[0.18, 0.18, 0.18]} />
-            <meshStandardMaterial color={['#5aa9e6', '#f5c542', '#7ac74f'][i]} />
-          </mesh>
-        )
-      })}
+      <Instanced items={STRAY_BLOCKS}>
+        <boxGeometry args={[0.18, 0.18, 0.18]} />
+        <meshStandardMaterial />
+      </Instanced>
     </group>
   )
 }
