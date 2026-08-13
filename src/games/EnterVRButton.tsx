@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
 import type { XRStore } from '@react-three/xr'
 import { useSettings } from '../state/settings'
+import { t } from '../i18n/strings'
+import { useEnterVR } from './useEnterVR'
 
 /**
  * The "Enter VR" control every 360 game overlays on its flat-screen canvas.
@@ -20,6 +21,10 @@ import { useSettings } from '../state/settings'
  * A rejected request (the child declined the headset permission prompt, or the
  * session could not start) puts the button straight back to normal, so a real
  * retry is still one press away.
+ *
+ * The click handling itself lives in `useEnterVR`, shared with `VRWaitingRoom`
+ * — the full-screen prompt shown in place of the game until the session is
+ * actually live (see that file for why the game no longer starts here).
  */
 export function EnterVRButton({
   store,
@@ -32,22 +37,12 @@ export function EnterVRButton({
   /** The game's own accent colour, as a CSS background value. */
   accent: string
 }) {
-  const [pending, setPending] = useState(false)
+  const { pending, enter } = useEnterVR(store)
   const lang = useSettings((s) => s.language)
-  // a session that starts unmounts nothing, but a failed one may resolve after
-  // the child has already quit the game
-  const alive = useRef(true)
-  useEffect(() => () => { alive.current = false }, [])
 
   return (
     <button
-      onClick={() => {
-        if (pending) return
-        setPending(true)
-        void Promise.resolve(store.enterVR())
-          .catch(() => {})
-          .finally(() => { if (alive.current) setPending(false) })
-      }}
+      onClick={enter}
       disabled={pending}
       style={{
         position: 'absolute',
@@ -68,7 +63,7 @@ export function EnterVRButton({
         touchAction: 'manipulation',
       }}
     >
-      🥽 {pending ? (lang === 'ml' ? 'തുടങ്ങുന്നു…' : 'Starting…') : label}
+      🥽 {pending ? t('vrEnterPending', lang) : label}
     </button>
   )
 }

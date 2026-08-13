@@ -9,7 +9,8 @@ import { t } from '../../i18n/strings'
 import { playSuccess, playTap } from '../../services/sounds'
 import { xrStore, vrSupported } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
-import { EnterVRButton } from '../EnterVRButton'
+import { useVrSessionActive } from '../vrSession'
+import { VRWaitingRoom } from '../VRWaitingRoom'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRInputSwitch } from '../VRInputSwitch'
@@ -49,6 +50,8 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
   const [ready, setReady] = useState(false)
   const [celebrating, setCelebrating] = useState(false)
   const [canVR, setCanVR] = useState(false)
+  /** whether the headset is actually presenting right now, vs. the flat pre-VR screen */
+  const vrActive = useVrSessionActive(xrStore)
 
   useEffect(() => {
     void vrSupported().then(setCanVR)
@@ -87,6 +90,20 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
   // below carries the method-specific instruction.
   const promptText = t(practicePromptKey({ ready, celebrating, inVR: false, inputMethod }), lang)
 
+  // Same "hold the game back" rule as every real 360 game: on a headset-
+  // capable browser, nothing here — not even the unscored warm-up — should
+  // animate or respond to a tap until the child is actually in the session.
+  if (canVR && !vrActive) {
+    return (
+      <VRWaitingRoom
+        store={xrStore}
+        accent="rgba(59, 130, 246, 0.92)"
+        label={lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'}
+        lang={lang}
+      />
+    )
+  }
+
   return (
     <WebGLGate>
       <div className="game-page">
@@ -116,9 +133,6 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
               <VRInputSwitch bearingDeg={-62} />
             </XR>
           </Canvas>
-          {canVR && (
-            <EnterVRButton store={xrStore} accent="rgba(59, 130, 246, 0.92)" label={lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'} />
-          )}
         </div>
         <div className="game-bottom">
           <PromptBanner text={promptText} lang={lang} />

@@ -30,7 +30,8 @@ import { useLevelProgress } from '../progression'
 import { museum360Line, exhibitLabel } from './strings'
 import { Museum360Scene } from './Museum360Scene'
 import { xrStore, vrSupported } from './xrStore'
-import { EnterVRButton } from '../EnterVRButton'
+import { useVrSessionActive } from '../vrSession'
+import { VRWaitingRoom } from '../VRWaitingRoom'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
@@ -78,6 +79,12 @@ export function Museum360Game() {
   const [hintSeen, setHintSeen] = useState(false)
   /** whether this browser can enter immersive VR (Quest etc.) — shows the button */
   const [canVR, setCanVR] = useState(false)
+  /** whether the headset is actually presenting right now, vs. the flat pre-VR screen */
+  const vrActive = useVrSessionActive(xrStore)
+  /** Play was pressed on a VR-capable browser, but the session hasn't started
+   *  yet — held here instead of calling `start()` so the round never begins
+   *  on the flat screen before the child is actually in the headset. */
+  const [awaitingVr, setAwaitingVr] = useState(false)
   /** timestamp of the moment the pointing cue settled on the target (latency zero-point) */
   const cueReadyAt = useRef<number | null>(null)
   /** last pick, to swallow duplicate click events — the XR layer forwards
@@ -87,6 +94,16 @@ export function Museum360Game() {
   useEffect(() => {
     void vrSupported().then(setCanVR)
   }, [])
+
+  // The moment the child actually enters VR after Play was pressed on a
+  // capable browser — this is the one true start signal on that path.
+  useEffect(() => {
+    if (awaitingVr && vrActive) {
+      setAwaitingVr(false)
+      start()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingVr, vrActive])
 
   // Results stay inside VR. Ending the session here (as this used to) is
   // what dropped the child into the Quest home environment with no window
@@ -100,7 +117,7 @@ export function Museum360Game() {
     lang,
     gameId: 'museum360',
     level: difficulty,
-    onRestart: start,
+    onRestart: handlePlayPress,
   })
 
   // Which trials show the gaze doll vs the pointing hand — a fixed, evenly-spread
@@ -137,6 +154,16 @@ export function Museum360Game() {
     cueReadyAt.current = null
     setRound(makeRound(difficulty, null))
     setPhase('playing')
+  }
+
+  /** Play button handler: on a VR-capable browser, wait for the child to
+   *  actually enter VR before `start()` runs (see the effect above). */
+  function handlePlayPress() {
+    if (canVR && !vrActive) {
+      setAwaitingVr(true)
+      return
+    }
+    start()
   }
 
   function handleCueReady() {
@@ -232,7 +259,19 @@ export function Museum360Game() {
   // there's no headset novelty and it's just friction, so it's skipped.
   if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
-  if (phase === 'start') return <StartScreen game={META} onStart={start} levelNotes={levelNotes} />
+  if (phase === 'start') {
+    if (awaitingVr) {
+      return (
+        <VRWaitingRoom
+          store={xrStore}
+          accent="rgba(14, 165, 233, 0.92)"
+          label={lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'}
+          lang={lang}
+        />
+      )
+    }
+    return <StartScreen game={META} onStart={handlePlayPress} levelNotes={levelNotes} />
+  }
 
   return (
     <WebGLGate>
@@ -251,9 +290,6 @@ export function Museum360Game() {
             hudPrompt={museum360Line(promptKey, lang)}
             hudQuit={t('vrQuit', lang)}
           />
-          {canVR && (
-            <EnterVRButton store={xrStore} accent="rgba(14, 165, 233, 0.92)" label={lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'} />
-          )}
           {!hintSeen && (
             <div
               style={{
@@ -285,7 +321,7 @@ export function Museum360Game() {
             stars={stars}
             message={t('greatPlaying', lang)}
             lang={lang}
-            onRestart={start}
+            onRestart={handlePlayPress}
             onChooseLevel={() => setPhase('start')}
           />
         )}

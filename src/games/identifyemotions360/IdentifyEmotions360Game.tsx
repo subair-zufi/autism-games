@@ -22,7 +22,8 @@ import { useLevelProgress } from '../progression'
 import { clipLine } from './strings'
 import { IdentifyEmotions360Scene } from './IdentifyEmotions360Scene'
 import { xrStore, vrSupported } from './xrStore'
-import { EnterVRButton } from '../EnterVRButton'
+import { useVrSessionActive } from '../vrSession'
+import { VRWaitingRoom } from '../VRWaitingRoom'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
@@ -68,7 +69,14 @@ export function IdentifyEmotions360Game() {
   const [celebrating, setCelebrating] = useState(false)
   const [wrong, setWrong] = useState<EmotionId[]>([])
   const [causePicked, setCausePicked] = useState<number | null>(null)
+  /** whether this browser can enter immersive VR (Quest etc.) — shows the button */
   const [canVR, setCanVR] = useState(false)
+  /** whether the headset is actually presenting right now, vs. the flat pre-VR screen */
+  const vrActive = useVrSessionActive(xrStore)
+  /** Play was pressed on a VR-capable browser, but the session hasn't started
+   *  yet — held here instead of calling `start()` so the clip never begins
+   *  playing on the flat screen before the child is actually in the headset. */
+  const [awaitingVr, setAwaitingVr] = useState(false)
 
   // one <video> element drives the on-screen texture for the whole session
   const [videoEl] = useState<HTMLVideoElement>(() => {
@@ -102,6 +110,16 @@ export function IdentifyEmotions360Game() {
   useEffect(() => {
     void vrSupported().then(setCanVR)
   }, [])
+
+  // The moment the child actually enters VR after Play was pressed on a
+  // capable browser — this is the one true start signal on that path.
+  useEffect(() => {
+    if (awaitingVr && vrActive) {
+      setAwaitingVr(false)
+      start()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingVr, vrActive])
 
   // Freeze the clip on its expressive frame, once, when it reaches the target.
   useEffect(() => {
@@ -174,7 +192,7 @@ export function IdentifyEmotions360Game() {
     lang,
     gameId: 'identifyemotions360',
     level: difficulty,
-    onRestart: start,
+    onRestart: handlePlayPress,
   })
 
   // Read the freeze prompt aloud once frozen (naming stage), stamping when it
@@ -233,6 +251,16 @@ export function IdentifyEmotions360Game() {
     qRef.current = built[0]
     setPhase('playing')
     startQuestion(built, 0)
+  }
+
+  /** Play button handler: on a VR-capable browser, wait for the child to
+   *  actually enter VR before `start()` runs (see the effect above). */
+  function handlePlayPress() {
+    if (canVR && !vrActive) {
+      setAwaitingVr(true)
+      return
+    }
+    start()
   }
 
   /** "Watch again" — rewind and replay up to the freeze. */
@@ -350,10 +378,20 @@ export function IdentifyEmotions360Game() {
   if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
   if (phase === 'start') {
+    if (awaitingVr) {
+      return (
+        <VRWaitingRoom
+          store={xrStore}
+          accent="rgba(139, 92, 246, 0.94)"
+          label={clipLine('enterVR', lang)}
+          lang={lang}
+        />
+      )
+    }
     return (
       <StartScreen
         game={META}
-        onStart={start}
+        onStart={handlePlayPress}
         levelNotes={{
           easy: clipLine('noteEasy', lang),
           medium: clipLine('noteMedium', lang),
@@ -401,9 +439,6 @@ export function IdentifyEmotions360Game() {
               hudQuit={t('vrQuit', lang)}
             />
           )}
-          {canVR && (
-            <EnterVRButton store={xrStore} accent="rgba(139, 92, 246, 0.94)" label={clipLine('enterVR', lang)} />
-          )}
         </div>
         <div className="game-bottom">
           {/* flat-screen twin of the in-world "Watch again" card (same button
@@ -428,7 +463,7 @@ export function IdentifyEmotions360Game() {
             stars={stars}
             message={t('greatPlaying', lang)}
             lang={lang}
-            onRestart={start}
+            onRestart={handlePlayPress}
             onChooseLevel={() => setPhase('start')}
           />
         )}

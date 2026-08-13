@@ -14,7 +14,8 @@ import { useLevelProgress } from '../progression'
 import { prLine, prLines, prSpeak, type Playroom360MessageKey } from './strings'
 import { Playroom360Scene } from './Playroom360Scene'
 import { xrStore, vrSupported } from './xrStore'
-import { EnterVRButton } from '../EnterVRButton'
+import { useVrSessionActive } from '../vrSession'
+import { VRWaitingRoom } from '../VRWaitingRoom'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
@@ -70,6 +71,12 @@ export function Playroom360Game() {
   const [hintSeen, setHintSeen] = useState(false)
   /** whether this browser can enter immersive VR (Quest etc.) — shows the button */
   const [canVR, setCanVR] = useState(false)
+  /** whether the headset is actually presenting right now, vs. the flat pre-VR screen */
+  const vrActive = useVrSessionActive(xrStore)
+  /** Play was pressed on a VR-capable browser, but the session hasn't started
+   *  yet — held here instead of calling `start()` so the turn sequence never
+   *  begins on the flat screen before the child is actually in the headset. */
+  const [awaitingVr, setAwaitingVr] = useState(false)
 
   const turn = index < sequence.length ? sequence[index] : null
   const activeIndex = turn ? turn.playerIndex : -1
@@ -91,6 +98,16 @@ export function Playroom360Game() {
     void vrSupported().then(setCanVR)
   }, [])
 
+  // The moment the child actually enters VR after Play was pressed on a
+  // capable browser — this is the one true start signal on that path.
+  useEffect(() => {
+    if (awaitingVr && vrActive) {
+      setAwaitingVr(false)
+      start()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingVr, vrActive])
+
   // Results stay inside VR. Ending the session here (as this used to) is
   // what dropped the child into the Quest home environment with no window
   // to come back to — every completed game, not just Quit.
@@ -103,7 +120,7 @@ export function Playroom360Game() {
     lang,
     gameId: 'playroom360',
     level: difficulty,
-    onRestart: start,
+    onRestart: handlePlayPress,
   })
 
   function start() {
@@ -118,6 +135,16 @@ export function Playroom360Game() {
     setImpatientTaps(0)
     setStars(0)
     setPhase('playing')
+  }
+
+  /** Play button handler: on a VR-capable browser, wait for the child to
+   *  actually enter VR before `start()` runs (see the effect above). */
+  function handlePlayPress() {
+    if (canVR && !vrActive) {
+      setAwaitingVr(true)
+      return
+    }
+    start()
   }
 
   // Peer turns drive themselves on a timer; the child's turn waits for them.
@@ -219,10 +246,20 @@ export function Playroom360Game() {
   if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
   if (phase === 'start') {
+    if (awaitingVr) {
+      return (
+        <VRWaitingRoom
+          store={xrStore}
+          accent="rgba(234, 88, 12, 0.92)"
+          label={prLine('enterVR', lang)}
+          lang={lang}
+        />
+      )
+    }
     return (
       <StartScreen
         game={META}
-        onStart={start}
+        onStart={handlePlayPress}
         levelNotes={{
           easy: prLine('noteEasy', lang),
           medium: prLine('noteMedium', lang),
@@ -271,9 +308,6 @@ export function Playroom360Game() {
             hudQuit={t('vrQuit', lang)}
             bubbleTap={prLine('bubbleMyTurn', lang)}
           />
-          {canVR && (
-            <EnterVRButton store={xrStore} accent="rgba(234, 88, 12, 0.92)" label={prLine('enterVR', lang)} />
-          )}
           {!hintSeen && (
             <div
               style={{
@@ -317,7 +351,7 @@ export function Playroom360Game() {
             stars={stars}
             message={t('greatPlaying', lang)}
             lang={lang}
-            onRestart={start}
+            onRestart={handlePlayPress}
             onChooseLevel={() => setPhase('start')}
           />
         )}

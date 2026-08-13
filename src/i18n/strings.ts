@@ -127,6 +127,17 @@ const MESSAGES = {
   vrInputGaze: { en: '👀 Gaze', ml: '👀 നോട്ടം' },
   vrInputController: { en: '🎮 Controller', ml: '🎮 കൺട്രോളർ' },
 
+  // --- Pre-VR "waiting room" (shared across every 360 game) ------------------
+  // Shown after Play is pressed on a headset-capable browser, in place of the
+  // game itself, until the child is actually inside the VR session — Enter VR
+  // is the only thing that starts the round (cues, timers, spoken prompts).
+  vrGetReadyTitle: { en: 'Ready when you are!', ml: 'നിങ്ങൾ തയ്യാറാകുമ്പോൾ!' },
+  vrGetReadyHint: {
+    en: 'Put on your headset, then press Enter VR to begin.',
+    ml: 'നിങ്ങളുടെ ഹെഡ്സെറ്റ് ധരിക്കൂ, എന്നിട്ട് തുടങ്ങാൻ Enter VR അമർത്തൂ.',
+  },
+  vrEnterPending: { en: 'Starting…', ml: 'തുടങ്ങുന്നു…' },
+
   // --- Game-over dialog (shared across the arcade-style games) ---------------
   greatPlaying: { en: 'Great playing! 🎉', ml: 'നന്നായി കളിച്ചു! 🎉' },
   greatTrying: { en: 'Great trying! 🌟', ml: 'നല്ല ശ്രമം! 🌟' },

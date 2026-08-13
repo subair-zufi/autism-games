@@ -26,7 +26,8 @@ import {
 import { IS_IT_OKAY, yardLine } from './strings'
 import { RightWay360Scene } from './RightWay360Scene'
 import { xrStore, vrSupported } from './xrStore'
-import { EnterVRButton } from '../EnterVRButton'
+import { useVrSessionActive } from '../vrSession'
+import { VRWaitingRoom } from '../VRWaitingRoom'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 
@@ -75,6 +76,12 @@ export function RightWay360Game() {
   const [hintSeen, setHintSeen] = useState(false)
   /** whether this browser can enter immersive VR (Quest etc.) — shows the button */
   const [canVR, setCanVR] = useState(false)
+  /** whether the headset is actually presenting right now, vs. the flat pre-VR screen */
+  const vrActive = useVrSessionActive(xrStore)
+  /** Play was pressed on a VR-capable browser, but the session hasn't started
+   *  yet — held here instead of calling `start()` so the scene never begins
+   *  acting out on the flat screen before the child is actually in the headset. */
+  const [awaitingVr, setAwaitingVr] = useState(false)
 
   /** when the scene became answerable — decision latency runs from here */
   const readyAt = useRef<number | null>(null)
@@ -86,6 +93,16 @@ export function RightWay360Game() {
   useEffect(() => {
     void vrSupported().then(setCanVR)
   }, [])
+
+  // The moment the child actually enters VR after Play was pressed on a
+  // capable browser — this is the one true start signal on that path.
+  useEffect(() => {
+    if (awaitingVr && vrActive) {
+      setAwaitingVr(false)
+      start()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingVr, vrActive])
 
   // Results stay inside VR. Ending the session here (as this used to) is
   // what dropped the child into the Quest home environment with no window
@@ -99,7 +116,7 @@ export function RightWay360Game() {
     lang,
     gameId: 'rightway360',
     level: difficulty,
-    onRestart: start,
+    onRestart: handlePlayPress,
   })
 
   function clearTimers() {
@@ -121,6 +138,16 @@ export function RightWay360Game() {
     setIdx(0)
     setPhase('playing')
     beginTrial(built, 0)
+  }
+
+  /** Play button handler: on a VR-capable browser, wait for the child to
+   *  actually enter VR before `start()` runs (see the effect above). */
+  function handlePlayPress() {
+    if (canVR && !vrActive) {
+      setAwaitingVr(true)
+      return
+    }
+    start()
   }
 
   function beginTrial(seq: Behavior[], i: number) {
@@ -228,10 +255,20 @@ export function RightWay360Game() {
   }
 
   if (phase === 'start') {
+    if (awaitingVr) {
+      return (
+        <VRWaitingRoom
+          store={xrStore}
+          accent="rgba(22, 163, 74, 0.94)"
+          label={yardLine('enterVR', lang)}
+          lang={lang}
+        />
+      )
+    }
     return (
       <StartScreen
         game={META}
-        onStart={start}
+        onStart={handlePlayPress}
         levelNotes={{
           easy: yardLine('noteEasy', lang),
           medium: yardLine('noteMedium', lang),
@@ -270,9 +307,6 @@ export function RightWay360Game() {
               hudProgress={progress}
             />
           )}
-          {canVR && (
-            <EnterVRButton store={xrStore} accent="rgba(22, 163, 74, 0.94)" label={yardLine('enterVR', lang)} />
-          )}
           {!hintSeen && (
             <div
               style={{
@@ -304,7 +338,7 @@ export function RightWay360Game() {
             stars={stars}
             message={t('greatPlaying', lang)}
             lang={lang}
-            onRestart={start}
+            onRestart={handlePlayPress}
             onChooseLevel={() => setPhase('start')}
           />
         )}

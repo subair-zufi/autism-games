@@ -25,7 +25,8 @@ import { useLevelProgress } from '../progression'
 import { roomLine } from './strings'
 import { EmotionRecognition360Scene } from './EmotionRecognition360Scene'
 import { xrStore, vrSupported } from './xrStore'
-import { EnterVRButton } from '../EnterVRButton'
+import { useVrSessionActive } from '../vrSession'
+import { VRWaitingRoom } from '../VRWaitingRoom'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
@@ -75,6 +76,12 @@ export function EmotionRecognition360Game() {
   const [hintSeen, setHintSeen] = useState(false)
   /** whether this browser can enter immersive VR (Quest etc.) — shows the button */
   const [canVR, setCanVR] = useState(false)
+  /** whether the headset is actually presenting right now, vs. the flat pre-VR screen */
+  const vrActive = useVrSessionActive(xrStore)
+  /** Play was pressed on a VR-capable browser, but the session hasn't started
+   *  yet — held here instead of calling `start()` so the round never begins
+   *  on the flat screen before the child is actually in the headset. */
+  const [awaitingVr, setAwaitingVr] = useState(false)
 
   /** when the boards became visible — response latency runs from here */
   const readyAt = useRef<number | null>(null)
@@ -100,6 +107,16 @@ export function EmotionRecognition360Game() {
     void vrSupported().then(setCanVR)
   }, [])
 
+  // The moment the child actually enters VR after Play was pressed on a
+  // capable browser — this is the one true start signal on that path.
+  useEffect(() => {
+    if (awaitingVr && vrActive) {
+      setAwaitingVr(false)
+      start()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingVr, vrActive])
+
   // Results stay inside VR. Ending the session here (as this used to) is
   // what dropped the child into the Quest home environment with no window
   // to come back to — every completed game, not just Quit.
@@ -112,7 +129,7 @@ export function EmotionRecognition360Game() {
     lang,
     gameId: 'emotionrecognition360',
     level: difficulty,
-    onRestart: start,
+    onRestart: handlePlayPress,
   })
 
   function clearTimers() {
@@ -134,6 +151,16 @@ export function EmotionRecognition360Game() {
     setRoundIdx(0)
     setPhase('playing')
     beginRound(seq, 0)
+  }
+
+  /** Play button handler: on a VR-capable browser, wait for the child to
+   *  actually enter VR before `start()` runs (see the effect above). */
+  function handlePlayPress() {
+    if (canVR && !vrActive) {
+      setAwaitingVr(true)
+      return
+    }
+    start()
   }
 
   function beginRound(seq: ReturnType<typeof buildTargets>, idx: number) {
@@ -269,10 +296,20 @@ export function EmotionRecognition360Game() {
   if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
   if (phase === 'start') {
+    if (awaitingVr) {
+      return (
+        <VRWaitingRoom
+          store={xrStore}
+          accent="rgba(245, 158, 11, 0.94)"
+          label={roomLine('enterVR', lang)}
+          lang={lang}
+        />
+      )
+    }
     return (
       <StartScreen
         game={META}
-        onStart={start}
+        onStart={handlePlayPress}
         levelNotes={{
           easy: roomLine('noteEasy', lang),
           medium: roomLine('noteMedium', lang),
@@ -302,9 +339,6 @@ export function EmotionRecognition360Game() {
               hudPrompt={promptText}
               hudQuit={t('vrQuit', lang)}
             />
-          )}
-          {canVR && (
-            <EnterVRButton store={xrStore} accent="rgba(245, 158, 11, 0.94)" label={roomLine('enterVR', lang)} />
           )}
           {!hintSeen && (
             <div
@@ -337,7 +371,7 @@ export function EmotionRecognition360Game() {
             stars={stars}
             message={t('greatPlaying', lang)}
             lang={lang}
-            onRestart={start}
+            onRestart={handlePlayPress}
             onChooseLevel={() => setPhase('start')}
           />
         )}
