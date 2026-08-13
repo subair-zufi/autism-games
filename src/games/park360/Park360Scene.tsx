@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
+import { Instanced, type Placement } from '../Instanced'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRGameOver } from '../VRGameOver'
@@ -353,54 +354,6 @@ function ParkWorld() {
  * here animates.
  */
 
-/** one placed copy of an instanced shape */
-interface Placement {
-  pos: [number, number, number]
-  /** yaw in radians */
-  rotY?: number
-  /** uniform scale */
-  scale?: number
-  /** per-instance tint; only meaningful when the material is left uncoloured */
-  color?: string
-}
-
-const UP_AXIS = new THREE.Vector3(0, 1, 0)
-
-/**
- * Draws `items.length` copies of the child geometry/material in one call.
- *
- * The children are the ordinary `<geometry>` / `<material>` elements the mesh
- * would have had, so converting a group of meshes to instances is a local
- * change: the shape and the look stay written exactly where they were.
- */
-function Instanced({ items, children }: { items: Placement[]; children: React.ReactNode }) {
-  const ref = useRef<THREE.InstancedMesh>(null)
-
-  useEffect(() => {
-    const mesh = ref.current
-    if (!mesh) return
-    const m = new THREE.Matrix4()
-    const p = new THREE.Vector3()
-    const q = new THREE.Quaternion()
-    const s = new THREE.Vector3()
-    const c = new THREE.Color()
-    items.forEach((it, i) => {
-      p.set(it.pos[0], it.pos[1], it.pos[2])
-      q.setFromAxisAngle(UP_AXIS, it.rotY ?? 0)
-      s.setScalar(it.scale ?? 1)
-      mesh.setMatrixAt(i, m.compose(p, q, s))
-      if (it.color != null) mesh.setColorAt(i, c.set(it.color))
-    })
-    mesh.instanceMatrix.needsUpdate = true
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-  }, [items])
-
-  return (
-    <instancedMesh ref={ref} args={[undefined, undefined, items.length]}>
-      {children}
-    </instancedMesh>
-  )
-}
 
 /** trunk and crown offsets within a tree, in un-scaled units */
 const TRUNK_Y = 0.8

@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
+import { Instanced, type Placement } from '../Instanced'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRGameOver } from '../VRGameOver'
@@ -350,17 +351,19 @@ const SIGN_WORD = 'MUSEUM'
 const SIGN_PX = 0.07 // pixel size
 
 /** where every lit block of the word sits, worked out once at module load */
-const SIGN_BLOCKS: { x: number; y: number }[] = (() => {
+const SIGN_BLOCKS: Placement[] = (() => {
   const letterW = 5 * SIGN_PX
   const gap = SIGN_PX * 1.6
   const totalW = SIGN_WORD.length * letterW + (SIGN_WORD.length - 1) * gap
-  const blocks: { x: number; y: number }[] = []
+  const blocks: Placement[] = []
   let cursor = -totalW / 2
   for (const ch of SIGN_WORD) {
     const pat = SIGN_FONT[ch]
     for (let r = 0; r < pat.length; r++) {
       for (let c = 0; c < 5; c++) {
-        if (pat[r][c] === '1') blocks.push({ x: cursor + c * SIGN_PX, y: (3 - r) * SIGN_PX })
+        if (pat[r][c] === '1') {
+          blocks.push({ pos: [cursor + c * SIGN_PX + SIGN_PX / 2, (3 - r) * SIGN_PX, 0] })
+        }
       }
     }
     cursor += letterW + gap
@@ -379,25 +382,12 @@ const SIGN_BLOCKS: { x: number; y: number }[] = (() => {
  * this was directly buying the lag on every pick and every button press.
  */
 function SignLetters() {
-  const ref = useRef<THREE.InstancedMesh>(null)
-
-  useEffect(() => {
-    const mesh = ref.current
-    if (!mesh) return
-    const m = new THREE.Matrix4()
-    SIGN_BLOCKS.forEach((b, i) => {
-      m.setPosition(b.x + SIGN_PX / 2, b.y, 0)
-      mesh.setMatrixAt(i, m)
-    })
-    mesh.instanceMatrix.needsUpdate = true
-  }, [])
-
   return (
     <group position={[0, 0, 0.09]}>
-      <instancedMesh ref={ref} args={[undefined, undefined, SIGN_BLOCKS.length]}>
+      <Instanced items={SIGN_BLOCKS}>
         <boxGeometry args={[SIGN_PX * 0.95, SIGN_PX * 0.95, 0.04]} />
         <meshStandardMaterial color="#e9c66b" emissive="#9c7a1f" emissiveIntensity={0.3} metalness={0.5} roughness={0.4} />
-      </instancedMesh>
+      </Instanced>
     </group>
   )
 }

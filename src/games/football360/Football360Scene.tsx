@@ -4,6 +4,7 @@ import { XR, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
+import { Instanced, type Placement } from '../Instanced'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
 import { VRGameOver } from '../VRGameOver'
@@ -328,7 +329,7 @@ function Grandstand() {
         )
       })}
       {/* the crowd: rings of bright spectators on every deck */}
-      <Crowd tiers={tiers} />
+      <Crowd />
     </group>
   )
 }
@@ -352,47 +353,36 @@ const CROWD_PER_TIER = 36
  * per-instance colour attribute; the heads are all one skin tone. Nothing about
  * the crowd moves, so the transforms are written once on mount.
  */
-function Crowd({ tiers }: { tiers: number[] }) {
-  const bodies = useRef<THREE.InstancedMesh>(null)
-  const heads = useRef<THREE.InstancedMesh>(null)
-  const count = tiers.length * CROWD_PER_TIER
-
-  useEffect(() => {
-    const b = bodies.current
-    const h = heads.current
-    if (!b || !h) return
-    const m = new THREE.Matrix4()
-    const colour = new THREE.Color()
-    let n = 0
-    for (const t of tiers) {
-      const r = STAND_R + t * 2.1
-      const stepY = 0.9 + t * 1.15
-      for (let i = 0; i < CROWD_PER_TIER; i++) {
-        const a = ((i + t * 0.5) / CROWD_PER_TIER) * Math.PI * 2
-        const [x, z] = bearingToXZ(a, r + 1.1)
-        m.setPosition(x, stepY + 0.28, z)
-        b.setMatrixAt(n, m)
-        b.setColorAt(n, colour.set(crowdColor(i, t)))
-        m.setPosition(x, stepY + 0.68, z)
-        h.setMatrixAt(n, m)
-        n++
-      }
+const CROWD_BODIES: Placement[] = TIERS.flatMap((t) =>
+  Array.from({ length: CROWD_PER_TIER }, (_, i) => {
+    const a = ((i + t * 0.5) / CROWD_PER_TIER) * Math.PI * 2
+    const [x, z] = bearingToXZ(a, STAND_R + t * 2.1 + 1.1)
+    return {
+      pos: [x, 0.9 + t * 1.15 + 0.28, z] as [number, number, number],
+      color: crowdColor(i, t),
     }
-    b.instanceMatrix.needsUpdate = true
-    if (b.instanceColor) b.instanceColor.needsUpdate = true
-    h.instanceMatrix.needsUpdate = true
-  }, [tiers])
+  }),
+)
 
+const CROWD_HEADS: Placement[] = TIERS.flatMap((t) =>
+  Array.from({ length: CROWD_PER_TIER }, (_, i) => {
+    const a = ((i + t * 0.5) / CROWD_PER_TIER) * Math.PI * 2
+    const [x, z] = bearingToXZ(a, STAND_R + t * 2.1 + 1.1)
+    return { pos: [x, 0.9 + t * 1.15 + 0.68, z] as [number, number, number] }
+  }),
+)
+
+function Crowd() {
   return (
     <group>
-      <instancedMesh ref={bodies} args={[undefined, undefined, count]}>
+      <Instanced items={CROWD_BODIES}>
         <capsuleGeometry args={[0.16, 0.3, 4, 8]} />
         <meshStandardMaterial />
-      </instancedMesh>
-      <instancedMesh ref={heads} args={[undefined, undefined, count]}>
+      </Instanced>
+      <Instanced items={CROWD_HEADS}>
         <sphereGeometry args={[0.13, 8, 8]} />
         <meshStandardMaterial color="#e8b888" />
-      </instancedMesh>
+      </Instanced>
     </group>
   )
 }
