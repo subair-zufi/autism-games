@@ -90,8 +90,8 @@ function HeadSelectActive({
   const aim = useMemo(createAimState, [])
 
   const reticle = useRef<THREE.Group>(null)
+  const tick = useRef<THREE.Group>(null)
   const arcGeo = useRef<THREE.RingGeometry>(null)
-  const ringMat = useRef<THREE.MeshBasicMaterial>(null)
   const dotMat = useRef<THREE.MeshBasicMaterial>(null)
   const chip = useRef<THREE.Group>(null)
 
@@ -139,6 +139,12 @@ function HeadSelectActive({
     camera.getWorldPosition(camPos)
 
     // --- reticle ---------------------------------------------------------
+    // The dot alone tracks the gaze at all times, like an ordinary pointer.
+    // The ring and its dwell arc — the "tick mark" — only appear once the
+    // gaze is actually armed on something selectable; showing them while the
+    // child is just scanning the scene made the ring appear to skate around
+    // the background on every glance, which read as distracting noise rather
+    // than feedback.
     if (reticle.current != null) {
       if (inter == null) {
         reticle.current.visible = false
@@ -150,9 +156,8 @@ function HeadSelectActive({
         reticle.current.scale.setScalar(Math.max(inter.distance, 0.3) * RETICLE_ANGULAR)
       }
     }
-    if (ringMat.current != null) {
-      ringMat.current.opacity = r.armed ? 0.95 : 0.35
-      ringMat.current.color.set(r.armed ? ARMED_COLOR : IDLE_COLOR)
+    if (tick.current != null) {
+      tick.current.visible = r.armed
     }
     if (dotMat.current != null) {
       dotMat.current.color.set(r.armed ? ARMED_COLOR : IDLE_COLOR)
@@ -219,18 +224,6 @@ function HeadSelectActive({
     <>
       <group ref={reticle} renderOrder={999} visible={false}>
         <mesh>
-          <ringGeometry args={[0.6, 0.72, ARC_SEGMENTS]} />
-          <meshBasicMaterial
-            ref={ringMat}
-            color={IDLE_COLOR}
-            transparent
-            opacity={0.35}
-            depthTest={false}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
-        <mesh>
           <circleGeometry args={[0.13, 20]} />
           <meshBasicMaterial
             ref={dotMat}
@@ -241,18 +234,32 @@ function HeadSelectActive({
             depthWrite={false}
           />
         </mesh>
-        {/* confirm fill — starts at 12 o'clock, sweeps clockwise */}
-        <mesh>
-          <ringGeometry ref={arcGeo} args={[0.55, 0.86, ARC_SEGMENTS, 1, Math.PI / 2, -Math.PI * 2]} />
-          <meshBasicMaterial
-            color={PROGRESS_COLOR}
-            transparent
-            opacity={0.95}
-            depthTest={false}
-            depthWrite={false}
-            side={THREE.DoubleSide}
-          />
-        </mesh>
+        {/* ring + dwell arc — only shown while armed on a target or the confirm chip */}
+        <group ref={tick} visible={false}>
+          <mesh>
+            <ringGeometry args={[0.6, 0.72, ARC_SEGMENTS]} />
+            <meshBasicMaterial
+              color={ARMED_COLOR}
+              transparent
+              opacity={0.95}
+              depthTest={false}
+              depthWrite={false}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+          {/* confirm fill — starts at 12 o'clock, sweeps clockwise */}
+          <mesh>
+            <ringGeometry ref={arcGeo} args={[0.55, 0.86, ARC_SEGMENTS, 1, Math.PI / 2, -Math.PI * 2]} />
+            <meshBasicMaterial
+              color={PROGRESS_COLOR}
+              transparent
+              opacity={0.95}
+              depthTest={false}
+              depthWrite={false}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        </group>
       </group>
 
       <group ref={chip} renderOrder={998} visible={false} userData={{ headConfirm: true }}>
