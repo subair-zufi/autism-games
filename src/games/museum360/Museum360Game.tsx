@@ -51,6 +51,7 @@ function targetBearingDeg(round: Round): number {
 export function Museum360Game() {
   const difficulty = useSettings((s) => s.difficulty.museum360)
   const lang = useSettings((s) => s.language)
+  const inputMethod = useSettings((s) => s.inputMethod)
   const vrPracticeDone = useSettings((s) => s.vrPracticeDone)
   const setVrPracticeDone = useSettings((s) => s.setVrPracticeDone)
   const best = useScores((s) => s.best.museum360)
@@ -81,6 +82,10 @@ export function Museum360Game() {
   const [canVR, setCanVR] = useState(false)
   /** whether the headset is actually presenting right now, vs. the flat pre-VR screen */
   const vrActive = useVrSessionActive(xrStore)
+  /** The child selects by gaze right now — inside a headset with the default
+   *  dwell method — so the prompt verb is "look", not "tap". Flat screen (mouse)
+   *  and the VR controller ray both keep "tap". */
+  const gazeSelect = vrActive && inputMethod === 'dwell'
   /** Play was pressed on a VR-capable browser, but the session hasn't started
    *  yet — held here instead of calling `start()` so the round never begins
    *  on the flat screen before the child is actually in the headset. */
@@ -128,7 +133,14 @@ export function Museum360Game() {
   // The prompt names the cue the child should follow this trial, so a pointing
   // trial and a look-only trial ask for different things instead of one vague
   // line. A missed gaze trial that falls back to the hand reads as pointing.
-  const promptKey = cue === 'gaze' ? 'promptLook' : 'promptPoint'
+  // The gaze-select variant swaps the closing "tap" for "look" (see gazeSelect).
+  const promptKey = gazeSelect
+    ? cue === 'gaze'
+      ? 'promptLookGaze'
+      : 'promptPointGaze'
+    : cue === 'gaze'
+      ? 'promptLook'
+      : 'promptPoint'
 
   // Malayalam-aware speech + level captions (surface the cue-fading ladder).
   const say = (key: Parameters<typeof museum360Line>[0], params?: Record<string, string>) =>

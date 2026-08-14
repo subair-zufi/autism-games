@@ -24,6 +24,17 @@ const MESSAGES = {
     en: 'They are looking — tap where they look!',
     ml: 'അവർ നോക്കുന്നു — നോക്കുന്നത് തൊട്ടോളൂ!',
   },
+  // Gaze-dwell wording: with the default gaze input the child *looks* at the
+  // exhibit and rests their gaze to select — there is no tap. Chosen at render
+  // time by input method (see Museum360Game's `gazeSelect`).
+  promptPointGaze: {
+    en: 'They are pointing — look at what they point to!',
+    ml: 'അവർ ചൂണ്ടുന്നു — ചൂണ്ടുന്നത് നോക്കൂ!',
+  },
+  promptLookGaze: {
+    en: 'They are looking — look where they look!',
+    ml: 'അവർ നോക്കുന്നു — നോക്കുന്നത് നോക്കൂ!',
+  },
   sayWin: {
     en: 'You followed every cue! Wonderful looking!',
     ml: 'എല്ലാം നന്നായി പിന്തുടർന്നു! കൊള്ളാം!',

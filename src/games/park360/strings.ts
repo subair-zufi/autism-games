@@ -39,6 +39,13 @@ const MESSAGES = {
     en: 'Tap your friend to show them!',
     ml: 'ചങ്ങാതിയെ തൊട്ടു കാണിക്കൂ!',
   },
+  // Gaze-dwell wording: with the default gaze input the child *looks* at the
+  // friend (and dwells) to bring them in — there is no tap. Chosen at fire time
+  // by input method (see Park360Game's `gazeSelect`).
+  nudgeShareGaze: {
+    en: 'Look at your friend to show them!',
+    ml: 'ചങ്ങാതിയെ നോക്കി കാണിക്കൂ!',
+  },
   sayWin: {
     en: 'You shared every discovery! What a wonderful friend you are!',
     ml: 'എല്ലാം ചങ്ങാതിയെ കാണിച്ചുകൊടുത്തു! കൊള്ളാം!',

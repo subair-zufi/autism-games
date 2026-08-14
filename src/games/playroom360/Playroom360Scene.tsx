@@ -712,6 +712,8 @@ function ChildBlock({
   onIllegal: () => void
 }) {
   const ref = useRef<THREE.Mesh>(null)
+  const ring = useRef<THREE.Mesh>(null)
+  const arrow = useRef<THREE.Group>(null)
   const [homeX, homeZ] = useMemo(() => landmarkXZ(TRAY_BEARING, TRAY_RADIUS), [])
   const restY = TABLE_H + BLOCK_H / 2
   const shake = useRef(0)
@@ -719,48 +721,90 @@ function ChildBlock({
   useFrame((state, dt) => {
     const m = ref.current
     if (!m) return
-    const bounce = canAct ? Math.abs(Math.sin(state.clock.elapsedTime * 2.5)) * 0.05 : 0
+    const t = state.clock.elapsedTime
+    // a bolder hop + a gentle size pulse on the child's turn, so the block that
+    // wants tapping visibly stands apart from the quiet ones on the tower
+    const bounce = canAct ? Math.abs(Math.sin(t * 2.5)) * 0.09 : 0
     m.position.set(homeX, restY + bounce, homeZ)
+    m.scale.setScalar(canAct ? 1 + Math.sin(t * 2.5) * 0.05 : 1)
     if (shake.current > 0) {
       shake.current = Math.max(0, shake.current - dt * 3)
-      m.position.x += Math.sin(state.clock.elapsedTime * 40) * shake.current * 0.04
+      m.position.x += Math.sin(t * 40) * shake.current * 0.04
     }
     const mat = m.material as THREE.MeshStandardMaterial
     const glow = canAct
-      ? 0.35 + Math.sin(state.clock.elapsedTime * 4) * 0.15
+      ? 0.45 + Math.sin(t * 4) * 0.2
       : anticipating
-        ? 0.15 + Math.abs(Math.sin(state.clock.elapsedTime * 4)) * 0.15
+        ? 0.15 + Math.abs(Math.sin(t * 4)) * 0.15
         : 0
     mat.emissiveIntensity += (glow - mat.emissiveIntensity) * 0.2
+
+    // "tap THIS now" cues — only while it is genuinely the child's turn. A
+    // pulsing amber ring on the table (the same touch-me ring the hand-off
+    // friend wears) and a bouncing arrow pointing straight down at the block,
+    // both wordless so a child who cannot read the banner still knows to act.
+    if (ring.current) {
+      ring.current.visible = canAct
+      if (canAct) {
+        const s = 1 + Math.sin(t * 4) * 0.14
+        ring.current.scale.set(s, s, 1)
+        ;(ring.current.material as THREE.MeshBasicMaterial).opacity =
+          0.4 + Math.abs(Math.sin(t * 4)) * 0.3
+      }
+    }
+    if (arrow.current) {
+      arrow.current.visible = canAct
+      if (canAct) arrow.current.position.y = restY + 0.52 + Math.abs(Math.sin(t * 3)) * 0.14
+    }
   })
 
   return (
-    <mesh
-      ref={ref}
-      position={[homeX, restY, homeZ]}
-      // stays selectable even when it is not this child's turn: tapping out of
-      // turn is a real answer here, scored as an illegal move
-      userData={{ headSelect: true }}
-      onClick={(e) => {
-        e.stopPropagation()
-        if (isDragTail() || dragDistance(e) > 8) return
-        if (!canAct) {
-          shake.current = 1
-          onIllegal()
-          return
-        }
-        onPlace()
-      }}
-      onPointerOver={() => {
-        document.body.style.cursor = 'pointer'
-      }}
-      onPointerOut={() => {
-        document.body.style.cursor = 'auto'
-      }}
-    >
-      <boxGeometry args={[BLOCK_W, BLOCK_H, BLOCK_W]} />
-      <meshStandardMaterial color={spec.color} emissive={spec.color} emissiveIntensity={0} roughness={0.6} />
-    </mesh>
+    <group>
+      {/* pulsing ring on the table around the block — "touch here" */}
+      <mesh ref={ring} visible={false} rotation-x={-Math.PI / 2} position={[homeX, TABLE_H + 0.03, homeZ]}>
+        <ringGeometry args={[0.28, 0.4, 40]} />
+        <meshBasicMaterial color="#f59e0b" transparent opacity={0.5} depthWrite={false} />
+      </mesh>
+
+      {/* bobbing arrow pointing down at the block — the wordless "tap this" */}
+      <group ref={arrow} visible={false} position={[homeX, restY + 0.52, homeZ]}>
+        <mesh position={[0, 0.15, 0]}>
+          <cylinderGeometry args={[0.028, 0.028, 0.2, 12]} />
+          <meshBasicMaterial color="#f59e0b" />
+        </mesh>
+        <mesh rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[0.1, 0.17, 18]} />
+          <meshBasicMaterial color="#f59e0b" />
+        </mesh>
+      </group>
+
+      <mesh
+        ref={ref}
+        position={[homeX, restY, homeZ]}
+        // stays selectable even when it is not this child's turn: tapping out of
+        // turn is a real answer here, scored as an illegal move
+        userData={{ headSelect: true }}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (isDragTail() || dragDistance(e) > 8) return
+          if (!canAct) {
+            shake.current = 1
+            onIllegal()
+            return
+          }
+          onPlace()
+        }}
+        onPointerOver={() => {
+          document.body.style.cursor = 'pointer'
+        }}
+        onPointerOut={() => {
+          document.body.style.cursor = 'auto'
+        }}
+      >
+        <boxGeometry args={[BLOCK_W, BLOCK_H, BLOCK_W]} />
+        <meshStandardMaterial color={spec.color} emissive={spec.color} emissiveIntensity={0} roughness={0.6} />
+      </mesh>
+    </group>
   )
 }
 

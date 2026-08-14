@@ -34,6 +34,7 @@ const META = GAME_LIST.find((g) => g.id === 'playroom360')!
 export function Playroom360Game() {
   const difficulty = useSettings((s) => s.difficulty.playroom360)
   const lang = useSettings((s) => s.language)
+  const inputMethod = useSettings((s) => s.inputMethod)
   const vrPracticeDone = useSettings((s) => s.vrPracticeDone)
   const setVrPracticeDone = useSettings((s) => s.setVrPracticeDone)
   const best = useScores((s) => s.best.playroom360)
@@ -73,6 +74,14 @@ export function Playroom360Game() {
   const [canVR, setCanVR] = useState(false)
   /** whether the headset is actually presenting right now, vs. the flat pre-VR screen */
   const vrActive = useVrSessionActive(xrStore)
+  /**
+   * The child selects by gaze right now — inside a headset with the default
+   * dwell method. Then the instruction verb is "look", not "tap": with gaze
+   * there is no tap, so "look at your block / friend" describes what the child
+   * actually does. On a flat screen (mouse) or the VR controller ray, it stays
+   * "tap". Drives both the spoken line and the on-screen/in-world banners.
+   */
+  const gazeSelect = vrActive && inputMethod === 'dwell'
   /** Play was pressed on a VR-capable browser, but the session hasn't started
    *  yet — held here instead of calling `start()` so the turn sequence never
    *  begins on the flat screen before the child is actually in the headset. */
@@ -179,8 +188,15 @@ export function Playroom360Game() {
         clearTimeout(t2)
       }
     }
-    // child's turn: open a head-telemetry window (measures where they look
-    // during their own turn and the hand-off) and wait for the tap
+    // child's turn: it used to open silently, so a child who can't read the
+    // banner had no signal it was their turn. Give a clear, language-free cue —
+    // a chime plus the spoken "your turn" — alongside the block's ring/arrow.
+    if (!handoffTo) {
+      playGentle()
+      say(gazeSelect ? 'promptPlaceGaze' : 'promptPlace')
+    }
+    // open a head-telemetry window (measures where they look during their own
+    // turn and the hand-off) and wait for the tap
     beginHeadWindow()
   }, [index, phase, handoffTo]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -273,10 +289,10 @@ export function Playroom360Game() {
   let promptKey: Playroom360MessageKey
   let promptParams: Record<string, string> | undefined
   if (handoffTo) {
-    promptKey = 'promptHandoff'
+    promptKey = gazeSelect ? 'promptHandoffGaze' : 'promptHandoff'
     promptParams = { name: handoffTo.name }
   } else if (isChildTurn) {
-    promptKey = 'promptPlace'
+    promptKey = gazeSelect ? 'promptPlaceGaze' : 'promptPlace'
   } else if (anticipating) {
     promptKey = 'promptGetReady'
   } else {
@@ -306,7 +322,7 @@ export function Playroom360Game() {
             hudScore={`🧱 ${score} / ${config.rounds}`}
             hudPrompt={prLine(promptKey, lang, promptParams)}
             hudQuit={t('vrQuit', lang)}
-            bubbleTap={prLine('bubbleMyTurn', lang)}
+            bubbleTap={prLine(gazeSelect ? 'bubbleMyTurnGaze' : 'bubbleMyTurn', lang)}
           />
           {!hintSeen && (
             <div

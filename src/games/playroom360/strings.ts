@@ -47,9 +47,21 @@ const MESSAGES = {
     en: 'Pass the turn — tap {name}!',
     ml: 'ഊഴം കൈമാറൂ — {name} തൊടൂ!',
   },
+  // Gaze-dwell wording for the hand-off (look at the next friend to pass).
+  promptHandoffGaze: {
+    en: 'Pass the turn — look at {name}!',
+    ml: 'ഊഴം കൈമാറൂ — {name} ഭാഗത്തേക്ക് നോക്കൂ!',
+  },
   promptPlace: {
     en: 'Your turn — tap your glowing block!',
     ml: 'നിന്റെ ഊഴം — തിളങ്ങുന്ന ബ്ലോക്ക് തൊടൂ!',
+  },
+  // Gaze-dwell wording: with the default gaze input the child *looks* at the
+  // block and rests their gaze to select — there is no tap, so a "tap" prompt
+  // describes a gesture they never make. Chosen at render time by input method.
+  promptPlaceGaze: {
+    en: 'Your turn — look at your glowing block!',
+    ml: 'നിന്റെ ഊഴം — തിളങ്ങുന്ന ബ്ലോക്കിൽ നോക്കൂ!',
   },
   promptGetReady: {
     en: 'Get ready — you are next!',
@@ -71,6 +83,8 @@ const MESSAGES = {
   hintLook: { en: 'Drag to look around the playroom', ml: 'മുറി ചുറ്റും കാണാൻ വലിച്ചു നോക്കൂ' },
   enterVR: { en: 'Enter VR', ml: 'VR-ൽ കളിക്കൂ' },
   bubbleMyTurn: { en: 'Tap me!', ml: 'എന്നെ തൊടൂ!' },
+  // Gaze-dwell wording for the hand-off friend's bubble ("Look at me!").
+  bubbleMyTurnGaze: { en: 'Look at me!', ml: 'എന്നെ നോക്കൂ!' },
 
   // Fallback peer label if the roster is momentarily empty.
   friend: { en: 'A friend', ml: 'ഒരു കൂട്ടുകാരൻ' },
