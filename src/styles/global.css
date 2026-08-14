@@ -175,6 +175,40 @@ button:active, a:active, [role='button']:active { filter: brightness(0.93); }
   flex-shrink: 0;
   box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.15);
 }
+
+/* ---- Football 360: "Great pass!" success pop-up ---- */
+.fb-winpop {
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  transform: translateX(-50%);
+  padding: 14px 30px;
+  border-radius: 999px;
+  background: rgba(22, 163, 74, 0.95);
+  color: #fff;
+  font-size: 1.6rem;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  z-index: 6;
+  animation: fb-winpop-in 0.32s cubic-bezier(0.22, 1.4, 0.4, 1) both;
+}
+@keyframes fb-winpop-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fb-winpop {
+    animation-duration: 0.01ms;
+  }
+}
 .hint-text {
   margin: 0;
   color: var(--ink-soft);

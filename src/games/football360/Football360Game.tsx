@@ -435,7 +435,17 @@ export function Football360Game() {
             hudScore={`⭐ ${score} · ⚽ ${returned} / ${goal} · ❤️ ${lives}`}
             hudPrompt={fbLine(promptKey, lang, promptParams)}
             hudQuit={t('vrQuit', lang)}
+            celebrate={stage === 'rolling'}
+            hudWin={fbLine('winPop', lang)}
           />
+          {/* a simple, clear pop-up on every successful pass so the child knows
+              the ball reached the teammate — the flat-screen twin of the VR
+              win banner above */}
+          {stage === 'rolling' && (
+            <div className="fb-winpop" role="status">
+              {fbLine('winPop', lang)}
+            </div>
+          )}
           {!hintSeen && (
             <div
               style={{

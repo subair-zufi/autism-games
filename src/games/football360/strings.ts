@@ -55,6 +55,8 @@ const MESSAGES = {
     ml: 'അയ്യോ, അവർ റെഡി ആയിരുന്നില്ല! ഒന്നൂടെ നോക്ക്!',
   },
   promptRolling: { en: 'Nice pass!', ml: 'കൊള്ളാം, നല്ല പാസ്!' },
+  // the celebratory pop-up confirming a successful pass reached the teammate
+  winPop: { en: 'Great pass! ⚽🎉', ml: 'കൊള്ളാം! നല്ല പാസ്! ⚽🎉' },
 
   // --- spoken flavour (voice) ------------------------------------------------
   sayIncoming: {

@@ -26,7 +26,9 @@ import type { Lang } from '../../i18n/strings'
 
 /** the child's eye height — the camera stands here, on the centre spot */
 const EYE_Y = 1.6
-const BALL_R = 0.32
+/** a real match ball is ~22 cm across; this radius keeps it life-sized rather
+ * than the beach-ball it used to be, while staying clearly visible on the pitch */
+const BALL_R = 0.12
 const BALL_Y = BALL_R
 /** where the ball rests while the child holds it: right at the child's feet
  * (just ahead of the centre spot, slightly to the right so it doesn't hide the
@@ -60,6 +62,10 @@ export interface Football360SceneProps {
   hudPrompt: string
   /** localized "Quit" label for the in-world VR-only exit control */
   hudQuit: string
+  /** true right after a correct pass — shows the celebratory "Great pass!" banner */
+  celebrate: boolean
+  /** localized "Great pass!" line for the in-world VR win banner */
+  hudWin: string
 }
 
 export function Football360Scene(props: Football360SceneProps) {
@@ -90,6 +96,7 @@ export function Football360Scene(props: Football360SceneProps) {
         <FootballGround />
         <SceneInner {...props} />
         <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
+        <VRWinBanner show={props.celebrate} text={props.hudWin} />
       </XR>
     </Canvas>
   )
@@ -182,6 +189,30 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
       <VRQuitButton bearingDeg={-72} label={quit} />
       {/* selection-method switch, directly under Quit in the same controls corner */}
       <VRInputSwitch bearingDeg={-72} />
+    </VRHudAnchor>
+  )
+}
+
+/* ---- VR win banner --------------------------------------------------------
+ * On the flat screen the DOM pop-up confirms a successful pass; inside an
+ * immersive session that overlay is invisible, so the same "Great pass!" is
+ * shown on a bright panel that floats up in front of the child, at the natural
+ * home bearing, only while the correct return is travelling.
+ */
+function VRWinBanner({ show, text }: { show: boolean; text: string }) {
+  const inSession = useXR((s) => !!s.session)
+  if (!inSession || !show) return null
+  return (
+    <VRHudAnchor designEyeY={EYE_Y}>
+      <TextPanel
+        text={text}
+        position={[0, 2.5, -3.6]}
+        width={2.8}
+        height={0.72}
+        font={120}
+        bg="rgba(22, 163, 74, 0.95)"
+        fg="#ffffff"
+      />
     </VRHudAnchor>
   )
 }
@@ -606,17 +637,30 @@ function Football({
   dest.current.set(tx, BALL_Y, tz)
   if (pos.current === null) pos.current = dest.current.clone()
 
-  // classic panel pattern: black caps poking through the white shell
-  const patches = useMemo(() => {
-    const dirs: THREE.Vector3[] = []
-    for (const y of [-0.62, 0.62]) {
-      for (let i = 0; i < 3; i++) {
-        const a = (i / 3) * Math.PI * 2 + (y > 0 ? Math.PI / 3 : 0)
-        dirs.push(new THREE.Vector3(Math.cos(a) * 0.78, y, Math.sin(a) * 0.78).normalize())
+  // classic football look: flat black pentagons sitting on the 12 vertices of
+  // an icosahedron — the truncated-icosahedron pattern of a real match ball,
+  // instead of the polka-dot caps this used to have. Each panel is oriented so
+  // it lies flat against the white shell, facing outward.
+  const panels = useMemo(() => {
+    const t = (1 + Math.sqrt(5)) / 2 // golden ratio → icosahedron vertices
+    const verts = [
+      [-1, t, 0], [1, t, 0], [-1, -t, 0], [1, -t, 0],
+      [0, -1, t], [0, 1, t], [0, -1, -t], [0, 1, -t],
+      [t, 0, -1], [t, 0, 1], [-t, 0, -1], [-t, 0, 1],
+    ]
+    const zAxis = new THREE.Vector3(0, 0, 1)
+    return verts.map((v) => {
+      const d = new THREE.Vector3(v[0], v[1], v[2]).normalize()
+      const q = new THREE.Quaternion().setFromUnitVectors(zAxis, d)
+      return {
+        position: [d.x * BALL_R * 1.004, d.y * BALL_R * 1.004, d.z * BALL_R * 1.004] as [
+          number,
+          number,
+          number,
+        ],
+        quaternion: [q.x, q.y, q.z, q.w] as [number, number, number, number],
       }
-    }
-    dirs.push(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, -1, 0))
-    return dirs
+    })
   }, [])
 
   useFrame((state, dt) => {
@@ -625,7 +669,9 @@ function Football({
     const p = pos.current
     if (!g || !m || !p) return
     delta.current.copy(p)
-    p.lerp(dest.current, Math.min(1, dt * 4.2))
+    // gentler glide than before (was 4.2): a slower, easier-to-follow pass so
+    // the child can see the ball actually leave them and reach the teammate
+    p.lerp(dest.current, Math.min(1, dt * 2.6))
     delta.current.subVectors(p, delta.current)
     const dist = delta.current.length()
     if (dist > 1e-4) {
@@ -650,12 +696,13 @@ function Football({
   return (
     <group ref={ref}>
       <mesh ref={sphere}>
-        <sphereGeometry args={[BALL_R, 24, 24]} />
-        <meshStandardMaterial color="#f4f4f2" emissive="#fff3b0" emissiveIntensity={0} roughness={0.5} />
-        {patches.map((d, i) => (
-          <mesh key={i} position={[d.x * BALL_R * 0.97, d.y * BALL_R * 0.97, d.z * BALL_R * 0.97]}>
-            <sphereGeometry args={[BALL_R * 0.28, 10, 10]} />
-            <meshStandardMaterial color="#23262b" roughness={0.6} />
+        <sphereGeometry args={[BALL_R, 32, 32]} />
+        <meshStandardMaterial color="#f6f6f4" emissive="#fff3b0" emissiveIntensity={0} roughness={0.45} />
+        {panels.map((p, i) => (
+          <mesh key={i} position={p.position} quaternion={p.quaternion}>
+            {/* a 5-sided circle is a pentagon; slightly proud of the shell */}
+            <circleGeometry args={[BALL_R * 0.36, 5]} />
+            <meshStandardMaterial color="#1b1d22" roughness={0.55} side={THREE.DoubleSide} />
           </mesh>
         ))}
       </mesh>
