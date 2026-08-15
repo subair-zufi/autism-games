@@ -576,10 +576,15 @@ function SceneInner(props: Football360SceneProps) {
         const [x, z] = playerPosition(i, partners)
         // teammates face the child (the camera at the centre spot) by default;
         // in orient mode the not-ready ones turn away — direction of the body
-        // *is* the cue on hard.
+        // *is* the cue on hard. The turn has to be big enough to actually read
+        // as "not facing you": the old ~54° (0.95 rad) still showed a mostly
+        // front-on body on these simple avatars, so all three looked like they
+        // faced the child and picking the ready one became a guess (which burned
+        // the 3 lives in a rally or two). ~109° shows a clear back/side profile,
+        // so "who's facing you?" is answerable by reading orientation.
         let face = Math.atan2(-x, -z)
         if (readyIndex !== null && i !== readyIndex && cue === 'orient') {
-          face += (i % 2 === 0 ? 1 : -1) * 0.95
+          face += (i % 2 === 0 ? 1 : -1) * 1.9
         }
         return (
           <Kid
@@ -779,7 +784,11 @@ function Kid({
       // turn to the assigned facing, sway idly, lean in to pass or beckon
       const wobble = rejecting ? Math.sin(t * 9) * 0.16 : 0
       b.rotation.y += (face + Math.sin(t * 0.9 + phase) * 0.04 + wobble - b.rotation.y) * 0.09
-      const lean = rolling ? -0.3 : ready && cue !== 'verbal' ? -0.14 : 0
+      // the ready teammate leans in toward the child — a positive "I'm open,
+      // pass to me" cue that reads alongside the others turning away. A bit
+      // stronger on orient (hard), where the lean is the only extra signal
+      // besides facing, so the ready one clearly stands out.
+      const lean = rolling ? -0.3 : ready && cue === 'orient' ? -0.24 : ready && cue !== 'verbal' ? -0.14 : 0
       b.rotation.x += (lean - b.rotation.x) * 0.1
     }
     const raiseL = handsUp ? -2.55 : Math.sin(t * 1.1 + phase) * 0.06
