@@ -120,6 +120,17 @@ button:active, a:active, [role='button']:active { filter: brightness(0.93); }
   background: var(--ink-soft);
 }
 
+/* ---- VR waiting room ----
+ * Sits over an already-mounted game canvas (so WebXR can bind to it — see
+ * VRWaitingRoom.tsx) rather than replacing it, so it needs its own opaque,
+ * always-on-top backdrop instead of .overlay's translucent dialog tint. */
+.vr-waiting-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  z-index: 30;
+}
+
 /* ---- start screen / coming soon ---- */
 .start-screen {
   min-height: 100%;

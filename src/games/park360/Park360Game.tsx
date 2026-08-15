@@ -341,17 +341,7 @@ export function Park360Game() {
   // there's no headset novelty and it's just friction, so it's skipped.
   if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
-  if (phase === 'start') {
-    if (awaitingVr) {
-      return (
-        <VRWaitingRoom
-          store={xrStore}
-          accent="rgba(22, 163, 74, 0.92)"
-          label={lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'}
-          lang={lang}
-        />
-      )
-    }
+  if (phase === 'start' && !awaitingVr) {
     return <StartScreen game={META} onStart={handlePlayPress} levelNotes={levelNotes} />
   }
 
@@ -411,6 +401,14 @@ export function Park360Game() {
             lang={lang}
             onRestart={handlePlayPress}
             onChooseLevel={() => setPhase('start')}
+          />
+        )}
+        {awaitingVr && (
+          <VRWaitingRoom
+            store={xrStore}
+            accent="rgba(22, 163, 74, 0.92)"
+            label={lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'}
+            lang={lang}
           />
         )}
       </div>

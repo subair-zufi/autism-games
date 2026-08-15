@@ -372,17 +372,7 @@ export function Football360Game() {
   // there's no headset novelty and it's just friction, so it's skipped.
   if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
-  if (phase === 'start') {
-    if (awaitingVr) {
-      return (
-        <VRWaitingRoom
-          store={xrStore}
-          accent="rgba(22, 163, 74, 0.92)"
-          label={fbLine('enterVR', lang)}
-          lang={lang}
-        />
-      )
-    }
+  if (phase === 'start' && !awaitingVr) {
     return (
       <StartScreen
         game={META}
@@ -493,6 +483,14 @@ export function Football360Game() {
             lang={lang}
             onRestart={handlePlayPress}
             onChooseLevel={() => setPhase('start')}
+          />
+        )}
+        {awaitingVr && (
+          <VRWaitingRoom
+            store={xrStore}
+            accent="rgba(22, 163, 74, 0.92)"
+            label={fbLine('enterVR', lang)}
+            lang={lang}
           />
         )}
       </div>

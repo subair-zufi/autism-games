@@ -36,6 +36,10 @@ const EYE_Y = 1.7
 
 export interface Museum360SceneProps {
   round: Round
+  /** false while the canvas is mounted only to bind the WebXR session (the
+   *  VRWaitingRoom overlay is up) — the helper must not start pointing and
+   *  settling on a cue for a round the child hasn't actually started yet */
+  active: boolean
   locked: boolean
   disabledIds: ExhibitId[]
   celebrate: number
@@ -449,7 +453,7 @@ function Bench({ bearingDeg }: { bearingDeg: number }) {
   )
 }
 
-function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueReady }: Museum360SceneProps) {
+function SceneInner({ round, active, locked, disabledIds, celebrate, cue, onPick, onCueReady }: Museum360SceneProps) {
   const n = round.visible.length
   const targetIdx = round.visible.indexOf(round.target)
   const [tx, tz] = slotPosition(targetIdx, n)
@@ -475,8 +479,12 @@ function SceneInner({ round, locked, disabledIds, celebrate, cue, onPick, onCueR
 
       {/* one person, one cue: the helper avatar at their "home" spot (bearing
           0) is the single source of every cue — a second floating hand would
-          split the child's attention between two places */}
-      <HelperFigure mode={cue} cueKey={round.target} aimPoint={aimPoint} onSettled={onCueReady} />
+          split the child's attention between two places. Held back entirely
+          while `!active` so its point-and-settle timer (and the cue_ready it
+          fires) never runs for a round the child hasn't started yet. */}
+      {active && (
+        <HelperFigure mode={cue} cueKey={round.target} aimPoint={aimPoint} onSettled={onCueReady} />
+      )}
 
       {/* podium the helper stands on, behind the row, so the exhibits never
           hide its face or merge with its body (the gaze cue needs the face

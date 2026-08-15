@@ -64,8 +64,14 @@ export function RightWay360Game() {
   const { recordStep, finishGame, resetSession } = useGameAnalytics('rightway360')
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
-  const [trials, setTrials] = useState<Behavior[]>([])
-  const [bearings, setBearings] = useState<number[]>([])
+  // Lazily populated with a real (if throwaway) level rather than `[]`, so the
+  // scene below has a `trial` to render — and therefore a mounted `<XR>` to
+  // bind `enterVR()` to — from the very first render, before Play is even
+  // pressed. `start()` immediately overwrites this with a fresh level; `active`
+  // (below) stays false until a real trial's `beginTrial` sets it, so nothing
+  // here plays out before that.
+  const [trials, setTrials] = useState<Behavior[]>(() => buildLevel(difficulty, Math.random))
+  const [bearings, setBearings] = useState<number[]>(() => stageBearings(trials.length))
   const [idx, setIdx] = useState(0)
   const [active, setActive] = useState(false)
   const [picked, setPicked] = useState<boolean | null>(null)
@@ -254,17 +260,7 @@ export function RightWay360Game() {
     setTimeout(() => setPhase('over'), 1200)
   }
 
-  if (phase === 'start') {
-    if (awaitingVr) {
-      return (
-        <VRWaitingRoom
-          store={xrStore}
-          accent="rgba(22, 163, 74, 0.94)"
-          label={yardLine('enterVR', lang)}
-          lang={lang}
-        />
-      )
-    }
+  if (phase === 'start' && !awaitingVr) {
     return (
       <StartScreen
         game={META}
@@ -340,6 +336,14 @@ export function RightWay360Game() {
             lang={lang}
             onRestart={handlePlayPress}
             onChooseLevel={() => setPhase('start')}
+          />
+        )}
+        {awaitingVr && (
+          <VRWaitingRoom
+            store={xrStore}
+            accent="rgba(22, 163, 74, 0.94)"
+            label={yardLine('enterVR', lang)}
+            lang={lang}
           />
         )}
       </div>

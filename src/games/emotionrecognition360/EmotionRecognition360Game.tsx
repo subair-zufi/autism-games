@@ -62,9 +62,20 @@ export function EmotionRecognition360Game() {
   const cfg = CONFIG[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
-  const [targets, setTargets] = useState<ReturnType<typeof buildTargets>>([])
+  // Lazily populated with a real (if throwaway) round rather than `[]`/`null`,
+  // so the scene below has a `round` to render — and therefore a mounted
+  // `<XR>` to bind `enterVR()` to — from the very first render, before Play is
+  // even pressed. `start()` immediately overwrites these with a fresh round;
+  // `active` (below) stays false until a real round's `beginRound` sets it, so
+  // nothing here plays out before that.
+  const [targets, setTargets] = useState<ReturnType<typeof buildTargets>>(() => buildTargets(difficulty))
   const [roundIdx, setRoundIdx] = useState(0)
-  const [round, setRound] = useState<Round | null>(null)
+  /** which board slot holds the correct face each round — dealt in shuffled
+   *  cycles so the session sweeps every position evenly (review M4) */
+  const answerSlots = useRef<number[]>(buildAnswerSlots(difficulty))
+  const [round, setRound] = useState<Round | null>(() =>
+    makeRound(targets[0], difficulty, Math.random, answerSlots.current[0]),
+  )
   const [active, setActive] = useState(false)
   const [pickedIndex, setPickedIndex] = useState<number | null>(null)
   const [answered, setAnswered] = useState(false)
@@ -97,9 +108,6 @@ export function EmotionRecognition360Game() {
   const hintFiredRef = useRef(false)
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const gapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  /** which board slot holds the correct face each round — dealt in shuffled
-   *  cycles so the session sweeps every position evenly (review M4) */
-  const answerSlots = useRef<number[]>([])
 
   useEffect(() => () => clearTimers(), [])
 
@@ -295,17 +303,7 @@ export function EmotionRecognition360Game() {
   // there's no headset novelty and it's just friction, so it's skipped.
   if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
-  if (phase === 'start') {
-    if (awaitingVr) {
-      return (
-        <VRWaitingRoom
-          store={xrStore}
-          accent="rgba(245, 158, 11, 0.94)"
-          label={roomLine('enterVR', lang)}
-          lang={lang}
-        />
-      )
-    }
+  if (phase === 'start' && !awaitingVr) {
     return (
       <StartScreen
         game={META}
@@ -373,6 +371,14 @@ export function EmotionRecognition360Game() {
             lang={lang}
             onRestart={handlePlayPress}
             onChooseLevel={() => setPhase('start')}
+          />
+        )}
+        {awaitingVr && (
+          <VRWaitingRoom
+            store={xrStore}
+            accent="rgba(245, 158, 11, 0.94)"
+            label={roomLine('enterVR', lang)}
+            lang={lang}
           />
         )}
       </div>

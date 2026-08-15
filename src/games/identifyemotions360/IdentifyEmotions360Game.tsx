@@ -58,7 +58,13 @@ export function IdentifyEmotions360Game() {
   const { submit } = useLevelProgress('identifyemotions360')
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
-  const [quiz, setQuiz] = useState<VideoQuestion[]>([])
+  // Lazily populated with a real (if throwaway) quiz rather than `[]`, so the
+  // scene below has a `q` to render — and therefore a mounted `<XR>` to bind
+  // `enterVR()` to — from the very first render, before Play is even pressed.
+  // `start()` immediately overwrites this with a fresh quiz; the clip itself
+  // never plays until `startQuestion` explicitly sets `videoEl.src`, so
+  // nothing here plays out before that.
+  const [quiz, setQuiz] = useState<VideoQuestion[]>(() => buildQuiz(difficulty))
   const [idx, setIdx] = useState(0)
   const [score, setScore] = useState(0)
   const [firstTryCount, setFirstTryCount] = useState(0)
@@ -377,17 +383,7 @@ export function IdentifyEmotions360Game() {
   // there's no headset novelty and it's just friction, so it's skipped.
   if (canVR && !vrPracticeDone) return <VRPracticeScene onComplete={() => setVrPracticeDone(true)} />
 
-  if (phase === 'start') {
-    if (awaitingVr) {
-      return (
-        <VRWaitingRoom
-          store={xrStore}
-          accent="rgba(139, 92, 246, 0.94)"
-          label={clipLine('enterVR', lang)}
-          lang={lang}
-        />
-      )
-    }
+  if (phase === 'start' && !awaitingVr) {
     return (
       <StartScreen
         game={META}
@@ -465,6 +461,14 @@ export function IdentifyEmotions360Game() {
             lang={lang}
             onRestart={handlePlayPress}
             onChooseLevel={() => setPhase('start')}
+          />
+        )}
+        {awaitingVr && (
+          <VRWaitingRoom
+            store={xrStore}
+            accent="rgba(139, 92, 246, 0.94)"
+            label={clipLine('enterVR', lang)}
+            lang={lang}
           />
         )}
       </div>

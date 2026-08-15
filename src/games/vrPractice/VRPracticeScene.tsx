@@ -93,16 +93,10 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
   // Same "hold the game back" rule as every real 360 game: on a headset-
   // capable browser, nothing here — not even the unscored warm-up — should
   // animate or respond to a tap until the child is actually in the session.
-  if (canVR && !vrActive) {
-    return (
-      <VRWaitingRoom
-        store={xrStore}
-        accent="rgba(59, 130, 246, 0.92)"
-        label={lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'}
-        lang={lang}
-      />
-    )
-  }
+  // The canvas below stays mounted throughout (WebXR needs a live <XR> to
+  // bind `enterVR()` to — see VRWaitingRoom); the overlay just sits on top
+  // of it and blocks interaction until the session is live.
+  const awaitingVr = canVR && !vrActive
 
   return (
     <WebGLGate>
@@ -137,6 +131,14 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
         <div className="game-bottom">
           <PromptBanner text={promptText} lang={lang} />
         </div>
+        {awaitingVr && (
+          <VRWaitingRoom
+            store={xrStore}
+            accent="rgba(59, 130, 246, 0.92)"
+            label={lang === 'ml' ? 'VR-ൽ കളിക്കൂ' : 'Enter VR'}
+            lang={lang}
+          />
+        )}
       </div>
     </WebGLGate>
   )
