@@ -384,7 +384,7 @@ export function Park360Game() {
                 whiteSpace: 'nowrap',
               }}
             >
-              👈 {lang === 'ml' ? 'ഇടത്തോട്ടും വലത്തോട്ടും വലിച്ചു നോക്കൂ' : 'Drag to look left and right'} 👉
+              👈 {parkLine('dragHint', lang)} 👉
             </div>
           )}
           {roundPhase === 'celebrating' && <div className="celebrate">⭐</div>}

@@ -53,6 +53,9 @@ const MESSAGES = {
   noteEasy: { en: 'Point + glowing target to start', ml: 'തുടക്കം ചൂണ്ടലും തിളങ്ങുന്ന ലക്ഷ്യവും' },
   noteMedium: { en: 'Point + sparkle trail to start', ml: 'തുടക്കം മിന്നും പൊട്ടുകളോടെ ചൂണ്ടൽ' },
   noteHard: { en: 'Plain point, fading to just a look', ml: 'വെറും ചൂണ്ടൽ, പിന്നെ നോട്ടം മാത്രം' },
+  // one-time "you can look around" hint, dismissed on the first drag (same
+  // wording as the other 360 games' dragHint key)
+  dragHint: { en: 'Drag to look left and right', ml: 'ഇടത്തോട്ടും വലത്തോട്ടും വലിച്ചു നോക്കൂ' },
 } satisfies Record<string, Entry>
 
 export type Museum360Key = keyof typeof MESSAGES

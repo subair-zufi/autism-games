@@ -309,7 +309,7 @@ export function Museum360Game() {
                 whiteSpace: 'nowrap',
               }}
             >
-              👈 {lang === 'ml' ? 'ഇടത്തോട്ടും വലത്തോട്ടും വലിച്ചു നോക്കൂ' : 'Drag to look left and right'} 👉
+              👈 {museum360Line('dragHint', lang)} 👉
             </div>
           )}
           {celebrate > 0 && locked && <div className="celebrate">⭐</div>}

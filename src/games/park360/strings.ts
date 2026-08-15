@@ -54,6 +54,9 @@ const MESSAGES = {
   noteEasy: { en: 'Big surprises, quick hints', ml: 'വലിയ അത്ഭുതങ്ങൾ, വേഗം സൂചന' },
   noteMedium: { en: 'Quieter surprises, slower hints', ml: 'ചെറിയ അത്ഭുതങ്ങൾ, പതുക്കെ സൂചന' },
   noteHard: { en: 'Tiny surprises, no hints — all you!', ml: 'വളരെ ചെറിയ അത്ഭുതങ്ങൾ, സൂചനയില്ല' },
+  // one-time "you can look around" hint, dismissed on the first drag (same
+  // wording as the other 360 games' dragHint key)
+  dragHint: { en: 'Drag to look left and right', ml: 'ഇടത്തോട്ടും വലത്തോട്ടും വലിച്ചു നോക്കൂ' },
 } satisfies Record<string, Entry>
 
 export type ParkKey = keyof typeof MESSAGES
