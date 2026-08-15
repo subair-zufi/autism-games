@@ -133,8 +133,17 @@ function HeadSelectActive({
     const inter = pointer.getIntersection()
     const onConfirm = isConfirmChip(inter?.object)
     const target = onConfirm ? null : findSelectTarget(inter?.object)
-    if (target != null && inter != null) armPoint.copy(inter.point)
     const r = advanceAim(aim, { target, onConfirm }, dt * 1000)
+    // Anchor the confirm chip's "on"-mode point to the gaze spot on the CURRENT
+    // candidate only — not to any target the ray happens to graze. Updating it
+    // for a not-yet-armed target teleported the chip in front of whatever the
+    // child glanced at next; because the chip then sits on the gaze ray and
+    // intercepts it, that new target could never accumulate the arming dwell —
+    // so the candidate stayed the first thing armed and confirming fired the
+    // wrong option (in Football 360: the ball went to a teammate the child
+    // wasn't looking at, costing a life). Tracking only the candidate lets the
+    // gaze move to a different option and re-arm it cleanly.
+    if (target != null && target === r.candidate && inter != null) armPoint.copy(inter.point)
 
     camera.getWorldPosition(camPos)
 
