@@ -43,7 +43,7 @@ export interface Football360SceneProps {
   ballOwner: number
   /** teammate currently showing the "pass it to me" ready cue, or null */
   readyIndex: number | null
-  /** teammate performing the incoming pass (lean-and-push animation), or null */
+  /** teammate passing the ball back to the child (lean-and-push animation), or null */
   rollerIndex: number | null
   /** teammate who just got a wrong-partner pass (head-shake wobble), or null */
   rejectIndex: number | null

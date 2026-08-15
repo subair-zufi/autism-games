@@ -38,8 +38,18 @@ const MESSAGES = {
     en: 'You’ve got the ball. Look at your teammates…',
     ml: 'പന്ത് നിന്റെ കയ്യിലുണ്ട്. കൂട്ടുകാരെ ഒന്ന് നോക്ക്…',
   },
+  // --- child-initiated flow: your-turn, the return pass, the calm pause -------
+  // Kept very short: the child may not read, so these mostly cue the 🔊 speech
+  // and the visuals (ready teammate + glowing ball) carry the meaning.
+  promptStart: {
+    en: 'You have the ball! ⚽ Pass to a friend.',
+    ml: 'പന്ത് നിന്റെ കയ്യിലുണ്ട്! ⚽ ഒരു കൂട്ടുകാരന് പാസ് ചെയ്യ്.',
+  },
+  promptYourTurn: { en: 'Your turn! ⚽', ml: 'നിന്റെ ഊഴം! ⚽' },
+  promptReturn: { en: '{name} passes it back to you! ⚽', ml: '{name} തിരികെ പാസ് ചെയ്യുന്നു! ⚽' },
+  promptPause: { en: 'Nice teamwork! 👍', ml: 'നല്ല ടീം വർക്ക്! 👍' },
   promptVerbal: {
-    en: '{name} wants the ball — pass it back!',
+    en: '{name} wants the ball — pass it to them!',
     ml: '{name} പന്ത് ചോദിക്കുന്നു — പാസ് ചെയ്ത് കൊടുക്ക്!',
   },
   promptGesture: {
@@ -66,6 +76,15 @@ const MESSAGES = {
   sayInitiate: {
     en: 'You’ve got the ball! Watch your teammates.',
     ml: 'പന്ത് നിന്റെ കയ്യിലുണ്ട്! കൂട്ടുകാരെ ഒന്ന് നോക്ക്.',
+  },
+  sayStart: {
+    en: 'You have the ball! Find a friend who’s ready.',
+    ml: 'പന്ത് നിന്റെ കയ്യിലുണ്ട്! റെഡിയായ കൂട്ടുകാരനെ കണ്ടെത്ത്.',
+  },
+  sayYourTurn: { en: 'Your turn! Who’s ready?', ml: 'നിന്റെ ഊഴം! ആരാ റെഡി?' },
+  sayReturn: {
+    en: '{name} passes it back to you!',
+    ml: '{name} നിനക്ക് തിരികെ പാസ് ചെയ്യുന്നു!',
   },
   sayVerbalCue: {
     en: '{name} says: pass it to me!',

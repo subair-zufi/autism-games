@@ -34,6 +34,12 @@ import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
 
 const META = GAME_LIST.find((g) => g.id === 'football360')!
 const MAX_LIVES = 3
+/** how long the teammate holds the catch/celebration before passing back */
+const CELEBRATE_HOLD_MS = 900
+/** the calm beat after the ball is back at the child's feet, before the next
+ * turn's ready cue — the comprehension pause an autistic child needs to settle
+ * and register that a full exchange just finished before the next one begins */
+const PAUSE_MS = 1300
 
 /** A name as both languages need it: Malayalam for the ml line, romanized for en. */
 function biName(p: Player | undefined): { en: string; ml: string } {
@@ -41,14 +47,25 @@ function biName(p: Player | undefined): { en: string; ml: string } {
 }
 
 /**
- * Same rally state machine as Roll-Back Buddy: incoming (a teammate passes the
- * ball in — skipped when the child initiates) → hold (the child has the ball;
- * after readyDelayMs the target teammate shows the ready cue) → rolling
- * (correct return travels) or reject (a not-ready teammate sends it back, then
- * hold again). The 360 twist is purely presentational: the child stands on the
- * centre spot and turns the view (or their head, in VR) to read the teammates.
+ * Child-initiated exchange, tuned for how an autistic child reads a turn:
+ * every round the *child* holds the ball and starts the pass, so the loop is
+ * always the same predictable shape rather than sometimes-receive/sometimes-
+ * initiate.
+ *
+ *   hold      — the child has the ball; after readyDelayMs one teammate shows
+ *               the ready cue, and the child passes to them.
+ *   rolling   — the pass travels out; the teammate catches and celebrates
+ *               (the "Great pass!" pop-up confirms it landed).
+ *   returning — the teammate passes the ball straight back to the child, so the
+ *               exchange is visibly reciprocal (you pass, they pass back).
+ *   pause     — a calm beat with the ball resting at the child's feet, giving
+ *               them time to register the finished exchange before the next.
+ *   reject    — a not-ready teammate sends it back and the child tries again.
+ *
+ * The 360 twist is purely presentational: the child stands on the centre spot
+ * and turns the view (or their head, in VR) to read who is ready.
  */
-type Stage = 'incoming' | 'hold' | 'reject' | 'rolling'
+type Stage = 'hold' | 'rolling' | 'returning' | 'pause' | 'reject'
 
 type Params = Parameters<typeof fbSpeak>[2]
 
@@ -77,7 +94,7 @@ export function Football360Game() {
   const [players, setPlayers] = useState<Player[]>([])
   const [sequence, setSequence] = useState<Rally[]>([])
   const [ri, setRi] = useState(0) // rally index
-  const [stage, setStage] = useState<Stage>('incoming')
+  const [stage, setStage] = useState<Stage>('hold')
   const [cueShown, setCueShown] = useState(false)
   const [ballOwner, setBallOwner] = useState(0)
   const [lastPicked, setLastPicked] = useState<number | null>(null)
@@ -145,9 +162,10 @@ export function Football360Game() {
     setPlayers(ps)
     setSequence(seq)
     setRi(0)
-    setStage(seq[0]?.initiate ? 'hold' : 'incoming')
+    // the child always starts holding the ball — they make the first pass
+    setStage('hold')
     setCueShown(false)
-    setBallOwner(seq[0]?.initiate ? 0 : seq[0]?.from ?? 0)
+    setBallOwner(0)
     setLastPicked(null)
     setScore(0)
     setReturned(0)
@@ -173,23 +191,12 @@ export function Football360Game() {
     start()
   }
 
-  // Incoming pass: the teammate holds the ball for a beat, then plays it in.
-  useEffect(() => {
-    if (phase !== 'playing' || rally === null || stage !== 'incoming') return
-    say('sayIncoming', { name: biName(players[rally.from]) })
-    setBallOwner(rally.from)
-    const t1 = setTimeout(() => setBallOwner(0), 500)
-    const t2 = setTimeout(() => setStage('hold'), 500 + config.rollTravelMs)
-    return () => {
-      clearTimeout(t1)
-      clearTimeout(t2)
-    }
-  }, [phase, ri, stage]) // eslint-disable-line react-hooks/exhaustive-deps
-
   // Hold: the child has the ball; after a beat, one teammate shows the ready cue.
   useEffect(() => {
     if (phase !== 'playing' || rally === null || stage !== 'hold' || cueShown) return
-    if (rally.initiate) say('sayInitiate')
+    // a short spoken nudge that it's the child's turn — the ball is already at
+    // their feet. First turn explains it; later turns just say "your turn".
+    say(ri === 0 ? 'sayStart' : 'sayYourTurn')
     const t = setTimeout(() => {
       setCueShown(true)
       cueAt.current = performance.now()
@@ -205,7 +212,7 @@ export function Football360Game() {
         rally: ri,
         to: players[rally.to].id,
         cue: config.cue,
-        initiate: rally.initiate,
+        initiate: true, // every round is child-initiated in this flow
         // how far the child must turn to face the ready teammate — the 360
         // attention-shift size, recorded like Museum 360's targetBearingDeg
         targetBearingDeg: playerHeadingDeg(rally.to, config.partners),
@@ -238,7 +245,9 @@ export function Football360Game() {
     }
   }, [phase, ri, stage]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Rolling: a correct return travels, the catcher celebrates, next rally.
+  // Rolling: the child's pass travels out, the teammate catches and celebrates.
+  // The last pass ends the game on that high note; every other pass then has
+  // the teammate play the ball back to the child (the `returning` stage).
   useEffect(() => {
     if (phase !== 'playing' || rally === null || stage !== 'rolling') return
     const t = setTimeout(() => {
@@ -252,14 +261,35 @@ export function Football360Game() {
         setPhase('over')
         return
       }
+      // the teammate passes the ball straight back to the child
+      setStage('returning')
+      setBallOwner(0)
+    }, config.rollTravelMs + CELEBRATE_HOLD_MS)
+    return () => clearTimeout(t)
+  }, [phase, ri, stage]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Returning: the teammate plays the ball back to the child (ball already
+  // travelling to owner 0). When it lands, settle into the calm pause.
+  useEffect(() => {
+    if (phase !== 'playing' || rally === null || stage !== 'returning') return
+    say('sayReturn', { name: biName(players[rally.to]) })
+    const t = setTimeout(() => setStage('pause'), config.rollTravelMs)
+    return () => clearTimeout(t)
+  }, [phase, ri, stage]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pause: a quiet beat with the ball resting at the child's feet, then the
+  // next turn begins (ball stays with the child — they pass again).
+  useEffect(() => {
+    if (phase !== 'playing' || rally === null || stage !== 'pause') return
+    const t = setTimeout(() => {
       cueAt.current = null
       setCueShown(false)
       setAttempts(0)
       setLastPicked(null)
       setRi(ri + 1)
-      setStage(sequence[ri + 1].initiate ? 'hold' : 'incoming')
-      if (sequence[ri + 1].initiate) setBallOwner(0)
-    }, config.rollTravelMs + 700)
+      setStage('hold')
+      setBallOwner(0)
+    }, PAUSE_MS)
     return () => clearTimeout(t)
   }, [phase, ri, stage]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -282,7 +312,9 @@ export function Football360Game() {
   /** The child passes the ball to teammate `i` (scene tap / VR ray). */
   function pick(i: number) {
     if (phase !== 'playing' || rally === null) return
-    if (stage === 'rolling' || stage === 'reject') return // ball is travelling
+    // only actionable while the child holds the ball on their turn; ignore taps
+    // while the ball is travelling out/back or resting in the between-turn pause
+    if (stage !== 'hold') return
     const result = classifyReturn(rally, i, cueShown && stage === 'hold')
     if (result === 'premature') {
       // passed (or reached) before the ready cue — the reciprocity slip
@@ -296,7 +328,7 @@ export function Football360Game() {
         picked: players[i]?.id,
         during: stage,
         cue: config.cue,
-        initiate: rally.initiate,
+        initiate: true, // every round is child-initiated in this flow
       })
       loseLife()
       return
@@ -328,7 +360,7 @@ export function Football360Game() {
           target: players[rally.to].id,
           picked: players[i].id,
           cue: config.cue,
-          initiate: rally.initiate,
+          initiate: true, // every round is child-initiated in this flow
           firstAttempt,
           latencyMs,
           latencyFromPromptEndMs,
@@ -355,7 +387,7 @@ export function Football360Game() {
         target: players[rally.to].id,
         picked: players[i].id,
         cue: config.cue,
-        initiate: rally.initiate,
+        initiate: true, // every round is child-initiated in this flow
         latencyMs,
         latencyFromPromptEndMs,
         ...head,
@@ -389,15 +421,17 @@ export function Football360Game() {
   // Which bilingual line the banner shows for the current stage (and its 🔊).
   let promptKey: Football360MessageKey
   let promptParams: Params
-  if (stage === 'incoming') {
-    promptKey = 'promptIncoming'
-    promptParams = { name: biName(players[rally?.from ?? 0]) }
-  } else if (stage === 'reject') {
+  if (stage === 'reject') {
     promptKey = 'promptReject'
   } else if (stage === 'rolling') {
     promptKey = 'promptRolling'
+  } else if (stage === 'returning') {
+    promptKey = 'promptReturn'
+    promptParams = { name: biName(rally ? players[rally.to] : undefined) }
+  } else if (stage === 'pause') {
+    promptKey = 'promptPause'
   } else if (!cueShown) {
-    promptKey = rally?.initiate ? 'promptInitiate' : 'promptCaught'
+    promptKey = ri === 0 ? 'promptStart' : 'promptYourTurn'
   } else if (config.cue === 'verbal') {
     promptKey = 'promptVerbal'
     promptParams = { name: biName(rally ? players[rally.to] : undefined) }
@@ -414,8 +448,8 @@ export function Football360Game() {
             players={players}
             cue={config.cue}
             ballOwner={ballOwner}
-            readyIndex={rally && cueShown && stage !== 'rolling' ? rally.to : null}
-            rollerIndex={rally && stage === 'incoming' && !rally.initiate ? rally.from : null}
+            readyIndex={rally && cueShown && stage === 'hold' ? rally.to : null}
+            rollerIndex={rally && stage === 'returning' ? rally.to : null}
             rejectIndex={stage === 'reject' ? lastPicked : null}
             celebrateIndex={rally && stage === 'rolling' ? rally.to : null}
             childTurn={stage === 'hold'}
