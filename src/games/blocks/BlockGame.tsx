@@ -7,7 +7,7 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { speak } from '../../services/speech'
+import { praise, speak } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { CONFIG, buildPlayers, makeSequence, type Player, type TurnSpec } from './logic'
@@ -108,6 +108,7 @@ export function BlockGame() {
     if (phase !== 'playing' || turn === null || turn.kind !== 'child' || handoffTo) return
     playSuccess()
     say('sayNiceBlock')
+    praise()
     recordStep('place_block', { round, slot: index % config.players, method }, { score: score + 1 })
     // Drop the block now (it appears), then require an explicit hand-off to
     // the next player before their turn begins — unless this was the last turn.

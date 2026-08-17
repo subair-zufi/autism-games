@@ -7,7 +7,7 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { speak } from '../../services/speech'
+import { praise, speak } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess, playTap } from '../../services/sounds'
 import {
@@ -186,6 +186,7 @@ export function DiscoveryGame() {
     setSpontCount(nextSpont)
     setStreak(nextStreak)
     say('sayWow', { label: discoveryLabel(round.discovery, lang) })
+    praise()
     recordStep(
       'share',
       {

@@ -16,6 +16,7 @@ import type { Difficulty } from '../../types'
 import { useScores } from '../../state/scores'
 import { useSettings } from '../../state/settings'
 import { playGentle, playSuccess } from '../../services/sounds'
+import { praise } from '../../services/speech'
 import { useGameAnalytics } from '../useGameAnalytics'
 import {
   t,
@@ -124,6 +125,7 @@ export function EmotionRecognitionGame() {
     if (correct) {
       setCorrectCount((c) => c + 1)
       playSuccess()
+      praise()
     } else {
       playGentle()
     }

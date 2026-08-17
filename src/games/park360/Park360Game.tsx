@@ -7,7 +7,7 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { speak } from '../../services/speech'
+import { praise, speak } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess, playTap } from '../../services/sounds'
 import {
@@ -303,6 +303,7 @@ export function Park360Game() {
     setSpontCount(nextSpont)
     setStreak(nextStreak)
     say('sayWow', { label: discoveryLabel(round.discovery, lang) })
+    praise()
     // the head's scan across this whole round: headToTargetMs = time to first
     // look at the surprise, and the range/travel span the turn to the friend
     const head = headMetrics(discoveryBearingDeg(round.discovery))

@@ -7,7 +7,7 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { speak } from '../../services/speech'
+import { praise, speak } from '../../services/speech'
 import { t, whoFeelsQuestion } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
@@ -243,6 +243,7 @@ export function EmotionRecognition360Game() {
     if (correct) {
       playSuccess()
       speak(roomLine('sayCorrect', lang), lang)
+      praise()
     } else {
       playGentle()
       speak(roomLine('sayTryAgain', lang), lang)

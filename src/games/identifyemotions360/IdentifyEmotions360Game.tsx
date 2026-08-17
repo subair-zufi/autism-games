@@ -7,7 +7,7 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { speak } from '../../services/speech'
+import { praise, speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { t, videoFreezeQuestion, whyQuestion } from '../../i18n/strings'
 import type { EmotionId } from '../emotionVocab'
@@ -296,7 +296,7 @@ export function IdentifyEmotions360Game() {
       setLocked(true)
       setCelebrating(true)
       playSuccess()
-      speak(clipLine('sayGreat', lang), lang)
+      praise()
       // reward, then resume the clip to its peak before moving on
       void videoEl.play().catch(() => {})
       const firstTry = firstTryRef.current
@@ -339,8 +339,10 @@ export function IdentifyEmotions360Game() {
       answer: q.cause.options[q.cause.answerIndex].en,
       latencyMs,
     })
-    if (correct) playSuccess()
-    else playGentle()
+    if (correct) {
+      playSuccess()
+      praise()
+    } else playGentle()
     // One attempt only — show the correct cause, then wait for the child to
     // tap Next (review: a fixed timer didn't give a child extra time to
     // read/process the "why" sentence before the game moved on; the DOM Next

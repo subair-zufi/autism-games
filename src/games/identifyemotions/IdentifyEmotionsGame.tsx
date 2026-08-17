@@ -17,7 +17,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
-import { speak, speechAvailable } from '../../services/speech'
+import { praise, speak, speechAvailable } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { emotionMeta, type EmotionId } from '../emotionVocab'
 import {
@@ -205,7 +205,7 @@ export function IdentifyEmotionsGame() {
       setLocked(true)
       setCelebrating(true)
       playSuccess()
-      speak(t('sayGreat', lang), lang)
+      praise()
       // Positive reinforcement, then resume the clip before moving on.
       void videoRef.current?.play()
       const nextScore = score + (firstTryRef.current ? 1 : 0)
@@ -248,8 +248,10 @@ export function IdentifyEmotionsGame() {
       answer: q.cause.options[q.cause.answerIndex].en,
       latencyMs,
     })
-    if (correct) playSuccess()
-    else playGentle()
+    if (correct) {
+      playSuccess()
+      praise()
+    } else playGentle()
     // One attempt only — show the correct cause, then wait for the child to
     // tap Next (review: the previous fixed 1.5s timer didn't give a child
     // extra time to read/process the "why" sentence before moving on).

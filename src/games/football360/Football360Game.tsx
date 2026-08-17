@@ -6,7 +6,7 @@ import { StartScreen } from '../../components/StartScreen'
 import { ScoreBar } from '../../components/ScoreBar'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { speakAll, speechAvailable } from '../../services/speech'
+import { praise, speakAll, speechAvailable } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
@@ -347,6 +347,7 @@ export function Football360Game() {
       const nextReturned = returned + 1
       playSuccess()
       say('sayCorrect', { name: biName(players[i]) })
+      praise()
       setBallOwner(i)
       setScore(nextScore)
       setReturned(nextReturned)
