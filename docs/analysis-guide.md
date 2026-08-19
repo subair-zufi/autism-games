@@ -16,6 +16,8 @@ data sheets, at three grains:
 | Export (button / endpoint) | Sheet | Grain | Use for |
 |---|---|---|---|
 | **Raw events CSV** · `/api/admin/export/events_raw.csv` | `raw_events` | one row per recorded event | your own scoring/filtering in SPSS/R — the source of truth |
+| **Sessions CSV** · `/api/admin/export/sessions.csv` | `sessions` | one row per play session | session-level timing/duration; join to `raw_events` on `session_id` |
+| **Level progress CSV** · `/api/admin/export/level_progress.csv` | `level_progress` | one row per participant × game × level | progression/unlock state (attempts, best score/accuracy, pass/master) |
 | **Trial-level CSV** · `/api/admin/export/trials.csv` | `trials` | one row per scored trial | learning curves, RT/process, VR-vs-flat, error analysis |
 | **Dose CSV** · `/api/admin/export/dose.csv` | `dose` | one row per participant × game | dose-response, retention/spacing |
 | **Export scores** · `/api/admin/assessments.csv` | `battery` | one row per blinded score | pre/post outcomes (near-transfer + distal) |
@@ -61,8 +63,10 @@ aggregate `correct` and `chance` per whatever grouping you choose.
    analysis explicitly.
 3. **Prefer the clean RT.** `latency_ms` includes spoken-prompt time; use
    `latency_from_prompt_end_ms` where present (the 360 emotion games + Football 360).
-4. **Recode for SPSS.** Booleans export as `1/0` already; empty cells are
-   system-missing. `xr_presenting` is `1` (VR) / `0` (flat) / blank (not recorded).
+4. **Recode for SPSS.** Booleans export as `1/0` already — in every sheet,
+   `raw_events` included (`correct`, `firstAttempt`, `xrPresenting`, `hinted`,
+   `unlocked`/`passed`/`mastered`, …); empty cells are system-missing.
+   `xr_presenting` is `1` (VR) / `0` (flat) / blank (not recorded).
 
 ---
 

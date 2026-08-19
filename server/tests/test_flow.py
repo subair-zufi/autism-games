@@ -646,6 +646,119 @@ def test_social_norms_report_pools_recent_sessions(client):
     ).status_code == 404
 
 
+def _admin_headers(client):
+    tok = client.post(
+        "/api/admin/login",
+        json={"email": settings.admin_email, "password": settings.admin_password},
+    ).json()["access_token"]
+    return {"Authorization": f"Bearer {tok}"}
+
+
+def _csv_rows(text_body):
+    import csv as _csv
+    import io as _io
+
+    return list(_csv.DictReader(_io.StringIO(text_body)))
+
+
+def test_raw_events_export_recodes_booleans_to_1_0(client):
+    """A1: boolean payload fields export as 1/0 (numeric for SPSS), not True/False."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("rawbool@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Bo"}, headers=h).json()["id"]
+    client.post(
+        "/api/events",
+        json={
+            "game_key": "emotionrecognition",
+            "event_type": "answer",
+            "student_id": sid,
+            "payload": {"correct": True, "firstAttempt": False, "level": "easy"},
+        },
+        headers=h,
+    )
+
+    r = client.get("/api/admin/export/events_raw.csv", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    row = next(
+        row for row in _csv_rows(r.text) if row.get("participant_code") and row["game_key"] == "emotionrecognition"
+    )
+    assert row["correct"] == "1"
+    assert row["firstAttempt"] == "0"
+    # Non-boolean payload values are untouched.
+    assert row["level"] == "easy"
+
+
+def test_sessions_export_one_row_per_session(client):
+    """B3: raw sessions dump — start/end, duration, final score, event count."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("sess@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Sessa"}, headers=h).json()["id"]
+    code = client.get("/api/students", headers=h).json()[0]["participant_code"]
+
+    session_id = client.post(
+        "/api/sessions", json={"game_key": "blocks", "student_id": sid}, headers=h
+    ).json()["id"]
+    for i in range(3):
+        client.post(
+            "/api/events",
+            json={
+                "game_key": "blocks",
+                "event_type": "place_block",
+                "student_id": sid,
+                "session_id": session_id,
+                "payload": {"round": i},
+            },
+            headers=h,
+        )
+    client.post(f"/api/sessions/{session_id}/end", json={"final_score": 7}, headers=h)
+
+    r = client.get("/api/admin/export/sessions.csv", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    row = next(row for row in _csv_rows(r.text) if row["session_id"] == session_id)
+    assert row["participant_code"] == code
+    assert row["game_key"] == "blocks"
+    assert row["final_score"] == "7"
+    assert row["n_events"] == "3"
+    assert row["started_at"] and row["ended_at"]
+    assert row["duration_s"] != ""  # session closed → duration present
+
+
+def test_level_progress_export(client):
+    """B4: raw level-progression dump with 1/0 flags."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("levels@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Lev"}, headers=h).json()["id"]
+    code = client.get("/api/students", headers=h).json()[0]["participant_code"]
+
+    # Pass easy (8/10) → easy mastered, medium unlocked.
+    client.post(
+        "/api/progress",
+        json={"game_key": "emotionrecognition", "level": "easy", "student_id": sid, "score": 8, "total": 10},
+        headers=h,
+    )
+
+    r = client.get("/api/admin/export/level_progress.csv", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    rows = {
+        row["level"]: row
+        for row in _csv_rows(r.text)
+        if row["participant_code"] == code and row["game_key"] == "emotionrecognition"
+    }
+    assert rows["easy"]["attempts"] == "1"
+    assert rows["easy"]["best_score"] == "8"
+    assert rows["easy"]["unlocked"] == "1"
+    assert rows["easy"]["passed"] == "1"
+    assert rows["easy"]["mastered"] == "1"
+    assert rows["medium"]["unlocked"] == "1"
+    assert rows["medium"]["passed"] == "0"
+
+
 def test_group_report_demographic_breakdown(client):
     token = client.post(
         "/api/auth/signup", json=_signup_payload("cohort@example.com")

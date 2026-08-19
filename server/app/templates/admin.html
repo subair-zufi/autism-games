@@ -109,6 +109,8 @@
             <button class="btn-ghost" id="download-raw" style="border-color:var(--accent); color:var(--text);" title="Every recorded event, every field, unprocessed — the source data for SPSS/R. Nothing scored, filtered or banded.">⬇ Raw events CSV</button>
             <button class="btn-ghost" id="download-csv" title="Derived: one row per scored trial (first-attempt rule applied) with demographics + process/VR fields">⬇ Trial-level CSV</button>
             <button class="btn-ghost" id="download-dose" title="Derived: one row per participant × game — sessions, trials, minutes, spacing">⬇ Dose CSV</button>
+            <button class="btn-ghost" id="download-sessions" title="Raw: one row per play session — start/end, duration, final score, event count, unprocessed">⬇ Sessions CSV</button>
+            <button class="btn-ghost" id="download-levels" title="Raw: one row per participant × game × level — attempts, best score/accuracy, unlock/pass/master flags">⬇ Level progress CSV</button>
           </div>
         </div>
         <table id="games-table">
@@ -471,6 +473,10 @@
       downloadCsv(e.currentTarget, "/api/admin/export/trials.csv", "trials.csv"));
     document.getElementById("download-dose").addEventListener("click", (e) =>
       downloadCsv(e.currentTarget, "/api/admin/export/dose.csv", "dose.csv"));
+    document.getElementById("download-sessions").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/sessions.csv", "sessions.csv"));
+    document.getElementById("download-levels").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/level_progress.csv", "level_progress.csv"));
     document.getElementById("dl-assess-template").addEventListener("click", (e) =>
       downloadCsv(e.currentTarget, "/api/admin/assessments/template.csv", "assessment_template.csv"));
     document.getElementById("dl-assess").addEventListener("click", (e) =>

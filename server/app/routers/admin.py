@@ -12,7 +12,15 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_admin
-from ..models import Admin, AssessmentScore, GameEvent, GameSession, Student, User
+from ..models import (
+    Admin,
+    AssessmentScore,
+    GameEvent,
+    GameSession,
+    LevelProgress,
+    Student,
+    User,
+)
 from ..scoring import (
     SKILL_BY_GAME,
     VISIBLE_GAMES,
@@ -562,10 +570,19 @@ RAW_FIXED_COLUMNS = (
 
 
 def _raw_cell(v: object) -> object:
-    """Render a payload value for a raw CSV cell: None → empty, nested → JSON,
-    everything else verbatim (booleans stay True/False; nothing is recoded)."""
+    """Render a payload value for a raw CSV cell: None → empty, booleans → 1/0,
+    nested → JSON, everything else verbatim.
+
+    Booleans are coerced to 1/0 so the export imports as numeric in SPSS/R (a
+    bare ``True``/``False`` reads as a string and would force a categorical
+    recode on every boolean field). This matches the trial-level export
+    (``_bool_int``) and the synthetic preview dataset, so a pipeline built on
+    the sample keeps working on the live export. ``bool`` is checked before the
+    numeric passthrough because ``bool`` is a subclass of ``int``."""
     if v is None:
         return ""
+    if isinstance(v, bool):
+        return int(v)
     if isinstance(v, (dict, list)):
         return json.dumps(v, ensure_ascii=False)
     return v
@@ -761,6 +778,158 @@ def export_dose_csv(
             )
 
     return _csv_response(DOSE_CSV_COLUMNS, rows, f"dose_{today.isoformat()}.csv")
+
+
+# ---------------------------------------------------------------------------
+# Raw session dump — one row per play session
+# ---------------------------------------------------------------------------
+# Raw, un-banded participant attributes are joined on for merging (compute
+# age/bands yourself), mirroring the raw event dump rather than the derived
+# exports. Session timing is otherwise only available aggregated in dose.csv.
+SESSIONS_CSV_COLUMNS = (
+    "session_id",
+    "participant_code",
+    "student_id",
+    "user_id",
+    "game_key",
+    "started_at",
+    "ended_at",
+    "duration_s",  # ended_at - started_at in seconds; blank if the session never closed
+    "final_score",  # GameSession.final_score (raw per-game tally, not the standardised score)
+    "n_events",  # recorded events attached to this session
+    "gender",
+    "date_of_birth",
+    "autism_level",
+    "iq_score",
+)
+
+
+@router.get("/export/sessions.csv")
+def export_sessions_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """RAW session dump — one row per play session, nothing scored or aggregated.
+
+    Complements the raw event dump (which carries ``session_id`` but not the
+    session's own clock): join the two on ``session_id`` to place each event in
+    its session, or use this alone for session-level timing/duration. All games
+    (including retired ones) are included; only mentor-only play with no
+    participant attached is left out (it can't be attributed)."""
+    students = {s.id: s for s in db.scalars(select(Student)).all()}
+    sessions = db.scalars(
+        select(GameSession)
+        .where(GameSession.student_id.isnot(None))
+        .order_by(GameSession.started_at.asc())
+    ).all()
+
+    # One grouped pass for the per-session event counts rather than a query each.
+    counts = dict(
+        db.execute(
+            select(GameEvent.session_id, func.count(GameEvent.id))
+            .where(GameEvent.session_id.isnot(None))
+            .group_by(GameEvent.session_id)
+        ).all()
+    )
+
+    rows: list[list[object]] = []
+    for sess in sessions:
+        s = students.get(sess.student_id)
+        duration = (
+            round((sess.ended_at - sess.started_at).total_seconds())
+            if sess.ended_at is not None and sess.started_at is not None
+            else None
+        )
+        rows.append(
+            [
+                str(sess.id),
+                (s.participant_code if s else "") or "",
+                str(sess.student_id) if sess.student_id else "",
+                str(sess.user_id) if sess.user_id else "",
+                sess.game_key,
+                sess.started_at.isoformat() if sess.started_at else "",
+                sess.ended_at.isoformat() if sess.ended_at else "",
+                _c(duration),
+                _c(sess.final_score),
+                counts.get(sess.id, 0),
+                (s.gender if s else "") or "",
+                s.date_of_birth.isoformat() if s and s.date_of_birth else "",
+                (s.autism_level if s else "") or "",
+                _c(s.iq_score if s else None),
+            ]
+        )
+
+    return _csv_response(SESSIONS_CSV_COLUMNS, rows, f"sessions_{date.today().isoformat()}.csv")
+
+
+# ---------------------------------------------------------------------------
+# Raw level-progression dump — one row per (participant × game × level)
+# ---------------------------------------------------------------------------
+LEVEL_PROGRESS_CSV_COLUMNS = (
+    "participant_code",
+    "student_id",
+    "user_id",
+    "game_key",
+    "level",
+    "attempts",
+    "best_score",
+    "best_accuracy",  # 0-1, uncorrected
+    "unlocked",  # 1/0
+    "passed",  # 1/0 (best_accuracy >= 70%)
+    "mastered",  # 1/0 (best_accuracy >= 80%)
+    "created_at",
+    "updated_at",
+    "gender",
+    "date_of_birth",
+    "autism_level",
+    "iq_score",
+)
+
+
+@router.get("/export/level_progress.csv")
+def export_level_progress_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """RAW level-progression dump — one row per (participant × game × level).
+
+    The saved progression state (attempts, best score/accuracy, unlock/pass/
+    master flags) for the level-based games, verbatim from ``level_progress``.
+    Booleans export as 1/0. Only progress attached to a participant is included
+    (mentor-only play is left out)."""
+    students = {s.id: s for s in db.scalars(select(Student)).all()}
+    rows_q = db.scalars(
+        select(LevelProgress)
+        .where(LevelProgress.student_id.isnot(None))
+        .order_by(LevelProgress.created_at.asc())
+    ).all()
+
+    rows: list[list[object]] = []
+    for lp in rows_q:
+        s = students.get(lp.student_id)
+        rows.append(
+            [
+                (s.participant_code if s else "") or "",
+                str(lp.student_id) if lp.student_id else "",
+                str(lp.user_id) if lp.user_id else "",
+                lp.game_key,
+                lp.level,
+                lp.attempts,
+                lp.best_score,
+                lp.best_accuracy,
+                int(lp.unlocked),
+                int(lp.passed),
+                int(lp.mastered),
+                lp.created_at.isoformat() if lp.created_at else "",
+                lp.updated_at.isoformat() if lp.updated_at else "",
+                (s.gender if s else "") or "",
+                s.date_of_birth.isoformat() if s and s.date_of_birth else "",
+                (s.autism_level if s else "") or "",
+                _c(s.iq_score if s else None),
+            ]
+        )
+
+    return _csv_response(
+        LEVEL_PROGRESS_CSV_COLUMNS, rows, f"level_progress_{date.today().isoformat()}.csv"
+    )
 
 
 # ---------------------------------------------------------------------------
