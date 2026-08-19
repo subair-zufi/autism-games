@@ -44,6 +44,8 @@ from ..schemas import (
     AssessmentImportRequest,
     AssessmentImportResult,
     EventPublic,
+    FieldCoverageItem,
+    FieldCoverageReport,
     GameBreakdownItem,
     PaginatedEvents,
     PaginatedStudents,
@@ -446,19 +448,75 @@ def analytics_games(
     by_game: dict[str, list[GameEvent]] = defaultdict(list)
     for e in scoring_events:
         by_game[e.game_key].append(e)
-    score_by_game = {
-        gk: corrected_score(trials_for_game(gk, evs)) for gk, evs in by_game.items()
-    }
+    # Trials once, reused for both the count (D8) and the pooled score.
+    trials_by_game = {gk: trials_for_game(gk, evs) for gk, evs in by_game.items()}
+    score_by_game = {gk: corrected_score(ts) for gk, ts in trials_by_game.items()}
 
     return [
         GameBreakdownItem(
             game_key=row[0],
             event_count=row[1],
+            trial_count=len(trials_by_game.get(row[0], [])),
             user_count=row[2],
             skill_score=score_by_game.get(row[0]),
         )
         for row in rows
     ]
+
+
+# Payload/process fields whose presence the QA panel checks per game (D7). Order
+# here is the column order in the coverage table; it mixes the always-present
+# condition flags (xrPresenting/inputMethod/visibility) with the ones that are
+# game- or event-type-specific, so a 0% cell flags a field that never reached the
+# data for that game (an M1-M5 telemetry gap), not merely one it doesn't use.
+COVERAGE_FIELDS = (
+    "xrPresenting",
+    "inputMethod",
+    "chance",
+    "correct",
+    "firstAttempt",
+    "hinted",
+    "latencyMs",
+    "latencyFromPromptEndMs",
+    "cue",
+    "construct",
+    "visibleCount",
+    "pageWasHidden",
+    "headYawTravelDeg",
+    "headToTargetMs",
+)
+
+
+@router.get("/analytics/field_coverage", response_model=FieldCoverageReport)
+def analytics_field_coverage(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> FieldCoverageReport:
+    """Per-game telemetry coverage — for each tracked payload field, the % of the
+    game's events that carry it. A presence check (is the field being logged?),
+    not a value check: 0% means the field never reached the data for that game.
+    Roster games only."""
+    events = db.scalars(
+        select(GameEvent).where(GameEvent.game_key.in_(VISIBLE_GAMES))
+    ).all()
+    totals: dict[str, int] = defaultdict(int)
+    present: dict[str, dict[str, int]] = defaultdict(lambda: {f: 0 for f in COVERAGE_FIELDS})
+    for e in events:
+        totals[e.game_key] += 1
+        p = e.payload if isinstance(e.payload, dict) else {}
+        counts = present[e.game_key]
+        for f in COVERAGE_FIELDS:
+            if p.get(f) is not None:
+                counts[f] += 1
+
+    games = [
+        FieldCoverageItem(
+            game_key=gk,
+            n_events=totals[gk],
+            pct=[round(100 * present[gk][f] / totals[gk]) if totals[gk] else 0 for f in COVERAGE_FIELDS],
+        )
+        for gk in sorted(totals, key=lambda g: -totals[g])
+    ]
+    return FieldCoverageReport(fields=list(COVERAGE_FIELDS), games=games)
 
 
 @router.get("/analytics/timeseries", response_model=list[TimeseriesPoint])

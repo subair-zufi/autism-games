@@ -291,6 +291,61 @@ def test_admin_login_and_analytics(client):
     assert users.status_code == 200 and users.json()["total"] >= 1
 
 
+def test_analytics_games_includes_trial_count(client):
+    """D8: the per-game breakdown reports scored trials, not just raw events.
+    Uses football360 (a visible game no other test writes to)."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("d8@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Eight"}, headers=h).json()["id"]
+    for i in range(5):
+        client.post(
+            "/api/events",
+            json={"game_key": "football360", "event_type": "roll_return", "student_id": sid,
+                  "payload": {"correct": True, "firstAttempt": i < 3, "cue": "verbal"}},
+            headers=h,
+        )
+    # a non-scoring event counts toward events but not trials
+    client.post(
+        "/api/events",
+        json={"game_key": "football360", "event_type": "game_over", "student_id": sid, "payload": {}},
+        headers=h,
+    )
+
+    games = client.get("/api/admin/analytics/games", headers=_admin_headers(client)).json()
+    row = next(g for g in games if g["game_key"] == "football360")
+    assert row["trial_count"] == 5
+    assert row["event_count"] == 6  # 5 roll_returns + game_over
+    assert row["event_count"] > row["trial_count"]  # game_over is not a trial
+
+
+def test_field_coverage_presence(client):
+    """D7: per-game telemetry coverage is a presence check (% of events with the
+    field). Uses museum360 (a visible game no other test writes to)."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("d7@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Seven"}, headers=h).json()["id"]
+    for _ in range(4):
+        client.post(
+            "/api/events",
+            json={"game_key": "museum360", "event_type": "answer", "student_id": sid,
+                  "payload": {"correct": True, "firstAttempt": True, "cue": "distal",
+                              "visibleCount": 6, "xrPresenting": True, "headYawTravelDeg": 42.0}},
+            headers=h,
+        )
+
+    rep = client.get("/api/admin/analytics/field_coverage", headers=_admin_headers(client)).json()
+    assert "xrPresenting" in rep["fields"] and "cue" in rep["fields"]
+    row = next(g for g in rep["games"] if g["game_key"] == "museum360")
+    assert len(row["pct"]) == len(rep["fields"])
+    pct = dict(zip(rep["fields"], row["pct"]))
+    assert pct["cue"] == 100 and pct["headYawTravelDeg"] == 100  # logged here
+    assert pct["inputMethod"] == 0  # never sent → flagged absent
+
+
 def test_admin_manage_user(client):
     ah_token = client.post(
         "/api/admin/login",
