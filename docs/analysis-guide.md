@@ -69,6 +69,10 @@ aggregate `correct` and `chance` per whatever grouping you choose.
    `raw_events` included (`correct`, `firstAttempt`, `xrPresenting`, `hinted`,
    `unlocked`/`passed`/`mastered`, …); empty cells are system-missing.
    `xr_presenting` is `1` (VR) / `0` (flat) / blank (not recorded).
+5. **`raw_events` columns are stable.** The flattened payload columns follow a
+   pinned order (every known field first, always, even when empty; genuinely new
+   fields only ever appended after them), so a saved import / column map keeps
+   working across exports — new data never shifts the existing columns.
 
 ---
 

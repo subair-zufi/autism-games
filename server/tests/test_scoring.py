@@ -28,6 +28,37 @@ def answers(game, n_correct, n_total, level="easy", **extra):
     return out
 
 
+# --- raw export column ordering (A2) ------------------------------------------
+
+
+def test_ordered_payload_columns_is_stable_and_appends_extras():
+    # Two very different event sets must share the same stable known-key prefix,
+    # so a saved SPSS import doesn't shift between exports.
+    few = [ev("emotionrecognition", "answer", {"correct": True, "level": "easy"})]
+    many = [
+        ev("museum", "answer", {"correct": True, "firstAttempt": True, "cue": "distal",
+                                "visibleCount": 6, "latencyMs": 900}),
+        ev("emotionrecognition", "answer", {"correct": False, "level": "hard", "answer": "sad"}),
+    ]
+    cols_few = scoring.ordered_payload_columns(few)
+    cols_many = scoring.ordered_payload_columns(many)
+
+    # Every known key is always present, in the canonical order, regardless of data.
+    assert cols_few[: len(scoring.RAW_PAYLOAD_ORDER)] == list(scoring.RAW_PAYLOAD_ORDER)
+    assert cols_many[: len(scoring.RAW_PAYLOAD_ORDER)] == list(scoring.RAW_PAYLOAD_ORDER)
+    # correct precedes chance precedes the head-scan block, and never reorders.
+    assert cols_few.index("correct") < cols_few.index("chance") < cols_few.index("headYawTravelDeg")
+
+
+def test_ordered_payload_columns_appends_unknown_keys_sorted():
+    evs = [ev("x", "answer", {"correct": True, "zeta": 1, "alpha": 2})]
+    cols = scoring.ordered_payload_columns(evs)
+    known = len(scoring.RAW_PAYLOAD_ORDER)
+    # unknown keys come after every known column, in sorted order
+    assert cols[known:] == ["alpha", "zeta"]
+    assert cols.index("alpha") > cols.index("during")  # after the last known key
+
+
 # --- correction for guessing --------------------------------------------------
 
 

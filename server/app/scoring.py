@@ -607,6 +607,44 @@ def raw_payload_columns(events: Iterable[EventLike]) -> list[str]:
     return sorted(keys)
 
 
+# Canonical column order for the raw event export's flattened payload. Pinned so
+# the exported layout is STABLE across exports — a saved SPSS/R import (fixed
+# column positions/variable maps) keeps working, instead of silently shifting as
+# the sorted union of whatever payload keys happen to be present grows. Every
+# known key is emitted every export (empty = system-missing) so the prefix never
+# moves; any key not listed here is appended after it in sorted order, so a new
+# field only ever adds trailing columns, never reorders existing ones. Grouped by
+# role; keep in sync with the codebook (routers/admin.py `_CODEBOOK`).
+RAW_PAYLOAD_ORDER = (
+    # outcome / accuracy
+    "correct", "firstAttempt", "attempt", "chance", "visibleCount", "boardCount",
+    # latency / process
+    "latencyMs", "latencyFromPromptEndMs", "hinted",
+    # condition / construct
+    "level", "difficulty", "construct", "cue", "cueKind", "answer", "picked",
+    "spontaneous", "nudges", "saliency", "discovery", "found",
+    # display / input condition
+    "xrPresenting", "inputMethod", "headYawContaminated",
+    "pageHiddenMs", "pageHideCount", "pageWasHidden",
+    # VR head-scan telemetry
+    "targetBearingDeg", "headStartYawDeg", "headEndYawDeg", "headYawTravelDeg",
+    "headYawRangeDeg", "headReversals", "headSamples", "headMinPitchDeg",
+    "headMaxPitchDeg", "headToTargetMs",
+    # bookkeeping
+    "round", "slot", "count", "target", "method", "source", "kind", "clip",
+    "freezeKind", "errorType", "during",
+)
+
+
+def ordered_payload_columns(events: Iterable[EventLike]) -> list[str]:
+    """Stable payload column order for the raw dump: every known key from
+    :data:`RAW_PAYLOAD_ORDER` first (always, so the layout doesn't move between
+    exports), then any other key present in the data, sorted, appended after."""
+    known = set(RAW_PAYLOAD_ORDER)
+    extra = [k for k in raw_payload_columns(events) if k not in known]
+    return list(RAW_PAYLOAD_ORDER) + extra
+
+
 # --- Trial-level export ------------------------------------------------------
 
 

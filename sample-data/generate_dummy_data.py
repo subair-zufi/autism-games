@@ -290,7 +290,7 @@ RAW_FIXED = ["event_id", "participant_code", "student_id", "game_key", "event_ty
              "autism_level", "iq_score"]
 code_by_sid = {r["sid"]: r["code"] for r in roster}
 demo_by_sid = {r["sid"]: r for r in roster}
-payload_cols = scoring.raw_payload_columns(all_events)
+payload_cols = scoring.ordered_payload_columns(all_events)  # stable column order
 RAW_COLS = RAW_FIXED + payload_cols
 
 

@@ -31,6 +31,7 @@ from ..scoring import (
     corrected_score,
     dose_summary,
     iq_band,
+    ordered_payload_columns,
     raw_payload_columns,
     score_participant,
     student_trial_records,
@@ -610,7 +611,7 @@ def _events_raw_table(db: Session) -> tuple[list[str], list[list[object]]]:
         .order_by(GameEvent.created_at.asc())
     ).all()
 
-    payload_cols = raw_payload_columns(events)
+    payload_cols = ordered_payload_columns(events)
     columns = list(RAW_FIXED_COLUMNS) + payload_cols
 
     rows: list[list[object]] = []
