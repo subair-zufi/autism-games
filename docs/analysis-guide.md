@@ -16,11 +16,15 @@ data sheets, at three grains:
 | Export (button / endpoint) | Sheet | Grain | Use for |
 |---|---|---|---|
 | **Raw events CSV** · `/api/admin/export/events_raw.csv` | `raw_events` | one row per recorded event | your own scoring/filtering in SPSS/R — the source of truth |
+| **Sessions CSV** · `/api/admin/export/sessions.csv` | `sessions` | one row per play session | session-level timing/duration; join to `raw_events` on `session_id` |
+| **Level progress CSV** · `/api/admin/export/level_progress.csv` | `level_progress` | one row per participant × game × level | progression/unlock state (attempts, best score/accuracy, pass/master) |
 | **Trial-level CSV** · `/api/admin/export/trials.csv` | `trials` | one row per scored trial | learning curves, RT/process, VR-vs-flat, error analysis |
 | **Dose CSV** · `/api/admin/export/dose.csv` | `dose` | one row per participant × game | dose-response, retention/spacing |
 | **Export scores** · `/api/admin/assessments.csv` | `battery` | one row per blinded score | pre/post outcomes (near-transfer + distal) |
+| **Participants CSV** · `/api/admin/export/participants.csv` | `participants` | one row per child | the de-identified demographic roster / covariates (no name/contact) |
+| **Codebook CSV** · `/api/admin/export/codebook.csv` | `codebook` | one row per variable | the data dictionary — type, unit and value meanings for every raw column |
+| **All raw (ZIP)** · `/api/admin/export/all.zip` | — | bundle | participants + raw_events + sessions + level_progress + codebook in one download |
 | *(derived from trials + dose + battery)* | `summary` | **one row per participant** | between-subjects analysis — **start here** |
-| — | `participants` | one row per child | the demographic roster / covariates |
 
 **Raw data is the ground truth.** `trials`, `dose`, and `summary` apply the app's
 standardised scoring for convenience; if you disagree with any scoring choice
@@ -61,8 +65,14 @@ aggregate `correct` and `chance` per whatever grouping you choose.
    analysis explicitly.
 3. **Prefer the clean RT.** `latency_ms` includes spoken-prompt time; use
    `latency_from_prompt_end_ms` where present (the 360 emotion games + Football 360).
-4. **Recode for SPSS.** Booleans export as `1/0` already; empty cells are
-   system-missing. `xr_presenting` is `1` (VR) / `0` (flat) / blank (not recorded).
+4. **Recode for SPSS.** Booleans export as `1/0` already — in every sheet,
+   `raw_events` included (`correct`, `firstAttempt`, `xrPresenting`, `hinted`,
+   `unlocked`/`passed`/`mastered`, …); empty cells are system-missing.
+   `xr_presenting` is `1` (VR) / `0` (flat) / blank (not recorded).
+5. **`raw_events` columns are stable.** The flattened payload columns follow a
+   pinned order (every known field first, always, even when empty; genuinely new
+   fields only ever appended after them), so a saved import / column map keeps
+   working across exports — new data never shifts the existing columns.
 
 ---
 

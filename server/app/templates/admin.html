@@ -109,12 +109,64 @@
             <button class="btn-ghost" id="download-raw" style="border-color:var(--accent); color:var(--text);" title="Every recorded event, every field, unprocessed — the source data for SPSS/R. Nothing scored, filtered or banded.">⬇ Raw events CSV</button>
             <button class="btn-ghost" id="download-csv" title="Derived: one row per scored trial (first-attempt rule applied) with demographics + process/VR fields">⬇ Trial-level CSV</button>
             <button class="btn-ghost" id="download-dose" title="Derived: one row per participant × game — sessions, trials, minutes, spacing">⬇ Dose CSV</button>
+            <button class="btn-ghost" id="download-sessions" title="Raw: one row per play session — start/end, duration, final score, event count, unprocessed">⬇ Sessions CSV</button>
+            <button class="btn-ghost" id="download-levels" title="Raw: one row per participant × game × level — attempts, best score/accuracy, unlock/pass/master flags">⬇ Level progress CSV</button>
+            <button class="btn-ghost" id="download-participants" title="De-identified roster: one row per child — demographics/covariates only, no name or contact">⬇ Participants CSV</button>
+            <button class="btn-ghost" id="download-codebook" title="Data dictionary: one row per variable — type, unit, value meanings for every raw column">⬇ Codebook CSV</button>
+            <button class="btn-ghost" id="download-all" style="border-color:var(--accent); color:var(--text);" title="Everything raw in one ZIP: participants + raw events + sessions + level progress + codebook">⬇ All raw (ZIP)</button>
           </div>
         </div>
         <table id="games-table">
-          <thead><tr><th>Game</th><th>Events</th><th>Players</th><th title="Standardised 0–100 skill score: chance-corrected first-attempt accuracy, pooled across all players. Comparable across games.">Skill score</th></tr></thead>
+          <thead><tr><th>Game</th><th>Events</th><th title="Scored trials — the analysable unit behind the skill score (how many raw events become trials)">Trials</th><th>Players</th><th title="Standardised 0–100 skill score: chance-corrected first-attempt accuracy, pooled across all players. Comparable across games.">Skill score</th></tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+
+      <div class="panel">
+        <h2>Telemetry coverage</h2>
+        <p style="color:var(--muted); font-size:13px; margin:-8px 0 14px;">
+          Per game, the <strong>% of events that carry each process/condition field</strong> — a
+          presence check that the telemetry the analysis relies on is actually being logged (the
+          go-live M1–M5 check). A <span style="color:var(--danger)">red 0%</span> means the field
+          never reached the data for that game; low % is expected for fields only some event types
+          carry (e.g. <code>latencyFromPromptEndMs</code> on answer events).
+        </p>
+        <div class="tscroll">
+          <table id="coverage-table">
+            <thead><tr><th>Game</th><th>Events</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; gap:12px; flex-wrap:wrap;">
+          <h2 style="margin:0;">Raw event browser</h2>
+          <div class="toolbar" style="margin:0;">
+            <select id="ev-game"><option value="">All games</option></select>
+            <select id="ev-type">
+              <option value="">All types</option>
+              <option>answer</option><option>roll_return</option><option>place_block</option>
+              <option>hand_off</option><option>impatient_tap</option><option>share</option>
+              <option>no_share</option><option>cue_ready</option><option>game_over</option>
+            </select>
+            <input type="search" id="ev-student" placeholder="student_id (optional)" />
+            <button class="btn-ghost" id="ev-load">Load</button>
+          </div>
+        </div>
+        <p style="color:var(--muted); font-size:13px; margin:0 0 12px;">
+          The most recent recorded events, newest first — spot-check the live stream and each
+          event's payload. Filter by game, event type or a specific <code>student_id</code>.
+        </p>
+        <div class="tscroll">
+          <table id="events-table">
+            <thead><tr>
+              <th>When</th><th>Game</th><th>Type</th><th>Student</th>
+              <th title="0-based step order in the session">Step</th><th>Score</th><th>Payload</th>
+            </tr></thead>
+            <tbody><tr><td colspan="7" style="color:#64748b">Click “Load” to fetch recent events.</td></tr></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="panel">
@@ -229,7 +281,7 @@
       } catch (_) { return; }
       document.getElementById("login-view").classList.add("hidden");
       document.getElementById("dash-view").classList.remove("hidden");
-      loadSummary(); loadTimeseries(); loadGames(); loadStudents(); loadUsers();
+      loadSummary(); loadTimeseries(); loadGames(); loadCoverage(); loadStudents(); loadUsers();
     }
 
     const COLS = 14; // keep in step with #students-table's header
@@ -399,9 +451,68 @@
         options: { plugins: { legend: { display: false } }, scales: { x: { ticks: { color: "#64748b" } }, y: { ticks: { color: "#64748b" } } } },
       });
       document.querySelector("#games-table tbody").innerHTML = data
-        .map((g) => `<tr><td>${esc(g.game_key)}</td><td>${g.event_count}</td><td>${g.user_count}</td><td>${g.skill_score ?? "—"}</td></tr>`).join("")
-        || `<tr><td colspan="4" style="color:#64748b">No data yet</td></tr>`;
+        .map((g) => `<tr><td>${esc(g.game_key)}</td><td>${g.event_count}</td><td>${g.trial_count}</td><td>${g.user_count}</td><td>${g.skill_score ?? "—"}</td></tr>`).join("")
+        || `<tr><td colspan="5" style="color:#64748b">No data yet</td></tr>`;
+
+      // Populate the raw-event browser's game filter from the live roster.
+      const sel = document.getElementById("ev-game");
+      if (sel) sel.innerHTML = '<option value="">All games</option>' +
+        data.map((g) => `<option>${esc(g.game_key)}</option>`).join("");
     }
+
+    // ---- D7: telemetry field coverage ----
+    const FIELD_SHORT = {
+      xrPresenting: "VR", inputMethod: "input", chance: "chance", correct: "correct",
+      firstAttempt: "1st-att", hinted: "hint", latencyMs: "lat", latencyFromPromptEndMs: "lat(clean)",
+      cue: "cue", construct: "constr", visibleCount: "n-vis", pageWasHidden: "hidden",
+      headYawTravelDeg: "yaw-travel", headToTargetMs: "head→tgt",
+    };
+    async function loadCoverage() {
+      let rep;
+      try { rep = await api("/api/admin/analytics/field_coverage"); }
+      catch (e) { return; }
+      document.querySelector("#coverage-table thead tr").innerHTML =
+        "<th>Game</th><th>Events</th>" +
+        rep.fields.map((f) => `<th title="${esc(f)}" style="text-align:center">${esc(FIELD_SHORT[f] || f)}</th>`).join("");
+      const tbody = document.querySelector("#coverage-table tbody");
+      tbody.innerHTML = rep.games.map((g) => `<tr>
+          <td>${esc(g.game_key)}</td><td style="color:var(--muted)">${g.n_events}</td>` +
+          g.pct.map((p) => {
+            const style = p === 0
+              ? "background:rgba(239,68,68,.18);color:var(--danger)"
+              : `background:rgba(34,197,94,${(0.08 + 0.32 * p / 100).toFixed(2)})`;
+            return `<td style="${style};text-align:center">${p}</td>`;
+          }).join("") + "</tr>").join("") ||
+        `<tr><td colspan="${rep.fields.length + 2}" style="color:#64748b">No events yet</td></tr>`;
+    }
+
+    // ---- D9: raw event browser ----
+    async function loadEvents() {
+      const g = document.getElementById("ev-game").value;
+      const t = document.getElementById("ev-type").value;
+      const s = document.getElementById("ev-student").value.trim();
+      const q = new URLSearchParams({ limit: "100" });
+      if (g) q.set("game_key", g);
+      if (t) q.set("event_type", t);
+      if (s) q.set("student_id", s);
+      const tbody = document.querySelector("#events-table tbody");
+      tbody.innerHTML = `<tr><td colspan="7" style="color:var(--muted)">Loading…</td></tr>`;
+      let data;
+      try { data = await api("/api/admin/events?" + q.toString()); }
+      catch (e) { tbody.innerHTML = `<tr><td colspan="7" style="color:var(--danger)">${esc(e.message)}</td></tr>`; return; }
+      tbody.innerHTML = data.items.map((ev) => {
+        const payload = ev.payload ? JSON.stringify(ev.payload) : "";
+        const short = payload.length > 90 ? payload.slice(0, 90) + "…" : payload;
+        return `<tr>
+          <td style="color:var(--muted); white-space:nowrap">${new Date(ev.created_at).toLocaleString()}</td>
+          <td>${esc(ev.game_key)}</td><td>${esc(ev.event_type)}</td>
+          <td style="color:var(--muted)" title="${esc(ev.student_id || "")}">${ev.student_id ? esc(String(ev.student_id).slice(0, 8)) : "—"}</td>
+          <td>${ev.step_index ?? "—"}</td><td>${ev.score ?? "—"}</td>
+          <td style="font-family:ui-monospace,monospace;font-size:12px" title="${esc(payload)}">${esc(short)}</td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="7" style="color:#64748b">No events match.</td></tr>`;
+    }
+    document.getElementById("ev-load").addEventListener("click", loadEvents);
 
     let searchTimer;
     document.getElementById("user-search").addEventListener("input", (e) => {
@@ -471,6 +582,16 @@
       downloadCsv(e.currentTarget, "/api/admin/export/trials.csv", "trials.csv"));
     document.getElementById("download-dose").addEventListener("click", (e) =>
       downloadCsv(e.currentTarget, "/api/admin/export/dose.csv", "dose.csv"));
+    document.getElementById("download-sessions").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/sessions.csv", "sessions.csv"));
+    document.getElementById("download-levels").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/level_progress.csv", "level_progress.csv"));
+    document.getElementById("download-participants").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/participants.csv", "participants.csv"));
+    document.getElementById("download-codebook").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/codebook.csv", "codebook.csv"));
+    document.getElementById("download-all").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/all.zip", "autism_games_raw.zip"));
     document.getElementById("dl-assess-template").addEventListener("click", (e) =>
       downloadCsv(e.currentTarget, "/api/admin/assessments/template.csv", "assessment_template.csv"));
     document.getElementById("dl-assess").addEventListener("click", (e) =>

@@ -268,8 +268,10 @@ for code, gender, dob, level, iq, profile in PARTICIPANTS:
             all_events.extend(evs)
             events_by_student[sid].extend(evs)
             sessions.append(SimpleNamespace(
-                student_id=sid, game_key=game, started_at=start,
+                session_id=sess_id, student_id=sid, user_id=uid, game_key=game,
+                started_at=start,
                 ended_at=start + timedelta(minutes=random.randint(4, 12)),
+                final_score=final, n_events=len(evs),
             ))
 
 # --- sheet: participants ------------------------------------------------------
@@ -288,7 +290,7 @@ RAW_FIXED = ["event_id", "participant_code", "student_id", "game_key", "event_ty
              "autism_level", "iq_score"]
 code_by_sid = {r["sid"]: r["code"] for r in roster}
 demo_by_sid = {r["sid"]: r for r in roster}
-payload_cols = scoring.raw_payload_columns(all_events)
+payload_cols = scoring.ordered_payload_columns(all_events)  # stable column order
 RAW_COLS = RAW_FIXED + payload_cols
 
 
@@ -365,6 +367,67 @@ for r in roster:
             "" if d.span_days is None else d.span_days,
             "" if d.median_gap_days is None else d.median_gap_days,
         ])
+
+# --- sheet: sessions (matches /export/sessions.csv) ---------------------------
+# Raw, one row per play session — the session-level companion to raw_events
+# (join on session_id). Un-banded participant attributes, like the raw dump.
+SESSION_COLS = ["session_id", "participant_code", "student_id", "user_id", "game_key",
+                "started_at", "ended_at", "duration_s", "final_score", "n_events",
+                "gender", "date_of_birth", "autism_level", "iq_score"]
+session_rows = []
+for s in sorted(sessions, key=lambda s: (code_by_sid[s.student_id], s.started_at)):
+    r = demo_by_sid[s.student_id]
+    duration = round((s.ended_at - s.started_at).total_seconds()) if s.ended_at else ""
+    session_rows.append([
+        s.session_id, r["code"], str(s.student_id), str(s.user_id), s.game_key,
+        s.started_at.isoformat(), s.ended_at.isoformat() if s.ended_at else "",
+        duration, "" if s.final_score is None else s.final_score, s.n_events,
+        r["gender"], r["dob"].isoformat(), r["level"], r["iq"],
+    ])
+
+# --- sheet: level_progress (matches /export/level_progress.csv) ---------------
+# Saved progression state per (participant × game × level) for the level-based
+# games. easy is always attempted; medium/hard unlock only once the prior level
+# is passed (best_accuracy ≥ 70%), mirroring the server's unlock rule. mastered
+# is best_accuracy ≥ 80%. Booleans export as 1/0.
+LEVEL_BASED_GAMES = ["emotionrecognition", "emotionrecognition360", "identifyemotions",
+                     "identifyemotions360", "rightway", "rightway360", "rulefixer"]
+LEVEL_PROGRESS_COLS = ["participant_code", "student_id", "user_id", "game_key", "level",
+                       "attempts", "best_score", "best_accuracy", "unlocked", "passed",
+                       "mastered", "created_at", "updated_at", "gender", "date_of_birth",
+                       "autism_level", "iq_score"]
+# (sid, game) -> its sessions, for realistic created/updated stamps + the owning user.
+sess_by_sid_game = {}
+for s in sessions:
+    sess_by_sid_game.setdefault((s.student_id, s.game_key), []).append(s)
+
+level_progress_rows = []
+for r in roster:
+    sid, code = r["sid"], r["code"]
+    ability = clamp(0.45 + (r["iq"] - 60) / 100.0, 0.4, 0.82)
+    played = [g for g in LEVEL_BASED_GAMES if (sid, g) in sess_by_sid_game]
+    for game in played:
+        gsess = sorted(sess_by_sid_game[(sid, game)], key=lambda s: s.started_at)
+        uid = gsess[0].user_id
+        created = gsess[0].started_at
+        updated = max(s.ended_at or s.started_at for s in gsess)
+        prior_passed = True  # easy is always reachable
+        for li, level in enumerate(LEVELS):
+            if not prior_passed:
+                break  # locked levels have no row (never unlocked)
+            # accuracy dips at harder levels; best_accuracy is the child's best of a few tries
+            acc = clamp(ability - 0.12 * li + random.uniform(0.0, 0.12), 0.2, 0.99)
+            best_score = round(acc * 10)
+            best_acc = round(best_score / 10, 4)
+            passed = best_acc >= 0.7
+            level_progress_rows.append([
+                code, str(sid), str(uid), game, level,
+                random.randint(1, 4), best_score, best_acc,
+                1, int(passed), int(best_acc >= 0.8),
+                created.isoformat(), updated.isoformat(),
+                r["gender"], r["dob"].isoformat(), r["level"], r["iq"],
+            ])
+            prior_passed = passed
 
 # --- sheet: battery (blinded pre/post outcomes) -------------------------------
 BATTERY_COLS = ["participant_code", "timepoint", "instrument", "form", "raw_score",
@@ -482,6 +545,8 @@ SHEETS = [
     ("trials", TRIAL_COLS, trial_rows),
     ("dose", DOSE_COLS, dose_rows),
     ("battery", BATTERY_COLS, battery_rows),
+    ("sessions", SESSION_COLS, session_rows),
+    ("level_progress", LEVEL_PROGRESS_COLS, level_progress_rows),
     ("raw_events", RAW_COLS, raw_rows),
 ]
 for name, cols, rows in SHEETS:
@@ -510,6 +575,8 @@ readme_lines = [
     ("  trials        — one row per SCORED trial (= /export/trials.csv). first_attempt_correct 0/1, chance, latency, VR fields.", False),
     ("  dose          — one row per participant × game: sessions, trials, minutes, spacing (= /export/dose.csv).", False),
     ("  battery        — blinded pre/post outcomes EIT/TOP/JAP/NCT + VSMS/ATEC (= the AssessmentScore import format).", False),
+    ("  sessions      — one row per play SESSION: start/end, duration, final score, event count (= /export/sessions.csv). Join to raw_events on session_id.", False),
+    ("  level_progress — one row per participant × game × level: attempts, best score/accuracy, unlock/pass/master flags 1/0 (= /export/level_progress.csv).", False),
     ("  raw_events    — one row per recorded EVENT, all payload fields flattened (= /export/events_raw.csv). Source data for SPSS.", False),
     ("", False),
     ("Notes for analysis:", True),
@@ -552,5 +619,7 @@ print("raw events  :", len(all_events), "| raw columns:", len(RAW_COLS))
 print("trials      :", len(trial_rows))
 print("dose rows   :", len(dose_rows))
 print("battery rows:", len(battery_rows))
+print("session rows:", len(session_rows))
+print("level rows  :", len(level_progress_rows))
 print("written to  :", OUT)
 print("files       :", ", ".join(sorted(os.listdir(OUT))))

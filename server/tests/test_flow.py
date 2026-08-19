@@ -291,6 +291,61 @@ def test_admin_login_and_analytics(client):
     assert users.status_code == 200 and users.json()["total"] >= 1
 
 
+def test_analytics_games_includes_trial_count(client):
+    """D8: the per-game breakdown reports scored trials, not just raw events.
+    Uses football360 (a visible game no other test writes to)."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("d8@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Eight"}, headers=h).json()["id"]
+    for i in range(5):
+        client.post(
+            "/api/events",
+            json={"game_key": "football360", "event_type": "roll_return", "student_id": sid,
+                  "payload": {"correct": True, "firstAttempt": i < 3, "cue": "verbal"}},
+            headers=h,
+        )
+    # a non-scoring event counts toward events but not trials
+    client.post(
+        "/api/events",
+        json={"game_key": "football360", "event_type": "game_over", "student_id": sid, "payload": {}},
+        headers=h,
+    )
+
+    games = client.get("/api/admin/analytics/games", headers=_admin_headers(client)).json()
+    row = next(g for g in games if g["game_key"] == "football360")
+    assert row["trial_count"] == 5
+    assert row["event_count"] == 6  # 5 roll_returns + game_over
+    assert row["event_count"] > row["trial_count"]  # game_over is not a trial
+
+
+def test_field_coverage_presence(client):
+    """D7: per-game telemetry coverage is a presence check (% of events with the
+    field). Uses museum360 (a visible game no other test writes to)."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("d7@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Seven"}, headers=h).json()["id"]
+    for _ in range(4):
+        client.post(
+            "/api/events",
+            json={"game_key": "museum360", "event_type": "answer", "student_id": sid,
+                  "payload": {"correct": True, "firstAttempt": True, "cue": "distal",
+                              "visibleCount": 6, "xrPresenting": True, "headYawTravelDeg": 42.0}},
+            headers=h,
+        )
+
+    rep = client.get("/api/admin/analytics/field_coverage", headers=_admin_headers(client)).json()
+    assert "xrPresenting" in rep["fields"] and "cue" in rep["fields"]
+    row = next(g for g in rep["games"] if g["game_key"] == "museum360")
+    assert len(row["pct"]) == len(rep["fields"])
+    pct = dict(zip(rep["fields"], row["pct"]))
+    assert pct["cue"] == 100 and pct["headYawTravelDeg"] == 100  # logged here
+    assert pct["inputMethod"] == 0  # never sent → flagged absent
+
+
 def test_admin_manage_user(client):
     ah_token = client.post(
         "/api/admin/login",
@@ -644,6 +699,209 @@ def test_social_norms_report_pools_recent_sessions(client):
         f"/api/reports/student/{sid}/social-norms",
         headers={"Authorization": f"Bearer {other}"},
     ).status_code == 404
+
+
+def _admin_headers(client):
+    tok = client.post(
+        "/api/admin/login",
+        json={"email": settings.admin_email, "password": settings.admin_password},
+    ).json()["access_token"]
+    return {"Authorization": f"Bearer {tok}"}
+
+
+def _csv_rows(text_body):
+    import csv as _csv
+    import io as _io
+
+    return list(_csv.DictReader(_io.StringIO(text_body)))
+
+
+def test_raw_events_export_recodes_booleans_to_1_0(client):
+    """A1: boolean payload fields export as 1/0 (numeric for SPSS), not True/False."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("rawbool@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Bo"}, headers=h).json()["id"]
+    client.post(
+        "/api/events",
+        json={
+            "game_key": "emotionrecognition",
+            "event_type": "answer",
+            "student_id": sid,
+            "payload": {"correct": True, "firstAttempt": False, "level": "easy"},
+        },
+        headers=h,
+    )
+
+    r = client.get("/api/admin/export/events_raw.csv", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    row = next(
+        row for row in _csv_rows(r.text) if row.get("participant_code") and row["game_key"] == "emotionrecognition"
+    )
+    assert row["correct"] == "1"
+    assert row["firstAttempt"] == "0"
+    # Non-boolean payload values are untouched.
+    assert row["level"] == "easy"
+
+
+def test_sessions_export_one_row_per_session(client):
+    """B3: raw sessions dump — start/end, duration, final score, event count."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("sess@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Sessa"}, headers=h).json()["id"]
+    code = client.get("/api/students", headers=h).json()[0]["participant_code"]
+
+    session_id = client.post(
+        "/api/sessions", json={"game_key": "blocks", "student_id": sid}, headers=h
+    ).json()["id"]
+    for i in range(3):
+        client.post(
+            "/api/events",
+            json={
+                "game_key": "blocks",
+                "event_type": "place_block",
+                "student_id": sid,
+                "session_id": session_id,
+                "payload": {"round": i},
+            },
+            headers=h,
+        )
+    client.post(f"/api/sessions/{session_id}/end", json={"final_score": 7}, headers=h)
+
+    r = client.get("/api/admin/export/sessions.csv", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    row = next(row for row in _csv_rows(r.text) if row["session_id"] == session_id)
+    assert row["participant_code"] == code
+    assert row["game_key"] == "blocks"
+    assert row["final_score"] == "7"
+    assert row["n_events"] == "3"
+    assert row["started_at"] and row["ended_at"]
+    assert row["duration_s"] != ""  # session closed → duration present
+
+
+def test_level_progress_export(client):
+    """B4: raw level-progression dump with 1/0 flags."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("levels@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Lev"}, headers=h).json()["id"]
+    code = client.get("/api/students", headers=h).json()[0]["participant_code"]
+
+    # Pass easy (8/10) → easy mastered, medium unlocked.
+    client.post(
+        "/api/progress",
+        json={"game_key": "emotionrecognition", "level": "easy", "student_id": sid, "score": 8, "total": 10},
+        headers=h,
+    )
+
+    r = client.get("/api/admin/export/level_progress.csv", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    rows = {
+        row["level"]: row
+        for row in _csv_rows(r.text)
+        if row["participant_code"] == code and row["game_key"] == "emotionrecognition"
+    }
+    assert rows["easy"]["attempts"] == "1"
+    assert rows["easy"]["best_score"] == "8"
+    assert rows["easy"]["unlocked"] == "1"
+    assert rows["easy"]["passed"] == "1"
+    assert rows["easy"]["mastered"] == "1"
+    assert rows["medium"]["unlocked"] == "1"
+    assert rows["medium"]["passed"] == "0"
+
+
+def test_participants_export_is_deidentified(client):
+    """C6 companion: roster carries covariates but never name/contact."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("roster@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    client.post(
+        "/api/students",
+        json={"full_name": "Private Name", "gender": "Male", "iq_score": 90,
+              "parent_contact": "+1 555", "autism_level": "Level 1"},
+        headers=h,
+    )
+
+    r = client.get("/api/admin/export/participants.csv", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    header = next(csv_reader(r.text))
+    # de-identified: no direct identifiers in the roster
+    assert "full_name" not in header and "parent_contact" not in header
+    assert {"participant_code", "gender", "iq_score", "iq_band", "age_band"} <= set(header)
+    assert "Private Name" not in r.text
+
+
+def csv_reader(text_body):
+    import csv as _csv
+    import io as _io
+
+    return _csv.reader(_io.StringIO(text_body))
+
+
+def test_codebook_export_documents_variables(client):
+    """C5: the codebook lists known variables and appends undocumented payload keys."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("codebook@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Cb"}, headers=h).json()["id"]
+    # a payload key that isn't in the curated codebook
+    client.post(
+        "/api/events",
+        json={
+            "game_key": "emotionrecognition",
+            "event_type": "answer",
+            "student_id": sid,
+            "payload": {"correct": True, "level": "easy", "madeUpField": 7},
+        },
+        headers=h,
+    )
+
+    r = client.get("/api/admin/export/codebook.csv", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    rows = _csv_rows(r.text)
+    by_var = {row["variable"]: row for row in rows}
+    assert by_var["correct"]["type"] == "bool01"
+    assert by_var["chance"]["type"] == "float"
+    assert "participant_code" in by_var
+    # the undocumented field is appended, not silently dropped
+    assert "madeUpField" in by_var
+    assert "Undocumented" in by_var["madeUpField"]["description"]
+
+
+def test_all_zip_bundles_raw_exports(client):
+    """C6: the bundle is a valid ZIP holding every raw export + codebook."""
+    import io as _io
+    import zipfile as _zip
+
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("zip@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Zed"}, headers=h).json()["id"]
+    s = client.post(
+        "/api/sessions", json={"game_key": "blocks", "student_id": sid}, headers=h
+    ).json()["id"]
+    client.post(
+        "/api/events",
+        json={"game_key": "blocks", "event_type": "place_block", "student_id": sid, "session_id": s},
+        headers=h,
+    )
+
+    r = client.get("/api/admin/export/all.zip", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    assert r.headers["content-type"] == "application/zip"
+    zf = _zip.ZipFile(_io.BytesIO(r.content))
+    names = [n.split("_")[0] if n.startswith(("participants", "events", "sessions", "level")) else n for n in zf.namelist()]
+    assert {"participants", "events", "sessions", "level", "codebook.csv"} <= set(names)
+    # each member is non-empty CSV with a header
+    for member in zf.namelist():
+        assert zf.read(member).decode("utf-8").count("\n") >= 1
 
 
 def test_group_report_demographic_breakdown(client):

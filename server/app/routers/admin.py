@@ -2,6 +2,7 @@
 import csv
 import io
 import json
+import zipfile
 from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 
@@ -12,7 +13,15 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..deps import get_current_admin
-from ..models import Admin, AssessmentScore, GameEvent, GameSession, Student, User
+from ..models import (
+    Admin,
+    AssessmentScore,
+    GameEvent,
+    GameSession,
+    LevelProgress,
+    Student,
+    User,
+)
 from ..scoring import (
     SKILL_BY_GAME,
     VISIBLE_GAMES,
@@ -22,6 +31,7 @@ from ..scoring import (
     corrected_score,
     dose_summary,
     iq_band,
+    ordered_payload_columns,
     raw_payload_columns,
     score_participant,
     student_trial_records,
@@ -34,6 +44,8 @@ from ..schemas import (
     AssessmentImportRequest,
     AssessmentImportResult,
     EventPublic,
+    FieldCoverageItem,
+    FieldCoverageReport,
     GameBreakdownItem,
     PaginatedEvents,
     PaginatedStudents,
@@ -436,19 +448,75 @@ def analytics_games(
     by_game: dict[str, list[GameEvent]] = defaultdict(list)
     for e in scoring_events:
         by_game[e.game_key].append(e)
-    score_by_game = {
-        gk: corrected_score(trials_for_game(gk, evs)) for gk, evs in by_game.items()
-    }
+    # Trials once, reused for both the count (D8) and the pooled score.
+    trials_by_game = {gk: trials_for_game(gk, evs) for gk, evs in by_game.items()}
+    score_by_game = {gk: corrected_score(ts) for gk, ts in trials_by_game.items()}
 
     return [
         GameBreakdownItem(
             game_key=row[0],
             event_count=row[1],
+            trial_count=len(trials_by_game.get(row[0], [])),
             user_count=row[2],
             skill_score=score_by_game.get(row[0]),
         )
         for row in rows
     ]
+
+
+# Payload/process fields whose presence the QA panel checks per game (D7). Order
+# here is the column order in the coverage table; it mixes the always-present
+# condition flags (xrPresenting/inputMethod/visibility) with the ones that are
+# game- or event-type-specific, so a 0% cell flags a field that never reached the
+# data for that game (an M1-M5 telemetry gap), not merely one it doesn't use.
+COVERAGE_FIELDS = (
+    "xrPresenting",
+    "inputMethod",
+    "chance",
+    "correct",
+    "firstAttempt",
+    "hinted",
+    "latencyMs",
+    "latencyFromPromptEndMs",
+    "cue",
+    "construct",
+    "visibleCount",
+    "pageWasHidden",
+    "headYawTravelDeg",
+    "headToTargetMs",
+)
+
+
+@router.get("/analytics/field_coverage", response_model=FieldCoverageReport)
+def analytics_field_coverage(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> FieldCoverageReport:
+    """Per-game telemetry coverage — for each tracked payload field, the % of the
+    game's events that carry it. A presence check (is the field being logged?),
+    not a value check: 0% means the field never reached the data for that game.
+    Roster games only."""
+    events = db.scalars(
+        select(GameEvent).where(GameEvent.game_key.in_(VISIBLE_GAMES))
+    ).all()
+    totals: dict[str, int] = defaultdict(int)
+    present: dict[str, dict[str, int]] = defaultdict(lambda: {f: 0 for f in COVERAGE_FIELDS})
+    for e in events:
+        totals[e.game_key] += 1
+        p = e.payload if isinstance(e.payload, dict) else {}
+        counts = present[e.game_key]
+        for f in COVERAGE_FIELDS:
+            if p.get(f) is not None:
+                counts[f] += 1
+
+    games = [
+        FieldCoverageItem(
+            game_key=gk,
+            n_events=totals[gk],
+            pct=[round(100 * present[gk][f] / totals[gk]) if totals[gk] else 0 for f in COVERAGE_FIELDS],
+        )
+        for gk in sorted(totals, key=lambda g: -totals[g])
+    ]
+    return FieldCoverageReport(fields=list(COVERAGE_FIELDS), games=games)
 
 
 @router.get("/analytics/timeseries", response_model=list[TimeseriesPoint])
@@ -539,6 +607,15 @@ def _csv_response(columns, rows, filename: str) -> StreamingResponse:
     )
 
 
+def _csv_bytes(columns, rows) -> bytes:
+    """Materialise a header + rows as UTF-8 CSV bytes (for bundling into a ZIP)."""
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(columns)
+    writer.writerows(rows)
+    return buf.getvalue().encode("utf-8")
+
+
 # Fixed (non-payload) columns for the raw event dump. Everything after these is
 # a flattened payload key. Raw participant attributes are joined on for merging;
 # no derived/banded fields (compute age/bands/scores yourself in SPSS/R).
@@ -562,25 +639,29 @@ RAW_FIXED_COLUMNS = (
 
 
 def _raw_cell(v: object) -> object:
-    """Render a payload value for a raw CSV cell: None → empty, nested → JSON,
-    everything else verbatim (booleans stay True/False; nothing is recoded)."""
+    """Render a payload value for a raw CSV cell: None → empty, booleans → 1/0,
+    nested → JSON, everything else verbatim.
+
+    Booleans are coerced to 1/0 so the export imports as numeric in SPSS/R (a
+    bare ``True``/``False`` reads as a string and would force a categorical
+    recode on every boolean field). This matches the trial-level export
+    (``_bool_int``) and the synthetic preview dataset, so a pipeline built on
+    the sample keeps working on the live export. ``bool`` is checked before the
+    numeric passthrough because ``bool`` is a subclass of ``int``."""
     if v is None:
         return ""
+    if isinstance(v, bool):
+        return int(v)
     if isinstance(v, (dict, list)):
         return json.dumps(v, ensure_ascii=False)
     return v
 
 
-@router.get("/export/events_raw.csv")
-def export_events_raw_csv(
-    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
-) -> StreamingResponse:
-    """RAW event dump for external analysis — one row per recorded event, every
+def _events_raw_table(db: Session) -> tuple[list[str], list[list[object]]]:
+    """(columns, rows) for the raw event dump — one row per recorded event, every
     payload field flattened to its own column, nothing scored, filtered, banded
-    or aggregated. This is the source data for SPSS/R: define your own scoring,
-    first-attempt rules and groupings from it. All event types and all games
-    (including retired ones) are included; only mentor-only play with no
-    participant attached is left out (it can't be attributed)."""
+    or aggregated. All event types and all games (including retired ones) are
+    included; only mentor-only play with no participant attached is left out."""
     students = {s.id: s for s in db.scalars(select(Student)).all()}
     events = db.scalars(
         select(GameEvent)
@@ -588,7 +669,7 @@ def export_events_raw_csv(
         .order_by(GameEvent.created_at.asc())
     ).all()
 
-    payload_cols = raw_payload_columns(events)
+    payload_cols = ordered_payload_columns(events)
     columns = list(RAW_FIXED_COLUMNS) + payload_cols
 
     rows: list[list[object]] = []
@@ -615,7 +696,18 @@ def export_events_raw_csv(
             ]
             + [_raw_cell(p.get(k)) for k in payload_cols]
         )
+    return columns, rows
 
+
+@router.get("/export/events_raw.csv")
+def export_events_raw_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """RAW event dump for external analysis — one row per recorded event, every
+    payload field flattened to its own column, nothing scored, filtered, banded
+    or aggregated. This is the source data for SPSS/R: define your own scoring,
+    first-attempt rules and groupings from it."""
+    columns, rows = _events_raw_table(db)
     return _csv_response(columns, rows, f"events_raw_{date.today().isoformat()}.csv")
 
 
@@ -761,6 +853,384 @@ def export_dose_csv(
             )
 
     return _csv_response(DOSE_CSV_COLUMNS, rows, f"dose_{today.isoformat()}.csv")
+
+
+# ---------------------------------------------------------------------------
+# Raw session dump — one row per play session
+# ---------------------------------------------------------------------------
+# Raw, un-banded participant attributes are joined on for merging (compute
+# age/bands yourself), mirroring the raw event dump rather than the derived
+# exports. Session timing is otherwise only available aggregated in dose.csv.
+SESSIONS_CSV_COLUMNS = (
+    "session_id",
+    "participant_code",
+    "student_id",
+    "user_id",
+    "game_key",
+    "started_at",
+    "ended_at",
+    "duration_s",  # ended_at - started_at in seconds; blank if the session never closed
+    "final_score",  # GameSession.final_score (raw per-game tally, not the standardised score)
+    "n_events",  # recorded events attached to this session
+    "gender",
+    "date_of_birth",
+    "autism_level",
+    "iq_score",
+)
+
+
+def _sessions_table(db: Session) -> tuple[list[str], list[list[object]]]:
+    """(columns, rows) for the raw session dump — one row per play session,
+    nothing scored or aggregated. Complements the raw event dump (which carries
+    ``session_id`` but not the session's own clock). All games (including retired
+    ones) are included; only mentor-only play with no participant is left out."""
+    students = {s.id: s for s in db.scalars(select(Student)).all()}
+    sessions = db.scalars(
+        select(GameSession)
+        .where(GameSession.student_id.isnot(None))
+        .order_by(GameSession.started_at.asc())
+    ).all()
+
+    # One grouped pass for the per-session event counts rather than a query each.
+    counts = dict(
+        db.execute(
+            select(GameEvent.session_id, func.count(GameEvent.id))
+            .where(GameEvent.session_id.isnot(None))
+            .group_by(GameEvent.session_id)
+        ).all()
+    )
+
+    rows: list[list[object]] = []
+    for sess in sessions:
+        s = students.get(sess.student_id)
+        duration = (
+            round((sess.ended_at - sess.started_at).total_seconds())
+            if sess.ended_at is not None and sess.started_at is not None
+            else None
+        )
+        rows.append(
+            [
+                str(sess.id),
+                (s.participant_code if s else "") or "",
+                str(sess.student_id) if sess.student_id else "",
+                str(sess.user_id) if sess.user_id else "",
+                sess.game_key,
+                sess.started_at.isoformat() if sess.started_at else "",
+                sess.ended_at.isoformat() if sess.ended_at else "",
+                _c(duration),
+                _c(sess.final_score),
+                counts.get(sess.id, 0),
+                (s.gender if s else "") or "",
+                s.date_of_birth.isoformat() if s and s.date_of_birth else "",
+                (s.autism_level if s else "") or "",
+                _c(s.iq_score if s else None),
+            ]
+        )
+    return list(SESSIONS_CSV_COLUMNS), rows
+
+
+@router.get("/export/sessions.csv")
+def export_sessions_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """RAW session dump — one row per play session, nothing scored or aggregated.
+    Join to the raw event dump on ``session_id`` to place each event in its
+    session, or use alone for session-level timing/duration."""
+    columns, rows = _sessions_table(db)
+    return _csv_response(columns, rows, f"sessions_{date.today().isoformat()}.csv")
+
+
+# ---------------------------------------------------------------------------
+# Raw level-progression dump — one row per (participant × game × level)
+# ---------------------------------------------------------------------------
+LEVEL_PROGRESS_CSV_COLUMNS = (
+    "participant_code",
+    "student_id",
+    "user_id",
+    "game_key",
+    "level",
+    "attempts",
+    "best_score",
+    "best_accuracy",  # 0-1, uncorrected
+    "unlocked",  # 1/0
+    "passed",  # 1/0 (best_accuracy >= 70%)
+    "mastered",  # 1/0 (best_accuracy >= 80%)
+    "created_at",
+    "updated_at",
+    "gender",
+    "date_of_birth",
+    "autism_level",
+    "iq_score",
+)
+
+
+def _level_progress_table(db: Session) -> tuple[list[str], list[list[object]]]:
+    """(columns, rows) for the raw level-progression dump — one row per
+    (participant × game × level): attempts, best score/accuracy, unlock/pass/
+    master flags (1/0), verbatim from ``level_progress``. Only progress attached
+    to a participant is included (mentor-only play is left out)."""
+    students = {s.id: s for s in db.scalars(select(Student)).all()}
+    rows_q = db.scalars(
+        select(LevelProgress)
+        .where(LevelProgress.student_id.isnot(None))
+        .order_by(LevelProgress.created_at.asc())
+    ).all()
+
+    rows: list[list[object]] = []
+    for lp in rows_q:
+        s = students.get(lp.student_id)
+        rows.append(
+            [
+                (s.participant_code if s else "") or "",
+                str(lp.student_id) if lp.student_id else "",
+                str(lp.user_id) if lp.user_id else "",
+                lp.game_key,
+                lp.level,
+                lp.attempts,
+                lp.best_score,
+                lp.best_accuracy,
+                int(lp.unlocked),
+                int(lp.passed),
+                int(lp.mastered),
+                lp.created_at.isoformat() if lp.created_at else "",
+                lp.updated_at.isoformat() if lp.updated_at else "",
+                (s.gender if s else "") or "",
+                s.date_of_birth.isoformat() if s and s.date_of_birth else "",
+                (s.autism_level if s else "") or "",
+                _c(s.iq_score if s else None),
+            ]
+        )
+    return list(LEVEL_PROGRESS_CSV_COLUMNS), rows
+
+
+@router.get("/export/level_progress.csv")
+def export_level_progress_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """RAW level-progression dump — one row per (participant × game × level).
+
+    The saved progression state (attempts, best score/accuracy, unlock/pass/
+    master flags) for the level-based games, verbatim from ``level_progress``.
+    Booleans export as 1/0. Only progress attached to a participant is included
+    (mentor-only play is left out)."""
+    columns, rows = _level_progress_table(db)
+    return _csv_response(
+        columns, rows, f"level_progress_{date.today().isoformat()}.csv"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Participant roster + codebook + bundled "all raw" download
+# ---------------------------------------------------------------------------
+PARTICIPANTS_CSV_COLUMNS = (
+    "participant_code",
+    "student_id",
+    "gender",
+    "age_years",
+    "age_band",
+    "date_of_birth",
+    "autism_level",
+    "iq_score",
+    "iq_band",
+    "rehabilitation_centre",
+    "is_active",  # 1/0
+    "created_at",
+)
+
+
+def _participants_table(db: Session) -> tuple[list[str], list[list[object]]]:
+    """(columns, rows) for the de-identified participant roster — one row per
+    child with demographics/covariates (no name or contact). The merge key for
+    every other export is ``participant_code`` / ``student_id``."""
+    today = date.today()
+    students = db.scalars(select(Student).order_by(Student.created_at.asc())).all()
+    rows = [
+        [
+            s.participant_code or "",
+            str(s.id),
+            s.gender or "",
+            _c(age_years(s.date_of_birth, today)),
+            age_band(s.date_of_birth, today),
+            s.date_of_birth.isoformat() if s.date_of_birth else "",
+            s.autism_level or "",
+            _c(s.iq_score),
+            iq_band(s.iq_score),
+            s.rehabilitation_centre or "",
+            int(s.is_active),
+            s.created_at.isoformat() if s.created_at else "",
+        ]
+        for s in students
+    ]
+    return list(PARTICIPANTS_CSV_COLUMNS), rows
+
+
+@router.get("/export/participants.csv")
+def export_participants_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """De-identified participant roster (demographics/covariates only — no name
+    or contact). Join every other export to it on ``participant_code``."""
+    columns, rows = _participants_table(db)
+    return _csv_response(columns, rows, f"participants_{date.today().isoformat()}.csv")
+
+
+# A curated data dictionary for the raw exports. Each entry documents one column
+# (fixed columns and the payload/process fields that flatten into raw_events).
+# `appears_in` names the export(s) the variable shows up in; `type` uses SPSS-
+# friendly shorthands (id/string/int/float/bool01/datetime/date). Any payload
+# key seen in the live data but missing here is appended at export time so the
+# codebook never silently omits a recorded field.
+CODEBOOK_CSV_COLUMNS = ("variable", "appears_in", "type", "unit", "values", "description")
+
+_CODEBOOK: tuple[tuple[str, str, str, str, str, str], ...] = (
+    # --- identifiers & keys ---
+    ("event_id", "raw_events", "id", "", "UUID", "Unique id of the recorded event row."),
+    ("session_id", "raw_events,sessions", "id", "", "", "Play-session id; join raw_events to sessions on this."),
+    ("participant_code", "all", "id", "", "e.g. P-2024-001", "Pseudonymous participant code; the primary analysis key."),
+    ("student_id", "all", "id", "", "UUID", "Opaque participant id; stable join key across exports."),
+    ("user_id", "raw_events,sessions,level_progress", "id", "", "UUID", "Owning mentor/account id."),
+    # --- demographics / covariates ---
+    ("gender", "all", "string", "", "M | F | Other (as entered)", "Participant gender as entered on the form."),
+    ("date_of_birth", "all", "date", "", "YYYY-MM-DD", "Participant date of birth."),
+    ("age_years", "participants,trials,dose", "int", "years", "", "Whole years at export date (derived)."),
+    ("age_band", "participants,trials,dose", "string", "", "under 8 | 8-10 | 11-12 | 13-15 | 16+", "Coarse age band (derived)."),
+    ("autism_level", "all", "string", "", "Level 1 | Level 2 | Level 3", "DSM-5 autism support level as entered."),
+    ("iq_score", "all", "int", "", "", "IQ score as entered (no instrument/date recorded)."),
+    ("iq_band", "participants,trials,dose", "string", "", "<70 | 70-84 | 85-99 | 100+", "Coarse IQ band (derived)."),
+    ("rehabilitation_centre", "participants", "string", "", "", "Centre name as entered."),
+    ("is_active", "participants", "bool01", "", "1 | 0", "Whether the participant record is active."),
+    ("created_at", "participants,level_progress", "datetime", "", "ISO 8601", "Row creation time (server, UTC)."),
+    # --- event fixed columns ---
+    ("game_key", "raw_events,sessions,level_progress,trials,dose", "string", "", "", "Game identifier (e.g. emotionrecognition, museum360)."),
+    ("event_type", "raw_events", "string", "", "answer | roll_return | place_block | hand_off | impatient_tap | share | no_share | game_over | …", "The kind of step recorded."),
+    ("step_index", "raw_events", "int", "count", "", "0-based order of the step within its session."),
+    ("event_score", "raw_events", "int", "points", "", "GameEvent.score — running/final game tally on the event (distinct from payload 'score')."),
+    ("client_timestamp", "raw_events", "datetime", "", "ISO 8601", "Client-reported event time (optional)."),
+    ("created_at (event)", "raw_events", "datetime", "", "ISO 8601", "Authoritative server time the event was stored."),
+    # --- session columns ---
+    ("started_at", "sessions", "datetime", "", "ISO 8601", "Session start time."),
+    ("ended_at", "sessions", "datetime", "", "ISO 8601", "Session end time (blank if never closed)."),
+    ("duration_s", "sessions", "int", "seconds", "", "ended_at − started_at (blank if the session never closed)."),
+    ("final_score", "sessions", "int", "points", "", "Session final tally (raw per-game, not the standardised score)."),
+    ("n_events", "sessions", "int", "count", "", "Number of recorded events attached to the session."),
+    # --- level_progress columns ---
+    ("level", "level_progress,raw_events(payload)", "string", "", "easy | medium | hard", "Difficulty tier."),
+    ("attempts", "level_progress", "int", "count", "", "Times this level was attempted."),
+    ("best_score", "level_progress", "int", "points", "", "Best raw score achieved on the level."),
+    ("best_accuracy", "level_progress", "float", "0-1", "", "Best uncorrected accuracy on the level."),
+    ("unlocked", "level_progress", "bool01", "", "1 | 0", "Whether the level is unlocked."),
+    ("passed", "level_progress", "bool01", "", "1 | 0", "best_accuracy ≥ 70%."),
+    ("mastered", "level_progress", "bool01", "", "1 | 0", "best_accuracy ≥ 80%."),
+    ("updated_at", "level_progress", "datetime", "", "ISO 8601", "Last time the progress row changed."),
+    # --- payload: outcome / accuracy ---
+    ("correct", "raw_events", "bool01", "", "1 | 0", "Whether the response was correct."),
+    ("firstAttempt", "raw_events", "bool01", "", "1 | 0", "First-attempt success (pointing/roll games close a round on a correct tap)."),
+    ("attempt", "raw_events", "int", "count", "", "Attempt number (retry-allowed games; 1 = first attempt)."),
+    ("chance", "raw_events", "float", "0-1", "", "Guessing baseline c for the trial (1/n options)."),
+    ("visibleCount", "raw_events", "int", "count", "", "Options on screen (pointing games) → chance = 1/visibleCount."),
+    ("boardCount", "raw_events", "int", "count", "", "Answer options presented (quiz games)."),
+    # --- payload: latency / process ---
+    ("latencyMs", "raw_events", "int", "ms", "", "Response latency; INCLUDES spoken-prompt time — avoid for RT claims."),
+    ("latencyFromPromptEndMs", "raw_events", "int", "ms", "", "Clean RT from TTS onend (subset of games only)."),
+    ("hinted", "raw_events", "bool01", "", "1 | 0", "A hint had fired before the answer."),
+    # --- payload: condition / construct ---
+    ("difficulty", "raw_events", "string", "", "easy | medium | hard", "Difficulty tier (VR copies record the level under this name)."),
+    ("construct", "raw_events", "string", "", "greetings | sharing | turns | space | politeness | helping | comforting | inclusion | fairness", "Social-norms sub-skill the item measures."),
+    ("cue", "raw_events", "string", "", "verbal | gesture | orient | pulse | hover | distal", "Joint-attention / roll cue level."),
+    ("cueKind", "raw_events", "string", "", "gesture | gaze", "Cue modality (museum/JA)."),
+    ("answer", "raw_events", "string", "", "happy | sad | angry | surprised | scared | disgust", "Emotion shown (emotion games)."),
+    ("picked", "raw_events", "string", "", "", "Option/emotion the child chose."),
+    ("spontaneous", "raw_events", "bool01", "", "1 | 0", "Share completed before any helper nudge (initiating JA)."),
+    ("nudges", "raw_events", "int", "count", "", "Helper nudges fired before a share."),
+    ("saliency", "raw_events", "string", "", "big | subtle", "Surprise salience (initiating-JA games)."),
+    ("discovery", "raw_events", "string", "", "", "Surprise/target id (discovery/park)."),
+    ("found", "raw_events", "int", "count", "", "Round index within a museum session."),
+    # --- payload: display / input condition ---
+    ("xrPresenting", "raw_events", "bool01", "", "1 = VR | 0 = flat", "Immersive VR vs flat screen (same game, two conditions)."),
+    ("inputMethod", "raw_events", "string", "", "dwell | controller", "Selection method — dwell (gaze) answers cannot arrive faster than the dwell time; never pool with controller."),
+    ("headYawContaminated", "raw_events", "bool01", "", "1 | 0", "JA-in-VR trial where head yaw is instrumental (aiming), not shared attention — exclude/adjust."),
+    ("pageHiddenMs", "raw_events", "int", "ms", "", "Time in this trial the page was hidden (tab switch / headset off) — exclude long ones."),
+    ("pageHideCount", "raw_events", "int", "count", "", "Separate times the page went hidden during the trial."),
+    ("pageWasHidden", "raw_events", "bool01", "", "1 | 0", "Any non-zero hidden time in the trial."),
+    # --- payload: VR head-scan telemetry (VR games only) ---
+    ("targetBearingDeg", "raw_events", "float", "deg", "", "Angle of the target from screen centre."),
+    ("headStartYawDeg", "raw_events", "float", "deg", "", "Head yaw at trial onset."),
+    ("headEndYawDeg", "raw_events", "float", "deg", "", "Head yaw when the answer was given."),
+    ("headYawTravelDeg", "raw_events", "float", "deg", "", "Total head-scan path length (VR)."),
+    ("headYawRangeDeg", "raw_events", "float", "deg", "", "Widest yaw span visited (VR)."),
+    ("headReversals", "raw_events", "int", "count", "", "Back-and-forth head reversals — hesitation (VR)."),
+    ("headSamples", "raw_events", "int", "count", "", "Head-pose samples logged for the trial (VR)."),
+    ("headMinPitchDeg", "raw_events", "float", "deg", "", "Lowest head pitch visited (VR)."),
+    ("headMaxPitchDeg", "raw_events", "float", "deg", "", "Highest head pitch visited (VR)."),
+    ("headToTargetMs", "raw_events", "int", "ms", "", "Time until the head first pointed at the target (VR)."),
+    # --- payload: bookkeeping ---
+    ("round", "raw_events", "int", "count", "", "Round index within a game session."),
+    ("slot", "raw_events", "int", "count", "", "Turn slot (turn-taking games)."),
+    ("count", "raw_events", "int", "count", "", "Generic count field (nudges/taps)."),
+    ("target", "raw_events", "string", "", "", "Target object/partner id."),
+    ("method", "raw_events", "string", "", "tap | button", "How the action was made."),
+    ("source", "raw_events", "string", "", "", "Origin of a tap/action."),
+    ("kind", "raw_events", "string", "", "", "Event sub-kind (e.g. whoFeels, share)."),
+    ("clip", "raw_events", "string", "", "", "Emotion-clip id (Emotion Clips)."),
+    ("freezeKind", "raw_events", "string", "", "peak | …", "Freeze-frame kind (Emotion Clips)."),
+    ("errorType", "raw_events", "string", "", "adjacent | …", "Mis-tap error classification (pointing games)."),
+    ("during", "raw_events", "string", "", "peer-turn | …", "Phase an impatient tap occurred in."),
+)
+
+
+def _codebook_table(db: Session) -> tuple[list[str], list[list[object]]]:
+    """(columns, rows) for the data dictionary. Starts from the curated set and
+    appends any live payload key not documented there, so the codebook always
+    covers what the raw export actually contains."""
+    rows: list[list[object]] = [list(r) for r in _CODEBOOK]
+    documented = {
+        r[0].split(" ")[0] for r in _CODEBOOK  # strip disambiguating suffixes like "(payload)"
+    }
+    events = db.scalars(select(GameEvent).where(GameEvent.student_id.isnot(None))).all()
+    for key in raw_payload_columns(events):
+        if key not in documented:
+            rows.append(
+                [key, "raw_events", "", "", "", "Undocumented payload field — recorded verbatim; see the game's logic.ts."]
+            )
+    return list(CODEBOOK_CSV_COLUMNS), rows
+
+
+@router.get("/export/codebook.csv")
+def export_codebook_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """Data dictionary for the raw exports — one row per variable (fixed columns
+    and flattened payload/process fields) with type, unit and value meanings, so
+    an SPSS/R import is self-documenting."""
+    columns, rows = _codebook_table(db)
+    return _csv_response(columns, rows, "codebook.csv")
+
+
+@router.get("/export/all.zip")
+def export_all_zip(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """Every raw game-metrics export plus the roster and codebook, bundled as one
+    ZIP: participants, raw events, sessions, level progress and the data
+    dictionary — all keyed by participant_code / student_id."""
+    today = date.today().isoformat()
+    datasets = [
+        (f"participants_{today}.csv", _participants_table(db)),
+        (f"events_raw_{today}.csv", _events_raw_table(db)),
+        (f"sessions_{today}.csv", _sessions_table(db)),
+        (f"level_progress_{today}.csv", _level_progress_table(db)),
+        ("codebook.csv", _codebook_table(db)),
+    ]
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for filename, (columns, rows) in datasets:
+            zf.writestr(filename, _csv_bytes(columns, rows))
+    payload = buf.getvalue()
+    return StreamingResponse(
+        iter([payload]),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="autism_games_raw_{today}.zip"'},
+    )
 
 
 # ---------------------------------------------------------------------------

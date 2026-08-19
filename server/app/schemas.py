@@ -252,11 +252,33 @@ class AnalyticsSummary(BaseModel):
 class GameBreakdownItem(BaseModel):
     game_key: str
     event_count: int
+    # Scored trials (the unit the skill score is built from) — how many of the
+    # raw events actually become analysable trials for this game.
+    trial_count: int
     user_count: int
     # Standardised 0-100 skill score: chance-corrected first-attempt accuracy
     # pooled across all players (see app/scoring.py). None for games with no
     # scorable trials yet (or retired games no longer in the roster).
     skill_score: float | None
+
+
+class FieldCoverageItem(BaseModel):
+    """Per-game telemetry coverage: for each tracked payload field, the % of the
+    game's events that carry it (a presence check, not a value check)."""
+
+    game_key: str
+    n_events: int
+    # % present, aligned position-for-position with FieldCoverageReport.fields.
+    pct: list[int]
+
+
+class FieldCoverageReport(BaseModel):
+    """Telemetry field-coverage QA across the roster games. Confirms the process/
+    condition fields the analysis relies on are actually being logged (the M1-M5
+    pre-go-live check) — 0% flags a field that is not reaching the data."""
+
+    fields: list[str]
+    games: list[FieldCoverageItem]
 
 
 class StudentOverviewItem(BaseModel):
