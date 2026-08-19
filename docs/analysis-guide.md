@@ -21,8 +21,10 @@ data sheets, at three grains:
 | **Trial-level CSV** · `/api/admin/export/trials.csv` | `trials` | one row per scored trial | learning curves, RT/process, VR-vs-flat, error analysis |
 | **Dose CSV** · `/api/admin/export/dose.csv` | `dose` | one row per participant × game | dose-response, retention/spacing |
 | **Export scores** · `/api/admin/assessments.csv` | `battery` | one row per blinded score | pre/post outcomes (near-transfer + distal) |
+| **Participants CSV** · `/api/admin/export/participants.csv` | `participants` | one row per child | the de-identified demographic roster / covariates (no name/contact) |
+| **Codebook CSV** · `/api/admin/export/codebook.csv` | `codebook` | one row per variable | the data dictionary — type, unit and value meanings for every raw column |
+| **All raw (ZIP)** · `/api/admin/export/all.zip` | — | bundle | participants + raw_events + sessions + level_progress + codebook in one download |
 | *(derived from trials + dose + battery)* | `summary` | **one row per participant** | between-subjects analysis — **start here** |
-| — | `participants` | one row per child | the demographic roster / covariates |
 
 **Raw data is the ground truth.** `trials`, `dose`, and `summary` apply the app's
 standardised scoring for convenience; if you disagree with any scoring choice

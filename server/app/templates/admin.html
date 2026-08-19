@@ -111,6 +111,9 @@
             <button class="btn-ghost" id="download-dose" title="Derived: one row per participant × game — sessions, trials, minutes, spacing">⬇ Dose CSV</button>
             <button class="btn-ghost" id="download-sessions" title="Raw: one row per play session — start/end, duration, final score, event count, unprocessed">⬇ Sessions CSV</button>
             <button class="btn-ghost" id="download-levels" title="Raw: one row per participant × game × level — attempts, best score/accuracy, unlock/pass/master flags">⬇ Level progress CSV</button>
+            <button class="btn-ghost" id="download-participants" title="De-identified roster: one row per child — demographics/covariates only, no name or contact">⬇ Participants CSV</button>
+            <button class="btn-ghost" id="download-codebook" title="Data dictionary: one row per variable — type, unit, value meanings for every raw column">⬇ Codebook CSV</button>
+            <button class="btn-ghost" id="download-all" style="border-color:var(--accent); color:var(--text);" title="Everything raw in one ZIP: participants + raw events + sessions + level progress + codebook">⬇ All raw (ZIP)</button>
           </div>
         </div>
         <table id="games-table">
@@ -477,6 +480,12 @@
       downloadCsv(e.currentTarget, "/api/admin/export/sessions.csv", "sessions.csv"));
     document.getElementById("download-levels").addEventListener("click", (e) =>
       downloadCsv(e.currentTarget, "/api/admin/export/level_progress.csv", "level_progress.csv"));
+    document.getElementById("download-participants").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/participants.csv", "participants.csv"));
+    document.getElementById("download-codebook").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/codebook.csv", "codebook.csv"));
+    document.getElementById("download-all").addEventListener("click", (e) =>
+      downloadCsv(e.currentTarget, "/api/admin/export/all.zip", "autism_games_raw.zip"));
     document.getElementById("dl-assess-template").addEventListener("click", (e) =>
       downloadCsv(e.currentTarget, "/api/admin/assessments/template.csv", "assessment_template.csv"));
     document.getElementById("dl-assess").addEventListener("click", (e) =>

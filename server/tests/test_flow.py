@@ -759,6 +759,96 @@ def test_level_progress_export(client):
     assert rows["medium"]["passed"] == "0"
 
 
+def test_participants_export_is_deidentified(client):
+    """C6 companion: roster carries covariates but never name/contact."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("roster@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    client.post(
+        "/api/students",
+        json={"full_name": "Private Name", "gender": "Male", "iq_score": 90,
+              "parent_contact": "+1 555", "autism_level": "Level 1"},
+        headers=h,
+    )
+
+    r = client.get("/api/admin/export/participants.csv", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    header = next(csv_reader(r.text))
+    # de-identified: no direct identifiers in the roster
+    assert "full_name" not in header and "parent_contact" not in header
+    assert {"participant_code", "gender", "iq_score", "iq_band", "age_band"} <= set(header)
+    assert "Private Name" not in r.text
+
+
+def csv_reader(text_body):
+    import csv as _csv
+    import io as _io
+
+    return _csv.reader(_io.StringIO(text_body))
+
+
+def test_codebook_export_documents_variables(client):
+    """C5: the codebook lists known variables and appends undocumented payload keys."""
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("codebook@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Cb"}, headers=h).json()["id"]
+    # a payload key that isn't in the curated codebook
+    client.post(
+        "/api/events",
+        json={
+            "game_key": "emotionrecognition",
+            "event_type": "answer",
+            "student_id": sid,
+            "payload": {"correct": True, "level": "easy", "madeUpField": 7},
+        },
+        headers=h,
+    )
+
+    r = client.get("/api/admin/export/codebook.csv", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    rows = _csv_rows(r.text)
+    by_var = {row["variable"]: row for row in rows}
+    assert by_var["correct"]["type"] == "bool01"
+    assert by_var["chance"]["type"] == "float"
+    assert "participant_code" in by_var
+    # the undocumented field is appended, not silently dropped
+    assert "madeUpField" in by_var
+    assert "Undocumented" in by_var["madeUpField"]["description"]
+
+
+def test_all_zip_bundles_raw_exports(client):
+    """C6: the bundle is a valid ZIP holding every raw export + codebook."""
+    import io as _io
+    import zipfile as _zip
+
+    token = client.post(
+        "/api/auth/signup", json=_signup_payload("zip@example.com")
+    ).json()["access_token"]
+    h = {"Authorization": f"Bearer {token}"}
+    sid = client.post("/api/students", json={"full_name": "Zed"}, headers=h).json()["id"]
+    s = client.post(
+        "/api/sessions", json={"game_key": "blocks", "student_id": sid}, headers=h
+    ).json()["id"]
+    client.post(
+        "/api/events",
+        json={"game_key": "blocks", "event_type": "place_block", "student_id": sid, "session_id": s},
+        headers=h,
+    )
+
+    r = client.get("/api/admin/export/all.zip", headers=_admin_headers(client))
+    assert r.status_code == 200, r.text
+    assert r.headers["content-type"] == "application/zip"
+    zf = _zip.ZipFile(_io.BytesIO(r.content))
+    names = [n.split("_")[0] if n.startswith(("participants", "events", "sessions", "level")) else n for n in zf.namelist()]
+    assert {"participants", "events", "sessions", "level", "codebook.csv"} <= set(names)
+    # each member is non-empty CSV with a header
+    for member in zf.namelist():
+        assert zf.read(member).decode("utf-8").count("\n") >= 1
+
+
 def test_group_report_demographic_breakdown(client):
     token = client.post(
         "/api/auth/signup", json=_signup_payload("cohort@example.com")
