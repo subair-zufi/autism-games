@@ -8,6 +8,7 @@ import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
 import { praise, speak } from '../../services/speech'
+import { WinStar } from '../../components/WinStar'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess, playTap } from '../../services/sounds'
 import {
@@ -388,7 +389,7 @@ export function Park360Game() {
               👈 {parkLine('dragHint', lang)} 👉
             </div>
           )}
-          {roundPhase === 'celebrating' && <div className="celebrate">⭐</div>}
+          <WinStar show={roundPhase === 'celebrating'} />
         </div>
         <div className="game-bottom">
           <PromptBanner text={parkLine('prompt', lang)} lang={lang} />

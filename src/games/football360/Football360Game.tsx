@@ -7,6 +7,7 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
 import { praise, speakAll, speechAvailable } from '../../services/speech'
+import { WinStar } from '../../components/WinStar'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
@@ -463,7 +464,7 @@ export function Football360Game() {
             celebrate={stage === 'rolling'}
             hudWin={fbLine('winPop', lang)}
           />
-          {stage === 'rolling' && <div className="celebrate">⭐</div>}
+          <WinStar show={stage === 'rolling'} />
           {/* a simple, clear pop-up on every successful pass so the child knows
               the ball reached the teammate — the flat-screen twin of the VR
               win banner above */}

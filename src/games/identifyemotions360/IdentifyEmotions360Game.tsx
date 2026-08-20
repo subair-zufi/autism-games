@@ -8,6 +8,7 @@ import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
 import { praise, speak } from '../../services/speech'
+import { WinStar } from '../../components/WinStar'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { t, videoFreezeQuestion, whyQuestion } from '../../i18n/strings'
 import type { EmotionId } from '../emotionVocab'
@@ -437,7 +438,7 @@ export function IdentifyEmotions360Game() {
               hudQuit={t('vrQuit', lang)}
             />
           )}
-          {celebrating && <div className="celebrate">⭐</div>}
+          <WinStar show={celebrating} />
         </div>
         <div className="game-bottom">
           {/* flat-screen twin of the in-world "Watch again" card (same button
