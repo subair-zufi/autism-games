@@ -230,6 +230,8 @@ export function EmotionRecognitionGame() {
         />
       )}
 
+      {answered && lastCorrect && <div className="celebrate">⭐</div>}
+
       <div className="game-bottom">
         <BilingualPrompt lines={lines} speakText={questionText(a, lang)} speakLang={lang} />
 

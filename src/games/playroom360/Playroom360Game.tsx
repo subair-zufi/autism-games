@@ -68,6 +68,8 @@ export function Playroom360Game() {
   // After the child places, they must actively pass the turn to the next
   // player (tap the friend) — training the reciprocal hand-off.
   const [handoffTo, setHandoffTo] = useState<Player | null>(null)
+  // Brief ⭐ pop over the scene on each block placed (matches the praise voice).
+  const [celebrating, setCelebrating] = useState(false)
   /** the one-time "drag to look around" hint, dismissed on the first look */
   const [hintSeen, setHintSeen] = useState(false)
   /** whether this browser can enter immersive VR (Quest etc.) — shows the button */
@@ -209,6 +211,8 @@ export function Playroom360Game() {
     playSuccess()
     say('sayNiceBlock')
     praise()
+    setCelebrating(true)
+    setTimeout(() => setCelebrating(false), 1300)
     recordStep('place_block', { round, slot: index % config.players, method: 'tap', ...headMetrics() }, { score: score + 1 })
     // Drop the block now (it appears), then require an explicit hand-off to
     // the next player before their turn begins — unless this was the last turn.
@@ -334,6 +338,7 @@ export function Playroom360Game() {
               👈 {prLine('hintLook', lang)} 👉
             </div>
           )}
+          {celebrating && <div className="celebrate">⭐</div>}
         </div>
         <div className="game-bottom">
           <div className="prompt-banner er-prompt">

@@ -300,6 +300,7 @@ export function RollBackGame() {
             shake={shake}
             onPickPartner={pick}
           />
+          {stage === 'rolling' && <div className="celebrate">⭐</div>}
         </div>
         <div className="game-bottom">
           <div className="prompt-banner er-prompt">

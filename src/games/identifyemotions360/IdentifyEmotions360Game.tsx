@@ -437,6 +437,7 @@ export function IdentifyEmotions360Game() {
               hudQuit={t('vrQuit', lang)}
             />
           )}
+          {celebrating && <div className="celebrate">⭐</div>}
         </div>
         <div className="game-bottom">
           {/* flat-screen twin of the in-world "Watch again" card (same button

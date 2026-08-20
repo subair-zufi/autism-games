@@ -463,6 +463,7 @@ export function Football360Game() {
             celebrate={stage === 'rolling'}
             hudWin={fbLine('winPop', lang)}
           />
+          {stage === 'rolling' && <div className="celebrate">⭐</div>}
           {/* a simple, clear pop-up on every successful pass so the child knows
               the ball reached the teammate — the flat-screen twin of the VR
               win banner above */}

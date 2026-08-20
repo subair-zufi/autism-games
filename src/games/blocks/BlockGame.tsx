@@ -37,6 +37,8 @@ export function BlockGame() {
   // After the child places, they must actively pass the turn to the next
   // player ("Your turn, Leo!") — training the reciprocal hand-off.
   const [handoffTo, setHandoffTo] = useState<Player | null>(null)
+  // Brief ⭐ pop over the scene on each block placed (matches the praise voice).
+  const [celebrating, setCelebrating] = useState(false)
 
   const turn = index < sequence.length ? sequence[index] : null
   const activeIndex = turn ? turn.playerIndex : -1
@@ -109,6 +111,8 @@ export function BlockGame() {
     playSuccess()
     say('sayNiceBlock')
     praise()
+    setCelebrating(true)
+    setTimeout(() => setCelebrating(false), 1300)
     recordStep('place_block', { round, slot: index % config.players, method }, { score: score + 1 })
     // Drop the block now (it appears), then require an explicit hand-off to
     // the next player before their turn begins — unless this was the last turn.
@@ -192,6 +196,7 @@ export function BlockGame() {
                 : null
             }
           />
+          {celebrating && <div className="celebrate">⭐</div>}
         </div>
         <div className="game-bottom">
           <PromptBanner text={promptText} lang={lang} />
