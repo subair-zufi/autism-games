@@ -49,3 +49,59 @@ function emit(freq: number, startAt: number, duration: number, peak: number) {
 export const playSuccess = () => { tone(523, 0, 0.25); tone(659, 0.12, 0.25); tone(784, 0.24, 0.35) }
 export const playGentle = () => { tone(330, 0, 0.3, 0.08) }
 export const playTap = () => { tone(440, 0, 0.08, 0.06) }
+
+// --- Pre-recorded audio clips ------------------------------------------------
+//
+// Played through the SAME AudioContext as the tones above. That matters on VR
+// headsets: the browser's speech synthesis (used for spoken prompts) ships no
+// voices in Wolvic/standalone browsers, but WebAudio works — the success chime
+// already proves it — so bundled clips are how spoken praise reaches the
+// headset. Decoded buffers are cached; the first play of a cold clip loads then
+// plays, later plays are instant.
+
+const clipBuffers = new Map<string, AudioBuffer>()
+const clipLoading = new Set<string>()
+
+async function loadClip(url: string): Promise<AudioBuffer | null> {
+  const ac = audio()
+  if (!ac) return null
+  const cached = clipBuffers.get(url)
+  if (cached) return cached
+  if (clipLoading.has(url)) return null
+  clipLoading.add(url)
+  try {
+    const res = await fetch(url)
+    const buf = await ac.decodeAudioData(await res.arrayBuffer())
+    clipBuffers.set(url, buf)
+    return buf
+  } catch {
+    return null
+  } finally {
+    clipLoading.delete(url)
+  }
+}
+
+/** Warm the decoded-buffer cache so the first real play isn't silent. */
+export function preloadClips(urls: readonly string[]) {
+  if (typeof AudioContext === 'undefined') return
+  for (const u of urls) void loadClip(u)
+}
+
+/** Play a bundled audio clip through the shared context. Caller gates on the
+ *  relevant mute toggle (praise checks `voiceOn`), so this never checks it. */
+export function playClip(url: string, volume = 1) {
+  const ac = audio()
+  if (!ac) return
+  if (ac.state === 'suspended') void ac.resume()
+  const start = (b: AudioBuffer) => {
+    const src = ac.createBufferSource()
+    src.buffer = b
+    const gain = ac.createGain()
+    gain.gain.value = volume
+    src.connect(gain).connect(ac.destination)
+    src.start()
+  }
+  const cached = clipBuffers.get(url)
+  if (cached) start(cached)
+  else void loadClip(url).then((b) => b && start(b))
+}

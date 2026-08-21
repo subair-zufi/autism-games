@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
+import { VRStarBurst } from '../VRStarBurst'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
@@ -97,6 +98,7 @@ export function Football360Scene(props: Football360SceneProps) {
         <SceneInner {...props} />
         <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
         <VRWinBanner show={props.celebrate} text={props.hudWin} />
+        <VRStarBurst show={props.celebrate} />
       </XR>
     </Canvas>
   )

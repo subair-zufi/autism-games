@@ -1,5 +1,6 @@
 import { useSettings } from '../state/settings'
 import type { Lang } from '../i18n/strings'
+import { playClip, preloadClips } from './sounds'
 
 export function speechAvailable(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window
@@ -43,75 +44,49 @@ export function speak(text: string, lang: Lang = 'en', onEnd?: () => void) {
 
 // --- Reinforcing praise after a correct answer ----------------------------
 //
-// A short, varied word of encouragement ("Great job!", "Well done!") spoken
+// A short, varied word of encouragement ("Great job!", "Well done!") played
 // after every correct response, in a voice whose gender is randomised each
 // time. English only, by product decision — kept deliberately separate from
 // the bilingual game prompts.
+//
+// These are PRE-RECORDED audio clips (public/praise/, generated with the two
+// macOS voices), not `speechSynthesis`: standalone VR browsers such as Wolvic
+// ship no TTS voices, so live speech is silent on the headset. WebAudio clips
+// play everywhere the success chime does — desktop and headset alike — so the
+// praise reaches VR. Female clips are `f-<slug>.m4a`, male are `m-<slug>.m4a`.
 
-const PRAISE_LINES = [
-  'Great job!',
-  'Well done!',
-  'Awesome!',
-  'Nice work!',
-  'You did it!',
-  'Fantastic!',
-  'Way to go!',
-  'Super!',
-  'Brilliant!',
-  'Excellent!',
-  'Amazing!',
-  "That's right!",
-]
+const PRAISE_SLUGS = [
+  'great-job', 'well-done', 'awesome', 'nice-work', 'you-did-it', 'fantastic',
+  'way-to-go', 'super', 'brilliant', 'excellent', 'amazing', 'thats-right',
+] as const
 
-// Name fragments that reliably flag a system voice's gender across the common
-// desktop / mobile / Quest TTS voice sets. Anything unmatched falls through to
-// pitch alone, which still gives an audible male/female contrast.
-const FEMALE_VOICE_HINTS = [
-  'female', 'samantha', 'victoria', 'karen', 'moira', 'tessa', 'fiona', 'susan',
-  'zira', 'serena', 'allison', 'ava', 'catherine', 'kate', 'veena', 'joana',
-  'amelie', 'anna', 'nicky', 'aria', 'jenny', 'sonia',
-]
-const MALE_VOICE_HINTS = [
-  'male', 'daniel', 'alex', 'fred', 'thomas', 'aaron', 'david', 'mark', 'oliver',
-  'george', 'rishi', 'gordon', 'arthur', 'guy', 'lee', 'ryan', 'brian',
-]
+const praiseUrl = (gender: 'm' | 'f', slug: string) => `./praise/${gender}-${slug}.m4a`
 
-function classifyVoice(v: SpeechSynthesisVoice): 'male' | 'female' | 'unknown' {
-  const n = v.name.toLowerCase()
-  // "…Male" also contains "…ale" → check female first only via exact fragments.
-  if (FEMALE_VOICE_HINTS.some((h) => n.includes(h))) return 'female'
-  if (MALE_VOICE_HINTS.some((h) => n.includes(h))) return 'male'
-  return 'unknown'
+let praisePreloaded = false
+
+/** Warm every praise clip so the first cheer isn't delayed by a cold decode. */
+export function preloadPraise() {
+  if (praisePreloaded) return
+  praisePreloaded = true
+  const urls: string[] = []
+  for (const g of ['m', 'f'] as const) for (const s of PRAISE_SLUGS) urls.push(praiseUrl(g, s))
+  preloadClips(urls)
 }
 
 /**
- * Speak a short, randomised word of praise after a correct answer.
+ * Play a short, randomised word of praise after a correct answer.
  *
- * Voice gender is chosen at random each call (male vs female): a gender-matching
- * English system voice is used when the device has one, and the pitch is nudged
- * to reinforce it so the two still sound clearly different on devices that only
- * ship a single TTS voice (e.g. the Quest). English only.
- *
- * Unlike `speak`, this does NOT cancel current speech: a game may say its own
- * localized line first ("Nice block!", "Wow, a butterfly!") and then call
- * `praise()` to add the cheer right after, so the two must queue rather than
- * clobber each other. No-ops when speech is unavailable or voice is muted.
+ * A male or female clip is chosen at random each call. Plays through the shared
+ * WebAudio context (see `playClip`) so it works on the VR headset, where TTS
+ * does not. No-op when voice is muted. The first call also warms the rest of
+ * the clips so later cheers are instant.
  */
 export function praise() {
-  if (!speechAvailable() || !useSettings.getState().voiceOn) return
-  const text = PRAISE_LINES[Math.floor(Math.random() * PRAISE_LINES.length)]
-  const wantFemale = Math.random() < 0.5
-  const u = new SpeechSynthesisUtterance(text)
-  u.lang = 'en-US'
-  u.rate = 1
-  u.pitch = wantFemale ? 1.3 : 0.75
-  const want = wantFemale ? 'female' : 'male'
-  const match = window.speechSynthesis
-    .getVoices()
-    .filter((v) => v.lang.toLowerCase().startsWith('en'))
-    .find((v) => classifyVoice(v) === want)
-  if (match) u.voice = match
-  window.speechSynthesis.speak(u)
+  if (!useSettings.getState().voiceOn) return
+  preloadPraise()
+  const gender = Math.random() < 0.5 ? 'm' : 'f'
+  const slug = PRAISE_SLUGS[Math.floor(Math.random() * PRAISE_SLUGS.length)]
+  playClip(praiseUrl(gender, slug))
 }
 
 /**

@@ -7,7 +7,6 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
 import { praise, speakAll, speechAvailable } from '../../services/speech'
-import { WinStar } from '../../components/WinStar'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { CONFIG, buildPlayers, makeSequence, peerBearingDeg, starsFor, type Player, type TurnSpec } from './logic'
@@ -315,6 +314,7 @@ export function Playroom360Game() {
             onPlace={succeedPlace}
             onIllegal={impatient}
             onHandoff={passHandoff}
+            celebrate={celebrating}
             hudScore={`🧱 ${score} / ${config.rounds}`}
             hudPrompt={prLine(promptKey, lang, promptParams)}
             hudQuit={t('vrQuit', lang)}
@@ -339,7 +339,6 @@ export function Playroom360Game() {
               👈 {prLine('hintLook', lang)} 👉
             </div>
           )}
-          <WinStar show={celebrating} />
         </div>
         <div className="game-bottom">
           <div className="prompt-banner er-prompt">

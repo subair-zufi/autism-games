@@ -8,7 +8,6 @@ import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
 import { praise, speak } from '../../services/speech'
-import { WinStar } from '../../components/WinStar'
 import { t, whoFeelsQuestion } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
@@ -359,7 +358,6 @@ export function EmotionRecognition360Game() {
               👈 {roomLine('dragHint', lang)} 👉
             </div>
           )}
-          <WinStar show={answered && pickedIndex === round?.answerIndex} />
         </div>
         <div className="game-bottom">
           <PromptBanner text={promptText} lang={lang} />

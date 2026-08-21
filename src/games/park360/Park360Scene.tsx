@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
+import { VRStarBurst } from '../VRStarBurst'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
@@ -105,6 +106,7 @@ export function Park360Scene(props: Park360SceneProps) {
         <HeadSampler />
         <ParkWorld />
         <SceneInner {...props} />
+        <VRStarBurst show={props.friendState === 'celebrating'} />
         <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
       </XR>
     </Canvas>

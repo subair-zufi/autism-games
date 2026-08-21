@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
+import { VRStarBurst } from '../VRStarBurst'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
@@ -79,6 +80,7 @@ export function Museum360Scene(props: Museum360SceneProps) {
         <HeadSampler />
         <RotundaRoom />
         <SceneInner {...props} />
+        <VRStarBurst trigger={props.celebrate} />
         <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
       </XR>
     </Canvas>

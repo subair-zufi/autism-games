@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
+import { VRStarBurst } from '../VRStarBurst'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
@@ -78,6 +79,7 @@ export function EmotionRecognition360Scene(props: EmotionRecognition360SceneProp
         <HeadSampler />
         <GalleryRoom />
         <BoardRow {...props} />
+        <VRStarBurst show={props.answered && props.pickedIndex === props.answerIndex} />
         <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
       </XR>
     </Canvas>

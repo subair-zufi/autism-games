@@ -6,7 +6,7 @@ import { join, posix } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT = fileURLToPath(new URL('../public', import.meta.url))
-const DIRS = ['videos', 'emotions', 'groups']
+const DIRS = ['videos', 'emotions', 'groups', 'praise']
 
 async function walk(absDir, relDir) {
   const out = []

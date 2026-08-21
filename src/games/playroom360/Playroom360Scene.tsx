@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { XR, useXR } from '@react-three/xr'
+import { VRStarBurst } from '../VRStarBurst'
 import * as THREE from 'three'
 import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
@@ -49,6 +50,8 @@ export interface Playroom360SceneProps {
   childNext: boolean
   /** the child may act now (their turn, no hand-off pending) */
   childTurn: boolean
+  /** pulses true right after a correct placement — fires the win star */
+  celebrate?: boolean
   /** the child's upcoming block (colour/offset); null once the game is over */
   nextChildSpec: TurnSpec | null
   /** friend the child must tap to pass the turn, or null */
@@ -93,6 +96,7 @@ export function Playroom360Scene(props: Playroom360SceneProps) {
         <HeadSampler />
         <PlayroomRoom />
         <SceneInner {...props} />
+        <VRStarBurst show={props.celebrate} />
         <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
       </XR>
     </Canvas>
