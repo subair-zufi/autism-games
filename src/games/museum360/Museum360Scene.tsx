@@ -903,87 +903,227 @@ function Exhibit({
   )
 }
 
+/* ---- exhibit models: cheerful, child-friendly characters ------------------
+ * Built from three.js primitives (no model files to load), each roughly ±0.5
+ * around the origin so it sits inside the shared click box and spins gently.
+ * Bright, high-contrast colours read well across the rotunda and are inviting
+ * for a young or autistic child to look at and want to find.
+ */
 function ExhibitModel({ id }: { id: ExhibitId }) {
   switch (id) {
-    case 'gem':
-      return (
-        <mesh>
-          <octahedronGeometry args={[0.42]} />
-          <meshStandardMaterial color="#3fd0e0" emissive="#1f8aa0" emissiveIntensity={0.4} metalness={0.3} roughness={0.2} />
-        </mesh>
-      )
-    case 'crystal':
-      return (
-        <mesh>
-          <cylinderGeometry args={[0.18, 0.32, 0.95, 6]} />
-          <meshStandardMaterial color="#b07fe0" emissive="#6f3fa0" emissiveIntensity={0.4} />
-        </mesh>
-      )
-    case 'rocket':
+    case 'butterfly':
       return (
         <group>
-          <mesh position={[0, 0, 0]}>
-            <cylinderGeometry args={[0.2, 0.2, 0.6, 16]} />
-            <meshStandardMaterial color="#f1f1f1" />
+          {/* body */}
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <cylinderGeometry args={[0.04, 0.06, 0.66, 10]} />
+            <meshStandardMaterial color="#4a3b2a" />
           </mesh>
-          <mesh position={[0, 0.45, 0]}>
-            <coneGeometry args={[0.2, 0.35, 16]} />
-            <meshStandardMaterial color="#e2554c" />
+          {/* head */}
+          <mesh position={[0, 0.38, 0]}>
+            <sphereGeometry args={[0.08, 12, 12]} />
+            <meshStandardMaterial color="#3a2e20" />
           </mesh>
-          <mesh position={[0, -0.4, 0]}>
-            <coneGeometry args={[0.26, 0.2, 16]} />
+          {/* antennae */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 0.05, 0.48, 0]} rotation={[0, 0, -s * 0.4]}>
+              <cylinderGeometry args={[0.006, 0.006, 0.18, 6]} />
+              <meshStandardMaterial color="#3a2e20" />
+            </mesh>
+          ))}
+          {/* wings: pink upper pair, orange lower pair, mirrored left/right */}
+          {[-1, 1].map((s) => (
+            <group key={s}>
+              <mesh position={[s * 0.28, 0.12, 0]} rotation={[0, s * 0.5, 0]} scale={[1, 1.1, 0.2]}>
+                <sphereGeometry args={[0.3, 16, 16]} />
+                <meshStandardMaterial color="#ff5ea8" emissive="#c02f6e" emissiveIntensity={0.25} side={THREE.DoubleSide} />
+              </mesh>
+              <mesh position={[s * 0.24, -0.2, 0]} rotation={[0, s * 0.5, 0]} scale={[1, 0.9, 0.2]}>
+                <sphereGeometry args={[0.22, 16, 16]} />
+                <meshStandardMaterial color="#ffb63d" emissive="#c07e18" emissiveIntensity={0.25} side={THREE.DoubleSide} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      )
+    case 'bird':
+      return (
+        <group>
+          {/* body */}
+          <mesh position={[0, -0.05, 0]} scale={[1, 1, 1.25]}>
+            <sphereGeometry args={[0.3, 18, 18]} />
+            <meshStandardMaterial color="#4aa3e0" />
+          </mesh>
+          {/* pale belly */}
+          <mesh position={[0, -0.12, 0.16]} scale={[0.7, 0.7, 0.6]}>
+            <sphereGeometry args={[0.25, 16, 16]} />
+            <meshStandardMaterial color="#fdf3d0" />
+          </mesh>
+          {/* head */}
+          <mesh position={[0, 0.28, 0.12]}>
+            <sphereGeometry args={[0.2, 18, 18]} />
+            <meshStandardMaterial color="#4aa3e0" />
+          </mesh>
+          {/* beak */}
+          <mesh position={[0, 0.26, 0.34]} rotation={[Math.PI / 2, 0, 0]}>
+            <coneGeometry args={[0.07, 0.18, 10]} />
             <meshStandardMaterial color="#f5a623" />
           </mesh>
+          {/* eyes */}
+          {[-0.08, 0.08].map((x) => (
+            <mesh key={x} position={[x, 0.33, 0.27]}>
+              <sphereGeometry args={[0.035, 10, 10]} />
+              <meshStandardMaterial color="#1c1712" />
+            </mesh>
+          ))}
+          {/* wings */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 0.28, 0, 0]} rotation={[0, 0, s * 0.4]} scale={[0.35, 1, 0.9]}>
+              <sphereGeometry args={[0.22, 14, 14]} />
+              <meshStandardMaterial color="#2f7fc0" />
+            </mesh>
+          ))}
+          {/* tail */}
+          <mesh position={[0, -0.02, -0.34]} rotation={[Math.PI / 2 - 0.5, 0, 0]}>
+            <coneGeometry args={[0.14, 0.3, 4]} />
+            <meshStandardMaterial color="#2f7fc0" />
+          </mesh>
         </group>
       )
-    case 'vase':
+    case 'doll':
       return (
         <group>
-          <mesh position={[0, -0.1, 0]}>
-            <sphereGeometry args={[0.33, 20, 20]} />
-            <meshStandardMaterial color="#c97b4a" />
+          {/* dress */}
+          <mesh position={[0, -0.18, 0]}>
+            <coneGeometry args={[0.32, 0.6, 20]} />
+            <meshStandardMaterial color="#ff6f91" />
           </mesh>
-          <mesh position={[0, 0.3, 0]}>
-            <cylinderGeometry args={[0.16, 0.22, 0.3, 16]} />
-            <meshStandardMaterial color="#b86c3d" />
+          {/* arms */}
+          {[-1, 1].map((s) => (
+            <mesh key={s} position={[s * 0.26, -0.08, 0]} rotation={[0, 0, s * 0.9]}>
+              <cylinderGeometry args={[0.05, 0.05, 0.3, 10]} />
+              <meshStandardMaterial color="#ffd9b3" />
+            </mesh>
+          ))}
+          {/* head */}
+          <mesh position={[0, 0.28, 0]}>
+            <sphereGeometry args={[0.24, 20, 20]} />
+            <meshStandardMaterial color="#ffd9b3" />
+          </mesh>
+          {/* hair cap */}
+          <mesh position={[0, 0.36, -0.02]} scale={[1, 0.8, 1]}>
+            <sphereGeometry args={[0.26, 20, 20]} />
+            <meshStandardMaterial color="#5a3a24" />
+          </mesh>
+          {/* pigtails */}
+          {[-0.24, 0.24].map((x) => (
+            <mesh key={x} position={[x, 0.3, 0]}>
+              <sphereGeometry args={[0.1, 12, 12]} />
+              <meshStandardMaterial color="#5a3a24" />
+            </mesh>
+          ))}
+          {/* eyes */}
+          {[-0.09, 0.09].map((x) => (
+            <mesh key={x} position={[x, 0.29, 0.21]}>
+              <sphereGeometry args={[0.035, 10, 10]} />
+              <meshStandardMaterial color="#2e2a3a" />
+            </mesh>
+          ))}
+          {/* rosy cheeks */}
+          {[-0.13, 0.13].map((x) => (
+            <mesh key={x} position={[x, 0.21, 0.19]}>
+              <sphereGeometry args={[0.03, 8, 8]} />
+              <meshStandardMaterial color="#ff9aa2" />
+            </mesh>
+          ))}
+          {/* smile */}
+          <mesh position={[0, 0.2, 0.2]} rotation={[0.3, 0, Math.PI]}>
+            <torusGeometry args={[0.05, 0.012, 8, 16, Math.PI]} />
+            <meshStandardMaterial color="#c0506a" />
           </mesh>
         </group>
       )
-    case 'mask':
+    case 'balloon':
       return (
         <group>
-          <mesh scale={[1, 1.25, 0.4]}>
+          {/* balloon */}
+          <mesh position={[0, 0.15, 0]} scale={[1, 1.2, 1]}>
             <sphereGeometry args={[0.34, 20, 20]} />
-            <meshStandardMaterial color="#d4af37" metalness={0.4} roughness={0.4} />
+            <meshStandardMaterial color="#e2554c" emissive="#8f2b25" emissiveIntensity={0.15} roughness={0.35} />
           </mesh>
-          <mesh position={[-0.12, 0.06, 0.16]}>
-            <sphereGeometry args={[0.06, 10, 10]} />
-            <meshStandardMaterial color="#2e2a3a" />
+          {/* knot */}
+          <mesh position={[0, -0.28, 0]}>
+            <coneGeometry args={[0.06, 0.1, 8]} />
+            <meshStandardMaterial color="#c0433b" />
           </mesh>
-          <mesh position={[0.12, 0.06, 0.16]}>
-            <sphereGeometry args={[0.06, 10, 10]} />
-            <meshStandardMaterial color="#2e2a3a" />
+          {/* string */}
+          <mesh position={[0, -0.55, 0]}>
+            <cylinderGeometry args={[0.008, 0.008, 0.5, 6]} />
+            <meshStandardMaterial color="#f5f5f5" />
           </mesh>
         </group>
       )
-    case 'dino':
+    case 'flower':
       return (
         <group>
-          <mesh position={[0, -0.1, 0]} scale={[1.2, 0.8, 0.8]}>
-            <sphereGeometry args={[0.3, 16, 16]} />
-            <meshStandardMaterial color="#6aa84f" />
+          {/* stem */}
+          <mesh position={[0, -0.3, 0]}>
+            <cylinderGeometry args={[0.03, 0.04, 0.5, 8]} />
+            <meshStandardMaterial color="#4c9a4c" />
           </mesh>
-          <mesh position={[0.18, 0.22, 0.05]} rotation={[0, 0, -0.5]}>
-            <cylinderGeometry args={[0.08, 0.1, 0.5, 12]} />
-            <meshStandardMaterial color="#6aa84f" />
+          {/* leaf */}
+          <mesh position={[0.12, -0.28, 0]} rotation={[0, 0, -0.6]} scale={[1, 0.5, 0.3]}>
+            <sphereGeometry args={[0.14, 12, 12]} />
+            <meshStandardMaterial color="#5cb85c" />
           </mesh>
-          <mesh position={[0.3, 0.42, 0.05]}>
-            <sphereGeometry args={[0.13, 14, 14]} />
-            <meshStandardMaterial color="#7cb45e" />
+          {/* petals */}
+          {Array.from({ length: 6 }, (_, i) => {
+            const a = (i / 6) * Math.PI * 2
+            return (
+              <mesh key={i} position={[Math.cos(a) * 0.22, 0.1 + Math.sin(a) * 0.22, 0]} scale={[1, 1, 0.4]}>
+                <sphereGeometry args={[0.14, 12, 12]} />
+                <meshStandardMaterial color="#ff8ac2" emissive="#c74e8f" emissiveIntensity={0.2} />
+              </mesh>
+            )
+          })}
+          {/* sunny centre */}
+          <mesh position={[0, 0.1, 0.05]}>
+            <sphereGeometry args={[0.13, 16, 16]} />
+            <meshStandardMaterial color="#ffd54a" emissive="#c79a17" emissiveIntensity={0.3} />
           </mesh>
-          <mesh position={[-0.3, 0.0, 0.0]} rotation={[0, 0, 0.6]}>
-            <coneGeometry args={[0.1, 0.4, 12]} />
-            <meshStandardMaterial color="#5d9b53" />
+        </group>
+      )
+    case 'fish':
+      return (
+        <group>
+          {/* body */}
+          <mesh scale={[1.3, 0.9, 0.7]}>
+            <sphereGeometry args={[0.32, 20, 20]} />
+            <meshStandardMaterial color="#ff922e" emissive="#b5591a" emissiveIntensity={0.2} />
+          </mesh>
+          {/* tail */}
+          <mesh position={[-0.42, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+            <coneGeometry args={[0.2, 0.34, 4]} />
+            <meshStandardMaterial color="#ff6f3d" />
+          </mesh>
+          {/* top fin */}
+          <mesh position={[0.02, 0.3, 0]}>
+            <coneGeometry args={[0.1, 0.26, 4]} />
+            <meshStandardMaterial color="#ff6f3d" />
+          </mesh>
+          {/* side fin */}
+          <mesh position={[0.16, -0.08, 0.24]} rotation={[0.6, 0, 0.3]}>
+            <coneGeometry args={[0.08, 0.2, 4]} />
+            <meshStandardMaterial color="#ff6f3d" />
+          </mesh>
+          {/* eye */}
+          <mesh position={[0.3, 0.1, 0.16]}>
+            <sphereGeometry args={[0.06, 12, 12]} />
+            <meshStandardMaterial color="#ffffff" />
+          </mesh>
+          <mesh position={[0.33, 0.1, 0.19]}>
+            <sphereGeometry args={[0.03, 10, 10]} />
+            <meshStandardMaterial color="#1c1712" />
           </mesh>
         </group>
       )

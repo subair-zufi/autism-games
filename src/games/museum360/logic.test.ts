@@ -48,7 +48,7 @@ test('visible always includes the target and has no duplicates', () => {
 
 test('target never repeats the previous round', () => {
   for (let i = 0; i < 40; i++) {
-    expect(makeRound('medium', 'rocket', Math.random).target).not.toBe('rocket')
+    expect(makeRound('medium', 'butterfly', Math.random).target).not.toBe('butterfly')
   }
 })
 
@@ -103,7 +103,7 @@ test('all 6 exhibits have metadata', () => {
     expect(e.label.length).toBeGreaterThan(0)
     expect(e.emoji.length).toBeGreaterThan(0)
   }
-  expect(exhibitMeta('gem').label).toBe('Gem')
+  expect(exhibitMeta('butterfly').label).toBe('Butterfly')
 })
 
 test('the hand ladder runs highlighted point -> plain point -> distal point', () => {
@@ -203,9 +203,9 @@ test('isDragTail blocks clicks that end a look-around drag, then expires', () =>
 })
 
 test('errorType splits near-misses from picks far around the room', () => {
-  const visible = ['gem', 'dino', 'rocket', 'vase'] as const
-  expect(errorType([...visible], 'dino', 'gem')).toBe('adjacent')
-  expect(errorType([...visible], 'dino', 'rocket')).toBe('adjacent')
-  expect(errorType([...visible], 'gem', 'rocket')).toBe('far')
-  expect(errorType([...visible], 'gem', 'vase')).toBe('far')
+  const visible = ['butterfly', 'bird', 'doll', 'balloon'] as const
+  expect(errorType([...visible], 'bird', 'butterfly')).toBe('adjacent')
+  expect(errorType([...visible], 'bird', 'doll')).toBe('adjacent')
+  expect(errorType([...visible], 'butterfly', 'doll')).toBe('far')
+  expect(errorType([...visible], 'butterfly', 'balloon')).toBe('far')
 })
