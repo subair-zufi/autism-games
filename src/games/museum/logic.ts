@@ -1,6 +1,6 @@
 import type { Difficulty } from '../../types'
 
-export type ExhibitId = 'gem' | 'dino' | 'rocket' | 'vase' | 'mask' | 'crystal'
+export type ExhibitId = 'butterfly' | 'bird' | 'doll' | 'balloon' | 'flower' | 'fish'
 
 export interface ExhibitMeta {
   id: ExhibitId
@@ -8,13 +8,17 @@ export interface ExhibitMeta {
   emoji: string
 }
 
+// Warm, friendly things a child recognizes and likes — a butterfly, a bird, a
+// doll — rather than abstract museum artefacts (a gem, a vase, a mask). The
+// joint-attention task is the same, but the reward of finding a cheerful,
+// colourful character keeps an autistic child engaged and motivated to play.
 export const EXHIBITS: ExhibitMeta[] = [
-  { id: 'gem', label: 'Gem', emoji: '💎' },
-  { id: 'dino', label: 'Dino', emoji: '🦕' },
-  { id: 'rocket', label: 'Rocket', emoji: '🚀' },
-  { id: 'vase', label: 'Vase', emoji: '🏺' },
-  { id: 'mask', label: 'Mask', emoji: '🎭' },
-  { id: 'crystal', label: 'Crystal', emoji: '🔮' },
+  { id: 'butterfly', label: 'Butterfly', emoji: '🦋' },
+  { id: 'bird', label: 'Bird', emoji: '🐦' },
+  { id: 'doll', label: 'Doll', emoji: '🪆' },
+  { id: 'balloon', label: 'Balloon', emoji: '🎈' },
+  { id: 'flower', label: 'Flower', emoji: '🌸' },
+  { id: 'fish', label: 'Fish', emoji: '🐠' },
 ]
 
 export function exhibitMeta(id: ExhibitId): ExhibitMeta {

@@ -40,12 +40,12 @@ export type MuseumKey = keyof typeof MESSAGES
 
 /** Localized exhibit names (spoken on a correct find). */
 const EXHIBIT_LABELS: Record<ExhibitId, Entry> = {
-  gem: { en: 'Gem', ml: 'രത്നം' },
-  dino: { en: 'Dino', ml: 'ദിനോ' },
-  rocket: { en: 'Rocket', ml: 'റോക്കറ്റ്' },
-  vase: { en: 'Vase', ml: 'പൂപ്പാത്രം' },
-  mask: { en: 'Mask', ml: 'മുഖംമൂടി' },
-  crystal: { en: 'Crystal', ml: 'പളുങ്ക്' },
+  butterfly: { en: 'Butterfly', ml: 'ചിത്രശലഭം' },
+  bird: { en: 'Bird', ml: 'പക്ഷി' },
+  doll: { en: 'Doll', ml: 'പാവ' },
+  balloon: { en: 'Balloon', ml: 'ബലൂൺ' },
+  flower: { en: 'Flower', ml: 'പൂവ്' },
+  fish: { en: 'Fish', ml: 'മീൻ' },
 }
 
 export function museumLine(key: MuseumKey, lang: Lang, params?: Record<string, string>): string {
