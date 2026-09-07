@@ -25,6 +25,17 @@ from app.scoring import age_band, age_years, iq_band
 
 random.seed(20260718)
 
+# Deterministic UUIDs from a dedicated stream, so re-running the generator
+# produces the SAME student_id/user_id/event_id every time (the exported files
+# and any Google Sheets copies stay consistent across regenerations). Kept
+# separate from the gameplay `random` stream so it doesn't perturb the scores.
+_ID_RNG = random.Random(20260718)
+
+
+def make_uuid() -> uuid.UUID:
+    return uuid.UUID(int=_ID_RNG.getrandbits(128), version=4)
+
+
 OUT = os.path.dirname(os.path.abspath(__file__))
 os.makedirs(OUT, exist_ok=True)
 
@@ -111,7 +122,7 @@ def make_events(game, sess_id, student_id, user_id, t0, acc, lat):
         base = {"xrPresenting": vr}
         base.update(payload)
         evs.append(Ev(
-            id=uuid.uuid4(), student_id=student_id, user_id=user_id, session_id=sess_id,
+            id=make_uuid(), student_id=student_id, user_id=user_id, session_id=sess_id,
             game_key=game, event_type=etype, step_index=step, score=ev_score,
             payload=base, client_timestamp=None,
             created_at=t0 + timedelta(milliseconds=(dt_ms if dt_ms is not None else step * 4200)),
@@ -247,8 +258,8 @@ events_by_student = {}   # student_id -> list[Ev]
 roster = []              # participant dicts
 
 for code, gender, dob, level, iq, profile in PARTICIPANTS:
-    sid = uuid.uuid4()
-    uid = uuid.uuid4()
+    sid = make_uuid()
+    uid = make_uuid()
     roster.append(dict(code=code, sid=sid, gender=gender, dob=dob, level=level,
                        iq=iq, profile=profile))
     events_by_student[sid] = []
@@ -543,8 +554,171 @@ for r in roster:
         row += [pre, post, gain]
     summary_rows.append(row)
 
+# --- sheet: codebook (data dictionary — one row per variable) -----------------
+# Documents both the DERIVED analysis columns (composite/skill/battery in the
+# summary sheet, computed by app.scoring) and the RAW/event columns. Column
+# layout mirrors the app's built-in codebook export (routers/admin.py _CODEBOOK):
+# variable | appears_in | type | unit | values | description.
+CODEBOOK_COLS = ["variable", "appears_in", "type", "unit", "values", "description"]
+
+_SKILL_SCORE_DESC = (
+    "0-100 chance-corrected first-attempt accuracy: score = 100*max(0,(p-c)/(1-c)), "
+    "where p = proportion correct on the FIRST attempt and c = the guessing baseline "
+    "(1/options; 0 for turn-taking/initiation tasks). 0 = chance, 100 = ceiling."
+)
+
+codebook_rows: list[list[str]] = [
+    # --- identifiers & keys ---
+    ["participant_code", "all", "id", "", "e.g. P-001", "Pseudonymous participant code; the primary analysis key."],
+    ["student_id", "all", "id", "", "UUID", "Opaque participant id; stable join key across every sheet."],
+    ["user_id", "sessions,level_progress,raw_events", "id", "", "UUID", "Owning mentor/account id."],
+    ["session_id", "sessions,trials,raw_events", "id", "", "", "Play-session id; join raw_events/trials to sessions on this."],
+    ["event_id", "raw_events", "id", "", "UUID", "Unique id of the recorded event row."],
+    ["profile_note", "participants,summary", "string", "", "completer | partial | dropout", "DUMMY-DATA ONLY: synthetic play pattern; not a real app field."],
+    # --- demographics / covariates ---
+    ["gender", "all", "string", "", "M | F | Other", "Participant gender as entered."],
+    ["date_of_birth", "participants,sessions,level_progress,raw_events", "date", "", "YYYY-MM-DD", "Participant date of birth."],
+    ["age_years", "participants,summary,trials,dose", "int", "years", "", "Whole years at export date (derived)."],
+    ["age_band", "participants,summary,trials,dose", "string", "", "under 8 | 8-10 | 11-12 | 13-15 | 16+", "Coarse age band (derived)."],
+    ["autism_level", "all", "string", "", "Level 1 | Level 2 | Level 3", "DSM-5 autism support level as entered."],
+    ["iq_score", "all", "int", "", "", "IQ score as entered (no instrument/date recorded)."],
+    ["iq_band", "participants,summary,trials,dose", "string", "", "<70 | 70-84 | 85-99 | 100+", "Coarse IQ band (derived)."],
+    # --- scoring method + composite (DERIVED) ---
+    ["Skill Score", "summary,trials(basis)", "float", "0-100", "", _SKILL_SCORE_DESC + " Computed per game, then averaged into a skill."],
+    ["composite_score", "summary", "float", "0-100", "", "Social-Emotional composite = equal-weighted mean of the child's available skill scores (emotion, turntaking, jointattention). Social Norms is deliberately excluded."],
+    ["composite_delta", "summary", "float", "0-100 pts", "", "Mean of the skill deltas = within-app FIRST->LAST session change. NOT the study's pre/post battery outcome; do not use as the efficacy endpoint."],
+]
+
+_SKILL_DOC = {
+    "emotion": "Emotional Identification (games: emotionrecognition, identifyemotions + 360 copies).",
+    "turntaking": "Turn-Taking (games: blocks, rollback + playroom360, football360).",
+    "jointattention": "Joint Attention (games: museum, discovery + museum360, park360).",
+}
+for _sk, _doc in _SKILL_DOC.items():
+    codebook_rows += [
+        [f"{_sk}_pre", "summary", "float", "0-100", "", f"{_doc} Skill score in the FIRST session of each game, averaged across the skill's games. Blank = skill never played."],
+        [f"{_sk}_post", "summary", "float", "0-100", "", f"{_doc} Skill score in the MOST RECENT session, averaged across the skill's games."],
+        [f"{_sk}_delta", "summary", "float", "0-100 pts", "", f"{_doc} post - pre (within-app improvement)."],
+    ]
+
+# --- summary: dose totals (DERIVED) ---
+codebook_rows += [
+    ["total_sessions", "summary", "int", "count", "", "Distinct play sessions the child completed."],
+    ["total_scored_trials", "summary", "int", "count", "", "Total scored trials across all games."],
+    ["total_minutes", "summary,dose", "float", "minutes", "", "Summed play time (ended-started) over the child's sessions (summary) or one game (dose)."],
+    ["active_days", "summary", "int", "days", "", "Calendar days from the child's first to last session."],
+    ["n_games_played", "summary", "int", "count", "", "Distinct games the child touched."],
+    ["n_skills_covered", "summary", "int", "count", "0-3", "Distinct scored skills touched (max 3; Social Norms excluded)."],
+    ["has_post_battery", "summary", "bool01", "", "1 | 0", "1 if any post-timepoint battery score exists (dropouts = 0)."],
+]
+
+# --- summary + battery sheet: outcome battery (DERIVED gains + raw rows) ---
+_INSTR_DOC = [
+    ("eit", "EIT", "Emotion Identification Test (forced choice, 3 options, max 30). Higher = better."),
+    ("top", "TOP", "Turn-taking Observation Protocol (max 21). Higher = better."),
+    ("jap", "JAP", "Joint Attention Probe (max 16). Higher = better."),
+    ("nct", "NCT", "Non-social Control Task (forced choice, 4 options, max 12). DISCRIMINANT CONTROL - should NOT improve pre->post."),
+    ("vsms", "VSMS", "Vineland Social Maturity Scale social quotient (distal). Higher = better."),
+    ("atec", "ATEC", "Autism Treatment Evaluation Checklist total (distal). LOWER = better, so a NEGATIVE gain is improvement."),
+]
+for _pfx, _inst, _doc in _INSTR_DOC:
+    codebook_rows += [
+        [f"{_pfx}_pre", "summary", "float", "score", "", f"{_inst} pre (baseline) raw score. {_doc}"],
+        [f"{_pfx}_post", "summary", "float", "score", "", f"{_inst} post raw score."],
+        [f"{_pfx}_gain", "summary", "float", "pts", "", f"{_inst} gain = post - pre."],
+    ]
+codebook_rows += [
+    ["timepoint", "battery", "string", "", "pre | post | followup", "Assessment wave (T0 / T1 / T2)."],
+    ["instrument", "battery", "string", "", "EIT | TOP | JAP | NCT | VSMS | ATEC", "Outcome instrument (entered by the blinded tester)."],
+    ["form", "battery", "string", "", "A | B", "Parallel test form."],
+    ["raw_score", "battery", "float", "score", "", "Raw score entered by the blinded tester."],
+    ["n_options", "battery", "int", "count", "", "Forced-choice options, so chance = 1/n is recoverable; blank if not forced-choice."],
+    ["max_score", "battery", "float", "score", "", "Maximum possible raw score; blank if open-ended."],
+    ["rater_id", "battery", "string", "", "R1 | R2 | ...", "Blinded rater id; R2 rows are second codings for inter-rater reliability."],
+    ["is_double_coded", "battery", "bool", "", "true | false", "Whether this row is a second blinded coding of the same probe."],
+    ["assessed_on", "battery", "date", "", "YYYY-MM-DD", "Assessment date."],
+    ["notes", "battery", "string", "", "", "Free-text tester note."],
+]
+
+# --- trials sheet (one row per scored trial) ---
+codebook_rows += [
+    ["skill", "trials,dose", "string", "", "emotion | turntaking | jointattention | socialnorms", "Skill the game trains. socialnorms games exist but do NOT feed the composite."],
+    ["game_key", "all", "string", "", "", "Game identifier (e.g. emotionrecognition, museum360)."],
+    ["xr_presenting", "trials", "bool01", "", "1 = VR | 0 = flat", "Whether the trial was played in immersive VR (carries head-scan telemetry)."],
+    ["trial_in_game", "trials", "int", "count", "", "1-based trial index within the game (oldest first)."],
+    ["trial_in_session", "trials", "int", "count", "", "1-based trial index within its session."],
+    ["first_attempt_correct", "trials", "bool01", "", "1 | 0", "The SCORED outcome: correct on the first attempt (retries never count)."],
+    ["chance", "trials,raw_events", "float", "0-1", "", "Guessing baseline c for the trial (1/options; 0 for no-guess tasks)."],
+    ["latency_ms", "trials,raw_events", "int", "ms", "", "Response latency; INCLUDES spoken-prompt time - avoid for pure RT claims."],
+    ["latency_from_prompt_end_ms", "trials,raw_events", "int", "ms", "", "Clean reaction time measured from prompt end (subset of games only)."],
+    ["hinted", "trials,raw_events", "bool01", "", "1 | 0", "A hint had fired before the answer."],
+    ["construct", "trials,raw_events", "string", "", "greetings | sharing | turns | ...", "Social-norms sub-skill the item measures (social-norms games only)."],
+    ["cue", "trials,raw_events", "string", "", "verbal | gesture | orient | pulse | hover | distal", "Joint-attention / roll cue level."],
+    ["visible_count", "trials,raw_events", "int", "count", "", "Options on screen (pointing games) -> chance = 1/visible_count."],
+    ["head_yaw_travel_deg", "trials,raw_events", "float", "deg", "", "VR head-scan path length (VR only)."],
+    ["head_yaw_range_deg", "trials,raw_events", "float", "deg", "", "VR widest yaw span visited (VR only)."],
+    ["head_reversals", "trials,raw_events", "int", "count", "", "VR back-and-forth head reversals - hesitation (VR only)."],
+    ["head_to_target_ms", "trials,raw_events", "int", "ms", "", "VR time until the head first pointed at the target (VR only)."],
+    ["timestamp", "trials", "datetime", "", "ISO 8601", "Trial time."],
+]
+
+# --- dose sheet ---
+codebook_rows += [
+    ["n_sessions", "dose", "int", "count", "", "Sessions of this game."],
+    ["n_scored_trials", "dose", "int", "count", "", "Scored trials of this game."],
+    ["first_session", "dose", "date", "", "YYYY-MM-DD", "Date of the first session of this game."],
+    ["last_session", "dose", "date", "", "YYYY-MM-DD", "Date of the most recent session of this game."],
+    ["span_days", "dose", "int", "days", "", "Calendar days from first to last session of this game."],
+    ["median_gap_days", "dose", "int", "days", "", "Typical spacing (days) between consecutive sessions of this game."],
+]
+
+# --- sessions sheet ---
+codebook_rows += [
+    ["started_at", "sessions", "datetime", "", "ISO 8601", "Session start time."],
+    ["ended_at", "sessions", "datetime", "", "ISO 8601", "Session end time (blank if never closed)."],
+    ["duration_s", "sessions", "int", "seconds", "", "ended_at - started_at."],
+    ["final_score", "sessions", "int", "points", "", "Raw per-game tally at session end (NOT the standardised score)."],
+    ["n_events", "sessions", "int", "count", "", "Recorded events attached to the session."],
+]
+
+# --- level_progress sheet ---
+codebook_rows += [
+    ["level", "level_progress,raw_events", "string", "", "easy | medium | hard", "Difficulty tier."],
+    ["attempts", "level_progress", "int", "count", "", "Times this level was attempted."],
+    ["best_score", "level_progress", "int", "points", "", "Best raw score on the level."],
+    ["best_accuracy", "level_progress", "float", "0-1", "", "Best uncorrected accuracy on the level."],
+    ["unlocked", "level_progress", "bool01", "", "1 | 0", "Whether the level is unlocked."],
+    ["passed", "level_progress", "bool01", "", "1 | 0", "best_accuracy >= 70%."],
+    ["mastered", "level_progress", "bool01", "", "1 | 0", "best_accuracy >= 80%."],
+    ["created_at", "participants,level_progress", "datetime", "", "ISO 8601", "Row creation time (server, UTC)."],
+    ["updated_at", "level_progress", "datetime", "", "ISO 8601", "Last time the progress row changed."],
+]
+
+# --- raw_events fixed columns + key payload fields ---
+codebook_rows += [
+    ["event_type", "raw_events", "string", "", "answer | roll_return | place_block | hand_off | impatient_tap | share | no_share | game_over", "The kind of step recorded."],
+    ["step_index", "raw_events", "int", "count", "", "0-based order of the step within its session."],
+    ["event_score", "raw_events", "int", "points", "", "Running/final game tally on the event."],
+    ["created_at (event)", "raw_events", "datetime", "", "ISO 8601", "Authoritative server time the event was stored."],
+    ["correct", "raw_events", "bool01", "", "1 | 0", "Whether the response was correct."],
+    ["firstAttempt", "raw_events", "bool01", "", "1 | 0", "First-attempt success (pointing/roll games close a round on a correct tap)."],
+    ["attempt", "raw_events", "int", "count", "", "Attempt number (retry-allowed games; 1 = first)."],
+    ["boardCount", "raw_events", "int", "count", "", "Answer options presented (quiz games)."],
+    ["cueKind", "raw_events", "string", "", "gesture | gaze", "Cue modality (museum / joint-attention)."],
+    ["answer", "raw_events", "string", "", "happy | sad | angry | surprised | scared | disgust", "Emotion shown (emotion games)."],
+    ["picked", "raw_events", "string", "", "", "Option/emotion the child chose."],
+    ["spontaneous", "raw_events", "bool01", "", "1 | 0", "Share completed before any helper nudge (initiating joint attention)."],
+    ["nudges", "raw_events", "int", "count", "", "Helper nudges fired before a share."],
+    ["saliency", "raw_events", "string", "", "big | subtle", "Surprise salience (initiating-JA games)."],
+    ["xrPresenting", "raw_events", "bool01", "", "1 = VR | 0 = flat", "Immersive VR vs flat screen (same game, two conditions)."],
+    ["inputMethod", "raw_events", "string", "", "dwell | controller", "Selection method; never pool dwell (gaze) with controller latencies."],
+    ["targetBearingDeg", "raw_events", "float", "deg", "", "Angle of the target from screen centre (VR)."],
+    ["errorType", "raw_events", "string", "", "adjacent | ...", "Mis-tap error classification (pointing games)."],
+]
+
 # --- write CSVs + XLSX --------------------------------------------------------
 SHEETS = [
+    ("codebook", CODEBOOK_COLS, codebook_rows),
     ("participants", PARTICIPANT_COLS, participants_rows),
     ("summary", SUMMARY_COLS, summary_rows),
     ("trials", TRIAL_COLS, trial_rows),
@@ -575,6 +749,7 @@ readme_lines = [
     (f"{len(roster)} participants · {len(sessions)} game sessions · {len(all_events)} events · generated 2026-07-18", False),
     ("", False),
     ("Sheets:", True),
+    ("  codebook      — data dictionary: one row per variable (type, unit, values, description), covering the derived scores AND the raw fields. Read this first.", False),
     ("  participants  — one row per child: code, demographics, profile_note (completer/partial/dropout)", False),
     ("  summary       — ONE row per child, analysis-ready wide format: in-game skill scores (pre/post/delta, 0-100), dose totals, battery pre/post/gain. Start here for between-subjects analysis.", False),
     ("  trials        — one row per SCORED trial (= /export/trials.csv). first_attempt_correct 0/1, chance, latency, VR fields.", False),
@@ -614,6 +789,15 @@ for name, cols, rows in SHEETS:
         ws.column_dimensions[letter].width = width
     ws.freeze_panes = "A2"
     ws.auto_filter.ref = f"A1:{get_column_letter(len(cols))}{len(rows)+1}"
+    # The codebook's free-text columns need more room than the 26-char cap; widen
+    # `values` and `description` and wrap the description so it stays readable.
+    if name == "codebook":
+        ws.column_dimensions["A"].width = 26  # variable
+        ws.column_dimensions["B"].width = 30  # appears_in
+        ws.column_dimensions["E"].width = 34  # values
+        ws.column_dimensions["F"].width = 95  # description
+        for row in ws.iter_rows(min_row=2, min_col=6, max_col=6):
+            row[0].alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
 
 xlsx_path = os.path.join(OUT, "dummy_research_data.xlsx")
 wb.save(xlsx_path)
