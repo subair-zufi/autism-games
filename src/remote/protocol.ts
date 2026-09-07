@@ -49,8 +49,14 @@ export type RemoteCommand =
 
 export type RemoteCommandType = RemoteCommand['type']
 
-/** What the child is doing right now, as far as any shared component knows. */
-export type RemotePhase = 'menu' | 'start' | 'playing' | 'over'
+/**
+ * What the child is doing right now, as far as any shared component knows.
+ *
+ * `enterVr` is the one the trainer must not miss: the child is on the Enter VR
+ * screen, and the press that starts the session can only happen on the headset
+ * (WebXR requires user activation there — see docs/trainer-remote.md).
+ */
+export type RemotePhase = 'menu' | 'start' | 'playing' | 'over' | 'enterVr'
 
 export interface RemoteStatus {
   v: number

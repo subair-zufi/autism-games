@@ -145,6 +145,38 @@ describe('the rest of the controls', () => {
     expect(calls.students).toEqual(['abc'])
   })
 
+  it('keeps junk out of the settings the child’s next session inherits', async () => {
+    const { ctx, calls } = makeCtx()
+    await applyRemoteCommand(
+      {
+        type: 'setting',
+        payload: { language: 'klingon', voiceOn: 'yes', inputMethod: 'dwell' },
+      } as unknown as RemoteCommand,
+      ctx,
+    )
+    // Only the value this build actually understands survives.
+    expect(calls.settings).toEqual([{ inputMethod: 'dwell' }])
+  })
+
+  it('does not touch settings when nothing in the payload is usable', async () => {
+    const { ctx, calls } = makeCtx()
+    await applyRemoteCommand(
+      { type: 'setting', payload: { playMode: 'holodeck' } } as unknown as RemoteCommand,
+      ctx,
+    )
+    expect(calls.settings).toEqual([])
+  })
+
+  it('treats a missing or empty participant as "not recording"', async () => {
+    const { ctx, calls } = makeCtx()
+    await applyRemoteCommand({ type: 'participant', payload: {} } as unknown as RemoteCommand, ctx)
+    await applyRemoteCommand(
+      { type: 'participant', payload: { studentId: '' } } as unknown as RemoteCommand,
+      ctx,
+    )
+    expect(calls.students).toEqual([null, null])
+  })
+
   it('turns the mirror on and off', async () => {
     const { ctx, calls } = makeCtx()
     await applyRemoteCommand({ type: 'mirror', payload: { on: true, intervalMs: 500 } } as RemoteCommand, ctx)

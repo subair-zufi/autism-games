@@ -175,10 +175,13 @@ export const remoteApi = {
     after: number,
     waitSeconds: number,
     wantFrame: boolean,
+    /** Revision of the mirror image the console already has — an unchanged
+     *  view is then not sent again. */
+    frameAfter = 0,
     signal?: AbortSignal,
   ) =>
     call<StateSnapshot>(
-      `/api/remote/rooms/${encode(code)}/state?after=${after}&wait=${waitSeconds}&frame=${wantFrame}`,
+      `/api/remote/rooms/${encode(code)}/state?after=${after}&wait=${waitSeconds}&frame=${wantFrame}&frame_after=${frameAfter}`,
       { method: 'GET' },
       signal,
       waitSeconds,

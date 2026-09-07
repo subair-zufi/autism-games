@@ -29,6 +29,26 @@ export interface RemoteContext {
 }
 
 const LEVELS: ReadonlySet<string> = new Set<Difficulty>(['easy', 'medium', 'hard'])
+const LANGS: ReadonlySet<unknown> = new Set(['en', 'ml'])
+const INPUT_METHODS: ReadonlySet<unknown> = new Set(['dwell', 'controller'])
+const PLAY_MODES: ReadonlySet<unknown> = new Set(['desktop', 'vr'])
+
+/**
+ * Keep only settings values this build understands.
+ *
+ * These land in the settings store, which is persisted — a junk value from a
+ * newer console (or a mistyped payload) would not just be ignored, it would
+ * stay on the headset and follow the child into the next session.
+ */
+function cleanSettings(patch: Partial<RemoteSettings>): Partial<RemoteSettings> {
+  const out: Partial<RemoteSettings> = {}
+  if (typeof patch.voiceOn === 'boolean') out.voiceOn = patch.voiceOn
+  if (typeof patch.soundOn === 'boolean') out.soundOn = patch.soundOn
+  if (LANGS.has(patch.language)) out.language = patch.language
+  if (INPUT_METHODS.has(patch.inputMethod)) out.inputMethod = patch.inputMethod
+  if (PLAY_MODES.has(patch.playMode)) out.playMode = patch.playMode
+  return out
+}
 
 /**
  * Run one command. Never throws: the remote is the trainer's only way to reach
@@ -63,12 +83,16 @@ export async function applyRemoteCommand(cmd: RemoteCommand, ctx: RemoteContext)
         if (game) ctx.setDifficulty(game, level)
         return
       }
-      case 'setting':
-        ctx.applySettings(cmd.payload)
+      case 'setting': {
+        const patch = cleanSettings(cmd.payload)
+        if (Object.keys(patch).length) ctx.applySettings(patch)
         return
-      case 'participant':
-        ctx.setStudent(cmd.payload.studentId ?? null)
+      }
+      case 'participant': {
+        const id = cmd.payload.studentId
+        ctx.setStudent(typeof id === 'string' && id ? id : null)
         return
+      }
       case 'mirror':
         ctx.setMirror(!!cmd.payload.on, cmd.payload.intervalMs)
         return

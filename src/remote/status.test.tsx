@@ -32,7 +32,7 @@ describe('what the trainer’s phone is told', () => {
     expect(readGameReport()).toEqual({ phase: 'playing', score: 4, prompt: 'Who feels happy?' })
   })
 
-  it('lets a later screen win — a result panel over a running game', () => {
+  it('lets the screen the child is looking at win over the game beneath it', () => {
     render(
       <>
         <Reporter report={{ phase: 'playing', score: 4 }} />
@@ -41,6 +41,30 @@ describe('what the trainer’s phone is told', () => {
     )
     expect(readGameReport().phase).toBe('over')
     expect(readGameReport().score).toBe(4)
+  })
+
+  it('does not depend on which component mounted first', () => {
+    // The 360 games keep the ScoreBar mounted under everything, and the
+    // game-over panel is published by the *parent* — so 'over' arrives from
+    // the earlier slot, and must still win.
+    render(
+      <>
+        <Reporter report={{ phase: 'over' }} />
+        <Reporter report={{ phase: 'playing', score: 4 }} />
+      </>,
+    )
+    expect(readGameReport().phase).toBe('over')
+  })
+
+  it('reports the Enter VR wait above everything — it is the one press only the headset can make', () => {
+    render(
+      <>
+        <Reporter report={{ phase: 'playing' }} />
+        <Reporter report={{ phase: 'over' }} />
+        <Reporter report={{ phase: 'enterVr' }} />
+      </>,
+    )
+    expect(readGameReport().phase).toBe('enterVr')
   })
 
   it('takes away only its own fields when it unmounts', () => {

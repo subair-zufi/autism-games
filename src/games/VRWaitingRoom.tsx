@@ -1,6 +1,7 @@
 import type { XRStore } from '@react-three/xr'
 import { t, type Lang } from '../i18n/strings'
 import { useEnterVR } from './useEnterVR'
+import { useRemoteReport } from '../remote/status'
 
 /**
  * Shown on top of a 360 game, from the moment "Play" is pressed on a
@@ -41,6 +42,9 @@ export function VRWaitingRoom({
   lang: Lang
 }) {
   const { pending, enter } = useEnterVR(store)
+  // Tells the trainer's phone that the session is waiting on the one press
+  // only the headset can supply — the moment they need to prompt the child.
+  useRemoteReport({ phase: 'enterVr' })
   return (
     // The whole screen is the button. Starting a session needs a real press on
     // this device — WebXR will not hand one out without user activation, so the

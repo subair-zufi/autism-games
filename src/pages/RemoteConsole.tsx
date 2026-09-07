@@ -150,17 +150,28 @@ function Console({ code }: { code: string }) {
     let stopped = false
     const abort = new AbortController()
     let rev = 0
+    let frameRev = 0
     let mirrorAskedAt = 0
 
     async function loop() {
       while (!stopped) {
         try {
-          const snap = await remoteApi.pullState(code, rev, 10, wantMirror.current, abort.signal)
+          const snap = await remoteApi.pullState(
+            code,
+            rev,
+            10,
+            wantMirror.current,
+            frameRev,
+            abort.signal,
+          )
           if (stopped) return
           rev = snap.state_rev
           setStatus(snap.state)
           setOnline(snap.headset_online)
-          if (snap.frame) setFrame(snap.frame)
+          if (snap.frame) {
+            setFrame(snap.frame)
+            frameRev = snap.frame_rev
+          }
           useRemoteLink.getState().markLive(snap.headset_online)
 
           // Keep asking for the mirror: a headset that reloaded (a new build,
@@ -212,6 +223,13 @@ function Console({ code }: { code: string }) {
       </header>
 
       <MirrorPanel frame={frame} status={status} on={mirrorOn} onToggle={() => setMirrorOn((v) => !v)} />
+
+      {status.phase === 'enterVr' && (
+        <p className="rc-alert">
+          Waiting for <strong>Enter VR</strong> to be pressed on the headset — the child can
+          press anywhere on that screen. WebXR does not allow starting a session from here.
+        </p>
+      )}
 
       <section className="rc-now">
         <div className="rc-now-main">
@@ -425,6 +443,8 @@ function phaseLabel(status: Partial<RemoteStatus>): string {
       return 'finished — result showing'
     case 'start':
       return 'waiting to start'
+    case 'enterVr':
+      return 'needs the Enter VR press'
     default:
       return 'menu'
   }

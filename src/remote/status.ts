@@ -28,13 +28,37 @@ export interface GameReport {
 const slots = new Map<number, GameReport>()
 let nextSlotId = 1
 
-/** The merged report, later slots winning — mount order, so a game-over panel
- *  rendered over a running game reports 'over'. */
+/**
+ * Which phase wins when two components report at once.
+ *
+ * The 360 games keep their flat `ScoreBar` mounted underneath everything —
+ * including the results panel and the Enter VR screen — so "a round is
+ * running" is the phase most often wrong, and it must never mask a screen the
+ * child is actually looking at. Ranked rather than order-dependent: relying on
+ * which component mounted first is exactly the kind of thing that quietly
+ * inverts when a game is restructured.
+ */
+const PHASE_RANK: Record<NonNullable<GameReport['phase']>, number> = {
+  menu: 0,
+  playing: 1,
+  start: 2,
+  over: 3,
+  enterVr: 4,
+}
+
+/** The merged report: the most specific phase wins, everything else last-wins. */
 export function readGameReport(): GameReport {
   const merged: GameReport = {}
   for (const slot of slots.values()) {
     for (const [key, value] of Object.entries(slot)) {
-      if (value !== undefined) (merged as Record<string, unknown>)[key] = value
+      if (value === undefined) continue
+      if (key === 'phase') {
+        const next = value as NonNullable<GameReport['phase']>
+        if (merged.phase && PHASE_RANK[merged.phase] > PHASE_RANK[next]) continue
+        merged.phase = next
+        continue
+      }
+      ;(merged as Record<string, unknown>)[key] = value
     }
   }
   return merged

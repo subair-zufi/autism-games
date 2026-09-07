@@ -99,6 +99,31 @@ def test_state_and_mirror_frame_round_trip(as_mentor) -> None:
     assert lean["state_rev"] == 1
 
 
+def test_an_unchanged_view_is_not_sent_twice(as_mentor) -> None:
+    code = _open(as_mentor)
+    as_mentor.post(
+        f"/api/remote/rooms/{code}/state",
+        json={"state": {}, "frame": "data:image/jpeg;base64,FIRST"},
+    )
+
+    first = as_mentor.get(f"/api/remote/rooms/{code}/state?after=0").json()
+    assert first["frame"] == "data:image/jpeg;base64,FIRST"
+    assert first["frame_rev"] == 1
+
+    # The console says which frame it already has; the same one costs nothing.
+    again = as_mentor.get(f"/api/remote/rooms/{code}/state?after=0&frame_after=1").json()
+    assert again["frame"] is None
+    assert again["frame_rev"] == 1
+
+    as_mentor.post(
+        f"/api/remote/rooms/{code}/state",
+        json={"state": {}, "frame": "data:image/jpeg;base64,SECOND"},
+    )
+    fresh = as_mentor.get(f"/api/remote/rooms/{code}/state?after=0&frame_after=1").json()
+    assert fresh["frame"] == "data:image/jpeg;base64,SECOND"
+    assert fresh["frame_rev"] == 2
+
+
 def test_oversized_frame_is_rejected(as_mentor) -> None:
     code = _open(as_mentor)
     res = as_mentor.post(

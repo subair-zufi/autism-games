@@ -53,8 +53,10 @@ while the child is inside VR ends the session (deliberately and cleanly) and lan
 on the new game's *Enter VR* screen, which has to be pressed on the headset.
 
 To make that press as small as possible, that screen is clickable edge to edge: a
-controller trigger aimed anywhere at the panel enters VR. Everything else — level, start,
-settings, participant, quit — needs no in-headset action at all.
+controller trigger aimed anywhere at the panel enters VR. The console says plainly when
+this is what it is waiting for ("needs the Enter VR press"), so the trainer knows to
+prompt the child rather than wondering whether the remote failed. Everything else —
+level, start, settings, participant, quit — needs no in-headset action at all.
 
 If a session ever needs to switch games with no in-headset press whatsoever, the way to
 get there is a single app-level WebXR session shared by every game, so a game change
@@ -76,6 +78,9 @@ That work is skipped entirely unless a console is watching: the capture returns
 immediately while the mirror is off, the headset turns it off as soon as the console
 stops polling, and the renderer's state (render target, viewport, scissor, `xr.enabled`)
 is restored exactly, so the headset's own frame is unaffected.
+
+An unchanged view is not re-sent: the console tells the relay which frame it already
+holds, so a still scene costs nothing on a phone's mobile data.
 
 Latency is a few hundred milliseconds — fine for "look a little to your left", not
 intended for judging reaction times.
