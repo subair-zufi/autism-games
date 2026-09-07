@@ -49,15 +49,47 @@ export class RemoteError extends Error {
   }
 }
 
-async function call<T>(path: string, init: RequestInit = {}, signal?: AbortSignal): Promise<T> {
+/**
+ * A request that gives up on its own.
+ *
+ * The command poll deliberately parks on the relay for 20 seconds, which makes
+ * a stalled connection indistinguishable from a quiet one — and a headset
+ * waiting forever on a dead socket is a trainer whose Quit button does
+ * nothing. Every call gets a deadline, chained to the caller's own signal so
+ * unmounting still cancels immediately.
+ */
+function deadline(outer: AbortSignal | undefined, ms: number) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), ms)
+  const relay = () => ctrl.abort()
+  outer?.addEventListener('abort', relay, { once: true })
+  return {
+    signal: ctrl.signal,
+    done: () => {
+      clearTimeout(timer)
+      outer?.removeEventListener('abort', relay)
+    },
+  }
+}
+
+/** Slack on top of a long-poll's own wait before the client gives up. */
+const REQUEST_GRACE_MS = 15_000
+
+async function call<T>(
+  path: string,
+  init: RequestInit = {},
+  signal?: AbortSignal,
+  waitSeconds = 0,
+): Promise<T> {
   const token = analytics.authToken
   if (!token) throw new RemoteError('Sign in on this device first.', 401)
 
+  const guard = deadline(signal, waitSeconds * 1000 + REQUEST_GRACE_MS)
   let res: Response
   try {
     res = await fetch(relayBase() + path, {
       ...init,
-      signal,
+      signal: guard.signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
@@ -65,8 +97,13 @@ async function call<T>(path: string, init: RequestInit = {}, signal?: AbortSigna
       },
     })
   } catch (err) {
-    if ((err as Error)?.name === 'AbortError') throw err
+    // An abort raised by our own deadline is a network problem, not a caller
+    // cancelling: only the caller's signal means "stop".
+    if ((err as Error)?.name === 'AbortError' && signal?.aborted) throw err
+    if ((err as Error)?.name === 'AbortError') throw new RemoteError('The server did not answer.', 0)
     throw new RemoteError('Cannot reach the relay.', 0)
+  } finally {
+    guard.done()
   }
 
   if (!res.ok) {
@@ -121,6 +158,7 @@ export const remoteApi = {
       `/api/remote/rooms/${encode(code)}/commands?after=${after}&wait=${waitSeconds}`,
       { method: 'GET' },
       signal,
+      waitSeconds,
     ),
 
   /** Headset: publish what it is showing, plus an optional mirror frame. */
@@ -143,6 +181,7 @@ export const remoteApi = {
       `/api/remote/rooms/${encode(code)}/state?after=${after}&wait=${waitSeconds}&frame=${wantFrame}`,
       { method: 'GET' },
       signal,
+      waitSeconds,
     ),
 }
 
