@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { discoveryMeta, type DiscoveryId, type Friend, type Saliency } from './logic'
+import { RemoteMirror } from '../../remote/RemoteMirror'
 
 export interface DiscoverySceneProps {
   /** the current surprise (only rendered while `active`) */
@@ -27,6 +28,7 @@ export interface DiscoverySceneProps {
 export function DiscoveryScene(props: DiscoverySceneProps) {
   return (
     <Canvas camera={{ position: [0, 2.7, 7.4], fov: 42 }}>
+      <RemoteMirror />
       <color attach="background" args={['#dff4ff']} />
       <ambientLight intensity={0.85} />
       <directionalLight position={[3, 6, 4]} intensity={0.9} />

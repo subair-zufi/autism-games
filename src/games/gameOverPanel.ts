@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef } from 'react'
 import { create } from 'zustand'
 import { t, type Lang } from '../i18n/strings'
 import { useSettings } from '../state/settings'
+import { useRemoteIntent } from '../remote/intents'
+import { useRemoteReport } from '../remote/status'
 import type { Difficulty, GameId } from '../types'
 
 /**
@@ -108,6 +110,17 @@ export function useVrGameOverPanel(opts: {
   restart.current = opts.onRestart
 
   const { over, headline, score, best, stars, lang, gameId, level } = opts
+
+  // The flat results dialog never renders in a headset, so this hook is the
+  // 360 games' equivalent report to the trainer's phone — and the place their
+  // "Play again" lands while the child is still inside VR.
+  useRemoteReport(over ? { phase: 'over', score } : {})
+  useRemoteIntent('restart', () => {
+    if (over) restart.current()
+  })
+  useRemoteIntent('play', () => {
+    if (over) restart.current()
+  })
 
   const levels = useMemo<VrLevelOption[]>(
     () =>

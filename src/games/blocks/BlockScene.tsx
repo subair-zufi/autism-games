@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { Text } from '@react-three/drei'
 import * as THREE from 'three'
 import { blockY, BLOCK_H, TOWER_MAX, type TurnSpec, type Player } from './logic'
+import { RemoteMirror } from '../../remote/RemoteMirror'
 
 /** Hard mode: the child places blocks by physically grabbing them. */
 export interface GrabControls {
@@ -28,6 +29,7 @@ export interface BlockSceneProps {
 export function BlockScene(props: BlockSceneProps) {
   return (
     <Canvas camera={{ position: [0, 2.4, 8], fov: 42 }}>
+      <RemoteMirror />
       <color attach="background" args={['#fff3e2']} />
       <ambientLight intensity={0.85} />
       <directionalLight position={[3, 6, 4]} intensity={0.9} />

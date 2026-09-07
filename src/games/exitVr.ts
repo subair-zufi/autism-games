@@ -90,14 +90,23 @@ function pageSettled(ms: number): Promise<void> {
 }
 
 /**
- * Ends the session and returns to the app's Home page.
+ * Ends the session and lands the app on `path`.
  *
  * Failure to end is deliberately swallowed: the session may already be ending
  * (a double-tap on Quit, or the headset taken off), and either way the goal is
  * to get the child out, not to report why.
+ *
+ * The destination is a parameter because the trainer's remote control uses the
+ * same exit: sending the child from one game straight to the next has to leave
+ * the session with exactly this care, then land somewhere other than Home.
  */
-export async function exitVrToHome(session: XRSession): Promise<void> {
+export async function exitVrTo(session: XRSession, path: string): Promise<void> {
   await endSession(session)
   await pageSettled(SETTLE_MS)
-  window.location.hash = '#/'
+  window.location.hash = `#${path.startsWith('/') ? path : `/${path}`}`
+}
+
+/** Ends the session and returns to the app's Home page. */
+export function exitVrToHome(session: XRSession): Promise<void> {
+  return exitVrTo(session, '/')
 }

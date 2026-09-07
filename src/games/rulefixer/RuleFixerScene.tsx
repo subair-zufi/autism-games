@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { PeerMood, Situation } from './logic'
+import { RemoteMirror } from '../../remote/RemoteMirror'
 
 export interface RuleFixerSceneProps {
   situation: Situation
@@ -13,6 +14,7 @@ export function RuleFixerScene({ situation, outcome }: RuleFixerSceneProps) {
   const { mood, books, tall, swing, fallen, watching } = situation.scene
   return (
     <Canvas camera={{ position: [0, 1.7, 6], fov: 45 }} onCreated={({ camera }) => camera.lookAt(0, 1, 0)}>
+      <RemoteMirror />
       <color attach="background" args={['#eef0f7']} />
       <ambientLight intensity={0.85} />
       <directionalLight position={[3, 6, 5]} intensity={0.85} />

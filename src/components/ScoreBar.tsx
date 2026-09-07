@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useRemoteReport } from '../remote/status'
 
 export function ScoreBar(props: {
   score: number
@@ -11,6 +12,15 @@ export function ScoreBar(props: {
   /** extra progress readout (e.g. "3 / 7" finds) when score itself is points */
   progress?: string
 }) {
+  // Every game shows this bar exactly while a round is running, which makes it
+  // the one place that can tell the trainer's phone the score without any game
+  // knowing that the remote control exists (remote/status.ts).
+  useRemoteReport({
+    phase: 'playing',
+    score: props.score,
+    progress:
+      props.progress ?? (props.goal !== undefined ? `${props.score} / ${props.goal}` : null),
+  })
   return (
     <div className="score-bar">
       <Link to="/" className="home-btn" aria-label="Home">🏠</Link>

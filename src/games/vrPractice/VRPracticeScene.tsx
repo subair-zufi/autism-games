@@ -13,6 +13,7 @@ import { useVrSessionActive } from '../vrSession'
 import { VRWaitingRoom } from '../VRWaitingRoom'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
+import { RemoteMirror } from '../../remote/RemoteMirror'
 import { VRInputSwitch } from '../VRInputSwitch'
 import {
   PRACTICE_BEARINGS_DEG,
@@ -116,6 +117,7 @@ export function VRPracticeScene({ onComplete }: { onComplete: () => void }) {
               <LookControls />
               <HeadSelect />
               <XRCameraHome />
+              <RemoteMirror />
               <Ground />
               {!ready && <Star bearingDeg={PRACTICE_BEARINGS_DEG[step]} onTap={tapStar} />}
               <VRInstruction

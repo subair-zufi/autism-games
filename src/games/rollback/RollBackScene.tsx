@@ -4,6 +4,7 @@ import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import type { CueMode, Player } from './logic'
 import { rbLine } from './strings'
+import { RemoteMirror } from '../../remote/RemoteMirror'
 
 export interface RollBackSceneProps {
   players: Player[]
@@ -28,6 +29,7 @@ export interface RollBackSceneProps {
 export function RollBackScene(props: RollBackSceneProps) {
   return (
     <Canvas camera={{ position: [0, 2.7, 7.4], fov: 42 }}>
+      <RemoteMirror />
       <color attach="background" args={['#dff4ff']} />
       <ambientLight intensity={0.85} />
       <directionalLight position={[3, 6, 4]} intensity={0.9} />

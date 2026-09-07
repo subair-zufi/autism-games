@@ -1,5 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useSettings } from '../state/settings'
+import { useRemoteIntent } from '../remote/intents'
+import { useRemoteReport } from '../remote/status'
 import { t, type MessageKey } from '../i18n/strings'
 import type { Difficulty, GameMeta } from '../types'
 
@@ -25,6 +27,10 @@ export function StartScreen({
   const setDifficulty = useSettings((s) => s.setDifficulty)
   const lang = useSettings((s) => s.language)
   const navigate = useNavigate()
+  // A trainer watching from their phone sees "waiting to start", and their
+  // Play button presses this one (remote/intents.ts).
+  useRemoteReport({ phase: 'start' })
+  useRemoteIntent('play', onStart)
   return (
     <div className="start-screen">
       <div className="start-icon">{game.icon}</div>

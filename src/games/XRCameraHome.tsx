@@ -2,14 +2,15 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useThree } from '@react-three/fiber'
 import { useXR } from '@react-three/xr'
 import { captureCameraHome, restoreCameraHome } from './cameraHome'
-import { setXrPresenting } from '../services/xrPresence'
+import { setXrSession } from '../services/xrPresence'
 
 /**
  * Session-exit housekeeping for the 360 games. Every scene mounts one inside
  * its `<XR>`, which also makes it the single place that observes a session
  * starting and ending — so it publishes that to `xrPresence`, where code
- * outside React (the service-worker update handler) can see it and avoid
- * reloading the page out from under a live headset session.
+ * outside React can see it: the service-worker update handler (which must not
+ * reload the page out from under a live headset session) and the trainer's
+ * remote control (which must be able to end one).
  *
  * Its main job: restoring the flat camera when an immersive session ends.
  *
@@ -37,7 +38,7 @@ export function XRCameraHome() {
   const wasPresenting = useRef(false)
 
   useEffect(() => {
-    setXrPresenting(session != null)
+    setXrSession(session ?? null)
     if (session != null) {
       wasPresenting.current = true
       return
@@ -49,7 +50,7 @@ export function XRCameraHome() {
 
   // leaving the game entirely (Home, or a route change) must not leave the flag
   // stuck on, or a pending reload would never run
-  useEffect(() => () => setXrPresenting(false), [])
+  useEffect(() => () => setXrSession(null), [])
 
   return null
 }

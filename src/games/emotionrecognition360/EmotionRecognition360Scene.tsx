@@ -7,6 +7,7 @@ import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
+import { RemoteMirror } from '../../remote/RemoteMirror'
 import { VRGameOver } from '../VRGameOver'
 import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
@@ -75,6 +76,7 @@ export function EmotionRecognition360Scene(props: EmotionRecognition360SceneProp
         <LookControls />
         <HeadSelect confirmGap={0.55} />
         <XRCameraHome />
+        <RemoteMirror />
         <VRGameOver />
         <HeadSampler />
         <GalleryRoom />

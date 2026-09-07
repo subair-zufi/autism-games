@@ -5,6 +5,8 @@
  */
 import { Link } from 'react-router-dom'
 import { t, type Lang } from '../i18n/strings'
+import { useRemoteIntent } from '../remote/intents'
+import { useRemoteReport } from '../remote/status'
 import type { Difficulty } from '../types'
 import type { LevelState, LevelSummary } from '../games/progression'
 
@@ -34,6 +36,8 @@ export function LevelSelect({
   onSelect: (l: Difficulty) => void
   onStart: () => void
 }) {
+  useRemoteReport({ phase: 'start' })
+  useRemoteIntent('play', onStart)
   return (
     <div className="start-screen">
       <div className="start-icon">{icon}</div>
@@ -81,6 +85,9 @@ export function LevelResult({
   onChooseLevel: () => void
 }) {
   const messageKey = summary.mastered ? 'resultMastered' : summary.passed ? 'resultPassed' : 'resultFailed'
+  useRemoteReport({ phase: 'over', score: summary.correct, progress: `${summary.correct} / ${summary.total}` })
+  useRemoteIntent('restart', onReplay)
+  useRemoteIntent('play', onReplay)
   return (
     <div className="overlay">
       <div className="dialog er-result">
