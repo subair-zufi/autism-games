@@ -39,6 +39,8 @@ PARTICIPANTS = [
     ("P-006", "M", date(2015, 4, 18), "Level 2", 89, "completer"),
     ("P-007", "F", date(2012, 9, 5), "Level 1", 109, "completer"),
     ("P-008", "M", date(2016, 12, 1), "Level 3", 70, "partial"),
+    ("P-009", "F", date(2014, 2, 14), "Level 1", 98, "completer"),
+    ("P-010", "M", date(2015, 10, 22), "Level 2", 83, "partial"),
 ]
 
 # Which games each profile touches (skill coverage varies on purpose).
