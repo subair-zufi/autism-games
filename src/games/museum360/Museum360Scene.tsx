@@ -8,6 +8,7 @@ import { FLAT_SCREEN_DPR } from '../xrInput'
 import { Instanced, type Placement } from '../Instanced'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
+import { RemoteMirror } from '../../remote/RemoteMirror'
 import { VRGameOver } from '../VRGameOver'
 import { HeadSampler } from '../HeadSampler'
 import { angDiffDeg, latestYawDeg } from '../headTracking'
@@ -76,6 +77,7 @@ export function Museum360Scene(props: Museum360SceneProps) {
         <LookControls />
         <HeadSelect confirmSide="on" />
         <XRCameraHome />
+        <RemoteMirror />
         <VRGameOver />
         <HeadSampler />
         <RotundaRoom />

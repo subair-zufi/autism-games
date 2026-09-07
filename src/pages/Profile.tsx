@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../state/auth'
 import { useSettings } from '../state/settings'
 import { initials } from '../lib/participant'
+import { RemoteControlCard } from '../components/RemoteControlCard'
 
 export function Profile() {
   const navigate = useNavigate()
@@ -149,6 +150,8 @@ export function Profile() {
           </button>
         </div>
       </section>
+
+      <RemoteControlCard />
 
       <button className="btn-danger" onClick={onLogout}>Log out</button>
 

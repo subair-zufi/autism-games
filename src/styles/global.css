@@ -1132,3 +1132,124 @@ button:active, a:active, [role='button']:active { filter: brightness(0.93); }
 .quick-panel:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1); }
 .quick-emoji { font-size: 3.4rem; }
 .quick-text { font-size: 1.3rem; text-align: center; line-height: 1.25; }
+
+/* ==========================================================================
+   Trainer remote control — the phone that drives the headset (pages/
+   RemoteConsole.tsx) and the pairing card on Profile.
+
+   Sized for a trainer holding a phone one-handed beside a child who is mid-
+   session: the view of what the child sees comes first, Quit is the biggest
+   control on the screen, and every target is thumb-sized.
+   ========================================================================== */
+.rc,
+.rc-pair {
+  font-family: var(--m-font);
+  color: var(--m-ink);
+  letter-spacing: normal;
+  background: var(--m-bg);
+  min-height: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 16px 16px 40px;
+}
+
+.rc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.rc-top h1 { font-size: 1.35rem; margin: 0 0 4px; }
+.rc-dot { font-size: 0.78rem; font-weight: 700; color: var(--m-muted); }
+.rc-dot.live { color: #16a34a; }
+.rc-dot.down { color: #d1495b; }
+
+.rc-lede { color: var(--m-muted); font-size: 0.9rem; line-height: 1.45; }
+.rc-hint { color: var(--m-muted); font-size: 0.78rem; line-height: 1.45; margin: 6px 2px 10px; }
+.rc-error { color: #d1495b; font-size: 0.85rem; font-weight: 600; }
+.rc-note { color: var(--m-accent); font-size: 0.8rem; font-weight: 700; text-align: center; margin: 6px 0 0; }
+.rc-footnote { color: var(--m-muted); font-size: 0.74rem; line-height: 1.5; margin-top: 20px; }
+
+.rc-code-input {
+  font-size: 1.6rem; font-weight: 800; letter-spacing: 0.35em; text-align: center;
+  text-transform: uppercase;
+}
+
+/* ---- the child's view ---- */
+.rc-mirror { position: relative; margin: 12px 0; }
+.rc-mirror img {
+  width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block;
+  border-radius: 14px; background: #0d1220;
+}
+.rc-mirror-empty {
+  width: 100%; aspect-ratio: 16 / 9; border-radius: 14px; background: #0d1220;
+  color: #8fa0c0; font-size: 0.85rem; display: flex; align-items: center; justify-content: center;
+}
+.rc-mirror-toggle {
+  position: absolute; right: 8px; bottom: 8px;
+  background: rgba(13, 18, 32, 0.72); color: #fff; border-radius: 999px;
+  padding: 6px 12px; font-size: 0.75rem; font-weight: 700;
+}
+
+/* ---- what is happening right now ---- */
+.rc-now {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: var(--m-card); border: 1px solid var(--m-line); border-radius: 14px; padding: 12px 14px;
+}
+.rc-now-main { display: flex; flex-direction: column; gap: 2px; }
+.rc-now-main strong { font-size: 1rem; }
+.rc-now-main span { font-size: 0.78rem; color: var(--m-muted); }
+.rc-now-score { display: flex; gap: 10px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; }
+.rc-prompt {
+  margin: 8px 2px 0; font-size: 0.9rem; font-style: italic; color: var(--m-ink);
+}
+
+/* ---- the three controls that matter most ---- */
+.rc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 4px; }
+.rc-btn {
+  background: var(--m-card); color: var(--m-ink); border: 1px solid var(--m-line);
+  border-radius: 14px; padding: 16px 12px; font-size: 1rem; font-weight: 700;
+}
+.rc-btn:active { transform: scale(0.98); }
+.rc-btn.quit {
+  grid-column: 1 / -1; background: #d1495b; color: #fff; border-color: #d1495b;
+  padding: 20px 12px; font-size: 1.15rem;
+}
+.rc-btn.go { background: var(--m-accent); color: #fff; border-color: var(--m-accent); }
+
+/* ---- sections, chips, game grid ---- */
+.rc-section { margin-top: 22px; }
+.rc-section h2 { font-size: 0.95rem; margin: 0 0 8px; }
+.rc-section h3 { font-size: 0.82rem; margin: 14px 0 8px; letter-spacing: 0.02em; }
+.rc-row { display: flex; gap: 8px; }
+.rc-row.rc-wrap { flex-wrap: wrap; }
+.rc-chip {
+  flex: 1; min-width: fit-content; background: var(--m-card); color: var(--m-ink);
+  border: 1px solid var(--m-line); border-radius: 999px; padding: 12px 14px;
+  font-size: 0.85rem; font-weight: 700; text-transform: capitalize;
+}
+.rc-chip.active { background: var(--m-accent); color: #fff; border-color: var(--m-accent); }
+.rc-chip:disabled { opacity: 0.45; }
+.rc-modes .rc-chip { text-transform: none; }
+
+.rc-games { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rc-game {
+  display: flex; align-items: center; gap: 8px; text-align: left;
+  background: var(--m-card); color: var(--m-ink); border: 1px solid var(--m-line);
+  border-radius: 14px; padding: 12px; font-size: 0.85rem; font-weight: 600;
+}
+.rc-game.active { border-color: var(--m-accent); box-shadow: 0 0 0 2px rgba(61, 123, 214, 0.18); }
+.rc-game-icon { font-size: 1.3rem; }
+.rc-game-title { line-height: 1.2; }
+
+.rc-relay { background: var(--m-card); border: 1px solid var(--m-line); border-radius: 14px; padding: 12px; }
+
+/* ---- pairing card on Profile (headset side) ---- */
+.remote-card .remote-card-lede { color: var(--m-muted); font-size: 0.85rem; line-height: 1.5; margin: 0 0 12px; }
+.remote-code {
+  font-size: 2.2rem; font-weight: 800; letter-spacing: 0.3em; text-align: center;
+  background: #0d1220; color: #fff; border-radius: 14px; padding: 16px 8px 16px 18px;
+}
+.remote-state { font-size: 0.82rem; font-weight: 700; color: var(--m-muted); text-align: center; }
+.remote-state.live { color: #16a34a; }
+.remote-console-link { display: inline-block; margin: 10px 0; font-size: 0.85rem; }
+.rc-alert {
+  margin: 10px 0 0; padding: 12px 14px; border-radius: 14px;
+  background: #fff4d6; border: 1px solid #f0d089; color: #7a5b12;
+  font-size: 0.84rem; line-height: 1.45;
+}

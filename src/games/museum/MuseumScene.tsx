@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { slotPosition, type CueMode, type ExhibitId, type Round } from './logic'
+import { RemoteMirror } from '../../remote/RemoteMirror'
 
 const PEDESTAL_H = 1.2
 const EXHIBIT_Y = PEDESTAL_H + 0.55
@@ -24,6 +25,7 @@ export function MuseumScene(props: MuseumSceneProps) {
       camera={{ position: [0, 2.4, 6.6], fov: 47 }}
       onCreated={({ camera }) => camera.lookAt(0, 1.3, 0)}
     >
+      <RemoteMirror />
       <color attach="background" args={['#2a2520']} />
       {/* soft warm ambient so nothing is pitch black */}
       <ambientLight intensity={0.5} color="#fff3e0" />

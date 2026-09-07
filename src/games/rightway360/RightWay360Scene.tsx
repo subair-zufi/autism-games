@@ -6,6 +6,7 @@ import { xrStore } from './xrStore'
 import { FLAT_SCREEN_DPR } from '../xrInput'
 import { HeadSelect } from '../HeadSelect'
 import { XRCameraHome } from '../XRCameraHome'
+import { RemoteMirror } from '../../remote/RemoteMirror'
 import { VRGameOver } from '../VRGameOver'
 import { VRInputSwitch } from '../VRInputSwitch'
 import {
@@ -70,6 +71,7 @@ export function RightWay360Scene(props: RightWay360SceneProps) {
         <LookControls />
         <HeadSelect />
         <XRCameraHome />
+        <RemoteMirror />
         <VRGameOver />
         <SchoolYard />
         {props.active && (

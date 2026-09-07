@@ -1,5 +1,7 @@
 import { Link } from 'react-router-dom'
 import { t, type Lang } from '../i18n/strings'
+import { useRemoteIntent } from '../remote/intents'
+import { useRemoteReport } from '../remote/status'
 
 export function GameOverDialog(props: {
   score: number
@@ -15,6 +17,9 @@ export function GameOverDialog(props: {
   lang?: Lang
 }) {
   const lang = props.lang ?? 'en'
+  useRemoteReport({ phase: 'over', score: props.score })
+  useRemoteIntent('restart', props.onRestart)
+  useRemoteIntent('play', props.onRestart)
   return (
     <div className="overlay">
       <div className="dialog">

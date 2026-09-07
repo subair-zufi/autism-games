@@ -23,6 +23,11 @@
 
 const API_BASE: string =
   (import.meta as any).env?.VITE_ANALYTICS_API ?? "";
+
+/** Where this build points by default. The trainer remote can be re-pointed at
+ *  another server at runtime (a laptop on the room's Wi-Fi when there is no
+ *  internet), so it needs to know what "default" means — see remote/client.ts. */
+export const DEFAULT_API_BASE = API_BASE;
 const TOKEN_KEY = "ag_player_token";
 const STUDENT_KEY = "ag_active_student";
 
@@ -257,6 +262,12 @@ class AnalyticsClient {
 
   get isLoggedIn(): boolean {
     return !!this.token;
+  }
+
+  /** The mentor's bearer token, for the remote-control client — which talks to
+   *  a configurable relay URL and so cannot go through `request()`. */
+  get authToken(): string | null {
+    return this.token;
   }
 
   private setToken(token: string) {

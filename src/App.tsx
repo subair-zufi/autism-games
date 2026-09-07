@@ -18,6 +18,8 @@ import { useAuth } from './state/auth'
 import { useOffline } from './state/offline'
 import { installVisibilityTracking } from './services/visibility'
 import { PlayOffline } from './pages/PlayOffline'
+import { RemoteConsole } from './pages/RemoteConsole'
+import { RemoteAgent } from './remote/RemoteAgent'
 
 /**
  * Every game is loaded on demand rather than imported up front.
@@ -87,6 +89,9 @@ export default function App() {
 
   return (
     <Suspense fallback={<GameLoading />}>
+      {/* Listens for the trainer's phone. Does nothing at all unless this
+          device was paired as the headset (state/remote.ts). */}
+      <RemoteAgent />
       <Routes>
         {/* Public auth screens */}
         <Route path="/login" element={<Login />} />
@@ -96,6 +101,7 @@ export default function App() {
         {/* Full-screen authed screens (own header, no tab bar) */}
         <Route path="/complete-profile" element={<RequireAuth><CompleteProfile /></RequireAuth>} />
         <Route path="/game/:gameId" element={<RequireAuth><GameDetail /></RequireAuth>} />
+        <Route path="/remote" element={<RequireAuth><RemoteConsole /></RequireAuth>} />
 
         {/* Tab-shell screens */}
         <Route element={<RequireAuth><AppShell /></RequireAuth>}>

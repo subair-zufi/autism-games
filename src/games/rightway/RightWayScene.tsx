@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { Behavior } from './logic'
+import { RemoteMirror } from '../../remote/RemoteMirror'
 
 export interface RightWaySceneProps {
   behavior: Behavior
@@ -17,6 +18,7 @@ export function RightWayScene({ behavior, celebrate }: RightWaySceneProps) {
 
   return (
     <Canvas camera={{ position: [0, 1.7, 6.2], fov: 45 }} onCreated={({ camera }) => camera.lookAt(0, 1, 0)}>
+      <RemoteMirror />
       <color attach="background" args={['#eaf4ec']} />
       <ambientLight intensity={0.85} />
       <directionalLight position={[3, 6, 5]} intensity={0.85} />

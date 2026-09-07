@@ -22,6 +22,7 @@
 - **Good Choice** - Pick the kind action in a social situation _(social rules)_
 - **Slide Queue** - Wait patiently in line for your turn on the slide _(turn taking / patience)_
 
+📱 **Trainer Remote** - Drive the headset from a phone: pick the game and level, start it, watch a live view of what the child is looking at, and quit — without taking the headset off them ([guide](./docs/trainer-remote.md))
 🔊 **Sound & Voice Support** - Toggle audio and voice guidance on/off
 📊 **Score Tracking** - Monitor progress with a built-in scoring system
 🎨 **Beautiful UI** - Colorful, engaging interface optimized for all ages

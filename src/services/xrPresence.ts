@@ -15,13 +15,33 @@
  */
 
 let presenting = false
+let session: XRSession | null = null
 const waiting = new Set<() => void>()
+
+/**
+ * Set by `XRCameraHome` alongside `setXrPresenting`.
+ *
+ * The session object itself is worth keeping, not just the flag: the trainer's
+ * remote control has to be able to end a live session from outside the React
+ * tree that owns it — the child cannot reach the in-world Quit button, which
+ * is the whole reason the remote exists.
+ */
+export function setXrSession(value: XRSession | null): void {
+  session = value
+  setXrPresenting(value != null)
+}
+
+/** The session presenting right now, if any. */
+export function currentXrSession(): XRSession | null {
+  return session
+}
 
 /** Set by `XRCameraHome`, which every 360 scene mounts inside its `<XR>`. */
 export function setXrPresenting(value: boolean): void {
   if (value === presenting) return
   presenting = value
   if (presenting) return
+  session = null
   // session just ended — release anything that was holding off
   const due = [...waiting]
   waiting.clear()

@@ -103,6 +103,28 @@ Event body: `game_key`, `event_type`, `step_index?`, `score?`, `student_id?`,
 `session_id?`, `payload?` (free-form JSON), `client_timestamp?`. A supplied `student_id`
 must belong to the calling mentor.
 
+### Trainer remote — `/api/remote` (require a **player/mentor** token)
+Pairs a headset with a trainer's phone so the session can be driven without taking the
+headset off the child (see `docs/trainer-remote.md` in the repo root). Rooms live **in
+memory**, scoped to the mentor account that created them, and expire after 6 hours idle.
+
+| Method | Path | Notes |
+|---|---|---|
+| `POST` | `/rooms` | Headset: register a pairing, returns the code to display. |
+| `POST` | `/rooms/{code}/join` | Console: attach to that code. |
+| `DELETE` | `/rooms/{code}` | Either end: drop the pairing. |
+| `POST` | `/rooms/{code}/commands` | Console: queue one `{type, payload}` instruction. |
+| `GET` | `/rooms/{code}/commands?after=&wait=` | Headset: pull new commands (long-poll, `wait` ≤ 25s). |
+| `POST` | `/rooms/{code}/state` | Headset: publish state + an optional mirror frame. |
+| `GET` | `/rooms/{code}/state?after=&wait=&frame=` | Console: read state (long-poll). |
+
+A code belonging to another mentor returns `404`, so knowing one is not enough to reach
+somebody else's headset. Command types are opaque to the server — the protocol lives in
+the frontend (`src/remote/protocol.ts`).
+
+> **Run one worker.** Pairings are per-process; with two workers a console can join a room
+> the headset never sees. The default `uvicorn app.main:app` is correct.
+
 ### Admin — `/api/admin` (require an **admin** token; player tokens are rejected)
 | Method | Path | Notes |
 |---|---|---|
