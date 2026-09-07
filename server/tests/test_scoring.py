@@ -296,17 +296,31 @@ def test_improvement_first_vs_latest_session():
 def test_participant_aggregation():
     evs = (
         answers("emotionrecognition", 8, 10, "easy")  # emotion game -> 60
-        + [ev("rightway", "answer", {"correct": True, "chance": 0.5}) for _ in range(4)]  # socialnorms -> 100
+        + [ev("blocks", "place_block", {}) for _ in range(4)]  # turntaking -> 100
     )
     ps = scoring.score_participant(evs)
     emo = next(s for s in ps.skills if s.skill == "emotion")
-    soc = next(s for s in ps.skills if s.skill == "socialnorms")
     ta = next(s for s in ps.skills if s.skill == "turntaking")
+    ja = next(s for s in ps.skills if s.skill == "jointattention")
     assert emo.score == 60.0
-    assert soc.score == 100.0
-    assert ta.score is None  # no turn-taking data
+    assert ta.score == 100.0
+    assert ja.score is None  # no joint-attention data
     # composite = mean of skills that have data (60, 100) = 80
     assert ps.composite == 80.0
+
+
+def test_social_norms_is_not_a_scored_skill():
+    """Social Norms games are hidden / not part of the intervention, so they
+    must not appear as a skill or fold into the composite average."""
+    evs = (
+        answers("emotionrecognition", 6, 10, "easy")  # emotion -> 20
+        + [ev("rightway", "answer", {"correct": True, "chance": 0.5}) for _ in range(4)]
+    )
+    ps = scoring.score_participant(evs)
+    assert "socialnorms" not in {s.skill for s in ps.skills}
+    assert {s.skill for s in ps.skills} == set(scoring.SKILLS)
+    # composite reflects emotion alone; the rightway trials do not lift it
+    assert ps.composite == 20.0
 
 
 # --- cohort aggregation + demographic bands ----------------------------------

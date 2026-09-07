@@ -607,17 +607,23 @@ def test_skill_report_standardised_scores(client):
     # Emotion Recognition: 8/10 correct at Easy (chance .5) -> 60.
     for i in range(10):
         answer("emotionrecognition", {"correct": i < 8, "level": "easy"})
-    # Right or Wrong: 4/4 correct (chance .5) -> 100.
+    # Block Buddies: 4/4 blocks placed on turn -> 100 (turntaking).
     for _ in range(4):
-        answer("rightway", {"correct": True, "chance": 0.5})
+        r = client.post(
+            "/api/events",
+            json={"game_key": "blocks", "event_type": "place_block", "student_id": sid, "payload": {}},
+            headers=h,
+        )
+        assert r.status_code == 201, r.text
 
     r = client.get(f"/api/reports/student/{sid}/skills", headers=h)
     assert r.status_code == 200, r.text
     body = r.json()
     skills = {s["skill"]: s for s in body["skills"]}
     assert skills["emotion"]["score"] == 60.0
-    assert skills["socialnorms"]["score"] == 100.0
-    assert skills["turntaking"]["score"] is None  # no data
+    assert skills["turntaking"]["score"] == 100.0
+    assert skills["jointattention"]["score"] is None  # no data
+    assert "socialnorms" not in skills  # hidden games are not a scored skill
     assert body["composite"] == 80.0  # mean of the two skills with data
     assert body["n_trials"] == 14
 

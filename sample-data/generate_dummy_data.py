@@ -46,14 +46,17 @@ PARTICIPANTS = [
 # Which games each profile touches (skill coverage varies on purpose).
 EMOTION = ["emotionrecognition", "identifyemotions", "emotionrecognition360"]
 TURN = ["blocks", "rollback", "football360"]
-NORMS = ["rightway", "rulefixer"]
 JA = ["museum", "discovery", "museum360"]
 VR_GAMES = {"emotionrecognition360", "identifyemotions360", "playroom360",
             "football360", "museum360", "park360"}  # xrPresenting=1 + head telemetry
 
+# Social Norms (Right or Wrong / Good Choice) is intentionally excluded: those
+# games are hidden from the player line-up and are not part of the intervention
+# participants play, so they are not generated here and are not a scored skill
+# (see server/app/scoring.py SKILLS).
 PROFILE_GAMES = {
-    "completer": EMOTION + TURN + NORMS + JA,          # all four skills
-    "partial": EMOTION + TURN + JA,                    # skips social norms
+    "completer": EMOTION + TURN + JA,                  # all three scored skills
+    "partial": EMOTION + JA,                           # skips turn-taking
     "dropout": ["emotionrecognition", "museum"],       # a couple, then stops
 }
 PROFILE_SESSIONS = {"completer": (3, 5), "partial": (2, 3), "dropout": (1, 2)}
@@ -475,7 +478,7 @@ for r in roster:
 # --- sheet: summary (ONE row per participant — analysis-ready wide format) ----
 # In-game skill scores (via the real score_participant) + dose totals + battery
 # pre/post/gain, all on one row: the classic between-subjects SPSS layout.
-SKILL_ORDER = ["emotion", "turntaking", "socialnorms", "jointattention"]
+SKILL_ORDER = ["emotion", "turntaking", "jointattention"]  # socialnorms excluded (hidden games)
 INSTR_ORDER = ["EIT", "TOP", "JAP", "NCT", "VSMS", "ATEC"]
 
 

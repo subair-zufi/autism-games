@@ -3,7 +3,7 @@
 The games emit very different raw numbers (chance-corrected accuracy for
 the emotion/social quizzes, point tallies with lives for the joint-attention
 and turn-taking scenes, latencies everywhere). To compare a child over time, to
-compare the four target skills, and to compare cohorts, every game has to reduce
+compare the target skills, and to compare cohorts, every game has to reduce
 to *one* comparable quantity.
 
 The common currency is a **0-100 Skill Score** defined identically for every
@@ -27,6 +27,14 @@ Aggregation is equal-weighted on purpose:
   * the **Composite Social-Emotional Score** is the mean of the available skill
     scores, so each skill contributes equally regardless of how many games or
     trials it has.
+
+Social Norms is deliberately NOT one of the scored skills: its games
+(Right or Wrong / Good Choice / Schoolyard 360) are hidden from the player
+line-up and are not part of the intervention participants play, so including
+that skill would fold an always-empty (or unrepresentative) term into the
+equal-weighted composite and bias it. Those games still exist and are scorable
+per-construct (see :func:`score_social_norms`); they simply do not feed the
+skill breakdown or the composite.
 """
 from __future__ import annotations
 
@@ -36,13 +44,18 @@ from typing import Iterable, Protocol
 
 # --- Skill taxonomy (keep in sync with src/types.ts GAME_LIST `skill`) --------
 
-SKILLS = ("emotion", "turntaking", "socialnorms", "jointattention")
+# The skills that feed the skill breakdown and the composite. Social Norms is
+# intentionally excluded (its games are hidden / not part of the intervention);
+# see the module docstring. ``SKILL_BY_GAME`` still labels the social-norms
+# games so their per-construct report and trial exports keep the right tag.
+SKILLS = ("emotion", "turntaking", "jointattention")
 
 SKILL_LABELS = {
     "emotion": "Emotional Identification",
     "turntaking": "Turn-Taking",
-    "socialnorms": "Social Norms",
     "jointattention": "Joint Attention",
+    # "socialnorms" is not a scored skill; kept out of the composite on purpose.
+    "socialnorms": "Social Norms",
 }
 
 # The current game roster (keep in sync with src/types.ts GAME_LIST). Each VR
