@@ -505,3 +505,54 @@ class SocialNormsReport(BaseModel):
 
     student_id: uuid.UUID
     games: list[GameConstructReport]
+
+
+# ---------------------------------------------------------------------------
+# Trainer remote control (see app/remote_rooms.py)
+# ---------------------------------------------------------------------------
+class RemoteRoomOut(BaseModel):
+    """A pairing the headset just registered, or the console just joined."""
+
+    code: str
+    expires_in: int
+    state: dict[str, Any] = Field(default_factory=dict)
+    state_rev: int = 0
+    last_seq: int = 0
+
+
+class RemoteCommandIn(BaseModel):
+    """One instruction from the trainer's console. `type` is validated on the
+    client side against the shared protocol — the relay stays deliberately
+    dumb so a new command needs no server deploy."""
+
+    type: str = Field(min_length=1, max_length=64)
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class RemoteCommandOut(BaseModel):
+    seq: int
+    type: str
+    payload: dict[str, Any]
+
+
+class RemoteCommandsOut(BaseModel):
+    commands: list[RemoteCommandOut]
+    last_seq: int
+    console_online: bool
+
+
+class RemoteStateIn(BaseModel):
+    """What the headset is doing right now, plus an optional mirror frame
+    (a small JPEG data URL of the child's view)."""
+
+    state: dict[str, Any] = Field(default_factory=dict)
+    frame: str | None = None
+
+
+class RemoteStateOut(BaseModel):
+    state: dict[str, Any]
+    state_rev: int
+    frame: str | None = None
+    frame_rev: int = 0
+    headset_online: bool
+    last_seq: int

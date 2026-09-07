@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .routers import admin, auth, events, progress, reports, students
+from .routers import admin, auth, events, progress, remote, reports, students
 from .seed import init_db
 
 logger = logging.getLogger("uvicorn.error")
@@ -50,6 +50,7 @@ app.include_router(students.router)
 app.include_router(events.router)
 app.include_router(progress.router)
 app.include_router(reports.router)
+app.include_router(remote.router)
 app.include_router(admin.router)
 
 if STATIC_DIR.exists():
