@@ -69,6 +69,9 @@ def test_pair_and_drive_a_headset(as_mentor) -> None:
     assert [c["type"] for c in pulled["commands"]] == ["goto"]
     assert pulled["commands"][0]["payload"]["level"] == "medium"
     assert pulled["console_online"] is True
+    # Each command says how old it is, so a headset that has been asleep can
+    # decline to act on instructions from several minutes ago.
+    assert pulled["commands"][0]["age_ms"] < 5000
 
     # Acknowledged — the headset does not run it twice.
     again = as_mentor.get(f"/api/remote/rooms/{code}/commands?after=1").json()

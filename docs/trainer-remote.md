@@ -156,3 +156,23 @@ Worth stating plainly for ethics documentation:
 | "No view from this screen" | The mirror only exists inside the 3D games. Menus and the mentor screens have no scene to mirror. |
 | Controls work but the view is frozen | The headset stopped producing frames (context loss). Toggle *Show view* off and on. |
 | Console joins but nothing arrives | The API is running with more than one worker; pairings are per-process. Run a single worker. |
+
+## Both ends stay in charge
+
+Pairing does not take the headset over. Anyone can still navigate on the headset
+itself while a trainer is connected, and the console reflects it within a second
+— which is the point: the trainer watches where the child has got to and steps
+in only when they are stuck.
+
+Three things keep it that way, and each of them was a bug first:
+
+- The headset's listener is never restarted by a navigation. It used to be, and
+  a restarted listener began again from the start of the room's history — so the
+  trainer's last "open this game" was carried out a second time, and pressing
+  Home on the headset threw the child straight back into it. The headset felt
+  locked; it was being re-commanded.
+- How far a device has got through the commands is remembered with the pairing,
+  so a reload (a new build, the headset browser reclaiming the tab) resumes
+  instead of replaying the session.
+- Anything older than a minute is read but not carried out, so a headset coming
+  back from sleep never acts on instructions the trainer gave long ago.

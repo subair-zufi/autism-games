@@ -533,6 +533,10 @@ class RemoteCommandOut(BaseModel):
     seq: int
     type: str
     payload: dict[str, Any]
+    #: How long ago the console sent this, by the relay's clock. The headset
+    #: uses it to ignore instructions that have gone stale while it was asleep,
+    #: offline or reloading, without having to trust its own clock.
+    age_ms: int = 0
 
 
 class RemoteCommandsOut(BaseModel):

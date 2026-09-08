@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GAME_LIST } from '../types'
 import { useSettings } from '../state/settings'
@@ -22,6 +22,25 @@ const STATE_INTERVAL_MS = 1000
 const IDLE_STATE_INTERVAL_MS = 4000
 /** Backoff after a failed call, so a headset that lost Wi-Fi is not hammering. */
 const RETRY_MS = 2000
+/**
+ * Floor under the command poll.
+ *
+ * The relay parks a poll for `COMMAND_WAIT_SECONDS`, so in normal service this
+ * never applies. It is here for the server that does not: an older build, or a
+ * proxy that cuts long-polls short, would otherwise have the headset pulling in
+ * a tight loop — flattening the battery of the device on a child's head.
+ */
+const MIN_POLL_GAP_MS = 500
+/**
+ * A command older than this is read but not carried out.
+ *
+ * A headset that was asleep, offline or reloading must not come back and act on
+ * a pile of instructions from several minutes ago — sending a child into a game
+ * the trainer asked for long before, or quitting one they are happily playing.
+ * The age is measured by the relay, so it does not depend on the headset's
+ * clock being right.
+ */
+const STALE_COMMAND_MS = 60_000
 
 /**
  * The headset half of the remote control: pulls the trainer's commands and
@@ -40,6 +59,21 @@ export function RemoteAgent() {
   const code = useRemoteLink((s) => s.code)
   const navigate = useNavigate()
 
+  /**
+   * `navigate` is held in a ref, and deliberately NOT in the effect's
+   * dependencies.
+   *
+   * react-router rebuilds it on every route change (the current pathname is one
+   * of its own dependencies), so listing it restarted this whole effect each
+   * time anyone navigated — including the trainer's own commands, and including
+   * anyone pressing a button on the headset. A restarted listener began again
+   * from sequence zero and was handed the trainer's earlier commands a second
+   * time, so pressing Home on the headset threw the child straight back into
+   * the last game the phone had opened. That is why the headset felt locked.
+   */
+  const navigateRef = useRef(navigate)
+  navigateRef.current = navigate
+
   useEffect(() => {
     if (role !== 'headset' || !code) return
 
@@ -51,7 +85,7 @@ export function RemoteAgent() {
       // re-render on every navigation would restart this effect and drop the
       // parked long-poll — a Quit press lost on every screen change.
       route: () => window.location.hash.replace(/^#/, '').split('?')[0] || '/',
-      navigate: (path) => navigate(path),
+      navigate: (path) => navigateRef.current(path),
       currentSession: () => (isXrPresenting() ? currentXrSession() : null),
       exitTo: exitVrTo,
       setDifficulty: (game, level) => useSettings.getState().setDifficulty(game, level),
@@ -69,8 +103,13 @@ export function RemoteAgent() {
     }
 
     async function commandLoop(): Promise<void> {
-      let after = 0
+      // Resume where this device left off. Starting from zero would replay the
+      // whole room's history after any reload — a service-worker update, or the
+      // headset browser reclaiming the tab — and the child would be dragged
+      // back through every game the trainer had opened that session.
+      let after = useRemoteLink.getState().ackSeq
       while (!stopped) {
+        const startedAt = Date.now()
         try {
           const res = await remoteApi.pullCommands(code!, after, COMMAND_WAIT_SECONDS, abort.signal)
           if (stopped) return
@@ -80,9 +119,13 @@ export function RemoteAgent() {
           if (!res.console_online) setMirrorWanted(false)
           for (const envelope of res.commands) {
             const cmd = parseCommand(envelope)
-            if (cmd) await applyRemoteCommand(cmd, ctx)
+            if (!cmd) continue
+            if ((envelope.age_ms ?? 0) > STALE_COMMAND_MS) continue
+            await applyRemoteCommand(cmd, ctx)
           }
           after = res.last_seq
+          // Remembered across reloads, so nothing is ever carried out twice.
+          useRemoteLink.getState().setAck(after)
         } catch (err) {
           if (stopped || isAbort(err)) return
           if (err instanceof RemoteError && err.isGone) {
@@ -91,7 +134,10 @@ export function RemoteAgent() {
           }
           useRemoteLink.getState().markError(errorText(err))
           await sleep(RETRY_MS)
+          continue
         }
+        const spent = Date.now() - startedAt
+        if (spent < MIN_POLL_GAP_MS) await sleep(MIN_POLL_GAP_MS - spent)
       }
     }
 
@@ -121,7 +167,9 @@ export function RemoteAgent() {
       stopped = true
       abort.abort()
     }
-  }, [role, code, navigate])
+    // NOT `navigate` — see navigateRef above. Restarting this effect on every
+    // route change is exactly the bug that made the headset unusable by hand.
+  }, [role, code])
 
   // Pairing is a mentor feature: signing out has to end it, or the next person
   // to use this headset inherits somebody else's remote.

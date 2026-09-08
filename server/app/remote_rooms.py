@@ -53,8 +53,14 @@ class Command:
     payload: dict[str, Any]
     created_at: float
 
-    def as_dict(self) -> dict[str, Any]:
-        return {"seq": self.seq, "type": self.type, "payload": self.payload}
+    def as_dict(self, now: float | None = None) -> dict[str, Any]:
+        now = time.time() if now is None else now
+        return {
+            "seq": self.seq,
+            "type": self.type,
+            "payload": self.payload,
+            "age_ms": max(0, int((now - self.created_at) * 1000)),
+        }
 
 
 @dataclass

@@ -88,6 +88,10 @@ export interface RemoteEnvelope {
   seq: number
   type: string
   payload: Record<string, unknown>
+  /** How long ago the console sent it, measured by the relay — so a headset
+   *  coming back from a reload can ignore instructions that have gone stale
+   *  without trusting its own clock. */
+  age_ms?: number
 }
 
 /**

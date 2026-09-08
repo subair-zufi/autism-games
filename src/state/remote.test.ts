@@ -19,7 +19,14 @@ beforeEach(() => {
   vi.clearAllMocks()
   localStorage.clear()
   resetMirror()
-  useRemoteLink.setState({ role: 'off', code: null, status: 'idle', error: null, peerOnline: false })
+  useRemoteLink.setState({
+    role: 'off',
+    code: null,
+    status: 'idle',
+    error: null,
+    peerOnline: false,
+    ackSeq: 0,
+  })
 })
 
 describe('pairing from the headset', () => {
@@ -30,11 +37,20 @@ describe('pairing from the headset', () => {
     const s = useRemoteLink.getState()
     expect(s).toMatchObject({ role: 'headset', code: 'PQ4RTX', status: 'live' })
     // A headset reloads itself whenever a new build lands; the pairing has to
-    // survive that without a trainer re-reading a code off the screen.
+    // survive that without a trainer re-reading a code off the screen — and so
+    // does the record of which commands it has already carried out, or the
+    // whole session's instructions would run again on the way back up.
     expect(JSON.parse(localStorage.getItem('autism-remote-link')!).state).toEqual({
       role: 'headset',
       code: 'PQ4RTX',
+      ackSeq: 0,
     })
+  })
+
+  it('starts from the room’s current position, so a re-pair inherits no backlog', async () => {
+    api.openRoom.mockResolvedValue({ code: 'PQ4RTX', expires_in: 3600, last_seq: 7 })
+    await useRemoteLink.getState().startHeadset()
+    expect(useRemoteLink.getState().ackSeq).toBe(7)
   })
 
   it('explains a signed-out device instead of showing a raw 401', async () => {
@@ -85,6 +101,20 @@ describe('ending a pairing', () => {
 
     await expect(useRemoteLink.getState().stop({ closeRoom: true })).resolves.toBeUndefined()
     expect(useRemoteLink.getState().role).toBe('off')
+  })
+})
+
+describe('remembering what has already been done', () => {
+  it('records progress and forgets it when the pairing ends', async () => {
+    api.openRoom.mockResolvedValue({ code: 'PQ4RTX', expires_in: 3600 })
+    await useRemoteLink.getState().startHeadset()
+
+    useRemoteLink.getState().setAck(4)
+    expect(useRemoteLink.getState().ackSeq).toBe(4)
+    expect(JSON.parse(localStorage.getItem('autism-remote-link')!).state.ackSeq).toBe(4)
+
+    await useRemoteLink.getState().stop()
+    expect(useRemoteLink.getState().ackSeq).toBe(0)
   })
 })
 
