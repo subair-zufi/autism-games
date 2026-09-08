@@ -131,3 +131,15 @@ def test_close_removes_the_room(registry: RoomRegistry) -> None:
     registry.close(room.code, MENTOR)
     with pytest.raises(RoomNotFound):
         registry.get(room.code, MENTOR)
+
+
+def test_commands_carry_their_age_so_a_stale_one_can_be_ignored(registry: RoomRegistry) -> None:
+    room = registry.create(MENTOR)
+    command = registry.push_command(room, "quit", {})
+
+    assert command.as_dict()["age_ms"] < 1000
+
+    # A headset that was asleep for two minutes must be able to tell that this
+    # instruction is no longer worth carrying out.
+    command.created_at = time.time() - 120
+    assert command.as_dict()["age_ms"] >= 120_000

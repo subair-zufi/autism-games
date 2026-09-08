@@ -22,6 +22,14 @@ interface RemoteLinkState {
   error: string | null
   /** Headset: a console is watching. Console: the headset is calling in. */
   peerOnline: boolean
+  /**
+   * The last command sequence this device has carried out.
+   *
+   * Persisted with the pairing so a reload resumes rather than replaying: the
+   * relay keeps a room's recent commands, and a headset that asked for
+   * "everything after 0" would act on all of them again.
+   */
+  ackSeq: number
   /** Headset: register a pairing and start listening. */
   startHeadset: () => Promise<boolean>
   /** Console: attach to the code shown on the headset. */
@@ -31,6 +39,7 @@ interface RemoteLinkState {
   /** Internal: called by the agent/console loops. */
   markLive: (peerOnline: boolean) => void
   markError: (message: string) => void
+  setAck: (seq: number) => void
 }
 
 export const useRemoteLink = create<RemoteLinkState>()(
@@ -41,12 +50,22 @@ export const useRemoteLink = create<RemoteLinkState>()(
       status: 'idle',
       error: null,
       peerOnline: false,
+      ackSeq: 0,
 
       startHeadset: async () => {
         set({ status: 'connecting', error: null })
         try {
           const room = await remoteApi.openRoom()
-          set({ role: 'headset', code: room.code, status: 'live', error: null, peerOnline: false })
+          set({
+            role: 'headset',
+            code: room.code,
+            status: 'live',
+            error: null,
+            peerOnline: false,
+            // Start from whatever the room has already seen, so a re-pair never
+            // inherits a backlog of instructions from the last session.
+            ackSeq: room.last_seq ?? 0,
+          })
           return true
         } catch (err) {
           set({ status: 'error', error: message(err), role: 'off', code: null })
@@ -68,7 +87,7 @@ export const useRemoteLink = create<RemoteLinkState>()(
 
       stop: async ({ closeRoom = false } = {}) => {
         const { code } = get()
-        set({ role: 'off', code: null, status: 'idle', error: null, peerOnline: false })
+        set({ role: 'off', code: null, status: 'idle', error: null, peerOnline: false, ackSeq: 0 })
         setMirrorWanted(false)
         if (closeRoom && code) {
           // Best effort: the pairing expires on its own, and a trainer who
@@ -88,12 +107,16 @@ export const useRemoteLink = create<RemoteLinkState>()(
       },
 
       markError: (msg) => set({ status: 'error', error: msg }),
+
+      setAck: (seq) => {
+        if (seq !== get().ackSeq) set({ ackSeq: seq })
+      },
     }),
     {
       name: 'autism-remote-link',
-      // Only the pairing itself is worth restoring; connection state is
-      // whatever the next poll says it is.
-      partialize: (s) => ({ role: s.role, code: s.code }),
+      // The pairing and how far through it this device has got. Connection
+      // state is whatever the next poll says it is.
+      partialize: (s) => ({ role: s.role, code: s.code, ackSeq: s.ackSeq }),
     },
   ),
 )

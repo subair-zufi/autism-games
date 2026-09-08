@@ -176,9 +176,16 @@ function Console({ code }: { code: string }) {
 
           // Keep asking for the mirror: a headset that reloaded (a new build,
           // a crash) comes back with it off and nothing else would turn it on.
+          //
+          // Only when the headset says the mirror is *off*, though.
+          // "unavailable" means it is trying and there is simply no 3D scene on
+          // screen to mirror — a menu, or the Profile page. Treating that as
+          // "not running" had the console re-sending the request every few
+          // seconds for the whole time the child sat on a menu.
           const wants = wantMirror.current
-          const running = snap.state?.mirror === 'live'
-          if (wants !== running && Date.now() - mirrorAskedAt > 4000) {
+          const reported = snap.state?.mirror
+          const needsAsking = wants ? reported === 'off' : reported !== 'off'
+          if (reported && needsAsking && Date.now() - mirrorAskedAt > 4000) {
             mirrorAskedAt = Date.now()
             void remoteApi
               .pushCommand(code, 'mirror', { on: wants, intervalMs: DEFAULT_MIRROR_INTERVAL_MS })
