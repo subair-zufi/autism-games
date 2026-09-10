@@ -97,7 +97,17 @@ export function RemoteAgent() {
         if (patch.inputMethod !== undefined) s.setInputMethod(patch.inputMethod)
         if (patch.playMode !== undefined) s.setPlayMode(patch.playMode)
       },
-      setStudent: (studentId) => useAuth.getState().switchStudent(studentId),
+      setStudent: (studentId) => {
+        const auth = useAuth.getState()
+        auth.switchStudent(studentId)
+        // A participant the trainer just added on their phone is not in this
+        // device's list yet. Recording works either way — it is the id that is
+        // stored — but without this the console would be told the session is
+        // running against nobody in particular.
+        if (studentId && !auth.students.some((s) => s.id === studentId)) {
+          void auth.loadStudents().catch(() => {})
+        }
+      },
       emit: emitRemoteIntent,
       setMirror: (on, intervalMs) => setMirrorWanted(on, intervalMs),
     }

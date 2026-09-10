@@ -42,8 +42,23 @@ again except one thing — see *The one press* below.
 | Any game | Opens it. Sets the level first, if one was chosen. |
 | Level (easy / medium / hard) | Sets the level for the game currently open; it applies at the next start. |
 | Voice, sound, language, selection method | Changes the session settings live. |
-| Participant | Switches who the session is recorded against, so analytics land on the right child. |
+| Participant | Chooses who the session is recorded against, and adds or removes participants without leaving the console. |
 | Show / hide view | Starts and stops the mirror image. |
+
+### Participants
+
+The participant list is on the console itself: tap to choose who the session
+records against, **＋ Add participant** for a child who turns up unexpectedly,
+and ✕ to remove one (with a confirmation; their past records are kept but
+detached, exactly as on the Participants screen).
+
+Adding asks only for the name and the three fields the study groups by — date
+of birth, gender, autism level — and selects the new participant straight away,
+since a child added mid-session is the one in the headset. Everything else in
+the intake record is filled in afterwards on the Participants screen, where
+nobody is waiting. The headset fetches a participant it has not seen before, so
+the console shows the name rather than "recording against nobody in
+particular".
 
 ### The one press
 
