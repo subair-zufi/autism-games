@@ -160,6 +160,24 @@ describe('a paired headset stays usable by hand', () => {
     expect(useRemoteLink.getState().ackSeq).toBe(1)
   })
 
+  it('fetches a participant it has never heard of, so the console sees their name', async () => {
+    const loadStudents = vi.fn(async () => {})
+    useAuth.setState({ isLoggedIn: true, students: [], activeStudentId: null, loadStudents })
+    room.commands.push({ seq: 1, type: 'participant', payload: { studentId: 'brand-new' } })
+
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <RemoteAgent />
+        <Screen />
+      </MemoryRouter>,
+    )
+
+    // The id is what gets recorded either way — this is so the trainer's phone
+    // can show who the session is running against, right after they added them.
+    await waitFor(() => expect(loadStudents).toHaveBeenCalled())
+    expect(useAuth.getState().activeStudentId).toBe('brand-new')
+  })
+
   it('does not hammer a relay that answers instantly instead of parking', async () => {
     render(
       <MemoryRouter initialEntries={['/']}>

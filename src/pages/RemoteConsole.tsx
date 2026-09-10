@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GAME_LIST, SKILLS, type Difficulty, type GameId, type PlayMode } from '../types'
 import { useAuth } from '../state/auth'
+import { RemoteParticipants } from '../components/RemoteParticipants'
 import { useRemoteLink } from '../state/remote'
 import { RemoteError, relayBase, remoteApi, setRelayBase } from '../remote/client'
 import { DEFAULT_MIRROR_INTERVAL_MS } from '../remote/mirror'
@@ -128,10 +129,6 @@ function Console({ code }: { code: string }) {
   // Read by the polling loop, which must not restart when the toggle flips.
   const wantMirror = useRef(mirrorOn)
   wantMirror.current = mirrorOn
-
-  useEffect(() => {
-    void useAuth.getState().loadStudents()
-  }, [])
 
   const send = useCallback(
     async (type: string, payload: Record<string, unknown> = {}, label?: string) => {
@@ -325,29 +322,16 @@ function Console({ code }: { code: string }) {
 
       <SettingsPanel settings={status.settings} send={send} />
 
-      <section className="rc-section">
-        <h2>Participant</h2>
-        <p className="rc-hint">The session is recorded against whoever is selected here.</p>
-        <div className="rc-row rc-wrap">
-          <button
-            type="button"
-            className={!status.studentId ? 'rc-chip active' : 'rc-chip'}
-            onClick={() => void send('participant', { studentId: null }, 'Unrecorded')}
-          >
-            Not recording
-          </button>
-          {students.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              className={status.studentId === s.id ? 'rc-chip active' : 'rc-chip'}
-              onClick={() => void send('participant', { studentId: s.id }, s.full_name)}
-            >
-              {s.full_name}
-            </button>
-          ))}
-        </div>
-      </section>
+      <RemoteParticipants
+        activeId={status.studentId ?? null}
+        onSelect={(studentId) =>
+          void send(
+            'participant',
+            { studentId },
+            studentId ? students.find((s) => s.id === studentId)?.full_name ?? 'Participant' : 'Unrecorded',
+          )
+        }
+      />
 
       <p className="rc-footnote">
         Switching game while the child is in VR ends the headset session on purpose — the app
