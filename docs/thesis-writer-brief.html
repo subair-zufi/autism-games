@@ -1,0 +1,832 @@
+<title>Study Brief for the Writer</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper:      #F2F3EF;
+    --surface:    #FBFBF9;
+    --surface-2:  #E9EBE4;
+    --ink:        #1A2229;
+    --ink-soft:   #414D57;
+    --muted:      #616C76;
+    --rule:       #D9DCD3;
+    --rule-soft:  #E6E8E1;
+    --accent:     #2A3A47;
+    --emotion:    #A96A0C;
+    --turn:       #11736A;
+    --joint:      #2B5FA3;
+    --flag:       #9A3B2E;
+
+    --display: "Newsreader", Georgia, "Times New Roman", serif;
+    --body: "IBM Plex Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:     #13181B;
+      --surface:   #1A2024;
+      --surface-2: #222A2F;
+      --ink:       #E7EAE4;
+      --ink-soft:  #C3CAC6;
+      --muted:     #939DA3;
+      --rule:      #2E373D;
+      --rule-soft: #262E33;
+      --accent:    #BFCBD4;
+      --emotion:   #E0A755;
+      --turn:      #46B7A8;
+      --joint:     #7BA9E6;
+      --flag:      #E08878;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:     #13181B;
+    --surface:   #1A2024;
+    --surface-2: #222A2F;
+    --ink:       #E7EAE4;
+    --ink-soft:  #C3CAC6;
+    --muted:     #939DA3;
+    --rule:      #2E373D;
+    --rule-soft: #262E33;
+    --accent:    #BFCBD4;
+    --emotion:   #E0A755;
+    --turn:      #46B7A8;
+    --joint:     #7BA9E6;
+    --flag:      #E08878;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    max-width: 1160px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    padding-block: 0 72px;
+  }
+
+  /* ---------- masthead ---------- */
+  .masthead {
+    padding-block: 56px 32px;
+    border-bottom: 2px solid var(--ink);
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(2.1rem, 5.2vw, 3.3rem);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    margin: 0 0 16px;
+    text-wrap: balance;
+  }
+  .standfirst {
+    font-family: var(--display);
+    font-size: clamp(1.05rem, 2.3vw, 1.3rem);
+    line-height: 1.5;
+    color: var(--ink-soft);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  /* ---------- at a glance ---------- */
+  .glance {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-block: 32px 0;
+  }
+  .glance div { background: var(--surface); padding: 16px 18px; }
+  .glance dt {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+  .glance dd { margin: 0; font-size: 15px; line-height: 1.45; font-weight: 500; }
+
+  /* ---------- layout ---------- */
+  .cols {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 1fr);
+    gap: 56px;
+    align-items: start;
+    margin-top: 48px;
+  }
+  nav.toc { position: sticky; top: 24px; }
+  nav.toc p {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; counter-reset: toc; }
+  nav.toc li { counter-increment: toc; font-size: 13.5px; line-height: 1.35; }
+  nav.toc a { color: var(--ink-soft); text-decoration: none; display: flex; gap: 9px; }
+  nav.toc a::before {
+    content: counter(toc);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    padding-top: 2px;
+    min-width: 14px;
+  }
+  nav.toc a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  nav.toc a:focus-visible { outline: 2px solid var(--joint); outline-offset: 3px; }
+
+  main { min-width: 0; max-width: 72ch; display: flex; flex-direction: column; gap: 52px; }
+
+  section > h2 {
+    font-family: var(--display);
+    font-size: clamp(1.5rem, 3.2vw, 1.95rem);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0 0 4px;
+    text-wrap: balance;
+    display: flex;
+    gap: 14px;
+    align-items: baseline;
+  }
+  section > h2 .num {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  section > h2 + .lede { color: var(--muted); margin: 0 0 22px; font-size: 15px; padding-left: 30px; }
+
+  h3 {
+    font-family: var(--body);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    margin: 30px 0 8px;
+  }
+  p { margin: 0 0 14px; }
+  main > section > p, main > section > ul, main > section > ol { max-width: 68ch; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 7px; }
+  strong { font-weight: 600; }
+  a { color: var(--joint); }
+
+  /* ---------- game cards ---------- */
+  .skillband {
+    margin-top: 26px;
+    border-top: 2px solid var(--sk, var(--accent));
+    padding-top: 14px;
+  }
+  .skillband > h3 {
+    margin: 0 0 3px;
+    font-size: 1.05rem;
+    color: var(--sk, var(--ink));
+  }
+  .skillband > p.what { margin: 0 0 16px; font-size: 14.5px; color: var(--muted); }
+  .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 18px; }
+  .game { background: var(--surface); border: 1px solid var(--rule); padding: 16px 18px 18px; }
+  .game h4 {
+    margin: 0 0 2px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: var(--body);
+  }
+  .game .tag {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--sk, var(--muted));
+    display: block;
+    margin-bottom: 9px;
+  }
+  .game p { font-size: 14.5px; margin: 0 0 12px; color: var(--ink-soft); }
+  .game dl { margin: 0; display: flex; flex-direction: column; gap: 5px; border-top: 1px solid var(--rule-soft); padding-top: 10px; }
+  .game dl div { display: flex; gap: 9px; font-size: 13px; line-height: 1.4; }
+  .game dt {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    min-width: 48px;
+    padding-top: 2px;
+  }
+  .game dd { margin: 0; color: var(--ink-soft); }
+
+  /* ---------- tables ---------- */
+  .tablewrap { overflow-x: auto; margin: 18px 0 8px; border: 1px solid var(--rule); }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; background: var(--surface); }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td code, p code, li code { font-family: var(--mono); font-size: 0.86em; background: var(--surface-2); padding: 1px 5px; }
+  .num-cell { font-variant-numeric: tabular-nums; }
+
+  /* ---------- callouts ---------- */
+  .note {
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    padding: 15px 18px;
+    margin: 18px 0;
+    font-size: 15px;
+  }
+  .note p:last-child { margin-bottom: 0; }
+  .note .label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 6px;
+  }
+  .note.warn { border-left-color: var(--flag); }
+  .note.warn .label { color: var(--flag); }
+
+  .formula {
+    font-family: var(--mono);
+    font-size: 15px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 16px 18px;
+    margin: 16px 0;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .worked { background: var(--surface); border: 1px solid var(--rule); padding: 18px; margin: 16px 0; }
+  .worked p:last-child { margin-bottom: 0; }
+  .worked .label {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  /* ---------- timeline ---------- */
+  .timeline { display: flex; flex-direction: column; gap: 0; margin: 18px 0; border: 1px solid var(--rule); }
+  .phase { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 16px; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--rule-soft); }
+  .phase:last-child { border-bottom: none; }
+  .phase .when {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding-top: 2px;
+  }
+  .phase h4 { margin: 0 0 3px; font-size: 14.5px; font-weight: 600; }
+  .phase p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+
+  /* ---------- glossary ---------- */
+  .glossary { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--rule); }
+  .glossary div { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--rule-soft); }
+  .glossary dt { font-weight: 600; font-size: 14.5px; }
+  .glossary dd { margin: 0; font-size: 14.5px; color: var(--ink-soft); }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 22px;
+    border-top: 2px solid var(--ink);
+    font-size: 13.5px;
+    color: var(--muted);
+  }
+  footer p { margin: 0 0 8px; max-width: 68ch; }
+
+  @media (max-width: 900px) {
+    .cols { grid-template-columns: 1fr; gap: 36px; }
+    nav.toc { position: static; }
+    nav.toc ol { columns: 2; column-gap: 24px; }
+    nav.toc li { break-inside: avoid; }
+    main { max-width: none; }
+    .glossary div { grid-template-columns: 1fr; gap: 2px; }
+    .phase { grid-template-columns: 1fr; gap: 4px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <p class="eyebrow">Background document · for the thesis writer</p>
+    <h1>VR Social-Skills Games for Autistic Children</h1>
+    <p class="standfirst">Everything the study does, in plain language: the six games children play in the headset, what the app measures, the test used before and after, and how the study is run from start to finish.</p>
+  </header>
+
+  <dl class="glance">
+    <div><dt>Who</dt><dd>Autistic children aged 7–15 in BUDS schools, Kerala</dd></div>
+    <div><dt>What they do</dt><dd>Six VR games on a Meta Quest headset, ~8 weeks</dd></div>
+    <div><dt>Skills trained</dt><dd>Recognising emotions · Taking turns · Joint attention</dd></div>
+    <div><dt>Main test</dt><dd>Autism Social Skills Profile (ASSP), before &amp; after</dd></div>
+    <div><dt>Design</dt><dd>Classrooms randomly split into two groups; one starts now, one waits</dd></div>
+    <div><dt>Language</dt><dd>Malayalam throughout</dd></div>
+  </dl>
+
+  <div class="cols">
+    <nav class="toc" aria-label="Contents">
+      <p>Contents</p>
+      <ol>
+        <li><a href="#s1">What the study asks</a></li>
+        <li><a href="#s2">The three skills</a></li>
+        <li><a href="#s3">The six games</a></li>
+        <li><a href="#s4">Levels and difficulty</a></li>
+        <li><a href="#s5">How play is scored</a></li>
+        <li><a href="#s6">What else is recorded</a></li>
+        <li><a href="#s7">The before-and-after test</a></li>
+        <li><a href="#s8">The two check tasks</a></li>
+        <li><a href="#s9">Background on each child</a></li>
+        <li><a href="#s10">Comfort in the headset</a></li>
+        <li><a href="#s11">How the study is run</a></li>
+        <li><a href="#s12">The questions being tested</a></li>
+        <li><a href="#s13">What the data looks like</a></li>
+        <li><a href="#s14">Honest limitations</a></li>
+        <li><a href="#s15">Word list</a></li>
+      </ol>
+    </nav>
+
+    <main>
+
+      <section id="s1">
+        <h2><span class="num">01</span>What the study asks</h2>
+        <p class="lede">The one-sentence version, and why it matters.</p>
+        <p>Many autistic children find everyday social situations hard — reading what someone is feeling, waiting for a turn, noticing when another person wants to share something. Practising these things in real life is difficult to arrange, hard to repeat, and stressful for the child.</p>
+        <p>This study asks a simple question: <strong>if a child practises these situations inside a virtual reality headset for about eight weeks, does their social behaviour in everyday life actually get better?</strong></p>
+        <p>The practice happens through six short games played on a Meta Quest headset. The child looks around a virtual room, a playroom, a football ground, a gallery or a park, and responds to what the characters there do. Each game is short — five to ten minutes.</p>
+        <p>Whether anything changed is judged not by the games themselves but by an adult who knows the child well — a teacher or parent — who fills in the same questionnaire before the eight weeks and again afterwards.</p>
+        <div class="note">
+          <span class="label">Important distinction</span>
+          <p>The games are the <strong>training</strong>. The questionnaire is the <strong>test</strong>. Getting better at a game only proves the child learned the game. The study only claims success if the questionnaire — which asks about real life at school and home, not about games — also moves.</p>
+        </div>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">02</span>The three skills</h2>
+        <p class="lede">Every game trains exactly one of these. Nothing else is trained.</p>
+        <p>The study deliberately targets three specific social-communication skills rather than "social skills" in general. Each has two games, so a child gets two different ways of practising the same underlying skill.</p>
+
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th scope="col">Skill</th><th scope="col">What it means in plain terms</th><th scope="col">Why it matters</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Emotional identification</strong></td>
+                <td>Looking at a person's face and working out what they are feeling — happy, sad, angry, surprised, scared, disgusted.</td>
+                <td>If you cannot read the feeling, you cannot respond to it. This is the entry point to almost every social exchange.</td>
+              </tr>
+              <tr>
+                <td><strong>Turn-taking</strong></td>
+                <td>Waiting while someone else has their go, then acting when it is your turn — and noticing <em>which</em> person is ready for you.</td>
+                <td>Underlies play, conversation and classroom life. Includes both waiting patiently and reading who wants the ball next.</td>
+              </tr>
+              <tr>
+                <td><strong>Joint attention</strong></td>
+                <td>Sharing attention with another person about a third thing. Two halves: <em>responding</em> (they point, you look) and <em>starting</em> (you spot something and show them).</td>
+                <td>One of the earliest and most reliably different areas in autism. Starting a share spontaneously is the harder half.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">03</span>The six games</h2>
+        <p class="lede">What the child actually sees and does in the headset.</p>
+        <p>All six are played standing or seated in the headset. In every one, the child turns their head to look around a scene in front of them and selects things by looking at them or tapping with the controller. Nothing is placed behind the child — everything sits in a comfortable half-circle in front, so the child never has to spin around.</p>
+
+        <div class="skillband" style="--sk: var(--emotion);">
+          <h3>Emotional identification</h3>
+          <p class="what">Read the feeling on a face.</p>
+          <div class="games">
+            <div class="game" style="--sk: var(--emotion);">
+              <h4>Emotion Room 360</h4>
+              <span class="tag">Gallery of faces · 5–10 min</span>
+              <p>Several framed photographs of faces stand around the child. A voice asks "who feels sad?" and the child turns to look along the row and picks the right person.</p>
+              <dl>
+                <div><dt>Easy</dt><dd>2 faces, clearly different, help offered after 5 seconds</dd></div>
+                <div><dt>Medium</dt><dd>3 faces, some similar, help after 9 seconds</dd></div>
+                <div><dt>Hard</dt><dd>3 easily-confused faces (fear vs surprise, anger vs disgust), no help at all</dd></div>
+              </dl>
+            </div>
+            <div class="game" style="--sk: var(--emotion);">
+              <h4>Emotion Cinema 360</h4>
+              <span class="tag">Media room · 5–10 min</span>
+              <p>A short clip of a person plays on a large screen in front of the child, then freezes. The child picks the feeling from cards floating in the room. At the hardest level they are also asked <em>why</em> the person feels that way.</p>
+              <dl>
+                <div><dt>Easy</dt><dd>6 clips, frozen at the clearest moment, 2 choices</dd></div>
+                <div><dt>Medium</dt><dd>9 clips, 3 choices</dd></div>
+                <div><dt>Hard</dt><dd>12 clips frozen half-way through the expression, 4 choices, plus a "why?" question</dd></div>
+              </dl>
+            </div>
+          </div>
+        </div>
+
+        <div class="skillband" style="--sk: var(--turn);">
+          <h3>Turn-taking</h3>
+          <p class="what">Wait for your go, and notice whose go it is.</p>
+          <div class="games">
+            <div class="game" style="--sk: var(--turn);">
+              <h4>Playroom 360</h4>
+              <span class="tag">Play table · 5–10 min</span>
+              <p>The child sits at a table with several virtual friends, building something together. Each friend takes a turn while the child waits and watches; then the child places their own block and passes the turn on.</p>
+              <dl>
+                <div><dt>Easy</dt><dd>3 builders, the same order every round, 5 rounds</dd></div>
+                <div><dt>Medium</dt><dd>4 builders, same order, 7 rounds</dd></div>
+                <div><dt>Hard</dt><dd>5 builders and the order is reshuffled each round, so the child must watch rather than count — 10 rounds</dd></div>
+              </dl>
+            </div>
+            <div class="game" style="--sk: var(--turn);">
+              <h4>Football 360</h4>
+              <span class="tag">Football ground · 5–10 min</span>
+              <p>The child stands in the middle of a pitch with teammates around them and passes the ball back to whoever is ready. The signal of who is ready gets quieter as levels rise.</p>
+              <dl>
+                <div><dt>Easy</dt><dd>1 teammate who asks out loud for the ball, 5 passes</dd></div>
+                <div><dt>Medium</dt><dd>2 teammates, hands-up gesture only, no words, 7 passes</dd></div>
+                <div><dt>Hard</dt><dd>3 teammates signalling only with body and gaze; some rounds the child has to start the exchange, 10 passes</dd></div>
+              </dl>
+            </div>
+          </div>
+        </div>
+
+        <div class="skillband" style="--sk: var(--joint);">
+          <h3>Joint attention</h3>
+          <p class="what">Follow someone's attention — and share your own.</p>
+          <div class="games">
+            <div class="game" style="--sk: var(--joint);">
+              <h4>Museum 360</h4>
+              <span class="tag">Gallery · 5–10 min · responding</span>
+              <p>Exhibits stand in a row and a helper character points at one of them. The child follows the point and looks at the right exhibit. The pointing gets subtler until, at the hardest level, the helper only turns their eyes.</p>
+              <dl>
+                <div><dt>Easy</dt><dd>3 exhibits, point plus a glowing target, 5 finds</dd></div>
+                <div><dt>Medium</dt><dd>4 exhibits, point plus a sparkle trail, 7 finds</dd></div>
+                <div><dt>Hard</dt><dd>5 exhibits, a plain point that fades to gaze alone, 10 finds</dd></div>
+              </dl>
+            </div>
+            <div class="game" style="--sk: var(--joint);">
+              <h4>Park 360</h4>
+              <span class="tag">Park lawn · 5–10 min · starting</span>
+              <p>Something surprising happens somewhere in the park. The child has to notice it <em>and</em> tell their virtual friend about it, by tapping the surprise and tapping the friend. A share the child starts without being nudged scores more than one that needed a prompt.</p>
+              <dl>
+                <div><dt>Easy</dt><dd>Big, obvious surprises, a nudge from the helper after 4 seconds, 5 shares</dd></div>
+                <div><dt>Medium</dt><dd>Quieter surprises, nudge after 8 seconds, 6 shares</dd></div>
+                <div><dt>Hard</dt><dd>Very small surprises and no nudges at all, 8 shares</dd></div>
+              </dl>
+            </div>
+          </div>
+        </div>
+
+        <div class="note">
+          <span class="label">About the desktop versions</span>
+          <p>The same six games also exist as flat versions played on a tablet or laptop, with names like Emotion Recognition, Block Buddies and Museum Look. <strong>These are for demonstration only</strong> — showing the games to staff, families or the ethics committee, and letting a child see what a game looks like before putting the headset on. They are not part of the treatment, and any desktop play is filtered out of the analysis. If a thesis section describes the intervention, it describes the VR version.</p>
+        </div>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">04</span>Levels and difficulty</h2>
+        <p class="lede">Three levels per game, and what counts as doing well.</p>
+        <p>Every game has three levels — easy, medium and hard. The differences are set out game by game above, but the pattern is the same everywhere: <strong>more choices, weaker hints, and less obvious signals</strong> as the level rises. The hardest level of every game removes help entirely.</p>
+        <p>The facilitator can choose any level for any session; levels are not locked. The app still records two achievement marks for each level a child plays:</p>
+        <ul>
+          <li><strong>Passed</strong> — the child got at least <span class="num-cell">70%</span> right at that level.</li>
+          <li><strong>Mastered</strong> — the child got at least <span class="num-cell">80%</span> right at that level.</li>
+        </ul>
+        <p>These are useful for describing how far each child progressed, but they are not the study's outcome. They belong in a descriptive section, not the results of the main test.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">05</span>How play is scored</h2>
+        <p class="lede">One score, used for every game, on a 0 to 100 scale.</p>
+
+        <h3>Only the first answer counts</h3>
+        <p>Some games let a child try again after a wrong answer. Only the <strong>first attempt</strong> at each question is scored. Otherwise a child who guessed their way through would look identical to one who knew the answer.</p>
+
+        <h3>Guessing is subtracted out</h3>
+        <p>A game with 2 choices is much easier than a game with 4 choices — a child who knows nothing still gets half right in the first, and a quarter right in the second. So raw percentages from different games cannot be compared directly.</p>
+        <p>The app corrects for this. Every question records how many options were on screen, so the level of pure guessing is always known. The score is then:</p>
+
+        <div class="formula">score = 100 × (p − c) ÷ (1 − c)&nbsp;&nbsp; — and never below 0</div>
+
+        <p>where <strong>p</strong> is the proportion the child got right on first attempt, and <strong>c</strong> is the proportion they would have got right by pure guessing.</p>
+
+        <div class="worked">
+          <span class="label">Worked example</span>
+          <p>A child answers <strong>8 out of 10</strong> correctly in a game with <strong>2 choices</strong> per question.</p>
+          <p>Raw accuracy is <span class="num-cell">0.80</span>. Pure guessing would give <span class="num-cell">0.50</span>. So the score is 100 × (0.80 − 0.50) ÷ (1 − 0.50) = <strong>60</strong>.</p>
+          <p>The same 8 out of 10 in a <strong>4-choice</strong> game would score 100 × (0.80 − 0.25) ÷ (1 − 0.25) = <strong>73</strong> — because that performance is harder to reach by luck.</p>
+        </div>
+
+        <p>The result always means the same thing:</p>
+        <ul>
+          <li><strong>0</strong> = no better than guessing.</li>
+          <li><strong>100</strong> = everything right.</li>
+        </ul>
+        <p>This single scale is what makes it possible to put a face-recognition game and a waiting-your-turn game on the same chart. Scores exist at three levels: <strong>per game</strong>, <strong>per skill</strong> (the average of that skill's two games), and an overall <strong>composite</strong> (the average of the three skills).</p>
+
+        <div class="note warn">
+          <span class="label">Do not confuse these</span>
+          <p>These 0–100 scores describe <em>performance inside the games</em>. They are a process measure — they show whether the child was learning. They are not the study's result. The result is whether the questionnaire in section 7 changed.</p>
+        </div>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">06</span>What else is recorded</h2>
+        <p class="lede">The app logs far more than right and wrong.</p>
+        <p>Every action a child takes is saved automatically while they play. This is what makes it possible to describe <em>how</em> a child improved, not just whether they did.</p>
+
+        <div class="tablewrap">
+          <table>
+            <thead>
+              <tr><th scope="col">What is recorded</th><th scope="col">In plain terms</th><th scope="col">Useful for</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>First-attempt correct</td><td>Right or wrong on the first try</td><td>The main accuracy score</td></tr>
+              <tr><td>Guessing level</td><td>How many options were on screen</td><td>Making scores comparable across games</td></tr>
+              <tr><td>Response time</td><td>How many seconds the child took to answer</td><td>Whether answering becomes quicker and more automatic</td></tr>
+              <tr><td>Clean response time</td><td>Time measured from the end of the spoken prompt, not the start</td><td>A fairer speed measure — the spoken question's length is removed</td></tr>
+              <tr><td>Hint used</td><td>Whether help appeared before the child answered</td><td>Whether the child still needs scaffolding</td></tr>
+              <tr><td>Head movement</td><td>How far the head turned, how wide the sweep, how many times it changed direction, and how long until the head landed on the target</td><td>An objective sign of searching and hesitation that no questionnaire can capture</td></tr>
+              <tr><td>Spontaneous share</td><td>In Park 360, whether the child shared without being nudged</td><td>The harder half of joint attention</td></tr>
+              <tr><td>Sessions and minutes</td><td>How many sessions, how long, spread over how many days, with what gaps</td><td>Dose — how much treatment each child actually got</td></tr>
+              <tr><td>Headset or screen</td><td>Whether the session was in VR or on a flat screen</td><td>Keeping demo play out of the analysis</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>All of this is collected by the app itself, with no extra work for the facilitator.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">07</span>The before-and-after test</h2>
+        <p class="lede">The Autism Social Skills Profile (ASSP) — the study's actual outcome.</p>
+
+        <p>The ASSP is a questionnaire about a child's social behaviour in everyday life. Crucially, <strong>the child does not fill it in</strong> — an adult who knows the child well does: a teacher at the BUDS school, or a parent.</p>
+
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th scope="col">Feature</th><th scope="col">Detail</th></tr></thead>
+            <tbody>
+              <tr><td>Full name</td><td>Autism Social Skills Profile (Bellini &amp; Hopf, 2007)</td></tr>
+              <tr><td>Who fills it in</td><td>A teacher or parent who knows the child well — the same person every time</td></tr>
+              <tr><td>Number of questions</td><td>49</td></tr>
+              <tr><td>How each is answered</td><td>Four options: never / sometimes / often / very often</td></tr>
+              <tr><td>Time to complete</td><td>About 15–20 minutes</td></tr>
+              <tr><td>When</td><td>Three times: before the games start, just after they finish, and again several weeks later</td></tr>
+              <tr><td>Language</td><td>Translated into Malayalam, then translated back to English by a second person to check nothing shifted in meaning</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>The three parts of the questionnaire</h3>
+        <p>The 49 questions group into three areas, each reported separately as well as together:</p>
+        <ul>
+          <li><strong>Social reciprocity</strong> — the back-and-forth of social contact: responding when spoken to, keeping an exchange going.</li>
+          <li><strong>Social participation and avoidance</strong> — whether the child joins in with others or keeps away from them.</li>
+          <li><strong>Detrimental social behaviours</strong> — behaviours that get in the way of social contact. These questions are scored in reverse, so that on every part of the questionnaire <strong>a higher number always means better social functioning</strong>.</li>
+        </ul>
+        <p>The <strong>total score</strong> across all 49 questions is the study's single main outcome. The three parts are reported as supporting detail — the study is not big enough to make a firm claim about each one separately.</p>
+
+        <div class="note">
+          <span class="label">Rules that protect the answers</span>
+          <p>The same adult rates a child every time (a change of rater is recorded as a deviation). Every rating refers to the <strong>last four weeks</strong> of the child's behaviour, so the three time points cover comparable windows. The completed first questionnaire is collected and never shown to the rater again, so they cannot simply copy or "improve on" what they said last time. For at least three in ten children, a <strong>second adult</strong> fills in the questionnaire independently, so agreement between raters can be measured.</p>
+        </div>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">08</span>The two check tasks</h2>
+        <p class="lede">Small tasks that are supposed to show no improvement at all.</p>
+
+        <p>Suppose the questionnaire scores go up after eight weeks. How do we know that is about social skills, and not simply that the children got older, got more comfortable with the adults, or got better at being tested in general?</p>
+        <p>That is what these two short tasks are for. They are given directly to the child, before and after, by a tester who has nothing to do with running the game sessions:</p>
+
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th scope="col">Task</th><th scope="col">What the child does</th><th scope="col">Why it is there</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Non-social picture task</strong><br><span class="num-cell">12 items</span>, about 4 minutes</td>
+                <td>Looks at picture cards of everyday objects and animals in Kerala settings and answers "which one is the ___?" from three options. Half are ordinary views, half are odd angles or partly hidden.</td>
+                <td>Same kind of question, same kind of answering, but nothing social in it at all.</td>
+              </tr>
+              <tr>
+                <td><strong>Sound-finding task</strong><br><span class="num-cell">2 trials</span>, about 2 minutes</td>
+                <td>A small chime plays from a speaker to one side, then the other, while the child faces forward. Does the child turn towards it?</td>
+                <td>Separates following a <em>social</em> cue from simply noticing a sound. Turning to a chime should not improve just because the child practised following a pointing finger.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>The prediction written down in advance is that <strong>neither of these changes</strong>. If the questionnaire improves while these stay flat, the improvement is much harder to explain away. If these also improve, the study says so openly and treats the questionnaire result with caution.</p>
+
+        <div class="note warn">
+          <span class="label">A limit the thesis must state</span>
+          <p>These tasks rule out the child simply getting better at being tested. They <strong>cannot</strong> rule out the teacher expecting improvement and rating the child more generously the second time — because the tasks measure the child, while the questionnaire measures the teacher's impression. That particular problem is handled by the waiting group described in section 11, not by these tasks.</p>
+        </div>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">09</span>Background on each child</h2>
+        <p class="lede">Collected once, at the start, and never re-measured.</p>
+        <p>These are descriptive facts about each child, used to describe the sample and to check whether some children benefited more than others. None of them is an outcome — they are not expected to change and are not measured again.</p>
+        <ul>
+          <li><strong>Age, gender, class</strong>.</li>
+          <li><strong>ISAA score</strong> — the Indian Scale for Assessment of Autism, a standard Indian measure of autism severity. It is recorded once as a characteristic of the child, in exactly the same way as an IQ score.</li>
+          <li><strong>IQ or developmental level</strong>, from existing school records or a brief measure.</li>
+          <li><strong>Verbal and communication level</strong>, and confirmation that Malayalam is the language used.</li>
+          <li><strong>Autism level</strong> (DSM-5 Level 1, 2 or 3) where on record.</li>
+        </ul>
+        <div class="note">
+          <span class="label">Common mix-up</span>
+          <p>ISAA is <strong>not</strong> a before-and-after test in this study. It describes how the child was at the start. Only the ASSP and the two check tasks are given before and after.</p>
+        </div>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span>Comfort in the headset</h2>
+        <p class="lede">Can these children actually use and tolerate VR? Measured every session.</p>
+        <p>Because the whole treatment depends on a child wearing a headset, this is not a side question — it is reported as a finding in its own right. Five things are tracked separately, because a game can be enjoyable and still make a child feel sick, or comfortable and still confusing:</p>
+        <ul>
+          <li><strong>Sickness and comfort</strong> — a quick 0–20 rating asked roughly every three minutes during the session, plus a short sickness questionnaire before and after.</li>
+          <li><strong>Usability</strong> — can the child work out how to select things, from observation and from the app's own records.</li>
+          <li><strong>Presence</strong> — how "really there" the child felt, asked with simple picture-based questions afterwards.</li>
+          <li><strong>Enjoyment</strong> — a five-faces "how much fun was that?" scale, a "would you play it again?" question, and how much of the session the child stayed on task.</li>
+          <li><strong>Sensory tolerance</strong> — how the child coped with the headset's weight, sound and brightness.</li>
+        </ul>
+        <p>There is a <strong>stop rule</strong> that overrides everything: if the sickness rating reaches 6 and is still rising, or the child shows any sign of real distress, the session ends immediately, regardless of what data is lost.</p>
+        <p>Results here are reported child by child, not only as averages — an average hides the one child who took the headset off after two minutes.</p>
+      </section>
+
+      <section id="s11">
+        <h2><span class="num">11</span>How the study is run</h2>
+        <p class="lede">Who takes part, how they are grouped, and what happens when.</p>
+
+        <h3>Who takes part</h3>
+        <p>Autistic children aged 7–15 attending BUDS schools in Kerala, with parent or guardian consent and the child's own agreement. Children are excluded if they have a vision or hearing problem that would make the materials meaningless, a seizure condition not medically cleared for headset use, or are in acute distress at the time of screening.</p>
+        <p>Notably, <strong>being comfortable with VR is not a requirement for taking part</strong>. Screening children for headset tolerance would quietly select the children most likely to do well. A child who cannot wear the headset stays in the study, is counted in the results with a treatment amount of zero, and that itself is a finding about how far this approach can reach.</p>
+
+        <h3>Two groups</h3>
+        <p>Whole classrooms — not individual children — are randomly assigned to one of two groups:</p>
+        <ul>
+          <li><strong>Immediate group</strong> — starts the eight weeks of games right away.</li>
+          <li><strong>Waiting group</strong> — carries on as normal for the same eight weeks, is tested at the same times, and then gets the games afterwards.</li>
+        </ul>
+        <p>Randomising classrooms rather than children avoids children in the same room comparing experiences. The waiting group matters for a second reason: their teachers also know a study is happening, so if their ratings go up too, the improvement was about expectation rather than the games.</p>
+        <p>If too few classrooms are available, the study falls back to a single group measured before and after. That is a weaker design, and the thesis has to say so.</p>
+
+        <h3>How much treatment</h3>
+        <p>The target is roughly <strong>three sessions a week for eight weeks</strong> — about 20 to 24 sessions of 15 to 20 minutes each, adjusted to what each child can manage. The actual amount every child received is recorded automatically and analysed, not just noted for bookkeeping. Six or more sessions counts as an adequate amount of treatment.</p>
+
+        <h3>The timeline</h3>
+        <div class="timeline">
+          <div class="phase"><span class="when">Weeks 1–6</span><div><h4>Approvals</h4><p>Ethics committee, school and local-government permission, trial registration, translation of all materials, and an expert panel review of the games.</p></div></div>
+          <div class="phase"><span class="when">Weeks 5–7</span><div><h4>Setup</h4><p>Headsets prepared, recording checked, facilitators and raters trained, the questionnaire translation finalised and frozen.</p></div></div>
+          <div class="phase"><span class="when">Weeks 7–10</span><div><h4>Pilot</h4><p>A small trial run: does the translated questionnaire work, do two raters agree, is the headset tolerable, does the timing hold?</p></div></div>
+          <div class="phase"><span class="when">Weeks 10–12</span><div><h4>Before-testing (T0)</h4><p>Consent, background details, the first questionnaire, the two check tasks, then classrooms are randomly assigned.</p></div></div>
+          <div class="phase"><span class="when">Weeks 12–20</span><div><h4>Eight weeks of games</h4><p>The immediate group plays; comfort and enjoyment measured each session; the app records everything.</p></div></div>
+          <div class="phase"><span class="when">Weeks 20–21</span><div><h4>After-testing (T1)</h4><p>The same questionnaire from the same adult, plus the check tasks, three to seven days after the last session. The waiting group is tested too, then starts their games.</p></div></div>
+          <div class="phase"><span class="when">Weeks 24–29</span><div><h4>Follow-up (T2)</h4><p>The questionnaire and check tasks once more, four to eight weeks later — did any gain hold?</p></div></div>
+          <div class="phase"><span class="when">Weeks 29–36</span><div><h4>Analysis and writing</h4><p>Results calculated according to the plan written down in advance, then written up.</p></div></div>
+        </div>
+
+        <h3>Who does what</h3>
+        <p>Roles are kept deliberately separate so nobody marks their own work:</p>
+        <ul>
+          <li>The <strong>facilitator</strong> runs the game sessions, helps the child use the headset, but never answers for them.</li>
+          <li>The <strong>rater</strong> (teacher or parent) fills in the questionnaire and does not know which group the classroom is in, where the design allows.</li>
+          <li>The <strong>tester</strong> gives the two check tasks and has no involvement in the game sessions.</li>
+          <li>The <strong>data manager</strong> collects questionnaires and keeps the list linking child names to code numbers in a separate, restricted file.</li>
+        </ul>
+
+        <h3>How many children</h3>
+        <p>The planning target is about <strong>34 children</strong> with both before and after measurements, adjusted upwards for randomising whole classrooms and for expected drop-out. This is described honestly as a target limited by what the sites can provide, not as a guarantee of statistical power — which is exactly why the study also reports how many individual children improved by a meaningful amount, a result that does not depend on a large sample.</p>
+      </section>
+
+      <section id="s12">
+        <h2><span class="num">12</span>The questions being tested</h2>
+        <p class="lede">Written down before any results are seen, so nothing can be chosen afterwards to suit the findings.</p>
+
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th scope="col">#</th><th scope="col">The question, in plain words</th><th scope="col">Status</th></tr></thead>
+            <tbody>
+              <tr><td class="num-cell">1</td><td>Do questionnaire scores go up from before to after, for children who got the games?</td><td>Main</td></tr>
+              <tr><td class="num-cell">2</td><td>Do they go up <em>more</em> than in the waiting group over the same weeks?</td><td>Main</td></tr>
+              <tr><td class="num-cell">3</td><td>Do the two check tasks stay flat, as predicted?</td><td>Main</td></tr>
+              <tr><td class="num-cell">4</td><td>How many individual children improved by an amount too large to be measurement noise?</td><td>Main</td></tr>
+              <tr><td class="num-cell">5</td><td>Did children who played more improve more?</td><td>Supporting</td></tr>
+              <tr><td class="num-cell">6</td><td>Did any gain still hold weeks later at follow-up?</td><td>Supporting</td></tr>
+              <tr><td class="num-cell">7</td><td>Could these children use, tolerate and enjoy the headset?</td><td>Reported alongside</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Question 4 deserves a note. With a small and very varied group of children, an average can hide everything interesting. So the study also reports a straightforward count — <strong>"n out of N children improved by more than measurement error"</strong> — which stays meaningful however small the sample is. For the thesis, this is often the more honest headline.</p>
+        <p>The plan also specifies, in advance, how missing data is handled, that no child is removed for having an inconvenient result, and that effect sizes with ranges are reported rather than leaning on p-values alone.</p>
+      </section>
+
+      <section id="s13">
+        <h2><span class="num">13</span>What the data looks like</h2>
+        <p class="lede">The files that come out at the end, and what each contains.</p>
+        <p>Everything is downloaded from the app's admin dashboard as spreadsheets. A synthetic example set with the exact same structure but fake numbers already exists, so analysis can be written and tested before any real child is recruited.</p>
+
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th scope="col">File</th><th scope="col">One row is…</th><th scope="col">What it's for</th></tr></thead>
+            <tbody>
+              <tr><td><code>summary</code></td><td>one child</td><td>The main analysis table — before, after and change for every measure, on one line per child. Start here.</td></tr>
+              <tr><td><code>participants</code></td><td>one child</td><td>Age, gender, autism level, IQ and other background details, with no names.</td></tr>
+              <tr><td><code>battery</code></td><td>one score</td><td>Questionnaire and check-task scores at each time point.</td></tr>
+              <tr><td><code>trials</code></td><td>one question answered</td><td>Learning curves, response times, head movement.</td></tr>
+              <tr><td><code>dose</code></td><td>one child per game</td><td>How many sessions, minutes and days, and the gaps between them.</td></tr>
+              <tr><td><code>sessions</code></td><td>one play session</td><td>Start, end, length and score of each session.</td></tr>
+              <tr><td><code>level_progress</code></td><td>one child per game per level</td><td>Attempts, best score, and whether the level was passed or mastered.</td></tr>
+              <tr><td><code>raw_events</code></td><td>one recorded action</td><td>The complete underlying record, if anything needs re-checking from scratch.</td></tr>
+              <tr><td><code>codebook</code></td><td>one column</td><td>A plain-language dictionary explaining every column in every file.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>No child's name appears in any of these. Each child has a code number, and the list connecting codes to names is kept separately under restricted access.</p>
+      </section>
+
+      <section id="s14">
+        <h2><span class="num">14</span>Honest limitations</h2>
+        <p class="lede">These belong in the thesis, stated plainly. A study that names its weaknesses reads as more trustworthy, not less.</p>
+        <ul>
+          <li><strong>The outcome is someone's opinion.</strong> A questionnaire filled in by a teacher measures that teacher's impression of the child, which is not the same thing as the child's behaviour. It is the right measure for a question about real life, but it carries this cost.</li>
+          <li><strong>Teachers cannot be fully blinded.</strong> They work in the school and know a study is running. The waiting group is the main defence against this, which is why losing that group would materially weaken the conclusions.</li>
+          <li><strong>Eight weeks is short.</strong> A questionnaire about everyday behaviour is deliberately slow to move. A small change, or none, is a plausible result and should not be written up as a failure of the approach.</li>
+          <li><strong>The sample is small and varied.</strong> Group averages should be treated cautiously; per-child results and effect sizes carry more weight.</li>
+          <li><strong>The questionnaire's published norms are from the United States.</strong> The study therefore works with raw scores and raw change, not converted standard scores.</li>
+          <li><strong>Getting better at a game is not the finding.</strong> In-game scores describe learning inside the training. They support the story; they are not the result.</li>
+          <li><strong>Not every child will tolerate VR.</strong> Those children stay in the analysis with zero treatment, which lowers the average effect — and is the honest way to report how far this approach reaches in practice.</li>
+        </ul>
+      </section>
+
+      <section id="s15">
+        <h2><span class="num">15</span>Word list</h2>
+        <p class="lede">Terms you will meet in the study documents, in plain language.</p>
+        <dl class="glossary">
+          <div><dt>ASSP</dt><dd>Autism Social Skills Profile — the 49-question form a teacher or parent fills in before and after. The study's main measure.</dd></div>
+          <div><dt>ISAA</dt><dd>Indian Scale for Assessment of Autism — a severity measure recorded once at the start to describe each child.</dd></div>
+          <div><dt>T0 / T1 / T2</dt><dd>Before the games / straight after / at follow-up a few weeks later.</dd></div>
+          <div><dt>Dose</dt><dd>How much treatment a child actually got — number of sessions, total minutes, and how they were spread out.</dd></div>
+          <div><dt>Baseline</dt><dd>The measurement taken before anything starts, used as the comparison point.</dd></div>
+          <div><dt>Control task</dt><dd>A task expected <em>not</em> to change, included so that a change in the main measure means something.</dd></div>
+          <div><dt>Blinded</dt><dd>A person who does not know which group a child is in, so their judgement cannot be swayed by it.</dd></div>
+          <div><dt>Cluster randomised</dt><dd>Whole classrooms, rather than individual children, are randomly assigned to the groups.</dd></div>
+          <div><dt>Waitlist control</dt><dd>The group that waits through the study period and receives the games afterwards — so nobody is denied the intervention.</dd></div>
+          <div><dt>Chance correction</dt><dd>Subtracting out how much a child would get right purely by guessing, so games with different numbers of options can be compared.</dd></div>
+          <div><dt>First attempt</dt><dd>Only the child's first answer to each question is scored, even if the game allows another try.</dd></div>
+          <div><dt>Composite score</dt><dd>The average of the three skill scores — one overall number for in-game performance.</dd></div>
+          <div><dt>Reliable change</dt><dd>An improvement in one child large enough that it cannot reasonably be measurement error.</dd></div>
+          <div><dt>Inter-rater agreement</dt><dd>How closely two different adults rating the same child agree — a check that the questionnaire is being used consistently.</dd></div>
+          <div><dt>Pre-registration</dt><dd>Writing down the questions and the analysis before seeing any results, so findings cannot be chosen to fit.</dd></div>
+          <div><dt>Generalisation</dt><dd>Skills practised in one place (the headset) showing up somewhere else (the classroom). This is what the study is testing.</dd></div>
+        </dl>
+      </section>
+
+      <footer>
+        <p><strong>Where this comes from.</strong> This document summarises the study's working papers: the outcome measure protocol, the pre-registration and analysis plan, the master study blueprint, the VR user-experience protocol, the analysis guide and the data-keeping review. Where this summary and those documents disagree, those documents are correct.</p>
+        <p><strong>Two things still to be confirmed</strong> before the study is locked: the exact question counts within each part of the ASSP and which questions are reverse-scored, taken from the official manual; and written permission to use and translate the ASSP for research.</p>
+      </footer>
+
+    </main>
+  </div>
+</div>
