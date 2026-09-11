@@ -130,7 +130,7 @@ recorded (from `sample-data/raw_events.csv` + `useGameAnalytics.ts` enrichment):
 | `latencyFromPromptEndMs` | clean RT (TTS `onend`) | the RT the SAP mandates — **only on 360 emotion games + Football 360** |
 | `hinted` | a hint fired before the answer | scaffold/process |
 | `level` / `difficulty` | Easy/Moderate/Hard tier | per-level chance table; learning |
-| `construct` | social-norms sub-skill (greetings, sharing, …) | per-construct profile |
+| `construct` | legacy social-norms sub-skill (greetings, sharing, …) | archived events only — the social-norms games were removed |
 | `cue`, `cueKind` | joint-attention cue (verbal/gesture/orient; pulse/hover/distal) | RJA cue-fading analysis; `1/partners` chance |
 | `answer`, `picked` | emotion shown vs chosen | confusion matrix |
 | `spontaneous`, `nudges`, `found`, `discovery`, `saliency`, `during` | initiation-JA process | Look-What-I-Found / Park 360 |
@@ -185,15 +185,14 @@ the schema but that this table is **isolated** from the rest of the platform (§
 | Raw accuracy | uncorrected proportion correct | secondary |
 | `baseline_score` / `latest_score` / `delta` | first vs last **session of that game** | Progress ▲/▼ chips |
 | **Skill Score (per skill)** | equal-weighted mean of that skill's games | Progress radar, Cohort |
-| **Composite social-emotional** | equal-weighted mean of the four skill scores | Progress hero, Participants overview |
-| median latency | per game / emotion / construct | Progress |
+| **Composite social-emotional** | equal-weighted mean of the three skill scores | Progress hero, Participants overview |
+| median latency | per game / emotion | Progress |
 | Emotion confusion matrix | `answer × picked`, first attempts | Progress |
-| Per-construct score | pooled over recent sessions (default 5) | Progress social-norms |
 | Dose summary | sessions, minutes, span, median gap | `dose.csv` |
 | Group stats | mean / SD / mean-delta by cohort or demographic band | Cohort |
 
 **Dashboards:** the **mentor** app shows a per-child Progress dashboard (composite, radar,
-skill breakdown, construct profile, emotion confusion, weekly activity, recent list) and a
+skill breakdown, emotion confusion, weekly activity, recent list) and a
 Cohort comparison (group means ± SD by gender / autism level / age / IQ band). The **admin**
 dashboard shows platform totals, a per-game breakdown with skill score, an activity
 timeseries, a per-participant overview, and the CSV/battery exports.
@@ -216,7 +215,7 @@ as a ▲/▼ chip next to scores and is easy to over-read. The SAP's efficacy te
 | O4 Moderation | `students` (age, gender, autism level, IQ) | ⚠️ covered but ISAA/verbal-level missing (G3) |
 | O5 VR value-add | `payload.xrPresenting` + head-scan block | ✅ covered (flat games have no head telemetry, by design) |
 | O6 VR acceptability (co-primary) | FMS/SSQ/presence/engagement/stop-rule | ❌ **no data model** (G4) |
-| O7 Confusions / sub-skills | `answer×picked`, `construct`, `cue` | ✅ covered |
+| O7 Confusions / sub-skills | `answer×picked`, `cue` | ✅ covered (`construct` only on archived social-norms events) |
 | O8 Reliability / psychometrics | `rater_id`, `is_double_coded`, `form` | ✅ schema present |
 | H1b Between-arm contrast | **arm + cluster** assignment | ❌ **not stored** (G1) |
 | H3 Reliable Change Index | battery pre/post + pilot SD | computed **off-platform** (G2) |

@@ -723,7 +723,7 @@ TRIAL_CSV_COLUMNS = DEMO_COLUMNS + (
     "latency_ms",
     "latency_from_prompt_end_ms",  # cleaner RT (excludes spoken-prompt time)
     "hinted",
-    "construct",  # social-norms sub-skill
+    "construct",  # legacy social-norms sub-skill; blank for every current game
     "cue",  # joint-attention cue type
     "visible_count",  # options on screen (pointing games)
     "head_yaw_travel_deg",  # VR scan-path length
@@ -1135,7 +1135,7 @@ _CODEBOOK: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("hinted", "raw_events", "bool01", "", "1 | 0", "A hint had fired before the answer."),
     # --- payload: condition / construct ---
     ("difficulty", "raw_events", "string", "", "easy | medium | hard", "Difficulty tier (VR copies record the level under this name)."),
-    ("construct", "raw_events", "string", "", "greetings | sharing | turns | space | politeness | helping | comforting | inclusion | fairness", "Social-norms sub-skill the item measures."),
+    ("construct", "raw_events", "string", "", "greetings | sharing | turns | space | politeness | helping | comforting | inclusion | fairness", "Legacy social-norms sub-skill, recorded only by the retired social-norms games; blank for every current game."),
     ("cue", "raw_events", "string", "", "verbal | gesture | orient | pulse | hover | distal", "Joint-attention / roll cue level."),
     ("cueKind", "raw_events", "string", "", "gesture | gaze", "Cue modality (museum/JA)."),
     ("answer", "raw_events", "string", "", "happy | sad | angry | surprised | scared | disgust", "Emotion shown (emotion games)."),

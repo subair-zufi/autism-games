@@ -607,16 +607,16 @@ def test_skill_report_standardised_scores(client):
     # Emotion Recognition: 8/10 correct at Easy (chance .5) -> 60.
     for i in range(10):
         answer("emotionrecognition", {"correct": i < 8, "level": "easy"})
-    # Right or Wrong: 4/4 correct (chance .5) -> 100.
+    # Museum Look: 4/4 correct with 2 pedestals on screen (chance .5) -> 100.
     for _ in range(4):
-        answer("rightway", {"correct": True, "chance": 0.5})
+        answer("museum", {"correct": True, "firstAttempt": True, "visibleCount": 2})
 
     r = client.get(f"/api/reports/student/{sid}/skills", headers=h)
     assert r.status_code == 200, r.text
     body = r.json()
     skills = {s["skill"]: s for s in body["skills"]}
     assert skills["emotion"]["score"] == 60.0
-    assert skills["socialnorms"]["score"] == 100.0
+    assert skills["jointattention"]["score"] == 100.0
     assert skills["turntaking"]["score"] is None  # no data
     assert body["composite"] == 80.0  # mean of the two skills with data
     assert body["n_trials"] == 14
@@ -627,76 +627,6 @@ def test_skill_report_standardised_scores(client):
     ).json()["access_token"]
     assert client.get(
         f"/api/reports/student/{sid}/skills",
-        headers={"Authorization": f"Bearer {other}"},
-    ).status_code == 404
-
-
-def test_social_norms_report_pools_recent_sessions(client):
-    token = client.post(
-        "/api/auth/signup", json=_signup_payload("socialnorms@example.com")
-    ).json()["access_token"]
-    h = {"Authorization": f"Bearer {token}"}
-    sid = client.post(
-        "/api/students", json={"full_name": "Meera"}, headers=h
-    ).json()["id"]
-
-    def play_session(game, construct, n_correct, n_total):
-        session_id = client.post(
-            "/api/sessions", json={"game_key": game, "student_id": sid}, headers=h
-        ).json()["id"]
-        for i in range(n_total):
-            r = client.post(
-                "/api/events",
-                json={
-                    "game_key": game,
-                    "event_type": "answer",
-                    "student_id": sid,
-                    "session_id": session_id,
-                    "payload": {"correct": i < n_correct, "construct": construct, "chance": 0.5},
-                },
-                headers=h,
-            )
-            assert r.status_code == 201, r.text
-        client.post(f"/api/sessions/{session_id}/end", json={}, headers=h)
-
-    # Earliest "greetings" session is all-wrong; two later ones are all-right.
-    play_session("rightway", "greetings", 0, 2)
-    play_session("rightway", "greetings", 2, 2)
-    play_session("rightway", "greetings", 2, 2)
-
-    # A window of 2 (default is 5, but request a tighter one) must exclude
-    # the earliest all-wrong session.
-    r = client.get(
-        f"/api/reports/student/{sid}/social-norms?sessions=2", headers=h
-    )
-    assert r.status_code == 200, r.text
-    body = r.json()
-    rightway = next(g for g in body["games"] if g["game_key"] == "rightway")
-    assert rightway["n_sessions_pooled"] == 2
-    greetings = next(c for c in rightway["constructs"] if c["construct"] == "greetings")
-    assert greetings["n_trials"] == 4
-    assert greetings["raw_accuracy"] == 1.0
-    assert greetings["score"] == 100.0
-    # Every construct is present even without data.
-    assert {c["construct"] for c in rightway["constructs"]} == {
-        "greetings", "sharing", "turns", "space", "politeness",
-    }
-
-    # Pooling everything (default window) must include the all-wrong session too.
-    all_body = client.get(
-        f"/api/reports/student/{sid}/social-norms", headers=h
-    ).json()
-    all_rightway = next(g for g in all_body["games"] if g["game_key"] == "rightway")
-    all_greetings = next(c for c in all_rightway["constructs"] if c["construct"] == "greetings")
-    assert all_greetings["n_trials"] == 6
-    assert all_greetings["raw_accuracy"] == pytest.approx(4 / 6, abs=1e-3)
-
-    # not your student -> 404
-    other = client.post(
-        "/api/auth/signup", json=_signup_payload("nosy4@example.com")
-    ).json()["access_token"]
-    assert client.get(
-        f"/api/reports/student/{sid}/social-norms",
         headers={"Authorization": f"Bearer {other}"},
     ).status_code == 404
 

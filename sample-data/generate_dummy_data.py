@@ -44,14 +44,13 @@ PARTICIPANTS = [
 # Which games each profile touches (skill coverage varies on purpose).
 EMOTION = ["emotionrecognition", "identifyemotions", "emotionrecognition360"]
 TURN = ["blocks", "rollback", "football360"]
-NORMS = ["rightway", "rulefixer"]
 JA = ["museum", "discovery", "museum360"]
 VR_GAMES = {"emotionrecognition360", "identifyemotions360", "playroom360",
             "football360", "museum360", "park360"}  # xrPresenting=1 + head telemetry
 
 PROFILE_GAMES = {
-    "completer": EMOTION + TURN + NORMS + JA,          # all four skills
-    "partial": EMOTION + TURN + JA,                    # skips social norms
+    "completer": EMOTION + TURN + JA,                  # all three skills
+    "partial": EMOTION + JA,                           # skips turn-taking
     "dropout": ["emotionrecognition", "museum"],       # a couple, then stops
 }
 PROFILE_SESSIONS = {"completer": (3, 5), "partial": (2, 3), "dropout": (1, 2)}
@@ -63,11 +62,6 @@ CLIPS_CHANCE = {"easy": 0.5, "medium": 1 / 3, "hard": 0.25}
 CUES = ["verbal", "gesture", "orient"]
 MUSEUM_CUES = [("pulse", "gesture", 3), ("hover", "gesture", 4), ("distal", "gaze", 6)]
 EMOTIONS = ["happy", "sad", "angry", "surprised", "scared", "disgust"]
-CONSTRUCTS = {
-    "rightway": ["greetings", "sharing", "turns", "space", "politeness"],
-    "rulefixer": ["helping", "comforting", "inclusion", "politeness", "fairness"],
-    "rightway360": ["greetings", "sharing", "turns", "space", "politeness"],
-}
 
 
 def clamp(x, lo=0.02, hi=0.99):
@@ -182,18 +176,6 @@ def make_events(game, sess_id, student_id, user_id, t0, acc, lat):
                 p.update({"targetBearingDeg": b, "latencyFromPromptEndMs": max(250, int(random.gauss(lat - 700, 300)))})
                 p.update(head_block(b))
             add("roll_return", p, ev_score=score)
-
-    elif game in ("rightway", "rulefixer", "rightway360"):
-        cons = CONSTRUCTS.get(game, CONSTRUCTS["rightway"])
-        for k in range(n):
-            level = random.choice(LEVELS)
-            correct = random.random() < acc
-            score += 1 if correct else 0
-            p = {"construct": random.choice(cons), "correct": correct, "level": level,
-                 "chance": 0.5, "latencyMs": max(500, int(random.gauss(lat, 400)))}
-            if game == "rulefixer":
-                p["picked"] = f"opt{random.randint(1,3)}"
-            add("answer", p, ev_score=score)
 
     elif game in ("museum", "museum360"):
         for k in range(n):
@@ -391,7 +373,7 @@ for s in sorted(sessions, key=lambda s: (code_by_sid[s.student_id], s.started_at
 # is passed (best_accuracy ≥ 70%), mirroring the server's unlock rule. mastered
 # is best_accuracy ≥ 80%. Booleans export as 1/0.
 LEVEL_BASED_GAMES = ["emotionrecognition", "emotionrecognition360", "identifyemotions",
-                     "identifyemotions360", "rightway", "rightway360", "rulefixer"]
+                     "identifyemotions360"]
 LEVEL_PROGRESS_COLS = ["participant_code", "student_id", "user_id", "game_key", "level",
                        "attempts", "best_score", "best_accuracy", "unlocked", "passed",
                        "mastered", "created_at", "updated_at", "gender", "date_of_birth",
@@ -473,7 +455,7 @@ for r in roster:
 # --- sheet: summary (ONE row per participant — analysis-ready wide format) ----
 # In-game skill scores (via the real score_participant) + dose totals + battery
 # pre/post/gain, all on one row: the classic between-subjects SPSS layout.
-SKILL_ORDER = ["emotion", "turntaking", "socialnorms", "jointattention"]
+SKILL_ORDER = ["emotion", "turntaking", "jointattention"]
 INSTR_ORDER = ["EIT", "TOP", "JAP", "NCT", "VSMS", "ATEC"]
 
 

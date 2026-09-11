@@ -422,8 +422,9 @@ class SkillScoreOut(BaseModel):
 
 
 class ParticipantSkillReport(BaseModel):
-    """Full per-participant profile: composite social-emotional score, the four
-    skill scores, per-game scores, and improvement (pre/post) at every level."""
+    """Full per-participant profile: composite social-emotional score, the
+    three skill scores, per-game scores, and improvement (pre/post) at every
+    level."""
 
     student_id: uuid.UUID
     composite: float | None
@@ -435,7 +436,7 @@ class ParticipantSkillReport(BaseModel):
 
 class StudentProfileOut(BaseModel):
     """Everything held on one child: the full record plus the complete
-    standardised profile (composite, four skills, every game with its
+    standardised profile (composite, the three skills, every game with its
     secondary metrics and pre/post delta). Fetched when a dashboard row is
     expanded, so the summary table stays cheap for large cohorts.
 
@@ -471,40 +472,6 @@ class GroupReport(BaseModel):
     group_by: str  # overall | gender | autism_level | age_band | iq_band
     total_participants: int
     breakdowns: list[GroupBreakdown]
-
-
-# ---------------------------------------------------------------------------
-# Per-construct scores for the social-norms games (see app/scoring.py)
-# ---------------------------------------------------------------------------
-class ConstructScoreOut(BaseModel):
-    """0-100 chance-corrected accuracy for one construct (e.g. "sharing"),
-    pooled across the student's recent sessions of that game."""
-
-    construct: str
-    score: float | None
-    raw_accuracy: float | None
-    n_trials: int
-    median_latency_ms: int | None
-
-
-class GameConstructReport(BaseModel):
-    """Per-construct profile for one social-norms game (Right or Wrong or
-    Good Choice), pooled across the student's most recent sessions."""
-
-    game_key: str
-    constructs: list[ConstructScoreOut]
-    n_sessions_pooled: int
-    session_window: int
-
-
-class SocialNormsReport(BaseModel):
-    """Per-construct profiles for both social-norms games. A single session
-    only carries ~2 trials per construct (a deliberate fatigue guard), so
-    each game's profile pools several recent sessions instead of reading one
-    session alone."""
-
-    student_id: uuid.UUID
-    games: list[GameConstructReport]
 
 
 # ---------------------------------------------------------------------------

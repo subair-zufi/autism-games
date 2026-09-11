@@ -11,15 +11,13 @@
 
 ## ✨ Features
 
-🎮 **9 Interactive Games** - Carefully designed therapeutic games for engagement and learning
+🎮 **7 Interactive Games** - Carefully designed therapeutic games for engagement and learning
 - **Feelings Faces** - Explore and recognize emotions
 - **Cross the Road** - Choose Walk or Wait to cross safely _(timing and decision-making)_
 - **Ball Drop** - Physics-based interactive gameplay
 - **Emotion Mirror** - Read feelings on an animated 3D face _(emotional recognition)_
 - **Block Buddies** - Take turns stacking a tower with a robot _(turn taking)_
 - **Museum Look** - Follow a pointing hand to the right exhibit _(joint attention)_
-- **Right or Wrong** - Judge whether a social behaviour is fine or needs fixing _(social rules)_
-- **Good Choice** - Pick the kind action in a social situation _(social rules)_
 - **Slide Queue** - Wait patiently in line for your turn on the slide _(turn taking / patience)_
 
 📱 **Trainer Remote** - Drive the headset from a phone: pick the game and level, start it, watch a live view of what the child is looking at, and quit — without taking the headset off them ([guide](./docs/trainer-remote.md))

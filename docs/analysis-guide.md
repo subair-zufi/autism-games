@@ -119,13 +119,12 @@ Does in-game improvement move the **blinded near-transfer battery**, while the
 - **Columns:** accuracy, `latency_from_prompt_end_ms`, and the head-scan block
   (`head_yaw_travel_deg`, `head_yaw_range_deg`, `head_reversals`, `head_to_target_ms`)
   as objective attention markers.
-- **Note:** Schoolyard 360 is flat-input (`xr_presenting = 0`, no head telemetry).
 
 ### Q7 — What's confused / which sub-skills lag?
 - **Sheet:** `raw_events`, `event_type = answer`.
 - **Emotion confusion:** cross-tabulate `answer` × `picked` (emotion games) →
   confusion matrix; does the off-diagonal shrink pre→post?
-- **Social-norms sub-skills:** group by `construct`; joint-attention by `cue`/`cueKind`.
+- **Joint-attention sub-skills:** group by `cue`/`cueKind`.
 
 ### Q8 — Reliability & psychometrics
 - **Inter-rater:** `battery` rows with the same probe but different `rater_id`

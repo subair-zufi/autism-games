@@ -7,9 +7,6 @@ export type GameId =
   | 'football360'
   | 'museum'
   | 'museum360'
-  | 'rightway'
-  | 'rightway360'
-  | 'rulefixer'
   | 'identifyemotions'
   | 'identifyemotions360'
   | 'calmcrew'
@@ -17,8 +14,8 @@ export type GameId =
   | 'park360'
 export type Difficulty = 'easy' | 'medium' | 'hard'
 
-/** The four skills the study targets — every game trains exactly one. */
-export type Skill = 'emotion' | 'turntaking' | 'socialnorms' | 'jointattention'
+/** The three skills the study targets — every game trains exactly one. */
+export type Skill = 'emotion' | 'turntaking' | 'jointattention'
 
 export interface SkillMeta {
   id: Skill
@@ -33,7 +30,6 @@ export const SKILLS: SkillMeta[] = [
   { id: 'jointattention', label: 'Joint Attention', icon: '👀', color: '#3b82f6' },
   { id: 'emotion', label: 'Emotional Identification', icon: '🙂', color: '#f59e0b' },
   { id: 'turntaking', label: 'Turn-Taking', icon: '🔄', color: '#14b8a6' },
-  { id: 'socialnorms', label: 'Social Norms', icon: '⚖️', color: '#16a34a' },
 ]
 
 export function skillMeta(id: Skill): SkillMeta {
@@ -73,7 +69,7 @@ export interface GameMeta {
   icon: string
   path: string
   color: string
-  /** Which of the four target skills this game trains. */
+  /** Which of the three target skills this game trains. */
   skill: Skill
   /** Desktop (mouse/tap) or VR HMD (360°, head-turn) build of this game. */
   mode: PlayMode
@@ -250,52 +246,6 @@ export const GAME_LIST: GameMeta[] = [
       medium: '2 teammates · hands-up gesture, no words · 7 rallies',
       hard: '3 teammates · body and gaze only · 10 rallies, some child-started',
     },
-  },
-  // --- Social Norms ---------------------------------------------------------
-  {
-    id: 'rightway',
-    title: 'Right or Wrong',
-    icon: '⚖️',
-    path: '/rightway',
-    color: '#16a34a',
-    skill: 'socialnorms',
-    mode: 'desktop',
-    description: 'Judge the situation',
-    objective:
-      'Social norms: judge whether a behaviour is okay across greetings, sharing, turns, space and politeness — harder levels use subtle behaviours (quiet omissions, polite refusals)',
-    duration: '5–10 min',
-    hasLevels: true,
-    hidden: true,
-  },
-  {
-    id: 'rightway360',
-    title: 'Schoolyard 360',
-    icon: '🛝',
-    path: '/rightway-360',
-    color: '#15803d',
-    skill: 'socialnorms',
-    mode: 'vr',
-    description: 'Watch the moment, judge it — look around',
-    objective:
-      'Social norms in an immersive first-person schoolyard: the same okay/not-okay judgment, item bank and clear/subtle tiers as Right or Wrong, but each behaviour is acted out by two kids at a spot across the front arc — the snatch lunges, the walk-past walks past, the queue-cut runs to the front — and the child turns the view (a head turn in VR) to find the scene, watch it, and tap an in-world 👍/👎 card; each answer records how far the child had to turn',
-    duration: '5–10 min',
-    hasLevels: false,
-    hidden: true,
-  },
-  {
-    id: 'rulefixer',
-    title: 'Good Choice',
-    icon: '💡',
-    path: '/rulefixer',
-    color: '#f59e0b',
-    skill: 'socialnorms',
-    mode: 'desktop',
-    description: 'Pick the kind choice',
-    objective:
-      'Social norms: choose the kind response across helping, comforting, inclusion, politeness and fairness situations — harder levels drop the obvious wrong option',
-    duration: '5–10 min',
-    hasLevels: true,
-    hidden: true,
   },
   // --- Joint Attention ------------------------------------------------------
   {
