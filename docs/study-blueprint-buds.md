@@ -153,8 +153,7 @@ active seizure disorder not medically cleared for screen/VR exposure (VR-specifi
 **Content.** The three-skill game suite:
 - Emotion: Emotion Recognition, Emotion Clips (+ Emotion Room 360, Emotion Cinema 360).
 - Turn-taking: Block Buddies, Roll-Back Buddy (+ Playroom 360, Football 360).
-- Joint attention: Museum Look, Look What I Found! (+ Museum 360, Park 360),
-  Right or Wrong / Schoolyard 360 for social norms.
+- Joint attention: Museum Look, Look What I Found! (+ Museum 360, Park 360).
 
 **Delivery modes.** Desktop (tablet/laptop) is the baseline mode everyone can use; VR (Meta
 Quest) is offered to children who tolerate it, using the persistent **play-mode toggle** on

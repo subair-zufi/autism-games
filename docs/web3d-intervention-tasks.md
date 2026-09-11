@@ -1,6 +1,6 @@
 # Web 3D Intervention Tasks — Autism Spectrum Disorder
 
-8 browser-based 3D tasks built with **Three.js** for children aged 7–15. Each task runs under 3 minutes with built-in performance assessment, clear navigation, and minimal avatar requirements.
+6 browser-based 3D tasks built with **Three.js** for children aged 7–15. Each task runs under 3 minutes with built-in performance assessment, clear navigation, and minimal avatar requirements.
 
 | Platform | Audience | Duration | Avatars | Scoring |
 |---|---|---|---|---|
@@ -196,68 +196,6 @@ The child drags to look around the garden, spots an object, and clicks/taps it t
 
 ---
 
-## Skill 4 — Social Rules
-
-### Task 7: The Right Way or Wrong Way?
-
-> Environment: everyday locations (shop, classroom) · Short clips · Choice buttons
-
-**Scene setup**
-Short animated 3D clips (10 seconds each, scripted character animations in the Three.js scene) showing social scenarios in familiar settings: a child greeting someone, waiting in a queue, asking permission, using polite words. The child judges if the social behaviour shown is "right" or "needs fixing."
-
-**Navigation**
-After each clip, two large buttons appear: green checkmark ("That's fine!") and yellow wrench ("Needs fixing!"). Child selects with a click or tap. If "Needs fixing" is chosen, a follow-up shows the correct behaviour.
-
-**Task steps**
-1. Audio: *"Watch carefully! Is this the right thing to do?"* Clip plays.
-2. Child selects "That's fine!" or "Needs fixing!" A friendly narrator explains why after each answer.
-3. If incorrect: the clip replays with a red highlight on the problematic moment, then shows the correct version.
-4. 8 clips per session covering: greetings, personal space, sharing, queue waiting, polite requests, saying sorry.
-
-**Performance assessment**
-
-| Metric | Measure |
-|---|---|
-| Rule recognition | Correct / 8 clips |
-| Rule category score | % per rule type |
-| Decision speed | Avg. seconds to decide |
-
-- 🟢 **Mastered:** ≥ 7/8
-- 🟡 **Developing:** 4–6/8
-- 🔴 **Retry:** ≤ 3/8
-
----
-
-### Task 8: Social Rule Fixer
-
-> Environment: school / café scene · Choose the correct action · Click to select option cards
-
-**Scene setup**
-The child views a social situation in first person (camera placed inside the scene). A frozen scene shows a social moment — e.g., someone dropped their books, a peer is crying, it's time to greet a teacher. The child must choose the correct social action from 3 options shown as floating 3D cards.
-
-**Navigation**
-Three option cards float in the environment. The child clicks/taps the card they choose (cards enlarge slightly on hover as feedback; the camera smoothly tweens toward the selected card). Option cards have a short pictogram + word label. The scene then "unfreezes" and plays the consequence of their choice — good or bad outcome.
-
-**Task steps**
-1. Audio: *"Oh! Something is happening. What should you do?"* Scene freezes, 3 option cards appear.
-2. Child reviews the options (e.g., "Help pick up books" / "Walk past" / "Laugh") and selects one.
-3. Scene unfreezes and shows the consequence. Positive choices = warm glow + praise. Negative = neutral consequence + brief explanation of the better choice.
-4. 6 scenes per session. Topics: helping others, greetings, personal space, sharing, apologies, asking for help.
-
-**Performance assessment**
-
-| Metric | Measure |
-|---|---|
-| Prosocial choices | Correct / 6 scenarios |
-| Second attempts | % needing replay |
-| Session trend | Score across sessions |
-
-- 🟢 **Mastered:** ≥ 5/6 first attempt
-- 🟡 **Developing:** 3–4/6
-- 🔴 **Retry:** ≤ 2/6
-
----
-
 ## Master Performance Assessment Framework
 
 ### Domain summaries
@@ -279,12 +217,6 @@ Three option cards float in the environment. The child clicks/taps the card they
 - Latency to respond to pointing cue
 - Prompt dependency index
 - First-initiation time across sessions
-
-**Social rules**
-- Rule recognition % (T7) + prosocial choice % (T8)
-- Category breakdown (greetings, sharing, etc.)
-- Second-attempt rate
-- Cross-session improvement slope
 
 ### Progression levels
 
