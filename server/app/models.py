@@ -238,17 +238,17 @@ class LevelProgress(Base):
 
 
 class AssessmentScore(Base):
-    """A blinded pre/post outcome-battery score for a participant.
+    """A pre/post outcome score for a participant.
 
-    Holds the study's proximal and distal outcome measures — the near-transfer
-    battery (EIT/TOP/JAP/NCT) and standardised instruments (VSMS/ATEC/TRENDS) —
-    alongside the game data, so in-game gains can be tested against transfer and
-    generalisation. These are entered by a blinded tester (imported as CSV), not
-    produced by the app.
+    Holds the study's outcome measure — the informant-rated **ASSP** (total plus
+    its three subscales) — and the child-administered discriminant control
+    (NCT, sound-localization), alongside the game data, so in-game gains can be
+    tested against generalisation. These are entered off-platform and imported as
+    CSV, not produced by the app.
 
     Uniqueness is per (participant, timepoint, instrument, form, rater): a second
-    blinded coder scoring the same probe is a separate row (for inter-rater
-    reliability), and re-importing the same row updates it in place.
+    independent informant rating the same child is a separate row (for
+    inter-rater agreement), and re-importing the same row updates it in place.
     """
 
     __tablename__ = "assessment_scores"
@@ -265,8 +265,8 @@ class AssessmentScore(Base):
     )
 
     timepoint: Mapped[str] = mapped_column(String(20), nullable=False)  # pre | post | followup
-    instrument: Mapped[str] = mapped_column(String(40), nullable=False)  # EIT | TOP | JAP | NCT | VSMS | ATEC | ...
-    form: Mapped[str | None] = mapped_column(String(10))  # A | B (parallel forms), else null
+    instrument: Mapped[str] = mapped_column(String(40), nullable=False)  # ASSP_TOTAL | ASSP_SR | ASSP_SPA | ASSP_DSB | NCT | SOUNDLOC | ...
+    form: Mapped[str | None] = mapped_column(String(10))  # SINGLE (ASSP) | A | B (NCT sets), else null
     raw_score: Mapped[float] = mapped_column(Float, nullable=False)
     # For forced-choice subtests: number of options, so chance (1/n) is recoverable.
     n_options: Mapped[int | None] = mapped_column(Integer)

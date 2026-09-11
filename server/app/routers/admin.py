@@ -1234,13 +1234,13 @@ def export_all_zip(
 
 
 # ---------------------------------------------------------------------------
-# Outcome battery (blinded pre/post scores) — CSV round-trip
+# Outcome scores (pre/post ASSP + discriminant control) — CSV round-trip
 # ---------------------------------------------------------------------------
 ASSESSMENT_CSV_COLUMNS = (
     "participant_code",
     "timepoint",  # pre | post | followup
-    "instrument",  # EIT | TOP | JAP | NCT | VSMS | ATEC | ...
-    "form",  # A | B (parallel forms), else blank
+    "instrument",  # ASSP_TOTAL | ASSP_SR | ASSP_SPA | ASSP_DSB | NCT | SOUNDLOC | ...
+    "form",  # SINGLE for the ASSP (no parallel forms) | A | B for the NCT sets
     "raw_score",
     "n_options",  # forced-choice options → chance = 1/n_options
     "max_score",
@@ -1250,9 +1250,17 @@ ASSESSMENT_CSV_COLUMNS = (
     "notes",
 )
 
-# The near-transfer battery + distal measures a blank template pre-lists per
-# participant (edit/extend freely — import accepts any instrument name).
-TEMPLATE_INSTRUMENTS = ("EIT", "TOP", "JAP", "NCT", "VSMS", "ATEC")
+# The outcome measure + discriminant control a blank template pre-lists per
+# participant: the ASSP total and its three subscales, then the control block
+# (edit/extend freely — import accepts any instrument name).
+TEMPLATE_INSTRUMENTS = (
+    "ASSP_TOTAL",
+    "ASSP_SR",  # Social Reciprocity
+    "ASSP_SPA",  # Social Participation-Avoidance
+    "ASSP_DSB",  # Detrimental Social Behaviours (reverse-scored)
+    "NCT",  # non-social control - expected flat
+    "SOUNDLOC",  # non-social orienting control - expected flat
+)
 TEMPLATE_TIMEPOINTS = ("pre", "post")
 _VALID_TIMEPOINTS = ("pre", "post", "followup")
 
@@ -1261,9 +1269,9 @@ _VALID_TIMEPOINTS = ("pre", "post", "followup")
 def assessments_template_csv(
     db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
 ) -> StreamingResponse:
-    """Blank entry template: the battery grid (timepoint × instrument) pre-filled
-    for every participant with a code, ready for a blinded tester to type scores
-    into and re-import."""
+    """Blank entry template: the outcome grid (timepoint × instrument) pre-filled
+    for every participant with a code, ready for the data manager or blinded
+    tester to type scores into and re-import."""
     students = db.scalars(select(Student).order_by(Student.created_at.asc())).all()
     rows: list[list[object]] = []
     for s in students:
@@ -1279,7 +1287,7 @@ def assessments_template_csv(
 def export_assessments_csv(
     db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
 ) -> StreamingResponse:
-    """Export all stored battery scores (round-trips the import format)."""
+    """Export all stored outcome scores (round-trips the import format)."""
     rows_q = db.execute(
         select(AssessmentScore, Student.participant_code)
         .join(Student, AssessmentScore.student_id == Student.id)
@@ -1329,7 +1337,7 @@ def import_assessments(
     db: Session = Depends(get_db),
     _: Admin = Depends(get_current_admin),
 ) -> AssessmentImportResult:
-    """Upsert blinded battery scores from CSV text (see ASSESSMENT_CSV_COLUMNS).
+    """Upsert outcome scores from CSV text (see ASSESSMENT_CSV_COLUMNS).
 
     Rows are matched to participants by ``participant_code``. A row updates any
     existing score with the same (participant, timepoint, instrument, form,

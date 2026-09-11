@@ -2,6 +2,13 @@
 
 6 browser-based 3D tasks built with **Three.js** for children aged 7–15. Each task runs under 3 minutes with built-in performance assessment, clear navigation, and minimal avatar requirements.
 
+> **Scope note.** This document is the *task design* — the constructs, scene logic, scoring
+> bands and feedback model behind each of the six tasks. Each task ships in two builds: a
+> flat desktop build and a 360°/VR build. **The study's intervention is the VR build only**;
+> the desktop builds exist for demonstration and familiarization and are not an intervention
+> condition (see [blueprint §8](study-blueprint-buds.md)). The task logic described here is
+> shared by both, so read "click/tap" as "look and select" in the headset.
+
 | Platform | Audience | Duration | Avatars | Scoring |
 |---|---|---|---|---|
 | Web browser (desktop, tablet, mobile) — Three.js + WebGL | Ages 7–15 | < 3 min per task | Minimal avatars | Auto-scoring |

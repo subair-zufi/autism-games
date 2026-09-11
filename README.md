@@ -11,14 +11,18 @@
 
 ## ✨ Features
 
-🎮 **7 Interactive Games** - Carefully designed therapeutic games for engagement and learning
-- **Feelings Faces** - Explore and recognize emotions
-- **Cross the Road** - Choose Walk or Wait to cross safely _(timing and decision-making)_
-- **Ball Drop** - Physics-based interactive gameplay
-- **Emotion Mirror** - Read feelings on an animated 3D face _(emotional recognition)_
-- **Block Buddies** - Take turns stacking a tower with a robot _(turn taking)_
-- **Museum Look** - Follow a pointing hand to the right exhibit _(joint attention)_
-- **Slide Queue** - Wait patiently in line for your turn on the slide _(turn taking / patience)_
+🎮 **12 Interactive Games** across three target skills, each in two builds - a flat desktop
+version and a 360°/VR version. **The research intervention is the VR build**; the desktop
+builds are for demonstration and familiarization ([study blueprint](./docs/study-blueprint-buds.md)).
+
+| Skill | 🥽 VR (the intervention) | 🖥️ Desktop (demo) |
+|---|---|---|
+| Emotional Identification | **Emotion Room 360** · **Emotion Cinema 360** | Emotion Recognition · Emotion Clips |
+| Turn-Taking | **Playroom 360** · **Football 360** | Block Buddies · Roll-Back Buddy |
+| Joint Attention | **Museum 360** · **Park 360** | Museum Look · Look What I Found! |
+
+Use the play-mode toggle on Home (🖥️ Desktop / 🥽 VR HMD) to switch which build each skill
+section shows.
 
 📱 **Trainer Remote** - Drive the headset from a phone: pick the game and level, start it, watch a live view of what the child is looking at, and quit — without taking the headset off them ([guide](./docs/trainer-remote.md))
 🔊 **Sound & Voice Support** - Toggle audio and voice guidance on/off

@@ -18,9 +18,9 @@ data sheets, at three grains:
 | **Raw events CSV** · `/api/admin/export/events_raw.csv` | `raw_events` | one row per recorded event | your own scoring/filtering in SPSS/R — the source of truth |
 | **Sessions CSV** · `/api/admin/export/sessions.csv` | `sessions` | one row per play session | session-level timing/duration; join to `raw_events` on `session_id` |
 | **Level progress CSV** · `/api/admin/export/level_progress.csv` | `level_progress` | one row per participant × game × level | progression/unlock state (attempts, best score/accuracy, pass/master) |
-| **Trial-level CSV** · `/api/admin/export/trials.csv` | `trials` | one row per scored trial | learning curves, RT/process, VR-vs-flat, error analysis |
+| **Trial-level CSV** · `/api/admin/export/trials.csv` | `trials` | one row per scored trial | learning curves, RT/process, head-scan, error analysis |
 | **Dose CSV** · `/api/admin/export/dose.csv` | `dose` | one row per participant × game | dose-response, retention/spacing |
-| **Export scores** · `/api/admin/assessments.csv` | `battery` | one row per blinded score | pre/post outcomes (near-transfer + distal) |
+| **Export scores** · `/api/admin/assessments.csv` | `battery` | one row per entered score | pre/post outcome (ASSP) + the discriminant control |
 | **Participants CSV** · `/api/admin/export/participants.csv` | `participants` | one row per child | the de-identified demographic roster / covariates (no name/contact) |
 | **Codebook CSV** · `/api/admin/export/codebook.csv` | `codebook` | one row per variable | the data dictionary — type, unit and value meanings for every raw column |
 | **All raw (ZIP)** · `/api/admin/export/all.zip` | — | bundle | participants + raw_events + sessions + level_progress + codebook in one download |
@@ -59,17 +59,23 @@ aggregate `correct` and `chance` per whatever grouping you choose.
    require ≥ 2 sessions and ≥ N trials per game) before trusting `*_delta`.
    *(In the sample, the dropout P-005 shows `emotion_delta = 100` from 26 trials —
    exactly the artefact this screen removes.)*
-2. **Understand the missingness.** Blank skill columns in `summary` mean the child
+2. **Filter to the intervention: VR only.** The research condition is the 360°/VR build;
+   the desktop games are in the app for demonstration only
+   ([blueprint §8](study-blueprint-buds.md)). **Every efficacy, dose and learning analysis
+   filters `xr_presenting = 1`** (`trials`, and `raw_events.xrPresenting`). Desktop rows are
+   legitimate data about demo use — just not intervention data. Blank `xr_presenting` means
+   the flag was not recorded: exclude it from the intervention set rather than assuming.
+3. **Understand the missingness.** Blank skill columns in `summary` mean the child
    **never played** that skill (structural missing, not zero). `has_post_battery = 0`
    flags dropouts with no post outcome. Decide intention-to-treat vs completer
    analysis explicitly.
-3. **Prefer the clean RT.** `latency_ms` includes spoken-prompt time; use
+4. **Prefer the clean RT.** `latency_ms` includes spoken-prompt time; use
    `latency_from_prompt_end_ms` where present (the 360 emotion games + Football 360).
-4. **Recode for SPSS.** Booleans export as `1/0` already — in every sheet,
+5. **Recode for SPSS.** Booleans export as `1/0` already — in every sheet,
    `raw_events` included (`correct`, `firstAttempt`, `xrPresenting`, `hinted`,
    `unlocked`/`passed`/`mastered`, …); empty cells are system-missing.
    `xr_presenting` is `1` (VR) / `0` (flat) / blank (not recorded).
-5. **`raw_events` columns are stable.** The flattened payload columns follow a
+6. **`raw_events` columns are stable.** The flattened payload columns follow a
    pinned order (every known field first, always, even when empty; genuinely new
    fields only ever appended after them), so a saved import / column map keeps
    working across exports — new data never shifts the existing columns.
@@ -78,16 +84,23 @@ aggregate `correct` and `chance` per whatever grouping you choose.
 
 ## 4. Research questions → sheets & columns
 
-### Q1 — Did the training transfer? *(primary outcome)*
-Does in-game improvement move the **blinded near-transfer battery**, while the
+### Q1 — Did the training generalize? *(primary outcome)*
+Does in-game improvement move the **informant-rated ASSP**, while the
 **non-social control (NCT) stays flat**?
 
 - **Sheet:** `summary` (one row per child).
-- **Predictors:** `composite_delta`, or a specific `{skill}_delta`.
-- **Outcomes:** `eit_gain`, `top_gain`, `jap_gain` (trained) vs `nct_gain` (control).
-- **Analysis:** paired *t*/Wilcoxon on each instrument pre→post; correlate in-game
-  delta with battery gain; the trained–vs–NCT contrast is the specificity test.
-- **Expectation baked into the sample:** EIT/TOP/JAP gain, NCT ≈ 0.
+- **Predictors:** `composite_delta`, or a specific `{skill}_delta` (VR trials only).
+- **Outcomes:** `assp_total_gain` (primary) and the three subscale gains
+  (`assp_sr_gain`, `assp_spa_gain`, `assp_dsb_gain`) vs `nct_gain` / `soundloc_gain`
+  (controls).
+- **Analysis:** paired *t*/Wilcoxon on the ASSP total pre→post; correlate in-game
+  delta with ASSP gain; the ASSP-vs-NCT contrast is the specificity test — **standardize
+  both change scores first**, they are different scales and different measurement modes
+  (rating scale vs child task).
+- **Expectation baked into the sample:** ASSP gains, NCT ≈ 0.
+- **Caveat to carry into the write-up:** the NCT rules out practice/compliance/maturation,
+  not **informant expectancy**. The between-arm (waitlist) contrast is what speaks to that
+  — see [protocol §4](pre-post-test-protocol.md).
 
 ### Q2 — How fast do children learn? *(learning curves)*
 - **Sheet:** `trials`.
@@ -97,14 +110,16 @@ Does in-game improvement move the **blinded near-transfer battery**, while the
   slope = acquisition rate. Compare slopes across subgroups.
 
 ### Q3 — Pre vs post within child
-- **Sheet:** `summary` — `{skill}_pre` / `{skill}_post`; or `battery` in long form.
+- **Sheet:** `summary` — `{skill}_pre` / `{skill}_post` (in-game, VR trials only); or
+  `battery` in long form for the ASSP and the control.
 - **Analysis:** paired tests / repeated-measures; effect sizes (Cohen's *d*, or
-  *d_z* for paired).
+  *d_z* for paired). ASSP is analysed on **raw** scores and raw change.
 
 ### Q4 — Dose–response and retention
 - **Sheet:** `dose` (per game) and `summary` (`total_*`, `active_days`).
 - **Columns:** `n_sessions`, `n_scored_trials`, `total_minutes`, `span_days`,
-  `median_gap_days` → predict gains.
+  `median_gap_days` → predict gains. **Count VR sessions only** — desktop demo play is
+  not dose.
 - **Analysis:** regress gain on dose; test for a minimal effective dose /
   diminishing returns; `median_gap_days` speaks to spacing/retention.
 
@@ -114,11 +129,18 @@ Does in-game improvement move the **blinded near-transfer battery**, while the
 - **Analysis:** regress gain on moderator (aptitude-by-treatment interactions);
   or compare `age_band` / `iq_band` groups. Small N ⇒ report effect sizes over *p*.
 
-### Q6 — Does VR add anything?
-- **Sheet:** `trials`, split by `xr_presenting` (same game, two conditions).
+### Q6 — How does the child attend inside the headset? *(process)*
+There is no VR-vs-flat contrast to run: the intervention is VR-only and desktop play is
+demonstration, so the two are not two conditions of one experiment. Treat the head-scan
+block as a process/attention measure within the VR trials instead.
+
+- **Sheet:** `trials`, filtered to `xr_presenting = 1`.
 - **Columns:** accuracy, `latency_from_prompt_end_ms`, and the head-scan block
   (`head_yaw_travel_deg`, `head_yaw_range_deg`, `head_reversals`, `head_to_target_ms`)
-  as objective attention markers.
+  as objective attention markers — does scanning become more direct as accuracy rises?
+- **If you do look at desktop rows**, it is a descriptive comparison of a demo surface
+  against the intervention, confounded by who played what and when. Label it exploratory,
+  never as O5 evidence.
 
 ### Q7 — What's confused / which sub-skills lag?
 - **Sheet:** `raw_events`, `event_type = answer`.
@@ -127,10 +149,13 @@ Does in-game improvement move the **blinded near-transfer battery**, while the
 - **Joint-attention sub-skills:** group by `cue`/`cueKind`.
 
 ### Q8 — Reliability & psychometrics
-- **Inter-rater:** `battery` rows with the same probe but different `rater_id`
-  (`is_double_coded = true`) → Cohen's κ / ICC.
-- **Internal consistency / test–retest:** split `trials` by trial or session and
-  correlate; item difficulty per emotion/construct/cue from `raw_events`.
+- **Inter-rater (ASSP):** `battery` rows for the same child × timepoint × instrument with
+  different `rater_id` (`is_double_coded = true`) → **ICC(2,1)**, target ≥ .70 on the total.
+- **Internal consistency (ASSP):** Cronbach's α on T0 item data, computed before unblinding.
+  (Item-level ASSP responses are entered outside the app — the `battery` sheet stores the
+  scored totals.)
+- **In-game test–retest:** split `trials` by trial or session and correlate; item difficulty
+  per emotion/cue from `raw_events`.
 
 ---
 
@@ -138,11 +163,15 @@ Does in-game improvement move the **blinded near-transfer battery**, while the
 
 - **Chance is recoverable everywhere** (`chance` on trials; `n_options` on battery),
   so you can always chance-correct.
-- **Parallel forms** `A`/`B` are counterbalanced on the battery (`form`) — post-test
-  gains can't be item memory.
+- **Forms:** the ASSP is one fixed translated form at every timepoint (`form = SINGLE`) —
+  a rating scale has no item-memory problem. Parallel forms `A`/`B` survive only on the
+  **NCT**, which alternates its two photo sets T0→T1 and returns to the T0 set at T2.
 - **Discriminant control** (`NCT`) has identical response demands but no social
-  content; it anchors specificity.
-- **Blinding & reliability** are represented by `rater_id` + `is_double_coded`.
+  content; it anchors specificity against practice and maturation.
+- **Blinding & reliability** are represented by `rater_id` + `is_double_coded` — on the ASSP
+  these identify the **second independent informant**, not a video coder.
+- **`xr_presenting` is an inclusion filter, not a contrast:** `1` = the VR intervention,
+  `0` = desktop demo play, blank = not recorded.
 
 ---
 

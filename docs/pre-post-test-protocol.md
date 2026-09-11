@@ -1,297 +1,239 @@
-# Pre/Post Assessment Battery — Custom Near-Transfer Tests
+# Pre/Post Outcome Measure — ASSP + Discriminant Control
 
-Ages 7–15 · Malayalam administration · three skills (Emotional Identification, Turn-Taking, Joint Attention)
+Ages 7–15 · Malayalam administration · three trained skills (Emotional Identification,
+Turn-Taking, Joint Attention) · intervention delivered in **VR only**
 
-This battery is the **primary outcome measure** of the study. Each subtest mirrors the
-construct its games train (same task logic) while changing every surface feature
-(stimuli, medium, setting, respondent) so a pre→post gain demonstrates **near transfer**,
-not game familiarity. Standardized instruments (VSMS, ATEC-Malayalam) sit *around* this
-battery as secondary/distal measures — see the study protocol.
+The **Autism Social Skills Profile (ASSP)** is the study's pre/post outcome tool. It is an
+informant-rated measure of the child's everyday social functioning, completed by an adult
+who knows the child well (BUDS teacher or parent/guardian), at T0, T1 and T2.
 
-Design rules applied throughout:
+Alongside it, one short **discriminant control block** is administered directly to the
+child. It is *not* an outcome — it exists only to show that any ASSP change is not
+general practice, compliance or maturation.
 
-1. **Novel stimuli, different medium.** Nothing from the games appears in the tests. No
-   screens where avoidable; never the app, never the headset.
-2. **Parallel forms A/B**, matched item-by-item, counterbalanced across children
-   (half get A→B, half B→A) so post-test gains cannot be item memory.
-3. **Blinded administration.** The tester does not run intervention sessions and does not
-   know (where feasible) which arm/dose the child received. All observation subtests are
-   video-recorded; a second blinded coder scores ≥30% for inter-rater reliability
-   (target Cohen's κ ≥ .80 per code).
-4. **Built-in discriminant control.** A non-social control task with identical response
-   demands is administered pre and post; it should **not** improve. Trained-construct
-   gains against a flat control task rule out practice/compliance/maturation effects.
-5. **Chance-corrected scoring.** Every forced-choice item reports raw accuracy and the
-   number of options, so chance level is always recoverable.
+> **Read this before locking the SAP.** Replacing a direct near-transfer battery with an
+> informant rating scale changes what the study can claim. ASSP asks about *generalized,
+> real-world social behaviour*, so a pre→post gain is evidence of **transfer to everyday
+> functioning** — a stronger claim, but a harder one to move in 8 weeks, and one that
+> carries informant-expectancy risk the old direct battery did not. §2 and §7 spell out
+> how the design compensates. The study is framed as **generalization**, not near transfer,
+> throughout this repo.
 
 ---
 
-## Battery at a glance
+## 1. Instrument
 
-| # | Subtest | Construct | Format | Trials | Time |
-|---|---------|-----------|--------|--------|------|
-| 1 | Emotion Identification Test (EIT) | Emotional identification | Table-top photo/video cards, forced choice | 30 | ~12 min |
-| 2 | Turn-Taking Observation Probe (TOP) | Waiting, anticipating, reciprocity | Live structured play, video-coded | 21 | ~10 min |
-| 3 | Joint Attention Probe (JAP) | RJA + IJA | Live structured probes, video-coded | 16 | ~10 min |
-| 4 | Non-Social Control Task (NCT) | Discriminant control | Table-top cards, forced choice | 12 | ~4 min |
+| | |
+|---|---|
+| **Name** | Autism Social Skills Profile (ASSP) |
+| **Source** | Bellini & Hopf (2007), *Focus on Autism and Other Developmental Disabilities*, 22(2), 80–87 |
+| **Type** | Informant-rated questionnaire (parent / teacher) |
+| **Items** | 49 |
+| **Response scale** | 4-point frequency: Never / Sometimes / Often / Very Often |
+| **Subscales** | Social Reciprocity · Social Participation–Avoidance · Detrimental Social Behaviours |
+| **Administration time** | ~15–20 min per child per timepoint |
+| **Respondent burden** | One form per child per timepoint (three total across T0/T1/T2) |
 
-Total ≈ 40 min including breaks. Order is fixed (1 → 2 → 3 with NCT items interleaved
-after subtest 1) so that IJA probes in subtest 3 arrive when the child no longer treats
-the room as a test situation — IJA must be measured un-announced.
-
----
-
-## Subtest 1 — Emotion Identification Test (EIT)
-
-Mirrors Emotion Recognition + Emotion Clips. All six basic emotions
-(happy, sad, angry, surprised, scared, disgust), Indian child/adolescent faces only.
-
-### Stimulus sourcing
-
-Preferred: license the **TRENDS** stimulus set (NIMHANS; Indian actors, six emotions at
-high and low intensity, stills + video). Fallback: photograph/film 4 local actors
-(2 male, 2 female, school-age where possible) posing each emotion at full and partial
-intensity, validated by ≥10 adult raters at ≥80% agreement per item before use.
-Each form (A/B) uses **different actors or different items of the same actors** —
-no photo appears in both forms. Forms are matched cell-by-cell on emotion × intensity ×
-actor gender.
-
-### Structure (30 items, 4 parts)
-
-| Part | Mirrors | Items | Task | Chance |
-|------|---------|-------|------|--------|
-| 1a. Label the face | Emotion Recognition `single` | 6 (one per emotion) | One photo at full intensity; "How does he/she feel?" — choose from 3 spoken+pictogram options | 33% |
-| 1b. Who feels X? | Emotion Recognition `whoFeels` | 6 (one per emotion) | Group photo of 3 faces, each showing a different emotion; "Show me who feels ___" — child points | 33% |
-| 1c. Low-intensity faces | Emotion Clips hard early-freeze | 12 (two per emotion) | Photo at partial (~40–50%) intensity; 3 options **always including one confusable distractor** (fear↔surprise, anger↔disgust, sad↔scared) | 33% |
-| 1d. Why does she feel…? | Emotion Clips `cause` follow-up | 6 (one per emotion) | Short picture scenario (e.g. dropped ice-cream); "Why is she sad?" — 3 pictured cause options | 33% |
-
-Age-calibration note (7–15): full-intensity items (1a/1b) will show ceiling in older
-children — that is acceptable; they anchor the scale and check compliance. The
-**sensitive slice is 1c**, which is why it carries double weight (12 items). Report 1c
-separately in analysis; it is the pre-registered primary emotion endpoint.
-
-### Distractor rules (copied from the games' `pickDistractors` logic)
-
-- Parts 1a/1b/1d: `mixed` tier — distractors drawn uniformly from the other 5 emotions.
-- Part 1c: `high` tier — at least one confusable distractor per item, per the
-  confusability map in `src/games/emotionVocab.ts`.
-- Options are presented as spoken Malayalam word + printed word + emoji pictogram
-  (same tri-modal presentation as the games' answer cards).
-
-### Administration
-
-- Seated at a table; stimuli on A5 cards (or a plain tablet in card-viewer mode if
-  printing quality is poor — same device pre and post, never the study app).
-- Script (Malayalam, verify with forward–back translation):
-  - 1a: "ഇവൻ/ഇവൾക്ക് എന്ത് തോന്നുന്നു?" (How does he/she feel?)
-  - 1b: "___ തോന്നുന്നത് ആരാണെന്ന് കാണിക്കൂ" (Show me who feels ___)
-  - 1d: "എന്തുകൊണ്ടാണ് അവൾക്ക് ___ തോന്നുന്നത്?" (Why does she feel ___?)
-- No feedback on correctness; neutral praise for effort every 3–4 items
-  ("നന്നായി ചെയ്യുന്നു" — you're working well).
-- One repeat of the question allowed per item on request; no other prompts.
+> **Fill from the manual before go-live.** Exact item counts per subscale, the reverse-scored
+> item list, the raw-score ranges, and the published reliability/validity coefficients must be
+> transcribed from the ASSP source and recorded in §10 of the
+> [pre-registration](preregistration-and-sap.md). Nothing in this repo should be treated as
+> the authoritative item set. Confirm permission/licensing terms for research use and for
+> translation at the same time.
 
 ### Scoring
 
-Per item: correct (1/0), response latency (from card presentation, stopwatch or video),
-and for errors in 1c whether the chosen distractor was the confusable one.
-Derived scores: total /30; part scores; per-emotion accuracy /5; confusable-error rate.
+- Each item scores 1–4. **Detrimental Social Behaviours items are reverse-scored** so that a
+  higher score always means better social functioning.
+- Derived scores, all reported: **ASSP total** (primary), and the **three subscale raw
+  totals** (secondary).
+- The published standard scores are normed on a US sample. This study analyses **raw scores
+  and raw change**; any standard score is reported descriptively only, with the norm mismatch
+  stated.
+- No chance correction applies — ASSP is a rating scale, not a forced-choice test. Chance
+  correction still governs the control task (§3) and all in-app telemetry.
+
+### Translation
+
+The ASSP is an English instrument and BUDS informants rate in Malayalam. Before T0:
+
+1. Forward translation by a bilingual clinician, back-translation by a second, independent
+   bilingual translator, reconciliation of discrepancies item by item.
+2. Cognitive pre-testing with 3–5 BUDS teachers — do they read each item the way it is meant?
+3. The **same translated form** is used at T0, T1 and T2. Freeze it; a mid-study wording fix
+   breaks the pre/post comparison.
+4. Record the translation provenance in the pre-registration (§10) and file the final
+   Malayalam form under `validation/`.
 
 ---
 
-## Subtest 2 — Turn-Taking Observation Probe (TOP)
+## 2. Design rules
 
-Mirrors Block Buddies (structured waiting/anticipation) and Roll-Back Buddy
-(reciprocity, cue-reading, initiation). Live, with the examiner (E) and one trained
-assistant (A) — same two roles pre and post. Video-recorded from a fixed corner angle.
-
-### Task 2.1 — Building rotation (mirrors Block Buddies) — 8 rounds
-
-Materials: stacking cups (Form A) / large beads on a rope (Form B) — different materials,
-identical demands.
-
-Setup: E, A, and child seated in a triangle. Instruction: "We build together. We go
-around — E, then A, then you. Wait for your turn."
-
-- Rounds 1–5: fixed rotation (E → A → child).
-- Rounds 6–8: E announces "now we mix it up!" and calls turns in an unpredictable order
-  (mirrors the hard-level shuffle) — the child must monitor, not count.
-- E and A take deliberately slow turns (~5 s each, consistent via silent count) to
-  create genuine waiting demand.
-
-Codes per round (from video):
-
-| Code | Definition | Score |
-|------|-----------|-------|
-| WAIT | Child does not touch materials during others' turns | 2 = no touch; 1 = reach/hover, self-corrects; 0 = grabs/places out of turn |
-| READY | Child acts within 3 s of their turn arriving, without being re-prompted | 1/0 |
-
-### Task 2.2 — Ball return (mirrors Roll-Back Buddy) — 11 trials
-
-Materials: soft ball (Form A) / bean-bag slide across the table (Form B).
-Setup: E and A sit apart in front of the child, ~2 m. One of them rolls the ball to the
-child; the child must return it **to whichever partner shows the ready cue**. Cue levels
-are staged in the game's fading order:
-
-- Trials 1–3 — **verbal**: ready partner says "എനിക്ക് താ!" (roll it to me!) with open hands.
-- Trials 4–6 — **gesture**: no words; ready partner leans in with open cupped hands;
-  the other partner keeps hands in lap.
-- Trials 7–9 — **orientation only**: both partners keep hands neutral; the ready partner
-  turns torso + gaze to the child, the other looks away at a clipboard (mirrors the
-  `orient` cue).
-- Trials 10–11 — **initiation**: nobody rolls first. E places the ball in front of the
-  child and both adults sit quietly; the ready partner orients toward the child. Does
-  the child start the exchange within 10 s? (mirrors `selfInitiate` rallies).
-
-Standardization: cue onset begins ~1 s after the ball settles; the "ready" partner
-alternates on a fixed schedule (E, A, A, E, …) identical across forms.
-
-Codes per trial:
-
-| Code | Definition |
-|------|-----------|
-| PARTNER | Rolled to the cued partner (1/0) — the orientation-reading error of the game |
-| TIMING | Waited for cue onset before releasing (1/0) — the premature-roll error |
-| LATENCY | Seconds from cue onset to release (video-coded) |
-| INIT (trials 10–11 only) | 2 = initiates unprompted ≤10 s; 1 = initiates after E's neutral glance; 0 = no initiation |
-
-Primary turn-taking endpoint (pre-registered): composite of WAIT (2.1) +
-PARTNER on gesture/orientation trials (2.2 trials 4–9) + INIT.
-Verbal-cue trials 1–3 are warm-up/anchor items and near ceiling by design.
+1. **Same informant at every timepoint.** The teacher or parent who completes T0 completes
+   T1 and T2 for that child. A changed informant is a protocol deviation and is recorded as
+   one — informant change is the single largest threat to a pre/post rating-scale contrast.
+2. **Informant blinding, as far as it goes.** The informant cannot be blind to the child's
+   participation (they are in the school). They **are** kept blind to: arm allocation where
+   the classroom design allows, their own previous ratings (T0 forms are collected and not
+   returned), and the study's hypotheses. Never rate with the previous form in view.
+3. **Rate on a fixed observation window.** Every rating refers to the child's behaviour over
+   **the preceding 4 weeks**, stated on the form, so T0/T1/T2 cover comparable windows.
+4. **Rater training.** A single short briefing covering the response anchors, the 4-week
+   window, and "rate what you see, not what you hope" — delivered once, identically, to all
+   informants before T0.
+5. **No parallel forms.** Forms A/B were a feature of the retired direct battery (they
+   controlled item memory in a child-administered test). A rating scale has no item-memory
+   problem, so the `form` field is recorded as `SINGLE` for ASSP rows. The corresponding
+   threat — **informant expectancy** — is handled by rules 2, 3 and §7 instead.
+6. **Independent double-rating.** For ≥30% of children, a **second informant** (the other of
+   teacher/parent, or a second teacher) completes the ASSP independently at the same
+   timepoint. This yields inter-rater agreement (ICC) and is the rating-scale analogue of the
+   old double-coded video.
+7. **Discriminant control administered directly to the child** (§3), by a tester who does not
+   run intervention sessions.
 
 ---
 
-## Subtest 3 — Joint Attention Probe (JAP)
+## 3. Discriminant control block (~6 min, child-administered)
 
-Mirrors Museum Look (RJA: fading point + gaze cues) and Look What I Found!
-(IJA: spontaneous sharing). Live, video-coded. The room is pre-arranged with **6 target
-pictures/objects** on walls and shelves: two in front, two ~90° left/right, two behind
-the child's midline — novel targets, different set per form (A: animals; B: vehicles).
+Retained unchanged from the previous battery, and retained for one reason only: it should
+**not** move. Two parts, administered together at T0, T1 and T2.
 
-### Block 3.1 — Responding to joint attention (RJA) — 10 trials
+### 3.1 Non-Social Control Task (NCT) — 12 items
 
-E sits facing the child ("Let's look at the pictures in this room"). Each trial: E gets
-eye contact by saying the child's name, then delivers ONE cue and holds it 3 s. No
-verbal label of the target, ever.
+Photo cards of **objects/animals in Kerala contexts**, no social content, at two difficulty
+tiers (6 typical views; 6 unusual angles / partial occlusion). "Which one is the ___?" —
+3 options, forced choice. Two sets exist (previously forms A/B); alternate them across T0/T1
+and return to the T0 set at T2, so the control task keeps its own memory guard.
 
-| Trials | Cue | Mirrors |
-|--------|-----|---------|
-| 1–2 | Proximal point (arm extended, target ≤1 m from E) | `hover` rung |
-| 3–6 | Distal point (target ≥2 m, including one behind-midline target) | `distal` rung |
-| 7–10 | **Gaze only** — head + eye turn, hands in lap (incl. one behind-midline) | `gaze` trials |
+Record per item: correct (1/0), and `n_options` so chance stays recoverable.
 
-The pulse/highlight rung of the game has no live equivalent and is omitted; the ladder
-starts at proximal point. 40% gaze trials matches the game's `GAZE_TRIALS` share.
+### 3.2 Non-social orienting control — 2 trials
 
-Codes per trial: CORRECT (child fixates the cued target — head/eye turn to the right
-object — within 5 s; 1/0); for errors, whether the child looked at a *different* target
-(discrimination error) or did not shift gaze at all (no-response).
+While the child faces forward, a small sound (phone chime) plays from a speaker placed left,
+then right, behind the midline. Code whether the child localizes it (1/0). This separates
+social-cue following from general orienting.
 
-### Block 3.2 — Initiating joint attention (IJA) — 4 probes
+### Pre-registered prediction
 
-**Never announced.** Probes are embedded in "break" moments between subtests and inside
-JAP while E writes on a clipboard, per this schedule: after EIT, after TOP task 2.1,
-before RJA, after RJA.
-
-Each probe: a pre-arranged surprise activates while E is visibly disengaged (turned
-~45–90° away, writing — mirrors the friend's `awayYaw`). Surprises (different set per
-form, ordered big → subtle to mirror the saliency fade):
-
-- Form A: wind-up walking toy crosses the table · remote-controlled light-up star on shelf ·
-  A "accidentally" knocks a cup that rolls · a picture on the wall is now upside-down (subtle)
-- Form B: battery bubble machine puffs once · remote buzzer + flap opens on a box ·
-  A's pen "rolls off" the table · a sticker has appeared on the child's cup (subtle)
-
-Code per probe (hierarchical, take the highest):
-
-| Score | Behaviour |
-|-------|-----------|
-| 3 | Spontaneous share ≤10 s: points/shows/vocalizes **and** alternates gaze between surprise and E |
-| 2 | Spontaneous partial: points at or comments on the surprise without gaze alternation, or gaze-alternates without point/comment |
-| 1 | Prompted share: shares only after E's neutral re-engagement ("ം?" + looking up) at 10 s |
-| 0 | No share (looks at/handles the surprise but never recruits E, or no reaction) |
-
-Also record LATENCY (surprise onset → first communicative act toward E) — the game's
-share-latency analog.
-
-### Block 3.3 — Non-social orienting control — 2 trials
-
-While the child faces forward, a small sound (phone chime) plays from a speaker placed
-left, then right, behind the midline. Code whether the child localizes it (1/0).
-This separates *social-cue* following from general orienting: RJA can improve while
-sound localization stays flat.
-
-Primary JA endpoints (pre-registered): RJA correct on distal+gaze trials (3–10, /8) and
-IJA total (/12), reported separately — the games train them as separate steps and they
-may move independently.
+**No reliable change pre→post** on either part. If either moves, the ASSP gain is reported
+with an explicit caution (see [analysis guide](analysis-guide.md) §3 and
+[SAP](preregistration-and-sap.md) §6).
 
 ---
 
-## Subtest 4 — Non-Social Control Task (NCT) — 12 items
+## 4. What the control does and does not control
 
-Same response format as the EIT, no social content: photo cards of **objects/animals in
-Kerala contexts** at two difficulty tiers (6 typical views; 6 unusual angles/partial
-occlusion — the perceptual analog of low-intensity faces). "Which one is the ___?" —
-3 options. Forms A/B use different photo sets.
+State this plainly in the write-up; it is the main methodological cost of the change.
 
-Pre-registered prediction: **no reliable change** pre→post. Administered in two blocks
-of 6 interleaved after EIT parts 1b and 1d, so it also serves as a pacing break.
-
----
-
-## Counterbalancing and session plan
-
-| Group (random ½) | Pre-test | Post-test |
-|------------------|----------|-----------|
-| 1 | Form A | Form B |
-| 2 | Form B | Form A |
-
-Stratify the randomization by age band (7–10 / 11–15) so forms are balanced within band.
-Same room, same time-of-day window (±2 h), same examiner pre and post per child where
-possible. Post-test 3–7 days after the final intervention session. Identical battery at
-follow-up (T2, 4–8 weeks) using the child's **pre-test form** (a ≥10-week gap makes item
-memory negligible and keeps forms balanced).
-
-Session order (fixed): EIT 1a–1b → NCT block 1 → [IJA probe 1] → EIT 1c–1d → NCT block 2 →
-TOP 2.1 → [IJA probe 2] → TOP 2.2 → [IJA probe 3] → JAP RJA → [IJA probe 4] →
-sound-control trials → finish. Breaks on request; battery may split into two sittings on
-consecutive days if needed (split point: after TOP), same split at pre and post.
-
----
-
-## Piloting checklist (before the study proper)
-
-1. **Form equivalence**: administer both forms (1 week apart, order counterbalanced) to
-   8–12 typically-developing children in the age band. Form means within ~½ SD per
-   subtest; fix any item with a large A/B gap.
-2. **Floor/ceiling**: item p-values in .2–.9 range for the sensitive slices (EIT 1c,
-   TOP gesture/orient trials, RJA distal+gaze, IJA). Full-intensity anchors may exceed .9.
-3. **IRR calibration**: two coders score 5 pilot videos to κ ≥ .80 per code; refine the
-   coding manual until reached.
-4. **Translation**: forward–back translate all scripts (Malayalam ↔ English) with a
-   bilingual clinician; the Malayalam lines above are drafts pending that verification.
-5. **Timing**: confirm ≤45 min including breaks for the youngest/most support-needing pilot child.
-
-## Analysis (pre-registered endpoints)
-
-Per skill, ONE primary endpoint: EIT part 1c (/12) · TOP composite (WAIT + PARTNER
-gesture/orient + INIT) · JAP split RJA distal+gaze (/8) and IJA (/12). Everything else is
-secondary. Group level: Wilcoxon signed-rank (or paired t) with effect sizes.
-Child level: Reliable Change Index per primary endpoint using pilot test–retest SD —
-report "n of N children showed reliable improvement". NCT and sound-localization must
-show no reliable group change; if they move, treat trained-skill gains with suspicion
-and say so.
-
-## Game → test mapping (validity trace)
-
-| Game element | Test element |
+| Threat to a pre→post ASSP gain | Does the NCT / sound-loc control it? |
 |---|---|
-| `single` items, tri-modal answer cards | EIT 1a |
-| `whoFeels` group photos | EIT 1b |
-| Hard early-freeze (~40–50% intensity), `high` distractor tier | EIT 1c |
-| `cause` follow-up questions | EIT 1d |
-| Fixed rotation → shuffled rotation; `impatient_tap` | TOP 2.1 rounds 1–5 → 6–8; WAIT code |
-| Cue fade verbal → gesture → orient; wrong-partner & premature errors | TOP 2.2 trial tiers; PARTNER & TIMING codes |
-| `selfInitiate` rallies | TOP 2.2 trials 10–11 (INIT) |
-| Hand ladder hover → distal; gaze-only trials (~40%) | JAP 3.1 trial tiers |
-| Surprise saliency fade; `awayYaw`; spontaneous vs prompted; share latency | JAP 3.2 probes, hierarchy + LATENCY |
-| (no game analog — control) | NCT; sound-localization trials |
+| General practice, test-wiseness, compliance improvement | ✅ Yes — same child, same response demands, no social content |
+| Maturation over the study window | ✅ Yes |
+| Regression to the mean on the child's task performance | ✅ Yes |
+| **Informant expectancy** — the teacher knows the child played, expects improvement | ❌ **No.** Different measurement mode and different respondent |
+| **Informant drift** — the rater's internal anchors shift between T0 and T1 | ❌ No |
+
+The expectancy and drift threats are addressed by design instead: blinding the informant to
+their own T0 ratings (§2.2), the fixed 4-week observation window (§2.3), independent
+double-rating (§2.6), and — where the cluster design holds — the waitlist arm, whose
+informants have the same expectancy exposure without the intervention. **The waitlist
+contrast (H1b) is therefore the strongest available guard against expectancy**, and should be
+described as such rather than as a mere efficacy comparison.
+
+---
+
+## 5. Session plan
+
+| Timepoint | ASSP | Control block | Window |
+|---|---|---|---|
+| **T0** (baseline) | Informant form | Child, ~6 min | Before randomization |
+| **T1** (post) | Same informant | Same child block | 3–7 days after the final intervention session |
+| **T2** (follow-up) | Same informant | Same child block | 4–8 weeks after T1 |
+
+ASSP forms are distributed and collected by the data manager, not by the intervention
+facilitators. Completed forms go straight into the code-keyed store; the informant never sees
+a previous timepoint's form.
+
+The control block is administered in a quiet room, same room and same time-of-day window
+(±2 h) per child across timepoints, by the blinded tester.
+
+---
+
+## 6. Endpoints
+
+| # | Endpoint | Metric | Role |
+|---|---|---|---|
+| **P1** | **ASSP total** | raw sum, 49 items, reverse-scored where required | **Primary** |
+| P2 | ASSP Social Reciprocity | subscale raw total | Secondary |
+| P3 | ASSP Social Participation–Avoidance | subscale raw total | Secondary |
+| P4 | ASSP Detrimental Social Behaviours | subscale raw total (reverse-scored) | Secondary |
+| C1 | NCT | /12, chance-corrected | Discriminant control — expected null |
+| C2 | Sound-localization | /2 | Discriminant control — expected null |
+
+The subscales are **secondary and interpreted as a family**, not as four independent
+primaries; the study is not powered to test each one. See [SAP §6–7](preregistration-and-sap.md).
+
+---
+
+## 7. Piloting checklist (before the study proper)
+
+1. **Translation validation** — forward–back translation complete, reconciled, and cognitively
+   pre-tested with 3–5 BUDS teachers (§1).
+2. **Internal consistency in sample** — compute Cronbach's α for the total and each subscale on
+   the T0 data before unblinding; report alongside the published values. A subscale that does
+   not hold together in this population is reported as such, not quietly dropped.
+3. **Inter-rater agreement** — ICC(2,1) on the ≥30% independently double-rated forms, target
+   **ICC ≥ .70** for the total. Below that, the subscale-level claims are withdrawn and only
+   the total is interpreted.
+4. **Test–retest SD for the RCI** — rate 8–12 children twice, 2 weeks apart, with no
+   intervention in between. This SD and reliability feed the Reliable Change Index
+   ([SAP §6](preregistration-and-sap.md)); without it H3 cannot be computed.
+5. **Floor/ceiling** — check the T0 total distribution. A sample bunched at the floor cannot
+   show improvement; if so, say it before the study, not after.
+6. **Control block timing and floor/ceiling** — NCT item p-values in the .2–.9 range; whole
+   block ≤ 10 min including settling.
+
+---
+
+## 8. Intervention → measure mapping (validity trace)
+
+The research condition is the **VR (360°) build only** — six games, two per trained skill.
+Desktop builds exist in the app for demonstration and familiarization and are **not** part of
+the intervention (see [blueprint §8](study-blueprint-buds.md)).
+
+| Trained skill | VR games (the intervention) | ASSP domain the gain should surface in |
+|---|---|---|
+| Emotional identification | Emotion Room 360 · Emotion Cinema 360 | Social Reciprocity (reading and responding to others' states) |
+| Turn-taking | Playroom 360 · Football 360 | Social Reciprocity · Social Participation–Avoidance (sustaining an exchange, joining in) |
+| Joint attention | Museum 360 · Park 360 | Social Reciprocity (responding to bids) · Social Participation–Avoidance (initiating, sharing) |
+| — (control) | none | NCT · sound-localization: expected flat |
+
+This mapping is **directional, at domain level only**. Item-level alignment (which ASSP items
+plausibly index which trained behaviour) is to be completed against the manual and recorded
+before lock; it is a pre-specified interpretive aid, not an analysis — no item subsets are
+scored separately.
+
+---
+
+## 9. What changed from version 0.1, and why
+
+Version 0.1 of this protocol specified a bespoke near-transfer battery: EIT (emotion
+identification), TOP (turn-taking observation), JAP (joint attention probe), plus VSMS and
+ATEC-Malayalam as distal measures, with parallel forms A/B and video coding.
+
+It has been replaced by the ASSP as the single pre/post tool. Consequences carried through
+the rest of the repo:
+
+- The claim moves from **near transfer** to **generalization to everyday social behaviour**.
+- **Parallel forms A/B no longer apply** to the outcome (the `form` field is `SINGLE` for ASSP
+  rows); the control task keeps its own two sets.
+- **Video coding and coder κ no longer apply** to the outcome; the reliability target becomes
+  **inter-rater ICC** on double-rated forms.
+- **VSMS / ATEC / TRENDS are out** of the measurement plan entirely.
+- **ISAA stays**, but only as a baseline participant characteristic alongside IQ — never as a
+  pre/post outcome.
+- The **NCT and sound-localization controls survive** as the discriminant control block.
+
+Anyone reading an older draft, an older analysis script, or the dated documents under
+`docs/superpowers/` should treat this document as authoritative.
