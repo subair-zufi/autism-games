@@ -1239,8 +1239,8 @@ def export_all_zip(
 ASSESSMENT_CSV_COLUMNS = (
     "participant_code",
     "timepoint",  # pre | post | followup
-    "instrument",  # ASSP_TOTAL | ASSP_SR | ASSP_SPA | ASSP_DSB | NCT | SOUNDLOC | ...
-    "form",  # SINGLE for the ASSP (no parallel forms) | A | B for the NCT sets
+    "instrument",  # EIT | TOP | JAP | ASSP_TOTAL | ASSP_SR | ASSP_SPA | ASSP_DSB | NCT | SOUNDLOC | ...
+    "form",  # A | B (parallel forms: battery + NCT) | SINGLE for the ASSP
     "raw_score",
     "n_options",  # forced-choice options → chance = 1/n_options
     "max_score",
@@ -1250,10 +1250,14 @@ ASSESSMENT_CSV_COLUMNS = (
     "notes",
 )
 
-# The outcome measure + discriminant control a blank template pre-lists per
-# participant: the ASSP total and its three subscales, then the control block
+# The outcome measures a blank template pre-lists per participant: the
+# near-transfer battery (primary), the ASSP total and its three subscales
+# (secondary, far transfer), then the discriminant control block
 # (edit/extend freely — import accepts any instrument name).
 TEMPLATE_INSTRUMENTS = (
+    "EIT",  # Emotion Identification Test
+    "TOP",  # Turn-Taking Observation Probe
+    "JAP",  # Joint Attention Probe
     "ASSP_TOTAL",
     "ASSP_SR",  # Social Reciprocity
     "ASSP_SPA",  # Social Participation-Avoidance

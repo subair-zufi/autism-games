@@ -17,10 +17,16 @@ and the [analysis guide](analysis-guide.md). Anything not named "confirmatory" h
 ## 1. Study identification
 
 - **Title:** VR social-skills games for autistic children — a cluster-randomized,
-  waitlist-controlled generalization trial in BUDS schools.
-- **Design:** cluster-randomized (classroom-level) waitlist-controlled trial with an
-  informant-rated outcome (**ASSP**) and an embedded non-social discriminant control
-  administered directly to the child; plus an embedded VR acceptability study.
+  waitlist-controlled near-transfer trial in BUDS schools.
+- **Design:** cluster-randomized (classroom-level) waitlist-controlled trial with a blinded,
+  parallel-form **near-transfer battery** as the primary outcome, the informant-rated
+  **ASSP** as a secondary far-transfer measure, and an embedded non-social discriminant
+  control; plus an embedded VR acceptability study.
+- **Two levels of transfer, fixed in advance:** the battery (EIT/TOP/JAP) is **primary** and
+  asks whether the trained skill moved; the ASSP is **secondary** and asks whether anything
+  reached everyday life. A null on the ASSP does not undo a battery gain, and an ASSP gain
+  without a battery gain is not reported as success
+  ([protocol §5.4](pre-post-test-protocol.md)).
 - **Intervention condition:** the **VR (360°) build only** — six games, two per trained
   skill. The desktop builds in the app are for demonstration and familiarization and are
   **not** an intervention condition; desktop play is excluded from all efficacy and dose
@@ -37,28 +43,29 @@ and the [analysis guide](analysis-guide.md). Anything not named "confirmatory" h
 
 Stated directionally; each maps to a test in §6.
 
-- **H1a (within-child efficacy, primary):** In the Immediate arm, the **ASSP total** improves
-  from T0→T1.
+- **H1a (within-child efficacy, primary):** In the Immediate arm, trained-skill battery
+  scores improve from T0→T1 (EIT 1c, TOP composite, JAP RJA, JAP IJA).
 - **H1b (between-arm efficacy, primary — full design only):** At T1, the Immediate arm shows
-  greater ASSP-total gain than the Waitlist arm over the same calendar window. Because the
-  outcome is informant-rated, this contrast is also the study's **main guard against
-  informant expectancy** (both arms' informants know the study is running;
-  [protocol §4](pre-post-test-protocol.md)) — not only an efficacy test.
+  greater trained-skill gain than the Waitlist arm over the same calendar window.
 - **H2 (specificity, primary):** The **NCT** and the **sound-localization** control show **no
-  reliable change** T0→T1, and their change is smaller than the ASSP change
-  (domain × time interaction). The control is child-administered and the outcome is
-  informant-rated, so H2 rules out practice, compliance and maturation — **not** informant
-  expectancy, which H1b and the design rules cover instead.
+  reliable change** T0→T1, and their change is smaller than the trained-skill change
+  (skill × task interaction).
 - **H3 (individual-level, primary):** A meaningful proportion of children show **reliable
-  improvement** (RCI) on the ASSP total.
-- **H4 (dose–response, secondary):** Greater VR dose (sessions/minutes) predicts larger ASSP
-  gain.
-- **H5 (retention, secondary):** T1 gains are maintained at T2 (no reliable T1→T2 decline).
+  improvement** (RCI) on ≥1 primary endpoint.
+- **H3b (far transfer, secondary):** The **ASSP total** improves T0→T1 in the Immediate arm,
+  and more than in the Waitlist arm. Because the ASSP is informant-rated, the **between-arm
+  contrast is its main guard against informant expectancy** — the control tasks cannot cover
+  that ([protocol §5.3](pre-post-test-protocol.md)). Expected to be the weaker signal; a null
+  is interpreted, not treated as failure.
+- **H4 (dose–response, secondary):** Greater VR dose (sessions/minutes) predicts larger
+  battery gain (and, exploratorily, larger ASSP gain).
+- **H5 (retention, secondary):** T1 gains are maintained at T2 (no reliable T1→T2 decline),
+  on the primary endpoints and on the ASSP total.
 - **H6 (acceptability, co-primary, descriptive):** A majority of headset users tolerate a
   full VR session (no stop-rule trigger) — reported as n-of-N, not tested.
 
-**Null for the primary family:** no differential change between the ASSP and the control task
-(H2 interaction = 0) and no within-arm ASSP gain (H1a = 0).
+**Null for the primary family:** no differential change between trained skills and the
+control task (H2 interaction = 0) and no within-arm trained-skill gain (H1a = 0).
 
 ---
 
@@ -70,14 +77,15 @@ Stated directionally; each maps to a test in §6.
 - **Arms:** Immediate (T0 → 8-wk intervention → T1 → T2) vs Waitlist (T0 → 8 wk
   business-as-usual → T1 → crossover intervention). Waitlist crossover data are analyzed
   **descriptively only** (within-arm pre–post replication), never pooled into H1b.
-- **Blinding:** the control-block tester is blinded to arm and dose and never runs
-  intervention sessions. The ASSP informant cannot be blind to the child's participation, but
-  **is** blind to arm allocation where the cluster design allows, to their own previous
-  ratings (T0 forms are collected and never returned), and to the hypotheses. Blinding
-  integrity is queried at T1 (tester guesses arm; report agreement vs chance).
-- **Forms:** the ASSP is a single fixed (translated) form at every timepoint — no parallel
-  forms, no counterbalancing; `form = SINGLE` on ASSP rows. The NCT keeps its two photo sets,
-  alternated T0→T1 with a return to the T0 set at T2.
+- **Blinding (battery):** the outcome-battery examiner and both video coders are blinded to
+  arm and dose; the examiner never runs intervention sessions. Blinding integrity is queried
+  at T1 (examiner guesses arm; report agreement vs chance).
+- **Blinding (ASSP):** the informant cannot be blind to the child's participation — they work
+  in the school — but **is** blind to arm allocation where the cluster design allows, to their
+  own previous ratings (T0 forms are collected and never returned), and to the hypotheses.
+- **Parallel forms (battery only):** A/B counterbalanced (½ A→B, ½ B→A at T0→T1); **T2 uses
+  the child's T0 form**. Stratified by age band. The ASSP is one fixed translated form at
+  every timepoint (`form = SINGLE`) — a rating scale has no item-memory problem.
 - **Informant continuity:** the same informant rates a given child at T0, T1 and T2. A change
   of informant is recorded as a protocol deviation and that child is flagged for the
   sensitivity analysis in §8.
@@ -119,25 +127,31 @@ Stated directionally; each maps to a test in §6.
 
 ## 6. Confirmatory endpoints & tests
 
-The ASSP is a rating scale and is analysed on **raw scores and raw change** (the published
-standard scores are normed on a US sample — reported descriptively only, with the mismatch
-stated). Chance correction
-`skill_score = 100·max(0,(p−c)/(1−c))` still governs the forced-choice control task and all
-in-app telemetry. Endpoints are frozen as:
+All forced-choice battery scores use the analysis-guide chance-correction
+`skill_score = 100·max(0,(p−c)/(1−c))` so 0 = chance, 100 = ceiling; the same correction
+governs all in-app telemetry. The **ASSP is exempt** — it is a rating scale, analysed on raw
+scores and raw change (its published standard scores are normed on a US sample, so any
+standard score is descriptive only, with the mismatch stated). Endpoints are frozen as:
 
 | # | Endpoint | Metric | Role | Test |
 |---|----------|--------|------|------|
-| **P1** | **ASSP total** | raw sum (49 items, reverse-scored where required) | **Primary** | H1a: Wilcoxon signed-rank T0→T1 (paired *t* if approx. normal) |
-| P2 | ASSP Social Reciprocity | subscale raw total | Secondary | signed-rank, Holm-corrected within the subscale family |
-| P3 | ASSP Social Participation–Avoidance | subscale raw total | Secondary | as P2 |
-| P4 | ASSP Detrimental Social Behaviours | subscale raw total (reverse-scored) | Secondary | as P2 |
+| **P1** | **EIT part 1c** (low-intensity faces) | /12 chance-corrected | **Primary** | H1a: Wilcoxon signed-rank T0→T1 (paired *t* if approx. normal) |
+| **P2** | **TOP composite** (WAIT + PARTNER gesture/orient + INIT) | composite | **Primary** | H1a: Wilcoxon signed-rank T0→T1 |
+| **P3** | **JAP RJA** distal+gaze (trials 3–10) | /8 | **Primary** | H1a: Wilcoxon signed-rank T0→T1 |
+| **P4** | **JAP IJA** (4 probes, hierarchical) | /12 | **Primary** | H1a: Wilcoxon signed-rank T0→T1 |
+| S1 | **ASSP total** | raw sum (49 items, reverse-scored where required) | Secondary | H3b: signed-rank T0→T1; between-arm at T1 |
+| S2–S4 | ASSP Social Reciprocity · Social Participation–Avoidance · Detrimental Social Behaviours | subscale raw totals | Secondary | signed-rank, Holm-corrected within the subscale family |
 | C1 | **NCT** | /12 chance-corrected | Control | H2: signed-rank T0→T1 expected null |
 | C2 | **Sound-localization** | /2 | Control | H2: expected null |
 
-**H1a (within-child, primary):** a single Wilcoxon signed-rank on **P1, the ASSP total**
+**H1a (within-child, primary):** one Wilcoxon signed-rank per primary endpoint P1–P4
 (Immediate arm), effect size = matched-pairs rank-biserial *r* (and d_z where parametric).
-P2–P4 are a secondary family, reported with CIs and Holm correction **within** that family;
-they never substitute for P1 and a subscale result is not reported as the study's finding.
+
+**H3b (far transfer, secondary):** signed-rank on S1 within the Immediate arm, plus the
+between-arm contrast at T1 modelled as in H1b. S2–S4 are Holm-corrected **within** the
+subscale family and never substitute for S1. The battery/ASSP result pattern is interpreted
+against the pre-specified table in [protocol §5.4](pre-post-test-protocol.md) — written down
+now precisely so the reading cannot be chosen after the fact.
 
 **H1b (between-arm, primary — full design):** cluster-adjusted comparison of T0→T1 change
 between arms. Primary model: **linear mixed model** on the change (or T1 with T0 as covariate,
@@ -145,27 +159,28 @@ ANCOVA-style), fixed effect = arm, **random intercept = classroom**, stratificat
 fixed covariates. Report arm effect + 95% CI. If the mixed model won't converge (few clusters),
 fall back to a cluster-summary approach: one mean change per cluster → Mann–Whitney between arms.
 
-**H2 (specificity, primary):** domain (rated social vs non-social control) × time interaction.
-Primary: compare the **standardized** T0→T1 change of the ASSP total vs the control
-(NCT + sound-loc) within child (Wilcoxon on the difference-of-differences) — standardization is
-required here, not optional, because the two are on different scales and different measurement
-modes. C1/C2 must **not** reach a reliable change; if either moves, the ASSP gain is reported
-with an explicit caution (analysis-guide rule).
+**H2 (specificity, primary):** skill (trained vs control) × time interaction. Primary: compare
+the standardized T0→T1 change of the trained composite vs the control (NCT + sound-loc) within
+child (Wilcoxon on the difference-of-differences). C1/C2 must **not** reach a reliable change;
+if either moves, trained-skill gains are reported with an explicit caution (analysis-guide
+rule). Note the scope: H2 covers the **battery**, which shares the control's measurement mode.
+It does not cover the ASSP, whose expectancy threat only the between-arm contrast addresses.
 
-**H3 (individual-level, primary):** **Reliable Change Index** on the ASSP total,
-`RCI = (post − pre) / SE_diff`, with `SE_diff = √2 · SD_pilot · √(1 − r_tt)` from the ASSP
-test–retest pilot ([protocol §7.4](pre-post-test-protocol.md)). RCI > 1.96 = reliable
-improvement. Headline = "**n of N** children improved reliably on the ASSP total." Without the
-test–retest pilot this cannot be computed — it is a go-live prerequisite, not an analysis-time
-decision.
+**H3 (individual-level, primary):** **Reliable Change Index** per primary endpoint,
+`RCI = (post − pre) / SE_diff`, with `SE_diff = √2 · SD_pilot · √(1 − r_tt)` from the pilot
+test–retest SD and reliability. RCI > 1.96 = reliable improvement. Headline = "**n of N**
+children improved reliably on ≥1 primary endpoint," per endpoint and overall; the same index
+is computed on the ASSP total and reported alongside. The pilot test–retest data (battery and
+ASSP) is a **go-live prerequisite**, not an analysis-time decision — without it H3 cannot be
+computed at all.
 
-**H4 (dose–response, secondary):** regress ASSP gain on VR dose (`n_sessions`,
-`total_minutes`, `median_gap_days`, counting `xr_presenting = 1` sessions only) with classroom
-random intercept; report slope + CI, and test
+**H4 (dose–response, secondary):** regress each battery gain (and, exploratorily, ASSP gain)
+on VR dose (`n_sessions`, `total_minutes`, `median_gap_days`, counting `xr_presenting = 1`
+sessions only) with classroom random intercept; report slope + CI, and test
 for a minimal effective dose / diminishing returns (add a quadratic / spline as exploratory).
 
-**H5 (retention, secondary):** Wilcoxon T1→T2 on the ASSP total; "maintained" = no reliable
-decline (CI on change includes 0 / RCI not < −1.96).
+**H5 (retention, secondary):** Wilcoxon T1→T2 per primary endpoint and on the ASSP total;
+"maintained" = no reliable decline (CI on change includes 0 / RCI not < −1.96).
 
 **H6 (acceptability, co-primary, descriptive):** per [VR-UX §Analysis](vr-ux-protocol.md) —
 per construct, per child, per game; **no composite UX score**. Safety headline = n-of-N tolerated
@@ -175,12 +190,14 @@ a full session; flag any Smileyometer-vs-behaviour discrepancy.
 
 ## 7. Multiplicity, inference criteria, effect sizes
 
-- **Primary family = {P1 within-child (H1a), H1b, H2, H3}.** Each is a single pre-designated
-  primary test of a different question, so no correction is applied across them; the family is
-  small by construction because the outcome is now one instrument, not four endpoints.
-  α = .05 two-sided throughout.
-- **Subscale family (P2–P4):** **Holm–Bonferroni** within the three subscales, reported as
-  secondary. A subscale result never stands in for P1.
+- **Primary family = {P1–P4 within-child (H1a), H1b, H2}.** Control the family-wise error with
+  **Holm–Bonferroni** across the four within-child endpoints; H1b and H2 are each pre-designated
+  single primary tests (not corrected against each other — different questions). α = .05
+  two-sided throughout.
+- **Secondary far-transfer family (S1–S4, H3b):** S1 (ASSP total) is the designated secondary
+  endpoint; S2–S4 are **Holm–Bonferroni** corrected within the subscale family. Reported with
+  CIs and effect sizes, explicitly labelled secondary. **No ASSP result is ever promoted to a
+  primary claim**, however it turns out.
 - **Secondary (H4, H5) and all VR-UX (H6):** reported with CIs and effect sizes; **no
   confirmatory p-value claims** beyond nominal α, explicitly labeled secondary/descriptive.
 - **Estimation over dichotomies:** every test reports an effect size with 95% CI (rank-biserial
@@ -193,12 +210,16 @@ a full session; flag any Smileyometer-vs-behaviour discrepancy.
 
 - **Missingness classification (analysis-guide §3):** blank skill columns = child **never played**
   that skill in VR (structural, not zero) — excluded from that skill's analysis, not imputed
-  as 0. `has_post_battery = 0` = dropout with no post ASSP.
+  as 0. `has_post_battery = 0` = dropout with no post outcome.
 - **Item-level missingness on the ASSP:** with ≤10% of items missing on a form, prorate the
   subscale (mean of completed items × item count) and record that it was prorated; above 10%,
   the form is missing. Fixed here, before data.
-- **Informant change:** children whose informant changed between timepoints are retained in
-  the primary analysis and re-run as a sensitivity analysis with them excluded; report both.
+- **Informant change (ASSP only):** children whose informant changed between timepoints are
+  retained in the secondary analysis and re-run as a sensitivity analysis with them excluded;
+  report both. This does not touch the primary battery endpoints.
+- **A child may have one measure and not the other** (battery completed, ASSP form not
+  returned, or vice versa). Each analysis uses the complete pairs it has; report the n per
+  test rather than dropping the child from everything.
 - **Primary handling:** ITT with observed data; **no imputation** for the primary within-child
   tests (paired tests use complete pairs). Sensitivity: (a) completer analysis, (b) for H1b, a
   mixed model under MAR (uses all available T0/T1). Report how many pairs each test used.
@@ -216,20 +237,28 @@ a full session; flag any Smileyometer-vs-behaviour discrepancy.
 
 ## 9. Reliability & data-integrity checks (before unblinding)
 
+- **Inter-rater reliability (battery):** a second blinded coder scores ≥30% of battery videos,
+  target Cohen's **κ ≥ .80** per code; VR-UX codes target **κ ≥ .75** (headset occlusion).
+  Report achieved κ; if below target, refine the manual and re-code (pre-analysis, not
+  post-hoc).
+- **Form equivalence (battery):** confirm from the pilot (form means within ~½ SD per
+  subtest). Any item with a large A/B gap flagged in the pilot is dropped **before** the study
+  lock, not after.
 - **Inter-rater agreement (ASSP):** a second independent informant rates ≥30% of children at
   the same timepoint; target **ICC(2,1) ≥ .70** on the total. Below target, subscale-level
-  claims are withdrawn and only the total is interpreted. VR-UX codes keep their video target
-  of **κ ≥ .75** (headset occlusion).
+  claims are withdrawn and only the total is interpreted.
 - **Internal consistency (ASSP):** Cronbach's α for the total and each subscale computed on T0
   data **before unblinding**, reported alongside the published values. A subscale that does not
   hold together in this population is reported as such, not dropped.
-- **Translation integrity:** the forward–back translation is reconciled, cognitively
-  pre-tested, and **frozen** before T0; the same Malayalam form is used at every timepoint.
+- **Translation integrity:** all battery scripts and the ASSP are forward–back translated,
+  reconciled and cognitively pre-tested, then **frozen** before T0; the same Malayalam ASSP
+  form is used at every timepoint.
+- **Chance recoverability:** verified on every forced-choice battery endpoint
+  (`chance` / `n_options`).
 - **Telemetry prerequisites (M1–M5):** head-yaw 5–10 Hz, TTS-`onend` latency, mis-tap/hint
   fields, and the `xrPresenting` flag verified as logged **before** go-live. `xrPresenting` is
   now an **inclusion filter** (research data = VR only), not a contrast variable, so a failure
   to log it invalidates the dose denominator rather than costing one analysis.
-- **Chance recoverability:** verified on every forced-choice endpoint (`chance` / `n_options`).
 
 ---
 
@@ -253,7 +282,8 @@ a full session; flag any Smileyometer-vs-behaviour discrepancy.
   reliability/validity — transcribed from the manual: ______
 - ASSP translation provenance (translators, reconciliation date, cognitive pre-test): ______
 - ASSP permission / licensing for research use and translation: ______
-- Pilot test–retest SD & reliability on the ASSP total (feeds RCI): ______
+- Pilot test–retest SD & reliability **per primary endpoint** (feeds RCI): ______
+- Pilot test–retest SD & reliability on the ASSP total (feeds the secondary RCI): ______
 - CTRI registration ID / date: ______
 - OSF (SAP) registration ID / date: ______
 - Locked-script git tag: ______

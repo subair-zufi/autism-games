@@ -24,13 +24,15 @@ BUDS schools. It does not repeat the instruments; it references them:
 
 We evaluate whether a suite of **360°/VR** games that train three social-communication
 skills — **emotion identification, turn-taking, and joint attention** — produces measurable
-gains in the everyday social behaviour of autistic children aged 7–15 attending BUDS schools,
-while confirming the intervention is **acceptable and tolerable** in a headset. Design: a
-**cluster-randomized, waitlist-controlled** rollout across BUDS classrooms with an
-informant-rated outcome (**ASSP**), an embedded non-social discriminant control administered
-directly to the child, in-app telemetry as a process measure, and a VR user-experience
-protocol as a parallel acceptability study. Primary endpoint: pre→post change on the **ASSP
-total**, against a flat non-social control task.
+**near-transfer** gains in autistic children aged 7–15 attending BUDS schools, and whether any
+of that reaches their **everyday social behaviour**, while confirming the intervention is
+**acceptable and tolerable** in a headset. Design: a **cluster-randomized,
+waitlist-controlled** rollout across BUDS classrooms with a blinded, parallel-form
+near-transfer battery, the informant-rated **ASSP** as a secondary far-transfer measure, an
+embedded non-social discriminant control, in-app telemetry as a process measure, and a VR
+user-experience protocol as a parallel acceptability study. Primary endpoint: pre→post change
+on the near-transfer battery (EIT 1c, TOP composite, JAP RJA + IJA), trained skills vs. the
+flat control task; the ASSP total is the secondary endpoint.
 
 ---
 
@@ -40,16 +42,19 @@ Primary and secondary questions map 1:1 to the [analysis guide](analysis-guide.m
 
 | # | Objective | Question | Endpoint |
 |---|-----------|----------|----------|
-| **O1 (primary)** | Efficacy / generalization | Does VR game training move the ASSP while the NCT stays flat? | **ASSP total** (raw change); subscales secondary; NCT & sound-localization flat |
+| **O1 (primary)** | Efficacy / near transfer | Does VR game training move the blinded battery while the NCT stays flat? | EIT 1c /12 · TOP composite · JAP RJA(/8)+IJA(/12); NCT & sound-localization flat |
+| **O1b (secondary)** | Far transfer / generalization | Does any of it reach everyday social behaviour? | **ASSP total** (raw change); subscales Holm-corrected within the family |
 | O2 | Acquisition | How fast do children learn in-game? | Trial-level learning slopes (`trials` sheet) |
 | O3 | Dose–response | Does more VR play → more gain? Minimal effective dose? | `dose` (VR sessions) × ASSP gain |
 | O4 | Moderation | Who benefits most (IQ, age, autism level, gender)? | Aptitude-by-treatment interactions on `summary` |
 | O5 | VR process / attention | What does head-scan behaviour say about how the child attends in the headset? | `trials` (VR only) + head-scan telemetry |
 | **O6 (co-primary)** | Acceptability | Can these children use, tolerate, enjoy the headset? | VR-UX protocol: n-of-N tolerated a full session; cybersickness safety |
 
-**H1 (primary):** the ASSP total improves pre→post with a moderate effect; NCT and
-sound-localization show no reliable change (specificity).
-**H0:** no differential change between the ASSP and the control task.
+**H1 (primary):** trained-skill battery scores improve pre→post with a moderate effect;
+NCT and sound-localization show no reliable change (specificity).
+**H1b (secondary):** the ASSP total also improves, and more than in the waitlist arm — the
+weaker and slower signal, interpreted per [protocol §5.4](pre-post-test-protocol.md).
+**H0:** no differential change between trained skills and the control task.
 
 ---
 
@@ -67,11 +72,12 @@ sound-localization show no reliable change (specificity).
 - This gives a **between-arm contrast at T1** on top of the within-child pre→post and the
   built-in discriminant control — three independent defenses against maturation/practice.
 
-**Fallback if only one school / too few clusters:** single-arm pre–post–follow-up. It is
-weaker — and weaker still with an informant-rated outcome, because the waitlist arm is the
-main guard against informant expectancy ([protocol §4](pre-post-test-protocol.md)). The NCT
-discriminant control and telemetry dose-response remain, but a single-arm result must be
-reported as provisional, with expectancy named as the leading alternative explanation.
+**Fallback if only one school / too few clusters:** single-arm pre–post–follow-up. The
+parallel-form battery + NCT discriminant control + telemetry dose-response still support a
+defensible near-transfer claim, so the **primary** endpoints survive the fallback. The **ASSP
+does not**: the waitlist arm is its main guard against informant expectancy
+([protocol §5.3](pre-post-test-protocol.md)), so without it any ASSP gain must be reported as
+provisional with expectancy named as the leading alternative explanation.
 
 Either way, the **VR-UX acceptability study (O6)** runs on every child who uses the
 headset — it is single-arm by nature (descriptive, per-child).
@@ -81,11 +87,11 @@ headset — it is single-arm by nature (descriptive, per-child).
 ## 4. Setting — BUDS schools
 
 - Confirm: which school(s)/district, number of classrooms, students per class, staff
-  (teachers/aides) available, room that can be darkened/quieted for the control block,
+  (teachers/aides) available, room that can be darkened/quieted for the outcome battery,
   power + Wi-Fi/offline for the app, and a safe seated space for headset use.
-- Two physical spaces needed per site: (a) a quiet **assessment room** for the control block
-  (table, two chairs), (b) an **intervention space** with a **Meta Quest** and a safe seated
-  area. A tablet/laptop is useful for demonstrating the desktop build to staff and families,
+- Two physical spaces needed per site: (a) a quiet **assessment room** for the battery
+  (table, two chairs, fixed-corner camera), (b) an **intervention space** with a **Meta Quest**
+  and a safe seated area. A tablet/laptop is useful for demonstrating the desktop build to staff and families,
   but it is not an intervention device.
 - Log site constraints that affect dose (session length limits, transport/attendance
   patterns, term calendar/holidays) — these bound O3.
@@ -110,11 +116,13 @@ active seizure disorder not medically cleared for screen/VR exposure (VR-specifi
 - IQ / developmental level (existing school records, or a brief measure) → `iq_band`.
 - Verbal level / communication mode; Malayalam as language of administration.
 
-There are no distal secondary instruments: VSMS, ATEC-Malayalam and TRENDS were dropped when
-the ASSP became the single pre/post tool ([protocol §9](pre-post-test-protocol.md)).
+The pre/post measures are the near-transfer battery (primary) and the **ASSP** (secondary
+far-transfer). There are no distal standardized instruments: VSMS, ATEC-Malayalam and
+TRENDS-as-an-outcome were dropped when the ASSP came in
+([protocol §5](pre-post-test-protocol.md)).
 
 **Sample size.** Fill in once cluster counts are known. Rule-of-thumb targets:
-- Efficacy (O1): power a moderate within-child effect on the ASSP total (d_z ≈ 0.5) at 80% → ~34 completers
+- Efficacy (O1): power a moderate within-child effect on the battery (d_z ≈ 0.5) at 80% → ~34 completers
   paired; inflate for clustering (design effect 1 + (m−1)·ICC) and ~20% attrition. Report
   as a **feasibility-bounded** target, not a hard power promise, given a heterogeneous
   small population — the pre-registered per-child **Reliable Change Index** (n-of-N
@@ -197,28 +205,33 @@ facilitate where another informant is available (blinding, §10).
 
 | Layer | Instrument | Doc | Timing |
 |-------|-----------|-----|--------|
-| **Primary outcome** | **ASSP** (49 items, informant-rated, Malayalam translation), same informant at every timepoint | [pre-post-test-protocol.md](pre-post-test-protocol.md) | T0, T1, T2 |
-| **Discriminant control** | NCT (12 forced-choice items) + sound-localization (2 trials), child-administered by the blinded tester | [pre-post-test-protocol.md](pre-post-test-protocol.md) §3 | T0, T1, T2 |
+| **Primary outcome (near transfer)** | Custom battery: EIT / TOP / JAP, parallel forms A/B, blinded, video-coded | [pre-post-test-protocol.md](pre-post-test-protocol.md) §§1–3 | T0, T1, T2 |
+| **Secondary outcome (far transfer)** | **ASSP** (49 items, informant-rated, Malayalam translation), same informant at every timepoint | [pre-post-test-protocol.md](pre-post-test-protocol.md) §5 | T0, T1, T2 |
+| **Discriminant control** | NCT (12 forced-choice items) + sound-localization (2 trials), child-administered by the blinded tester | [pre-post-test-protocol.md](pre-post-test-protocol.md) §4 | T0, T1, T2 |
 | **Baseline characterization** | ISAA severity, IQ/dev level, demographics — recorded once, as participant characteristics | `validation/isaa-record-form.*` | T0 |
 | **Process / mechanism** | In-app telemetry (trials, latency, head-yaw, dose) | [analysis-guide.md](analysis-guide.md) | continuous |
 | **Acceptability (co-primary O6)** | VR-UX: FMS, VRSQ/SSQ, usability, presence, engagement, sensory | [vr-ux-protocol.md](vr-ux-protocol.md) | each VR session |
 | **Content validity** | Expert CVI panel on the games | `validation/content-validity-dossier.docx` + `expert-cvi-rating-form.docx` | pre-study |
 
-The ASSP is the primary efficacy measure and the only pre/post instrument; the control block
-exists solely to be flat; telemetry is the process measure that links in-game learning (O2) to
-the rated outcome (O1) and dose (O3).
+The battery is the primary efficacy measure; the ASSP sits beyond it as the far-transfer
+measure; the control block exists solely to be flat; telemetry is the process measure that
+links in-game learning (O2) to transfer (O1) and dose (O3). There are no distal standardized
+instruments — VSMS, ATEC and TRENDS-as-an-outcome were dropped when the ASSP came in.
 
 ---
 
 ## 10. Blinding, randomization, counterbalancing
 
-- **Control-block tester is blinded** to arm/dose; does not run intervention sessions.
+- **Battery examiner is blinded** to arm/dose; does not run intervention sessions.
+- All observation subtests **video-recorded**; a **second blinded coder** scores ≥30% for
+  inter-rater reliability (κ ≥ .80 battery; κ ≥ .75 VR-UX codes).
+- **Form counterbalancing (battery):** half A→B, half B→A pre/post; T2 uses the child's
+  **pre-test form**. Stratify by age band (7–10 / 11–15).
 - **ASSP informants** are blind to arm (where the cluster design allows), to their own
   previous ratings, and to the hypotheses; the **same informant** rates a child at every
   timepoint. A **second independent informant** rates ≥30% of children for agreement
-  (ICC ≥ .70 on the total; VR-UX video codes keep κ ≥ .75).
-- **No parallel forms** on the outcome — the ASSP is one fixed translated form throughout.
-  The NCT alternates its two photo sets T0→T1 and returns to the T0 set at T2.
+  (ICC ≥ .70 on the total). The ASSP is one fixed translated form throughout — no parallel
+  forms.
 - **Cluster randomization:** classrooms to Immediate/Waitlist by a concealed sequence
   (e.g. sealed envelopes / offline RNG), stratified by school and class age profile.
 - **VR game-order** counterbalanced A/B per the VR-UX protocol.
@@ -252,10 +265,11 @@ the rated outcome (O1) and dose (O3).
 Pre-register O1's endpoints, the NCT specificity contrast, and RCI thresholds **before**
 unblinding. Then, per [analysis-guide.md §4](analysis-guide.md):
 
-- **O1:** paired *t*/Wilcoxon on the **ASSP total** pre→post + between-arm (Immediate vs
-  Waitlist) at T1; ASSP-vs-NCT standardized contrast = specificity; **RCI per child** ("n of N
-  improved"). Subscales are a Holm-corrected secondary family. NCT + sound-localization must
-  be flat.
+- **O1:** paired *t*/Wilcoxon per battery endpoint pre→post + between-arm (Immediate vs
+  Waitlist) at T1; trained-vs-NCT contrast = specificity; **RCI per child** ("n of N
+  improved"). NCT + sound-localization must be flat.
+- **O1b:** the same pre→post and between-arm tests on the ASSP total, with subscales
+  Holm-corrected within the family; read against the battery per protocol §5.4.
 - **O2:** mixed-effects logistic growth on `trials`.
 - **O3:** regress gain on dose; test minimal effective dose / diminishing returns.
 - **O4:** aptitude-by-treatment interactions (IQ, age, autism level, gender) — small N ⇒
@@ -291,11 +305,11 @@ unblinding. Then, per [analysis-guide.md §4](analysis-guide.md):
 |-------|-------|-----------|--------------------|
 | **0. Approvals & content validity** | 1–6 | IEC submission; BUDS/LSGD permission; trial registration; run **expert CVI panel** on the games; finalize translations (forward–back) | Ethics + site approved; CVI acceptable |
 | **1. Setup & telemetry check** | 5–7 | Headsets provisioned; verify telemetry M1–M5 logging (incl. `xrPresenting`); ASSP translation + informant briefing prepared; build analysis pipeline on dummy data; train facilitators + 2 VR-UX coders | Telemetry confirmed; coders calibrated; ASSP form frozen |
-| **2. Pilot** | 7–10 | ASSP translation validation + test–retest (8–12 children, 2 wks apart) for the RCI; inter-rater ICC; control-block floor/ceiling; VR stop-rule & comprehension pilot (4–6 children) | Piloting checklists (both protocols) passed |
-| **3. Baseline (T0)** | 10–12 | Consent/assent; demographics + ISAA + IQ (participant characteristics); **ASSP** from the named informant; control block; randomize clusters | All enrolled children baselined |
+| **2. Pilot** | 7–10 | Battery form-equivalence (8–12 TD children), floor/ceiling, coder κ; ASSP translation validation, test–retest for the RCI, inter-rater ICC; VR stop-rule & comprehension pilot (4–6 children); timing ≤45 min | Piloting checklists (both protocols) passed |
+| **3. Baseline (T0)** | 10–12 | Consent/assent; demographics + ISAA + IQ (participant characteristics); blinded battery Form (A or B) + control block; **ASSP** from the named informant; randomize clusters | All enrolled children baselined |
 | **4. Intervention** | 12–20 | ~8 weeks of **VR** play; continuous telemetry + VR-UX per session; adherence/dose tracking | Dose window complete |
-| **5. Post (T1)** | 20–21 | **ASSP** from the same informant + control block, 3–7 days after the last session; waitlist arm posted then crossed over | Post data collected |
-| **6. Follow-up (T2)** | 24–29 | **ASSP** (same informant) + control block, 4–8 weeks post; retention | — |
+| **5. Post (T1)** | 20–21 | Blinded battery (alternate form) + control block 3–7 days after the last session; **ASSP** from the same informant; waitlist arm posted then crossed over | Post data collected |
+| **6. Follow-up (T2)** | 24–29 | Battery (pre-test form) + control block + **ASSP** (same informant), 4–8 weeks post; retention | — |
 | **7. Analysis & write-up** | 29–36 | Unblind after lock; run pre-registered plan; report | Manuscript / thesis |
 
 (Overlaps are intentional; Phase 0 CVI can run while approvals are pending.)
@@ -307,10 +321,10 @@ unblinding. Then, per [analysis-guide.md §4](analysis-guide.md):
 | Role | Responsibility |
 |------|----------------|
 | PI / researcher | Protocol, ethics, registration, analysis, reporting |
-| Blinded tester(s) | Administer the control block only; no intervention contact |
+| Blinded examiner(s) | Administer the battery and control block only; no intervention contact |
 | Intervention facilitator(s) + BUDS staff | Run game sessions, support without answering, VR safety |
 | Second informant (≥30% of children) | Independent ASSP rating for inter-rater ICC |
-| Blinded coder ×2 | Video-code VR-UX; establish IRR |
+| Blinded coder ×2 | Video-code the battery + VR-UX; establish IRR |
 | Expert panel (pre-study) | CVI ratings on the games |
 | Bilingual clinician | Forward–back translation of all scripts |
 | Data manager | Exports, key separation, backups, pipeline |
@@ -320,7 +334,7 @@ unblinding. Then, per [analysis-guide.md §4](analysis-guide.md):
 ## 16. Document / deliverable checklist
 
 Already written (in repo):
-- [x] Pre/post outcome protocol (ASSP) · VR-UX protocol · analysis guide
+- [x] Pre/post outcome protocol (battery + ASSP) · VR-UX protocol · analysis guide
 - [x] Content-validity dossier + expert CVI rating form
 - [x] Consent, ISAA record, data-request & expert-request letters, VR-UX forms
 
@@ -328,7 +342,7 @@ To produce before go-live:
 - [ ] IEC application package + trial registration entry
 - [ ] This master blueprint finalized with BUDS specifics (§4, §5 sample size)
 - [ ] Statistical Analysis Plan / **pre-registration** (lock O1 endpoints + RCI)
-- [ ] Facilitator SOP + ASSP informant briefing + coder manual (VR-UX)
+- [ ] Facilitator SOP + ASSP informant briefing + coder manual (battery & VR-UX)
 - [ ] Data management & retention plan (DPDP-aware)
 - [ ] Adverse-event log template + VR safety/seizure screen
 - [ ] Finalized Malayalam scripts (forward–back verified)
@@ -346,5 +360,7 @@ To produce before go-live:
    session throughput does that allow across the 8-week window?
 4. **ASSP access:** confirm permission/licensing for research use **and for translation**,
    and secure the manual (item list, reverse-scored items, score ranges, published
-   psychometrics) before lock.
+   psychometrics) before lock. Separately, confirm whether the **TRENDS** stimulus set
+   (NIMHANS) can be licensed as a face-photo source for the EIT, or whether local actors must
+   be photographed instead (protocol §1).
 5. **Registration body:** CTRI (or applicable) — confirm and register before enrollment.

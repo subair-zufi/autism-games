@@ -240,15 +240,17 @@ class LevelProgress(Base):
 class AssessmentScore(Base):
     """A pre/post outcome score for a participant.
 
-    Holds the study's outcome measure — the informant-rated **ASSP** (total plus
-    its three subscales) — and the child-administered discriminant control
-    (NCT, sound-localization), alongside the game data, so in-game gains can be
-    tested against generalisation. These are entered off-platform and imported as
-    CSV, not produced by the app.
+    Holds both measurement layers — the near-transfer battery (EIT/TOP/JAP,
+    the primary outcome) and the informant-rated **ASSP** (total plus its three
+    subscales, the secondary far-transfer measure) — plus the discriminant
+    control (NCT, sound-localization), alongside the game data, so in-game gains
+    can be tested against transfer. These are entered off-platform and imported
+    as CSV, not produced by the app.
 
     Uniqueness is per (participant, timepoint, instrument, form, rater): a second
-    independent informant rating the same child is a separate row (for
-    inter-rater agreement), and re-importing the same row updates it in place.
+    blinded coder on the battery, or a second independent informant on the ASSP,
+    is a separate row (for inter-rater agreement), and re-importing the same row
+    updates it in place.
     """
 
     __tablename__ = "assessment_scores"
@@ -265,8 +267,8 @@ class AssessmentScore(Base):
     )
 
     timepoint: Mapped[str] = mapped_column(String(20), nullable=False)  # pre | post | followup
-    instrument: Mapped[str] = mapped_column(String(40), nullable=False)  # ASSP_TOTAL | ASSP_SR | ASSP_SPA | ASSP_DSB | NCT | SOUNDLOC | ...
-    form: Mapped[str | None] = mapped_column(String(10))  # SINGLE (ASSP) | A | B (NCT sets), else null
+    instrument: Mapped[str] = mapped_column(String(40), nullable=False)  # EIT | TOP | JAP | ASSP_TOTAL | ASSP_SR | ASSP_SPA | ASSP_DSB | NCT | SOUNDLOC | ...
+    form: Mapped[str | None] = mapped_column(String(10))  # A | B (parallel forms) | SINGLE (ASSP), else null
     raw_score: Mapped[float] = mapped_column(Float, nullable=False)
     # For forced-choice subtests: number of options, so chance (1/n) is recoverable.
     n_options: Mapped[int | None] = mapped_column(Integer)

@@ -20,7 +20,7 @@ data sheets, at three grains:
 | **Level progress CSV** · `/api/admin/export/level_progress.csv` | `level_progress` | one row per participant × game × level | progression/unlock state (attempts, best score/accuracy, pass/master) |
 | **Trial-level CSV** · `/api/admin/export/trials.csv` | `trials` | one row per scored trial | learning curves, RT/process, head-scan, error analysis |
 | **Dose CSV** · `/api/admin/export/dose.csv` | `dose` | one row per participant × game | dose-response, retention/spacing |
-| **Export scores** · `/api/admin/assessments.csv` | `battery` | one row per entered score | pre/post outcome (ASSP) + the discriminant control |
+| **Export scores** · `/api/admin/assessments.csv` | `battery` | one row per entered score | pre/post outcomes: the near-transfer battery, the ASSP, and the control |
 | **Participants CSV** · `/api/admin/export/participants.csv` | `participants` | one row per child | the de-identified demographic roster / covariates (no name/contact) |
 | **Codebook CSV** · `/api/admin/export/codebook.csv` | `codebook` | one row per variable | the data dictionary — type, unit and value meanings for every raw column |
 | **All raw (ZIP)** · `/api/admin/export/all.zip` | — | bundle | participants + raw_events + sessions + level_progress + codebook in one download |
@@ -84,23 +84,34 @@ aggregate `correct` and `chance` per whatever grouping you choose.
 
 ## 4. Research questions → sheets & columns
 
-### Q1 — Did the training generalize? *(primary outcome)*
-Does in-game improvement move the **informant-rated ASSP**, while the
+### Q1 — Did the training transfer? *(primary outcome)*
+Does in-game improvement move the **blinded near-transfer battery**, while the
 **non-social control (NCT) stays flat**?
 
 - **Sheet:** `summary` (one row per child).
 - **Predictors:** `composite_delta`, or a specific `{skill}_delta` (VR trials only).
-- **Outcomes:** `assp_total_gain` (primary) and the three subscale gains
-  (`assp_sr_gain`, `assp_spa_gain`, `assp_dsb_gain`) vs `nct_gain` / `soundloc_gain`
-  (controls).
-- **Analysis:** paired *t*/Wilcoxon on the ASSP total pre→post; correlate in-game
-  delta with ASSP gain; the ASSP-vs-NCT contrast is the specificity test — **standardize
-  both change scores first**, they are different scales and different measurement modes
-  (rating scale vs child task).
-- **Expectation baked into the sample:** ASSP gains, NCT ≈ 0.
-- **Caveat to carry into the write-up:** the NCT rules out practice/compliance/maturation,
-  not **informant expectancy**. The between-arm (waitlist) contrast is what speaks to that
-  — see [protocol §4](pre-post-test-protocol.md).
+- **Outcomes:** `eit_gain`, `top_gain`, `jap_gain` (trained) vs `nct_gain` /
+  `soundloc_gain` (controls).
+- **Analysis:** paired *t*/Wilcoxon on each instrument pre→post; correlate in-game
+  delta with battery gain; the trained–vs–NCT contrast is the specificity test.
+- **Expectation baked into the sample:** EIT/TOP/JAP gain, NCT ≈ 0.
+
+### Q1b — Did it reach everyday life? *(secondary outcome)*
+Same question one step further out: does the **informant-rated ASSP** move too?
+
+- **Sheet:** `summary`.
+- **Outcomes:** `assp_total_gain` (secondary endpoint) and the three subscale gains
+  (`assp_sr_gain`, `assp_spa_gain`, `assp_dsb_gain`), Holm-corrected within the family.
+- **Analysis:** paired *t*/Wilcoxon pre→post, plus the between-arm contrast at T1. If you
+  compare the ASSP against the NCT, **standardize both change scores first** — they are
+  different scales and different measurement modes (rating scale vs child task).
+- **Read it against Q1, not on its own.** The four-way interpretation table is fixed in
+  advance in [protocol §5.4](pre-post-test-protocol.md): battery gain + ASSP gain is the
+  strongest result; battery gain + ASSP flat is the *expected* one at 8 weeks and is not a
+  failure; ASSP gain without a battery gain is not headlined.
+- **Caveat to carry into the write-up:** the NCT rules out practice/compliance/maturation
+  for the child, not **informant expectancy** on the ASSP. Only the between-arm (waitlist)
+  contrast speaks to that — see [protocol §5.3](pre-post-test-protocol.md).
 
 ### Q2 — How fast do children learn? *(learning curves)*
 - **Sheet:** `trials`.
@@ -111,7 +122,7 @@ Does in-game improvement move the **informant-rated ASSP**, while the
 
 ### Q3 — Pre vs post within child
 - **Sheet:** `summary` — `{skill}_pre` / `{skill}_post` (in-game, VR trials only); or
-  `battery` in long form for the ASSP and the control.
+  `battery` in long form for the battery instruments, the ASSP and the control.
 - **Analysis:** paired tests / repeated-measures; effect sizes (Cohen's *d*, or
   *d_z* for paired). ASSP is analysed on **raw** scores and raw change.
 
@@ -149,8 +160,10 @@ block as a process/attention measure within the VR trials instead.
 - **Joint-attention sub-skills:** group by `cue`/`cueKind`.
 
 ### Q8 — Reliability & psychometrics
-- **Inter-rater (ASSP):** `battery` rows for the same child × timepoint × instrument with
-  different `rater_id` (`is_double_coded = true`) → **ICC(2,1)**, target ≥ .70 on the total.
+- **Inter-rater (battery):** `battery` rows for the same probe with different `rater_id`
+  (`is_double_coded = true`) → Cohen's **κ**, target ≥ .80 per code.
+- **Inter-rater (ASSP):** the same column pair, but the second `rater_id` is an independent
+  **informant**, not a video coder → **ICC(2,1)**, target ≥ .70 on the total.
 - **Internal consistency (ASSP):** Cronbach's α on T0 item data, computed before unblinding.
   (Item-level ASSP responses are entered outside the app — the `battery` sheet stores the
   scored totals.)
@@ -163,13 +176,17 @@ block as a process/attention measure within the VR trials instead.
 
 - **Chance is recoverable everywhere** (`chance` on trials; `n_options` on battery),
   so you can always chance-correct.
-- **Forms:** the ASSP is one fixed translated form at every timepoint (`form = SINGLE`) —
-  a rating scale has no item-memory problem. Parallel forms `A`/`B` survive only on the
-  **NCT**, which alternates its two photo sets T0→T1 and returns to the T0 set at T2.
+- **Two levels of transfer:** the battery (`EIT`/`TOP`/`JAP`) is the **primary**,
+  near-transfer outcome; the `ASSP_*` rows are the **secondary**, far-transfer one. Do not
+  pool them, and do not swap which is which after seeing results.
+- **Forms:** parallel forms `A`/`B` are counterbalanced on the battery and the `NCT` (`form`)
+  — post-test gains can't be item memory. The ASSP is one fixed translated form
+  (`form = SINGLE`); a rating scale has no item-memory problem.
 - **Discriminant control** (`NCT`) has identical response demands but no social
   content; it anchors specificity against practice and maturation.
-- **Blinding & reliability** are represented by `rater_id` + `is_double_coded` — on the ASSP
-  these identify the **second independent informant**, not a video coder.
+- **Blinding & reliability** are represented by `rater_id` + `is_double_coded` — on the
+  battery these identify a second **video coder** (κ), on the ASSP a second independent
+  **informant** (ICC).
 - **`xr_presenting` is an inclusion filter, not a contrast:** `1` = the VR intervention,
   `0` = desktop demo play, blank = not recorded.
 

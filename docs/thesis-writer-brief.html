@@ -142,16 +142,16 @@
     padding-bottom: 10px;
     border-bottom: 1px solid var(--rule);
   }
-  nav.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; counter-reset: toc; }
-  nav.toc li { counter-increment: toc; font-size: 13.5px; line-height: 1.35; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  nav.toc li { font-size: 13.5px; line-height: 1.35; }
   nav.toc a { color: var(--ink-soft); text-decoration: none; display: flex; gap: 9px; }
-  nav.toc a::before {
-    content: counter(toc);
+  nav.toc a .n {
     font-family: var(--mono);
     font-size: 11px;
     color: var(--muted);
     padding-top: 2px;
-    min-width: 14px;
+    min-width: 18px;
+    flex: none;
   }
   nav.toc a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
   nav.toc a:focus-visible { outline: 2px solid var(--joint); outline-offset: 3px; }
@@ -354,7 +354,8 @@
     <div><dt>Who</dt><dd>Autistic children aged 7–15 in BUDS schools, Kerala</dd></div>
     <div><dt>What they do</dt><dd>Six VR games on a Meta Quest headset, ~8 weeks</dd></div>
     <div><dt>Skills trained</dt><dd>Recognising emotions · Taking turns · Joint attention</dd></div>
-    <div><dt>Main test</dt><dd>Autism Social Skills Profile (ASSP), before &amp; after</dd></div>
+    <div><dt>Main test</dt><dd>A three-part skills battery (EIT, TOP, JAP), before &amp; after</dd></div>
+    <div><dt>Second test</dt><dd>ASSP — a teacher/parent questionnaire on everyday behaviour</dd></div>
     <div><dt>Design</dt><dd>Classrooms randomly split into two groups; one starts now, one waits</dd></div>
     <div><dt>Language</dt><dd>Malayalam throughout</dd></div>
   </dl>
@@ -363,21 +364,22 @@
     <nav class="toc" aria-label="Contents">
       <p>Contents</p>
       <ol>
-        <li><a href="#s1">What the study asks</a></li>
-        <li><a href="#s2">The three skills</a></li>
-        <li><a href="#s3">The six games</a></li>
-        <li><a href="#s4">Levels and difficulty</a></li>
-        <li><a href="#s5">How play is scored</a></li>
-        <li><a href="#s6">What else is recorded</a></li>
-        <li><a href="#s7">The before-and-after test</a></li>
-        <li><a href="#s8">The two check tasks</a></li>
-        <li><a href="#s9">Background on each child</a></li>
-        <li><a href="#s10">Comfort in the headset</a></li>
-        <li><a href="#s11">How the study is run</a></li>
-        <li><a href="#s12">The questions being tested</a></li>
-        <li><a href="#s13">What the data looks like</a></li>
-        <li><a href="#s14">Honest limitations</a></li>
-        <li><a href="#s15">Word list</a></li>
+        <li><a href="#s1"><span class="n">1</span>What the study asks</a></li>
+        <li><a href="#s2"><span class="n">2</span>The three skills</a></li>
+        <li><a href="#s3"><span class="n">3</span>The six games</a></li>
+        <li><a href="#s4"><span class="n">4</span>Levels and difficulty</a></li>
+        <li><a href="#s5"><span class="n">5</span>How play is scored</a></li>
+        <li><a href="#s6"><span class="n">6</span>What else is recorded</a></li>
+        <li><a href="#s7"><span class="n">7</span>The main before-and-after test</a></li>
+        <li><a href="#s7b"><span class="n">7b</span>The everyday-life questionnaire</a></li>
+        <li><a href="#s8"><span class="n">8</span>The two check tasks</a></li>
+        <li><a href="#s9"><span class="n">9</span>Background on each child</a></li>
+        <li><a href="#s10"><span class="n">10</span>Comfort in the headset</a></li>
+        <li><a href="#s11"><span class="n">11</span>How the study is run</a></li>
+        <li><a href="#s12"><span class="n">12</span>The questions being tested</a></li>
+        <li><a href="#s13"><span class="n">13</span>What the data looks like</a></li>
+        <li><a href="#s14"><span class="n">14</span>Honest limitations</a></li>
+        <li><a href="#s15"><span class="n">15</span>Word list</a></li>
       </ol>
     </nav>
 
@@ -389,10 +391,15 @@
         <p>Many autistic children find everyday social situations hard — reading what someone is feeling, waiting for a turn, noticing when another person wants to share something. Practising these things in real life is difficult to arrange, hard to repeat, and stressful for the child.</p>
         <p>This study asks a simple question: <strong>if a child practises these situations inside a virtual reality headset for about eight weeks, does their social behaviour in everyday life actually get better?</strong></p>
         <p>The practice happens through six short games played on a Meta Quest headset. The child looks around a virtual room, a playroom, a football ground, a gallery or a park, and responds to what the characters there do. Each game is short — five to ten minutes.</p>
-        <p>Whether anything changed is judged not by the games themselves but by an adult who knows the child well — a teacher or parent — who fills in the same questionnaire before the eight weeks and again afterwards.</p>
+        <p>Setting the two tests apart matters for how the thesis reads. The close-up tests are expected to move; the questionnaire may well not, because everyday behaviour is slow to shift in eight weeks. <strong>That combination is the anticipated result, not a disappointment</strong> — section 7b explains how the two are read together.</p>
+        <p>Whether anything changed is judged in two separate ways, at two different distances from the training:</p>
+        <ul>
+          <li><strong>Close up (the main test).</strong> Three short tests given directly to the child, one per skill, using completely different materials from the games — real photographs on cards, real people in a room, real objects. If the child improves here, the skill itself improved and not just their handling of a game.</li>
+          <li><strong>Further out (the second test).</strong> A questionnaire filled in by a teacher or parent about the child's everyday social behaviour at school and home. If this improves too, something reached real life.</li>
+        </ul>
         <div class="note">
           <span class="label">Important distinction</span>
-          <p>The games are the <strong>training</strong>. The questionnaire is the <strong>test</strong>. Getting better at a game only proves the child learned the game. The study only claims success if the questionnaire — which asks about real life at school and home, not about games — also moves.</p>
+          <p>The games are the <strong>training</strong>. The three tests and the questionnaire are the <strong>testing</strong>. Getting better at a game only proves the child learned the game — which is why nothing from the games appears anywhere in the tests.</p>
         </div>
       </section>
 
@@ -562,7 +569,7 @@
 
         <div class="note warn">
           <span class="label">Do not confuse these</span>
-          <p>These 0–100 scores describe <em>performance inside the games</em>. They are a process measure — they show whether the child was learning. They are not the study's result. The result is whether the questionnaire in section 7 changed.</p>
+          <p>These 0–100 scores describe <em>performance inside the games</em>. They are a process measure — they show whether the child was learning. They are not the study's result. The result is whether the tests in sections 7 and 7b changed.</p>
         </div>
       </section>
 
@@ -593,10 +600,62 @@
       </section>
 
       <section id="s7">
-        <h2><span class="num">07</span>The before-and-after test</h2>
-        <p class="lede">The Autism Social Skills Profile (ASSP) — the study's actual outcome.</p>
+        <h2><span class="num">07</span>The main before-and-after test</h2>
+        <p class="lede">Three short tests given to the child — one per trained skill. This is the study's primary outcome.</p>
 
-        <p>The ASSP is a questionnaire about a child's social behaviour in everyday life. Crucially, <strong>the child does not fill it in</strong> — an adult who knows the child well does: a teacher at the BUDS school, or a parent.</p>
+        <p>These three tests were built for this study. Each one measures the same skill as a pair of games, but using <strong>completely different materials</strong>: printed photographs instead of virtual faces, real adults in a room instead of avatars, physical objects instead of 3D models. Nothing from the games appears anywhere in them, and the headset is never used.</p>
+        <p>That is the whole point. If a child improves on a test that shares nothing with the game except the underlying skill, the skill itself improved — the child did not simply get good at the game. Researchers call this <strong>near transfer</strong>.</p>
+
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th scope="col">Test</th><th scope="col">Skill</th><th scope="col">What the child does</th><th scope="col">Items</th><th scope="col">Time</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>EIT</strong><br>Emotion Identification Test</td>
+                <td>Emotions</td>
+                <td>Photograph cards on a table. Name the feeling; pick out who feels sad from a group photo; name feelings shown only faintly; say why someone feels that way.</td>
+                <td class="num-cell">30</td>
+                <td class="num-cell">~12 min</td>
+              </tr>
+              <tr>
+                <td><strong>TOP</strong><br>Turn-Taking Observation Probe</td>
+                <td>Turn-taking</td>
+                <td>Real play with two adults. Build something in rotation, waiting through others' turns; then return a ball to whichever adult signals they are ready — the signal getting quieter each round.</td>
+                <td class="num-cell">21</td>
+                <td class="num-cell">~10 min</td>
+              </tr>
+              <tr>
+                <td><strong>JAP</strong><br>Joint Attention Probe</td>
+                <td>Joint attention</td>
+                <td>Pictures placed around a room. The examiner points, then eventually only looks, and the child follows. Separately, small surprises are set off while the examiner is busy — does the child spontaneously show them?</td>
+                <td class="num-cell">16</td>
+                <td class="num-cell">~10 min</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>About 40 minutes in total for the child, including breaks and the check tasks in section 8. It can be split across two days if that is easier, as long as the split is the same before and after.</p>
+
+        <h3>The one number that matters per skill</h3>
+        <p>Each test produces many numbers, but one per skill was chosen in advance as <em>the</em> result — again so nothing can be picked afterwards to suit the findings:</p>
+        <ul>
+          <li><strong>Emotions:</strong> the 12 faint-expression items from the EIT. The full-strength faces are too easy for older children and mostly confirm the child is co-operating; the faint ones are where change would show.</li>
+          <li><strong>Turn-taking:</strong> a combined score from the TOP — waiting without grabbing, passing to the right person when the signal is only a gesture or a glance, and starting an exchange unprompted.</li>
+          <li><strong>Joint attention:</strong> two separate scores, because the games train them as separate things and they may move independently — <em>following</em> a point or a look, and <em>starting</em> a share.</li>
+        </ul>
+
+        <div class="note">
+          <span class="label">Rules that protect these tests</span>
+          <p>There are <strong>two versions</strong> of every test, matched item for item. Half the children get version A first and B second, half the other way round, so improvement cannot be the child remembering the items. The person giving the tests <strong>never runs the game sessions</strong> and does not know which group the child is in. The turn-taking and joint attention tests are <strong>video-recorded</strong>, and a second person who also does not know the groups scores at least three in ten videos independently, so agreement between scorers can be measured.</p>
+        </div>
+      </section>
+
+      <section id="s7b">
+        <h2><span class="num">7b</span>The everyday-life questionnaire</h2>
+        <p class="lede">The ASSP — the second, wider test. Secondary, and deliberately so.</p>
+
+        <p>The three tests above show whether the skill improved. They cannot show whether it made any difference to the child's actual life. That is what this questionnaire is for.</p>
+        <p>The ASSP asks about the child's ordinary social behaviour at school and home. <strong>The child does not fill it in</strong> — an adult who knows them well does: a teacher at the BUDS school, or a parent.</p>
 
         <div class="tablewrap">
           <table>
@@ -606,25 +665,38 @@
               <tr><td>Who fills it in</td><td>A teacher or parent who knows the child well — the same person every time</td></tr>
               <tr><td>Number of questions</td><td>49</td></tr>
               <tr><td>How each is answered</td><td>Four options: never / sometimes / often / very often</td></tr>
-              <tr><td>Time to complete</td><td>About 15–20 minutes</td></tr>
-              <tr><td>When</td><td>Three times: before the games start, just after they finish, and again several weeks later</td></tr>
+              <tr><td>Time to complete</td><td>About 15–20 minutes — and none of it is the child's time</td></tr>
+              <tr><td>When</td><td>Three times, on the same schedule as the tests above</td></tr>
               <tr><td>Language</td><td>Translated into Malayalam, then translated back to English by a second person to check nothing shifted in meaning</td></tr>
             </tbody>
           </table>
         </div>
 
         <h3>The three parts of the questionnaire</h3>
-        <p>The 49 questions group into three areas, each reported separately as well as together:</p>
         <ul>
           <li><strong>Social reciprocity</strong> — the back-and-forth of social contact: responding when spoken to, keeping an exchange going.</li>
           <li><strong>Social participation and avoidance</strong> — whether the child joins in with others or keeps away from them.</li>
-          <li><strong>Detrimental social behaviours</strong> — behaviours that get in the way of social contact. These questions are scored in reverse, so that on every part of the questionnaire <strong>a higher number always means better social functioning</strong>.</li>
+          <li><strong>Detrimental social behaviours</strong> — behaviours that get in the way of social contact. These questions are scored in reverse, so that everywhere on the questionnaire <strong>a higher number means better social functioning</strong>.</li>
         </ul>
-        <p>The <strong>total score</strong> across all 49 questions is the study's single main outcome. The three parts are reported as supporting detail — the study is not big enough to make a firm claim about each one separately.</p>
+        <p>The <strong>total score</strong> is what is reported; the three parts are supporting detail, since the study is not large enough to make a firm claim about each one on its own.</p>
 
         <div class="note">
           <span class="label">Rules that protect the answers</span>
-          <p>The same adult rates a child every time (a change of rater is recorded as a deviation). Every rating refers to the <strong>last four weeks</strong> of the child's behaviour, so the three time points cover comparable windows. The completed first questionnaire is collected and never shown to the rater again, so they cannot simply copy or "improve on" what they said last time. For at least three in ten children, a <strong>second adult</strong> fills in the questionnaire independently, so agreement between raters can be measured.</p>
+          <p>The same adult rates a child every time (a change of rater is recorded as a deviation). Every rating refers to the <strong>last four weeks</strong> of behaviour, so the three time points cover comparable windows. The completed first questionnaire is collected and never shown to the rater again, so they cannot copy or "improve on" what they said last time. For at least three in ten children, a <strong>second adult</strong> fills it in independently, so agreement between raters can be measured.</p>
+        </div>
+
+        <h3>How the two tests are read together</h3>
+        <p>This was decided in advance, before any data existed, so the interpretation cannot be chosen to suit the result:</p>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th scope="col">Skills tests</th><th scope="col">Questionnaire</th><th scope="col">What it means</th></tr></thead>
+            <tbody>
+              <tr><td>Improved</td><td>Improved</td><td>The strongest possible result — the skill improved <em>and</em> it reached everyday life.</td></tr>
+              <tr><td>Improved</td><td>No change</td><td><strong>The expected result.</strong> The training worked; eight weeks was not long enough for it to show up in a teacher's overall impression. Report it as that, not as a failure.</td></tr>
+              <tr><td>No change</td><td>Improved</td><td>Treat with caution. If the skill itself did not move, a shift in the teacher's rating most likely reflects their expectations. Do not headline it.</td></tr>
+              <tr><td>No change</td><td>No change</td><td>No evidence of benefit on either measure.</td></tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -632,7 +704,7 @@
         <h2><span class="num">08</span>The two check tasks</h2>
         <p class="lede">Small tasks that are supposed to show no improvement at all.</p>
 
-        <p>Suppose the questionnaire scores go up after eight weeks. How do we know that is about social skills, and not simply that the children got older, got more comfortable with the adults, or got better at being tested in general?</p>
+        <p>Suppose the test scores go up after eight weeks. How do we know that is about social skills, and not simply that the children got older, got more comfortable with the adults, or got better at being tested in general?</p>
         <p>That is what these two short tasks are for. They are given directly to the child, before and after, by a tester who has nothing to do with running the game sessions:</p>
 
         <div class="tablewrap">
@@ -653,11 +725,11 @@
           </table>
         </div>
 
-        <p>The prediction written down in advance is that <strong>neither of these changes</strong>. If the questionnaire improves while these stay flat, the improvement is much harder to explain away. If these also improve, the study says so openly and treats the questionnaire result with caution.</p>
+        <p>The prediction written down in advance is that <strong>neither of these changes</strong>. If the skills tests improve while these stay flat, the improvement is much harder to explain away. If these also improve, the study says so openly and treats the whole result with caution.</p>
 
         <div class="note warn">
           <span class="label">A limit the thesis must state</span>
-          <p>These tasks rule out the child simply getting better at being tested. They <strong>cannot</strong> rule out the teacher expecting improvement and rating the child more generously the second time — because the tasks measure the child, while the questionnaire measures the teacher's impression. That particular problem is handled by the waiting group described in section 11, not by these tasks.</p>
+          <p>These tasks rule out the child simply getting better at being tested — which covers the three skills tests in section 7 well, since those measure the child in the same direct way. They <strong>cannot</strong> rule out a teacher expecting improvement and rating the child more generously on the questionnaire the second time. That problem is handled by the waiting group described in section 11, not by these tasks.</p>
         </div>
       </section>
 
@@ -674,7 +746,7 @@
         </ul>
         <div class="note">
           <span class="label">Common mix-up</span>
-          <p>ISAA is <strong>not</strong> a before-and-after test in this study. It describes how the child was at the start. Only the ASSP and the two check tasks are given before and after.</p>
+          <p>ISAA is <strong>not</strong> a before-and-after test in this study. It describes how the child was at the start. Only the three skills tests, the questionnaire and the two check tasks are given before and after.</p>
         </div>
       </section>
 
@@ -746,18 +818,20 @@
           <table>
             <thead><tr><th scope="col">#</th><th scope="col">The question, in plain words</th><th scope="col">Status</th></tr></thead>
             <tbody>
-              <tr><td class="num-cell">1</td><td>Do questionnaire scores go up from before to after, for children who got the games?</td><td>Main</td></tr>
+              <tr><td class="num-cell">1</td><td>Do the three skills-test scores go up from before to after, for children who got the games?</td><td>Main</td></tr>
               <tr><td class="num-cell">2</td><td>Do they go up <em>more</em> than in the waiting group over the same weeks?</td><td>Main</td></tr>
               <tr><td class="num-cell">3</td><td>Do the two check tasks stay flat, as predicted?</td><td>Main</td></tr>
               <tr><td class="num-cell">4</td><td>How many individual children improved by an amount too large to be measurement noise?</td><td>Main</td></tr>
-              <tr><td class="num-cell">5</td><td>Did children who played more improve more?</td><td>Supporting</td></tr>
-              <tr><td class="num-cell">6</td><td>Did any gain still hold weeks later at follow-up?</td><td>Supporting</td></tr>
-              <tr><td class="num-cell">7</td><td>Could these children use, tolerate and enjoy the headset?</td><td>Reported alongside</td></tr>
+              <tr><td class="num-cell">5</td><td>Does the everyday-life questionnaire move as well — and more than in the waiting group?</td><td>Secondary</td></tr>
+              <tr><td class="num-cell">6</td><td>Did children who played more improve more?</td><td>Supporting</td></tr>
+              <tr><td class="num-cell">7</td><td>Did any gain still hold weeks later at follow-up?</td><td>Supporting</td></tr>
+              <tr><td class="num-cell">8</td><td>Could these children use, tolerate and enjoy the headset?</td><td>Reported alongside</td></tr>
             </tbody>
           </table>
         </div>
 
         <p>Question 4 deserves a note. With a small and very varied group of children, an average can hide everything interesting. So the study also reports a straightforward count — <strong>"n out of N children improved by more than measurement error"</strong> — which stays meaningful however small the sample is. For the thesis, this is often the more honest headline.</p>
+        <p>Question 5 is marked <em>secondary</em> on purpose. The questionnaire is a real result and is reported in full, but it can never be promoted into the study's headline finding, however it turns out. That was fixed before any data existed.</p>
         <p>The plan also specifies, in advance, how missing data is handled, that no child is removed for having an inconvenient result, and that effect sizes with ranges are reported rather than leaning on p-values alone.</p>
       </section>
 
@@ -772,7 +846,7 @@
             <tbody>
               <tr><td><code>summary</code></td><td>one child</td><td>The main analysis table — before, after and change for every measure, on one line per child. Start here.</td></tr>
               <tr><td><code>participants</code></td><td>one child</td><td>Age, gender, autism level, IQ and other background details, with no names.</td></tr>
-              <tr><td><code>battery</code></td><td>one score</td><td>Questionnaire and check-task scores at each time point.</td></tr>
+              <tr><td><code>battery</code></td><td>one score</td><td>All the before-and-after scores at each time point: the three skills tests, the questionnaire total and its parts, and the check tasks.</td></tr>
               <tr><td><code>trials</code></td><td>one question answered</td><td>Learning curves, response times, head movement.</td></tr>
               <tr><td><code>dose</code></td><td>one child per game</td><td>How many sessions, minutes and days, and the gaps between them.</td></tr>
               <tr><td><code>sessions</code></td><td>one play session</td><td>Start, end, length and score of each session.</td></tr>
@@ -789,9 +863,11 @@
         <h2><span class="num">14</span>Honest limitations</h2>
         <p class="lede">These belong in the thesis, stated plainly. A study that names its weaknesses reads as more trustworthy, not less.</p>
         <ul>
-          <li><strong>The outcome is someone's opinion.</strong> A questionnaire filled in by a teacher measures that teacher's impression of the child, which is not the same thing as the child's behaviour. It is the right measure for a question about real life, but it carries this cost.</li>
-          <li><strong>Teachers cannot be fully blinded.</strong> They work in the school and know a study is running. The waiting group is the main defence against this, which is why losing that group would materially weaken the conclusions.</li>
-          <li><strong>Eight weeks is short.</strong> A questionnaire about everyday behaviour is deliberately slow to move. A small change, or none, is a plausible result and should not be written up as a failure of the approach.</li>
+          <li><strong>The main tests were built for this study.</strong> They are not published, standardised instruments with existing norms, so their reliability has to be established within this study rather than cited from elsewhere. That is why the pilot phase and the scorer-agreement checks matter so much.</li>
+          <li><strong>The second measure is someone's opinion.</strong> A questionnaire filled in by a teacher measures that teacher's impression, which is not the same as the child's behaviour. It is the right instrument for a question about real life, but it carries this cost — which is one reason it is secondary.</li>
+          <li><strong>Teachers cannot be fully blinded.</strong> They work in the school and know a study is running. The waiting group is the main defence against this, which is why losing that group would materially weaken the questionnaire result specifically.</li>
+          <li><strong>Eight weeks is short for the questionnaire.</strong> Everyday behaviour is deliberately slow to move. A small change, or none, on the questionnaire is a plausible and expected result and should not be written up as a failure of the approach.</li>
+          <li><strong>Near transfer is not the same as real-world benefit.</strong> Improving on a table-top test of emotion recognition is genuine evidence, but it is a step short of the child's life changing. The thesis should be careful not to slide from one claim to the other.</li>
           <li><strong>The sample is small and varied.</strong> Group averages should be treated cautiously; per-child results and effect sizes carry more weight.</li>
           <li><strong>The questionnaire's published norms are from the United States.</strong> The study therefore works with raw scores and raw change, not converted standard scores.</li>
           <li><strong>Getting better at a game is not the finding.</strong> In-game scores describe learning inside the training. They support the story; they are not the result.</li>
@@ -803,7 +879,12 @@
         <h2><span class="num">15</span>Word list</h2>
         <p class="lede">Terms you will meet in the study documents, in plain language.</p>
         <dl class="glossary">
-          <div><dt>ASSP</dt><dd>Autism Social Skills Profile — the 49-question form a teacher or parent fills in before and after. The study's main measure.</dd></div>
+          <div><dt>EIT</dt><dd>Emotion Identification Test — the emotion test, 30 photograph-card items. One of the three main measures.</dd></div>
+          <div><dt>TOP</dt><dd>Turn-Taking Observation Probe — the turn-taking test, played live with two adults and video-recorded.</dd></div>
+          <div><dt>JAP</dt><dd>Joint Attention Probe — the joint attention test: following a point or a look, and spontaneously sharing a surprise.</dd></div>
+          <div><dt>RJA / IJA</dt><dd>The two halves of joint attention: <em>responding</em> to someone's bid for attention, and <em>initiating</em> one yourself.</dd></div>
+          <div><dt>NCT</dt><dd>Non-Social Control Task — the picture task expected not to change (section 8).</dd></div>
+          <div><dt>ASSP</dt><dd>Autism Social Skills Profile — the 49-question form a teacher or parent fills in before and after. The study's secondary, everyday-life measure.</dd></div>
           <div><dt>ISAA</dt><dd>Indian Scale for Assessment of Autism — a severity measure recorded once at the start to describe each child.</dd></div>
           <div><dt>T0 / T1 / T2</dt><dd>Before the games / straight after / at follow-up a few weeks later.</dd></div>
           <div><dt>Dose</dt><dd>How much treatment a child actually got — number of sessions, total minutes, and how they were spread out.</dd></div>
@@ -818,13 +899,15 @@
           <div><dt>Reliable change</dt><dd>An improvement in one child large enough that it cannot reasonably be measurement error.</dd></div>
           <div><dt>Inter-rater agreement</dt><dd>How closely two different adults rating the same child agree — a check that the questionnaire is being used consistently.</dd></div>
           <div><dt>Pre-registration</dt><dd>Writing down the questions and the analysis before seeing any results, so findings cannot be chosen to fit.</dd></div>
-          <div><dt>Generalisation</dt><dd>Skills practised in one place (the headset) showing up somewhere else (the classroom). This is what the study is testing.</dd></div>
+          <div><dt>Near transfer</dt><dd>The trained skill improving on a different task that measures the same thing — the three skills tests. The study's primary claim.</dd></div>
+          <div><dt>Far transfer / generalisation</dt><dd>The skill showing up in ordinary life outside any test — what the questionnaire asks about. The study's secondary claim.</dd></div>
+          <div><dt>Parallel forms</dt><dd>Two matched versions of a test, so a child does not get the identical items twice and improve just by remembering them.</dd></div>
         </dl>
       </section>
 
       <footer>
         <p><strong>Where this comes from.</strong> This document summarises the study's working papers: the outcome measure protocol, the pre-registration and analysis plan, the master study blueprint, the VR user-experience protocol, the analysis guide and the data-keeping review. Where this summary and those documents disagree, those documents are correct.</p>
-        <p><strong>Two things still to be confirmed</strong> before the study is locked: the exact question counts within each part of the ASSP and which questions are reverse-scored, taken from the official manual; and written permission to use and translate the ASSP for research.</p>
+        <p><strong>Still to be confirmed</strong> before the study is locked: the exact question counts within each part of the ASSP and which questions are reverse-scored, taken from the official manual; written permission to use and translate the ASSP for research; and the source of the face photographs for the emotion test — either licensing an existing Indian emotion-photograph set, or photographing local actors and validating the images first.</p>
       </footer>
 
     </main>

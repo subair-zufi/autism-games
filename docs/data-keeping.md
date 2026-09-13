@@ -24,7 +24,8 @@ chance-recoverable; first-attempt rules are enforced per game; a single **standa
 0–100 chance-corrected skill score** makes 2-, 3-, 4-alternative and "wait your turn" tasks
 directly comparable; the VR/desktop flag is on every step, which is what separates
 intervention data from demo play; dose (sessions, minutes, spacing) is derivable; and the
-outcome table carries `rater_id` + `is_double_coded` for inter-rater agreement. The exports are de-identified
+outcome table carries `rater_id` + `is_double_coded` + parallel `form` for inter-rater and
+form-equivalence checks. The exports are de-identified
 (participant code + opaque id, never the child's name).
 
 **What is missing or risky (headline).**
@@ -39,8 +40,8 @@ outcome table carries `rater_id` + `is_double_coded` for inter-rater agreement. 
    and **no dashboard panel** that joins pre/post battery gains to in-game scores. The
    `summary` sheet in the analysis guide exists *only in the Python dummy generator*, so the
    primary-outcome join, RCI, and the NCT specificity contrast all happen off-platform.
-   (The ASSP is an informant questionnaire completed on paper, so only its **scored totals**
-   ever enter the platform — that part is by design, not a gap.)
+   (Both the battery and the ASSP are administered off-platform, so only their **scored
+   totals** enter the app — that part is by design, not a gap.)
 3. **Baseline characterization is thinner than the protocol requires** — **ISAA** severity,
    verbal/communication level, language of administration, and the IQ instrument/date are
    not stored (only a bare `iq_score` and a DSM-5 `autism_level`).
@@ -167,18 +168,20 @@ Per (child, `timepoint`, `instrument`, `form`, `rater_id`): `raw_score`, `n_opti
 `max_score`, `is_double_coded`, `assessed_on`, `notes`.
 
 - `timepoint` ∈ pre / post / followup (T0/T1/T2).
-- `instrument` ∈ `ASSP_TOTAL` (primary) · `ASSP_SR` / `ASSP_SPA` / `ASSP_DSB` (subscales) ·
+- `instrument` ∈ `EIT` / `TOP` / `JAP` (near-transfer battery, **primary**) ·
+  `ASSP_TOTAL` + `ASSP_SR` / `ASSP_SPA` / `ASSP_DSB` (far transfer, **secondary**) ·
   `NCT` / `SOUNDLOC` (discriminant control). Free-text, so any instrument name imports.
-- `form` = `SINGLE` on every ASSP row (a rating scale has no parallel forms); the NCT keeps
-  `A`/`B` for its two photo sets.
-- `rater_id` + `is_double_coded` identify the **second independent ASSP informant** used for
-  inter-rater **ICC**; on the control block they identify the tester.
-- Uniqueness is per (child, timepoint, instrument, form, rater) → a second informant is a
-  separate row, and re-import updates in place.
+- `form` = `A`/`B` on the battery and NCT (parallel forms); `SINGLE` on every ASSP row, since
+  a rating scale has no parallel forms.
+- `rater_id` + `is_double_coded` carry two different reliability designs in one pair of
+  columns: on the battery a second **video coder** (Cohen's κ), on the ASSP a second
+  independent **informant** (ICC). The instrument tells you which.
+- Uniqueness is per (child, timepoint, instrument, form, rater) → a second coder or informant
+  is a separate row, and re-import updates in place.
 
-**Relevance verdict:** the schema takes the ASSP without change — it was general enough that
-swapping the instrument set needed no migration. The problem is not the schema but that this
-table is **isolated** from the rest of the platform (§5, G2).
+**Relevance verdict:** the schema carries both measurement layers without change — it was
+general enough that adding the ASSP alongside the battery needed no migration. The problem is
+not the schema but that this table is **isolated** from the rest of the platform (§5, G2).
 
 ---
 
@@ -214,7 +217,8 @@ as a ▲/▼ chip next to scores and is easy to over-read. The SAP's efficacy te
 
 | Question (blueprint O1–O8 / analysis guide Q1–Q8) | Data that answers it | Status |
 |---|---|---|
-| O1 Generalization efficacy | `assessment_scores` (ASSP) vs NCT | **stored, but not joined in-app** (G2) |
+| O1 Near-transfer efficacy | `assessment_scores` (EIT/TOP/JAP) vs NCT | **stored, but not joined in-app** (G2) |
+| O1b Far transfer | `assessment_scores` (ASSP total + subscales) | **stored, but not joined in-app** (G2) |
 | O2 In-game acquisition | `game_events` → `trials` (`first_attempt_correct` ~ trial index) | ✅ well covered |
 | O3 Dose–response | `game_sessions` → `dose` | ✅ covered |
 | O4 Moderation | `students` (age, gender, autism level, IQ) | ⚠️ covered but ISAA/verbal-level missing (G3) |
@@ -250,9 +254,9 @@ completer populations are reconstructed by hand.
 ### G2 — The primary outcome never integrates with the game data in-app
 `assessment_scores` is **import/export CSV only**. There is:
 
-- **no server `summary` endpoint** — the per-participant `summary` sheet (with
-  `assp_total_gain`, the subscale gains, `nct_gain`, `has_post_battery`, `composite_delta`)
-  that the
+- **no server `summary` endpoint** — the per-participant `summary` sheet (with `eit_gain`,
+  `top_gain`, `jap_gain`, `assp_total_gain`, `nct_gain`, `has_post_battery`,
+  `composite_delta`) that the
   analysis guide centres on exists **only in `sample-data/generate_dummy_data.py`**, i.e. it
   is a documentation artifact, not a reproducible product export;
 - **no dashboard panel** showing battery scores, pre/post gains, the NCT specificity
@@ -330,8 +334,8 @@ limits O2's RT strand.
 3. Build a server **`summary` export/endpoint** that joins `assessment_scores` gains to the
    standardised in-game scores per participant (the shape the analysis guide already
    documents), so the primary-outcome table is reproducible from the product, not a script. (G2)
-4. Add a dashboard **Outcomes panel**: pre/post ASSP total and subscales, the ASSP-vs-NCT
-   specificity view, and RCI per child. (G2)
+4. Add a dashboard **Outcomes panel**: pre/post battery per instrument, the ASSP alongside
+   it, the trained-vs-NCT specificity view, and RCI per child. (G2)
 
 **P1 — data quality & scope**
 5. Add **`isaa_score`** (numeric, alongside `iq_score`, with a band for grouping),
@@ -360,7 +364,7 @@ limits O2's RT strand.
 ## 7. One-line answer to the brief
 
 The app keeps a **rich, well-instrumented per-trial telemetry stream and a clean
-outcome-score table**, and its **covariates are appropriate** — but it is **missing the
+outcome-score table** (near-transfer battery, ASSP and control in one schema), and its **covariates are appropriate** — but it is **missing the
 study-design scaffolding** (arm, cluster, timepoint, consent/enrollment), the **in-app
 integration and display of the primary outcome**, part of the **protocol-mandated baseline
 characterization** (ISAA severity, verbal level), any **structured

@@ -6,8 +6,8 @@ Ages 7–15 · Malayalam administration · Meta Quest, six 360° games
 This is an **acceptability / usability measure, not an efficacy measure.** It answers
 "can these children use, tolerate, and enjoy the headset and the games?" — a
 precondition for the intervention, and a moderator to report alongside outcomes. Efficacy
-(generalization to everyday social behaviour) is measured separately by the
-[ASSP outcome protocol](pre-post-test-protocol.md).
+(near transfer, and generalization to everyday behaviour) is measured separately by the
+[outcome measures protocol](pre-post-test-protocol.md).
 Because the sample is autistic children, this protocol leans on **objective telemetry and
 structured observation** and treats child self-report as corroborating, not primary —
 Likert-style self-report is unreliable in this population (literal interpretation,
