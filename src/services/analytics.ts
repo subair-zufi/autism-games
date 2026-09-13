@@ -157,6 +157,15 @@ export interface GameScore {
   baseline_score: number | null; // first session (pre)
   latest_score: number | null; // most recent session (post)
   delta: number | null; // latest − baseline (improvement)
+  /** Difficulty tier at each end of `delta`. Levels are freely selectable, so
+   *  the two ends need not match — and when they don't the delta compares two
+   *  different tasks, since chance-correction handles the option count but not
+   *  the subtler cues and faded hints a harder tier adds. */
+  baseline_level: string;
+  latest_level: string;
+  /** True when both ends sat at the same tier, i.e. the delta is like-for-like.
+   *  False (or an unknown tier) hides the improvement chip. */
+  delta_same_level: boolean;
 }
 
 /** Mean 0–100 score across the games that train one target skill. */

@@ -946,6 +946,10 @@ button:active, a:active, [role='button']:active { filter: brightness(0.93); }
 .delta-chip { font-size: 0.7rem; font-weight: 700; margin-left: 6px; padding: 1px 6px; border-radius: 999px; vertical-align: middle; }
 .delta-chip.up { color: #0f7a3d; background: #dcfce7; }
 .delta-chip.down { color: #b42318; background: #fee2e2; }
+/* Shown instead of a ▲/▼ chip when the first and latest sessions sat at
+   different difficulties — a change across tiers isn't an improvement or a
+   decline, it's a different task, so it reads as neutral. */
+.delta-note { font-size: 0.68rem; font-weight: 600; margin-left: 6px; padding: 1px 6px; border-radius: 999px; vertical-align: middle; color: var(--m-muted); background: var(--m-surface-2, #eef1f6); white-space: nowrap; }
 
 .composite-panel { text-align: center; }
 .composite-hero { display: flex; align-items: center; justify-content: center; gap: 18px; flex-wrap: wrap; margin-bottom: 6px; }

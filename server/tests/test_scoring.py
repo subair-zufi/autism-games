@@ -290,6 +290,44 @@ def test_improvement_first_vs_latest_session():
     assert g.delta == 100.0
 
 
+def test_delta_flags_a_level_change_between_first_and_last_session():
+    # First session on easy, last on hard: the delta compares two different
+    # tasks, so it must not read as a like-for-like improvement.
+    early = [ev("emotionrecognition", "answer", {"correct": True, "level": "easy"}, session="s1", offset=i) for i in range(6)]
+    late = [ev("emotionrecognition", "answer", {"correct": i < 3, "level": "hard"}, session="s2", offset=100 + i) for i in range(6)]
+    g = scoring.score_game("emotionrecognition", early + late)
+    assert (g.baseline_level, g.latest_level) == ("easy", "hard")
+    assert g.delta_same_level is False
+    assert g.delta is not None  # still computed; the caller decides what to do with it
+
+
+def test_delta_is_same_level_when_both_ends_match():
+    early = [ev("emotionrecognition", "answer", {"correct": i < 3, "level": "easy"}, session="s1", offset=i) for i in range(6)]
+    late = [ev("emotionrecognition", "answer", {"correct": True, "level": "easy"}, session="s2", offset=100 + i) for i in range(6)]
+    g = scoring.score_game("emotionrecognition", early + late)
+    assert g.delta_same_level is True
+    assert g.baseline_level == "easy" and g.latest_level == "easy"
+
+
+def test_unknown_level_is_not_treated_as_a_match():
+    # Games that record no level at all must not claim a like-for-like delta.
+    evs = [ev("blocks", "place_block", {}, session="s1", offset=i) for i in range(3)] + [
+        ev("blocks", "place_block", {}, session="s2", offset=100 + i) for i in range(3)
+    ]
+    g = scoring.score_game("blocks", evs)
+    assert (g.baseline_level, g.latest_level) == ("", "")
+    assert g.delta_same_level is False
+
+
+def test_session_level_takes_the_mode_when_a_facilitator_switches_midway():
+    evs = (
+        [ev("emotionrecognition", "answer", {"correct": True, "level": "medium"}, session="s1", offset=i) for i in range(4)]
+        + [ev("emotionrecognition", "answer", {"correct": True, "level": "hard"}, session="s1", offset=10 + i) for i in range(2)]
+    )
+    g = scoring.score_game("emotionrecognition", evs)
+    assert g.baseline_level == "medium"  # 4 medium trials outweigh 2 hard
+
+
 # --- aggregation to skills + composite ---------------------------------------
 
 

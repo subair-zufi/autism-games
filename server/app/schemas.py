@@ -408,6 +408,12 @@ class GameScoreOut(BaseModel):
     baseline_score: float | None
     latest_score: float | None
     delta: float | None
+    # Difficulty tier at each end of `delta`, and whether they match. When they
+    # don't, the delta compares two different tasks — the UI hides its
+    # improvement chip and analysis should model level instead of using it.
+    baseline_level: str
+    latest_level: str
+    delta_same_level: bool
 
 
 class SkillScoreOut(BaseModel):

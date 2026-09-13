@@ -462,6 +462,18 @@ class GameScore:
     baseline_score: float | None  # first session's score (pre)
     latest_score: float | None  # most recent session's score (post)
     delta: float | None  # latest - baseline (improvement)
+    # The difficulty tier each of those two sessions was mostly played at. The
+    # levels are freely selectable, so the two ends of `delta` need not match —
+    # and when they don't, the delta compares two different tasks. `chance`
+    # corrects for the option count but not for the subtler cues, faded hints
+    # and more confusable distractors a harder tier adds, so a child who
+    # progressed can show a flat or negative delta while genuinely improving.
+    baseline_level: str  # "" when unknown
+    latest_level: str  # "" when unknown
+    # True when the two ends are the same tier, i.e. the delta is a like-for-like
+    # comparison. False means read it with the level change in mind (the UI
+    # suppresses its improvement chip; analysis should model level instead).
+    delta_same_level: bool
 
     def as_dict(self) -> dict:
         return {
@@ -475,6 +487,9 @@ class GameScore:
             "baseline_score": self.baseline_score,
             "latest_score": self.latest_score,
             "delta": self.delta,
+            "baseline_level": self.baseline_level,
+            "latest_level": self.latest_level,
+            "delta_same_level": self.delta_same_level,
         }
 
 
@@ -521,6 +536,16 @@ def _mean(values: list[float]) -> float | None:
     return round(sum(vals) / len(vals), 1) if vals else None
 
 
+def _session_level(trials: list[Trial]) -> str:
+    """The difficulty tier a session was played at — the modal `level`/`difficulty`
+    across its trials, or "" if none recorded. A session normally sits at one
+    tier; the mode covers a facilitator switching part-way through."""
+    levels = [_level(t.payload) for t in trials if t.payload.get("level") or t.payload.get("difficulty")]
+    if not levels:
+        return ""
+    return max(set(levels), key=levels.count)
+
+
 def score_game(game_key: str, events: Iterable[EventLike]) -> GameScore:
     trials = trials_for_game(game_key, events)
     sessions = _sessions_ordered(trials)
@@ -528,6 +553,11 @@ def score_game(game_key: str, events: Iterable[EventLike]) -> GameScore:
     baseline = corrected_score(sessions[0]) if sessions else None
     latest = corrected_score(sessions[-1]) if sessions else None
     delta = round(latest - baseline, 1) if baseline is not None and latest is not None else None
+    baseline_level = _session_level(sessions[0]) if sessions else ""
+    latest_level = _session_level(sessions[-1]) if sessions else ""
+    # Unknown tiers are not evidence of a like-for-like comparison, so an empty
+    # level on either end counts as "not comparable" rather than "same".
+    same_level = bool(baseline_level) and baseline_level == latest_level
     return GameScore(
         game_key=game_key,
         skill=SKILL_BY_GAME.get(game_key, ""),
@@ -539,6 +569,9 @@ def score_game(game_key: str, events: Iterable[EventLike]) -> GameScore:
         baseline_score=baseline,
         latest_score=latest,
         delta=delta,
+        baseline_level=baseline_level,
+        latest_level=latest_level,
+        delta_same_level=same_level,
     )
 
 

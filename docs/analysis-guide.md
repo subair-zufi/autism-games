@@ -26,10 +26,24 @@ data sheets, at three grains:
 | **All raw (ZIP)** · `/api/admin/export/all.zip` | — | bundle | participants + raw_events + sessions + level_progress + codebook in one download |
 | *(derived from trials + dose + battery)* | `summary` | **one row per participant** | between-subjects analysis — **start here** |
 
-**Raw data is the ground truth.** `trials`, `dose`, and `summary` apply the app's
-standardised scoring for convenience; if you disagree with any scoring choice
-(first-attempt rule, chance baseline, session windows), rebuild it yourself from
-`raw_events`.
+### Raw or derived — know which you are holding
+
+| | Files | What has been done to them |
+|---|---|---|
+| **Raw** (as stored) | `raw_events` · `sessions` · `level_progress` · `participants` · `battery` | **Nothing.** Every recorded event and every entered score, exactly as saved. No scoring, no filtering, no banding, no aggregation. |
+| **Derived** (convenience) | `trials` · `dose` · `summary` | The app's scoring applied: the first-attempt rule, chance-correction, session windows, per-skill and composite averaging. |
+
+**If you want to run your own statistics from scratch, use the raw files and ignore the
+derived ones entirely.** One click gets all of them: **All raw (ZIP)** ·
+`/api/admin/export/all.zip` — participants, raw events, sessions, level progress, the
+outcome scores, and the codebook, with no scoring applied. The derived files are
+deliberately *excluded* from that bundle so there is no ambiguity about what you have.
+
+`raw_events` is the ground truth underneath everything: one row per recorded action, every
+payload field flattened into its own column, in a pinned column order. Anything in `trials`,
+`dose` or `summary` can be rebuilt from it — so if you disagree with a scoring choice (the
+first-attempt rule, a chance baseline, how sessions are windowed), rebuild it your own way
+rather than working around the app's version. The `codebook` sheet defines every column.
 
 ---
 
@@ -229,13 +243,33 @@ reason the battery exists, using different materials in a different room. So:
   gain (Q1) and the **dose–response** relationship (Q4). Those connect the process to the
   outcome; the raw in-game numbers on their own do not.
 
+### Report progression — it is the measure the score hides
+
+If a child moved from Easy to Hard, **that is the improvement**, and the app already defines
+it: **70%** accuracy passes a level, **80%** masters it, both stored per child × game × level
+in `level_progress` (`passed`, `mastered`, `attempts`, `best_accuracy`).
+
+A flat score at a rising difficulty is real progress that the score actively conceals, so
+report progression as its own measure rather than trying to squeeze it into the delta:
+
+- **Levels passed** and **levels mastered** per child (out of 3 per game).
+- **Highest level reached** per game, and how quickly.
+- The **distribution** across the cohort — how many children reached Hard on anything.
+
+It needs no modelling, has no small-sample problem, and it is the app's own definition of
+getting better. Together with the process measures (Q2) and dose–response (Q4) it gives a
+complete account of the training without leaning on a fragile difference score.
+
 ### Three traps in `{skill}_delta`
 
 `baseline_score` is the child's **first session** of a game and `latest_score` their
 **last**; `delta` is the difference. Three things break that comparison, all avoidable:
 
 1. **Level changes.** The two sessions may be at different difficulties (see the Q2
-   warning). Check `level` before trusting any delta.
+   warning). The app now reports this for you: every game score carries `baseline_level`,
+   `latest_level` and **`delta_same_level`** — filter on the last one, and treat a delta
+   across tiers as uninterpretable rather than as a decline. (The Progress dashboard does
+   the same thing, showing "Easy → Hard" instead of a red ▼.)
 2. **Too few sessions.** A delta from one or two sessions is noise — apply the stability
    screen in §3.1.
 3. **Ceiling.** A child who scored 100 in session one cannot improve. Report the baseline

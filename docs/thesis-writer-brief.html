@@ -643,13 +643,17 @@
           <li><strong>Error patterns.</strong> Which emotions get mistaken for which, and whether those specific confusions shrink over the eight weeks.</li>
         </ul>
 
-        <h4 style="font-size:15px; font-weight:600; margin:22px 0 6px;">4. Did the intervention actually happen? (feasibility)</h4>
-        <p>Sessions completed, total minutes, how the sessions were spread across weeks, which levels each child reached, and how many children could tolerate the headset at all. In a first study in a new setting, this is a genuine finding in its own right and deserves its own results section — not a footnote.</p>
+        <h4 style="font-size:15px; font-weight:600; margin:22px 0 6px;">4. How far did each child get? (progression)</h4>
+        <p>This is the measure the raw score hides, and it is worth reporting on its own. The app records, for every child and every game, whether they <strong>passed</strong> each level (70% correct) and whether they <strong>mastered</strong> it (80%). So you can report how many levels each child passed, how many they mastered, and the highest level they reached.</p>
+        <p>Why it matters: a child who moved from Easy up to Hard may show a <em>flat or even lower</em> score, because Hard is a harder task — but moving up is exactly what improvement looks like. Progression captures that directly, needs no statistical modelling, and works however small the sample is.</p>
+
+        <h4 style="font-size:15px; font-weight:600; margin:22px 0 6px;">5. Did the intervention actually happen? (feasibility)</h4>
+        <p>Sessions completed, total minutes, how the sessions were spread across weeks, and how many children could tolerate the headset at all. In a first study in a new setting, this is a genuine finding in its own right and deserves its own results section — not a footnote.</p>
 
         <h3>Three traps to avoid when reporting improvement</h3>
         <p>The app reports an in-game "improvement" figure by comparing a child's first session of a game with their last. Three things can make that figure misleading, and all three are checkable:</p>
         <ol>
-          <li><strong>The difficulty changed.</strong> A child who started on easy and finished on hard is being compared across two different tasks. Their score can look flat, or even fall, while they were genuinely improving. Always check which level each session was played at — the exported data now records this on every single answer.</li>
+          <li><strong>The difficulty changed.</strong> A child who started on easy and finished on hard is being compared across two different tasks. Their score can look flat, or even fall, while they were genuinely improving. The exported data now records the level on every single answer, and flags directly whether a child's before-and-after comparison was at the same level. Use progression (point 4 above) for these children instead.</li>
           <li><strong>Too few sessions.</strong> A change based on one or two sessions is noise, not learning. Set a minimum before looking at the numbers.</li>
           <li><strong>The ceiling.</strong> A child who scored full marks in their first session has nowhere to improve to. Their zero improvement means something quite different from another child's zero, and mixing the two together hides real effects.</li>
         </ol>
@@ -912,6 +916,18 @@
             </tbody>
           </table>
         </div>
+        <h3>Raw data, with nothing done to it</h3>
+        <p>Some of these files have the app's own scoring already applied, and some are completely untouched. If you want to run your own statistics from scratch, use the untouched ones:</p>
+        <div class="tablewrap">
+          <table>
+            <thead><tr><th scope="col"></th><th scope="col">Files</th><th scope="col">What has been done to them</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Raw</strong></td><td><code>raw_events</code> · <code>sessions</code> · <code>level_progress</code> · <code>participants</code> · <code>battery</code></td><td><strong>Nothing at all.</strong> Every recorded action and every entered score, exactly as saved — no scoring, no filtering, no averaging.</td></tr>
+              <tr><td><strong>Worked out</strong></td><td><code>trials</code> · <code>dose</code> · <code>summary</code></td><td>The app's scoring applied: first-attempt rule, guessing correction, per-skill averages.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A single button in the admin dashboard — <strong>"All raw (ZIP)"</strong> — downloads every raw file at once, plus the codebook that explains each column. The worked-out files are deliberately left out of that download, so there is no doubt about what is in it. Everything in the worked-out files can be rebuilt from <code>raw_events</code>, so if you disagree with any of the app's scoring choices, you can redo them your own way.</p>
         <p>No child's name appears in any of these. Each child has a code number, and the list connecting codes to names is kept separately under restricted access.</p>
       </section>
 

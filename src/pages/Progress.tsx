@@ -17,6 +17,22 @@ import { StarIcon } from '../components/icons'
 import { emotionMeta, type EmotionId } from '../games/emotionVocab'
 
 const gameTitle = (key: string) => gameById(key)?.title ?? key
+
+const LEVEL_LABEL: Record<string, string> = { easy: 'Easy', medium: 'Moderate', hard: 'Hard' }
+
+/**
+ * A ▲/▼ chip compares a game's first session with its most recent one. That is
+ * only fair if both sat at the same difficulty: a child who moved up to Hard can
+ * score lower while genuinely improving, and showing them a red ▼ for it is
+ * simply wrong. When the tiers differ we show the move instead of a chip.
+ */
+function levelChangeNote(g: GameScore): string | undefined {
+  if (g.delta_same_level || g.delta == null) return undefined
+  if (!g.baseline_level || !g.latest_level) return undefined
+  const from = LEVEL_LABEL[g.baseline_level] ?? g.baseline_level
+  const to = LEVEL_LABEL[g.latest_level] ?? g.latest_level
+  return `${from} → ${to}`
+}
 const fmt = (v: number | null) => (v == null ? '—' : Math.round(v).toString())
 
 /** Coloured ± improvement chip; hidden when there is nothing to compare. */
@@ -37,12 +53,15 @@ function ScoreBar({
   color,
   delta,
   sub,
+  note,
 }: {
   label: string
   score: number | null
   color: string
   delta?: number | null
   sub?: string
+  /** Shown in place of the ▲/▼ chip when the change isn't a fair comparison. */
+  note?: string
 }) {
   const played = score != null
   return (
@@ -51,7 +70,11 @@ function ScoreBar({
         <span className="score-bar-label">{label}</span>
         <span className="score-bar-value">
           {fmt(score)}
-          {delta !== undefined && <DeltaChip delta={delta ?? null} />}
+          {note ? (
+            <span className="delta-note" title={note}>{note}</span>
+          ) : (
+            delta !== undefined && <DeltaChip delta={delta ?? null} />
+          )}
         </span>
       </div>
       <div className="score-bar-track">
@@ -85,7 +108,8 @@ function SkillCard({ skill }: { skill: SkillScore }) {
             label={gameTitle(g.game_key)}
             score={g.score}
             color={meta.color}
-            delta={g.delta}
+            delta={g.delta_same_level ? g.delta : undefined}
+            note={levelChangeNote(g)}
             sub={
               g.n_trials > 0
                 ? `${g.n_trials} trials · ${g.n_sessions} session${g.n_sessions === 1 ? '' : 's'}` +

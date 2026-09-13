@@ -1212,15 +1212,21 @@ def export_codebook_csv(
 def export_all_zip(
     db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
 ) -> StreamingResponse:
-    """Every raw game-metrics export plus the roster and codebook, bundled as one
-    ZIP: participants, raw events, sessions, level progress and the data
-    dictionary — all keyed by participant_code / student_id."""
+    """Everything the platform holds, as stored, bundled as one ZIP: the roster,
+    every recorded event, sessions, level progress, the outcome scores and the
+    data dictionary — all keyed by participant_code / student_id.
+
+    **No scoring is applied to any of it.** These are the source tables; the
+    derived exports (trials.csv, dose.csv) are conveniences built from them and
+    are deliberately not included, so this bundle is unambiguously the raw data
+    for an independent analysis."""
     today = date.today().isoformat()
     datasets = [
         (f"participants_{today}.csv", _participants_table(db)),
         (f"events_raw_{today}.csv", _events_raw_table(db)),
         (f"sessions_{today}.csv", _sessions_table(db)),
         (f"level_progress_{today}.csv", _level_progress_table(db)),
+        (f"assessments_{today}.csv", _assessments_table(db)),
         ("codebook.csv", _codebook_table(db)),
     ]
     buf = io.BytesIO()
@@ -1289,11 +1295,9 @@ def assessments_template_csv(
     return _csv_response(ASSESSMENT_CSV_COLUMNS, rows, "assessment_template.csv")
 
 
-@router.get("/assessments.csv")
-def export_assessments_csv(
-    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
-) -> StreamingResponse:
-    """Export all stored outcome scores (round-trips the import format)."""
+def _assessments_table(db: Session) -> tuple[tuple[str, ...], list[list[object]]]:
+    """Every stored outcome score, exactly as entered — no scoring applied.
+    Shared by the CSV endpoint and the all-raw ZIP bundle."""
     rows_q = db.execute(
         select(AssessmentScore, Student.participant_code)
         .join(Student, AssessmentScore.student_id == Student.id)
@@ -1315,7 +1319,16 @@ def export_assessments_csv(
         ]
         for a, code in rows_q
     ]
-    return _csv_response(ASSESSMENT_CSV_COLUMNS, rows, "assessments.csv")
+    return ASSESSMENT_CSV_COLUMNS, rows
+
+
+@router.get("/assessments.csv")
+def export_assessments_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """Export all stored outcome scores (round-trips the import format)."""
+    columns, rows = _assessments_table(db)
+    return _csv_response(columns, rows, "assessments.csv")
 
 
 def _pf(v: str | None) -> float | None:

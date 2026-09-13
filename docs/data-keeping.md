@@ -66,7 +66,7 @@ Details and recommendations follow.
 | Play sessions | `game_sessions` | one row per game run | `startSession`/`endSession` |
 | **Gameplay steps** | `game_events` (+ JSONB `payload`) | one row per step/trial | `recordStep` (only when logged in) |
 | Level progression | `level_progress` | one row per (mentor, child, game, level) | `submitProgress` |
-| **Outcome scores** | `assessment_scores` | one row per entered score | CSV import (data manager / blinded tester) |
+| **Outcome scores** | `assessment_scores` | one row per entered score | CSV import (data manager / blinded tester); included in the all-raw ZIP |
 | Admins | `admins` | dashboard operators | seed/admin |
 | Derived scores | *(none — computed on read)* | per trial / game / skill / participant / cohort | `scoring.py` |
 
