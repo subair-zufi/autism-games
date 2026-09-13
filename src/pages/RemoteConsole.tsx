@@ -228,6 +228,8 @@ function Console({ code }: { code: string }) {
 
       <MirrorPanel frame={frame} status={status} on={mirrorOn} onToggle={() => setMirrorOn((v) => !v)} />
 
+      <PromptCard status={status} />
+
       {status.phase === 'enterVr' && (
         <p className="rc-alert">
           Waiting for <strong>Enter VR</strong> to be pressed on the headset — the child can
@@ -249,8 +251,6 @@ function Console({ code }: { code: string }) {
           {status.progress && <span>{status.progress}</span>}
         </div>
       </section>
-
-      {status.prompt && <p className="rc-prompt">“{status.prompt}”</p>}
 
       <div className="rc-actions">
         <button className="rc-btn quit" type="button" onClick={() => void send('quit', {}, 'Quit')}>
@@ -339,6 +339,29 @@ function Console({ code }: { code: string }) {
         on the headset itself. That press is a WebXR requirement, not a choice this app makes.
       </p>
     </div>
+  )
+}
+
+/**
+ * The question the child is being asked, given the room it deserves.
+ *
+ * This is the trainer's main working text. A child in a headset often cannot
+ * read the prompt, and a trainer who cannot see it is guessing at what to say —
+ * so it is set large, directly under the view, and it stays put between trials
+ * rather than flickering as the game re-renders.
+ *
+ * What is deliberately absent: the answer options and which of them is right.
+ * A trainer who can see the correct answer will cue it without meaning to.
+ */
+function PromptCard({ status }: { status: Partial<RemoteStatus> }) {
+  if (!status.prompt) return null
+  return (
+    <section className="rc-prompt-card">
+      <span className="rc-prompt-label">The child is being asked</span>
+      <p className="rc-prompt-text" lang={status.settings?.language ?? 'en'}>
+        {status.prompt}
+      </p>
+    </section>
   )
 }
 

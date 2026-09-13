@@ -1195,9 +1195,6 @@ button:active, a:active, [role='button']:active { filter: brightness(0.93); }
 .rc-now-main strong { font-size: 1rem; }
 .rc-now-main span { font-size: 0.78rem; color: var(--m-muted); }
 .rc-now-score { display: flex; gap: 10px; font-weight: 700; font-size: 0.9rem; white-space: nowrap; }
-.rc-prompt {
-  margin: 8px 2px 0; font-size: 0.9rem; font-style: italic; color: var(--m-ink);
-}
 
 /* ---- the three controls that matter most ---- */
 .rc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0 4px; }
@@ -1277,3 +1274,15 @@ button:active, a:active, [role='button']:active { filter: brightness(0.93); }
 }
 .rc-add-person .rc-row { gap: 8px; }
 .rc-chip-link { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+
+/* ---- the question the child is being asked (trainer's main working text) ---- */
+.rc-prompt-card {
+  margin: 12px 0 0; padding: 14px 16px; border-radius: 14px;
+  background: var(--m-card); border: 1px solid var(--m-line);
+  border-left: 4px solid var(--m-accent);
+}
+.rc-prompt-label {
+  display: block; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--m-muted); margin-bottom: 6px;
+}
+.rc-prompt-text { margin: 0; font-size: 1.25rem; font-weight: 700; line-height: 1.35; }

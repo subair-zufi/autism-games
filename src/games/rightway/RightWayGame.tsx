@@ -26,7 +26,7 @@ import { useSettings } from '../../state/settings'
 import { ProgressBar } from '../../components/ProgressBar'
 import { WebGLGate } from '../../components/WebGLGate'
 import { LevelResult, LevelSelect } from '../../components/LevelScreens'
-import { speak, speechAvailable } from '../../services/speech'
+import { speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { t, type Lang } from '../../i18n/strings'
 import { useGameAnalytics } from '../useGameAnalytics'
@@ -42,6 +42,7 @@ import {
   type LevelSummary,
 } from './logic'
 import { RightWayScene } from './RightWayScene'
+import { BilingualPromptBanner } from '../../components/BilingualPromptBanner'
 
 export const GAME_KEY = 'rightway'
 
@@ -262,14 +263,11 @@ function promptFor(trial: Behavior, lang: Lang): string {
 function PromptBanner({ trial, lang }: { trial: Behavior; lang: Lang }) {
   const text = promptFor(trial, lang)
   return (
-    <div className="prompt-banner er-prompt">
-      <div className="er-prompt-lines">
-        <span className={`er-prompt-line er-prompt-${lang}`}>{text}</span>
-      </div>
-      {speechAvailable() && (
-        <button aria-label={t('sayAgain', lang)} onClick={() => speak(text, lang)}>🔊</button>
-      )}
-    </div>
+    <BilingualPromptBanner
+      lines={[{ lang, text }]}
+      lang={lang}
+      onSpeak={() => speak(text, lang)}
+    />
   )
 }
 
