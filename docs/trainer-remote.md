@@ -45,6 +45,20 @@ again except one thing — see *The one press* below.
 | Participant | Chooses who the session is recorded against, and adds or removes participants without leaving the console. |
 | Show / hide view | Starts and stops the mirror image. |
 
+### The question the child is being asked
+
+Set large, directly under the view, because it is the trainer's main working
+text: a child in a headset frequently cannot read the prompt, and a trainer who
+cannot see it is guessing at what to say. Every game reports it — they all draw
+their question through one shared band (`components/BilingualPromptBanner.tsx`
+or `components/PromptBanner.tsx`), and a test fails if a game grows its own copy
+of that markup, which is how half the games came to be missing from the console
+in the first place.
+
+What is deliberately **not** shown: the answer options, and which one is right.
+A trainer who can see the correct answer will cue it without meaning to, and the
+measure goes with it.
+
 ### Participants
 
 The participant list is on the console itself: tap to choose who the session

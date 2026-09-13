@@ -17,7 +17,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
-import { praise, speak, speechAvailable } from '../../services/speech'
+import { praise, speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { emotionMeta, type EmotionId } from '../emotionVocab'
 import {
@@ -37,6 +37,7 @@ import {
 } from '../progression'
 import { LevelResult, LevelSelect } from '../../components/LevelScreens'
 import { useGameAnalytics } from '../useGameAnalytics'
+import { BilingualPromptBanner } from '../../components/BilingualPromptBanner'
 
 export const GAME_KEY = 'identifyemotions'
 
@@ -311,18 +312,13 @@ export function IdentifyEmotionsGame() {
         {celebrating && <div className="celebrate">⭐</div>}
       </div>
       <div className="game-bottom">
-        <div className="prompt-banner er-prompt">
-          <div className="er-prompt-lines">
-            {promptLines.map(({ lang: l, text }) => (
-              <span key={l} className={`er-prompt-line er-prompt-${l}`}>
-                {text}
-              </span>
-            ))}
-          </div>
-          {(frozen || stage === 'cause') && speechAvailable() && (
-            <button aria-label={t('sayAgain', lang)} onClick={() => speak(promptSpeak, lang)}>🔊</button>
-          )}
-        </div>
+        <BilingualPromptBanner
+          lines={promptLines}
+          lang={lang}
+          onSpeak={
+            frozen || stage === 'cause' ? () => speak(promptSpeak, lang) : undefined
+          }
+        />
         {stage === 'cause' && q.cause ? (
           <>
             <div className="choice-row">
