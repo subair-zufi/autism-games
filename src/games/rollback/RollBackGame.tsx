@@ -6,7 +6,7 @@ import { StartScreen } from '../../components/StartScreen'
 import { ScoreBar } from '../../components/ScoreBar'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { praise, speakAll, speechAvailable } from '../../services/speech'
+import { praise, speakAll } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
   CONFIG,
@@ -20,9 +20,9 @@ import {
   type Rally,
 } from './logic'
 import { RollBackScene } from './RollBackScene'
-import { t } from '../../i18n/strings'
 import { rbLine, rbLines, rbSpeak, type RollBackMessageKey } from './strings'
 import { useGameAnalytics } from '../useGameAnalytics'
+import { BilingualPromptBanner } from '../../components/BilingualPromptBanner'
 
 const META = GAME_LIST.find((g) => g.id === 'rollback')!
 const MAX_LIVES = 3
@@ -303,20 +303,11 @@ export function RollBackGame() {
           {stage === 'rolling' && <div className="celebrate">⭐</div>}
         </div>
         <div className="game-bottom">
-          <div className="prompt-banner er-prompt">
-            <div className="er-prompt-lines">
-              {rbLines(promptKey, lang, promptParams).map(({ lang: l, text }) => (
-                <span key={l} className={`er-prompt-line er-prompt-${l}`}>
-                  {text}
-                </span>
-              ))}
-            </div>
-            {speechAvailable() && (
-              <button aria-label={t('sayAgain', lang)} onClick={() => say(promptKey, promptParams)}>
-                🔊
-              </button>
-            )}
-          </div>
+          <BilingualPromptBanner
+            lines={rbLines(promptKey, lang, promptParams)}
+            lang={lang}
+            onSpeak={() => say(promptKey, promptParams)}
+          />
           <div className="player-btn-row">
             {players.map((p, i) => {
               if (p.kind === 'child') {

@@ -6,7 +6,7 @@ import { StartScreen } from '../../components/StartScreen'
 import { ScoreBar } from '../../components/ScoreBar'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { praise, speakAll, speechAvailable } from '../../services/speech'
+import { praise, speakAll } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
@@ -31,6 +31,7 @@ import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
 import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
+import { BilingualPromptBanner } from '../../components/BilingualPromptBanner'
 
 const META = GAME_LIST.find((g) => g.id === 'football360')!
 const MAX_LIVES = 3
@@ -492,20 +493,11 @@ export function Football360Game() {
           )}
         </div>
         <div className="game-bottom">
-          <div className="prompt-banner er-prompt">
-            <div className="er-prompt-lines">
-              {fbLines(promptKey, lang, promptParams).map(({ lang: l, text }) => (
-                <span key={l} className={`er-prompt-line er-prompt-${l}`}>
-                  {text}
-                </span>
-              ))}
-            </div>
-            {speechAvailable() && (
-              <button aria-label={t('sayAgain', lang)} onClick={() => say(promptKey, promptParams)}>
-                🔊
-              </button>
-            )}
-          </div>
+          <BilingualPromptBanner
+            lines={fbLines(promptKey, lang, promptParams)}
+            lang={lang}
+            onSpeak={() => say(promptKey, promptParams)}
+          />
         </div>
         {phase === 'over' && (
           <GameOverDialog

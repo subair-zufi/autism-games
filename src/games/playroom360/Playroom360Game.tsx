@@ -6,7 +6,7 @@ import { StartScreen } from '../../components/StartScreen'
 import { ScoreBar } from '../../components/ScoreBar'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { praise, speakAll, speechAvailable } from '../../services/speech'
+import { praise, speakAll } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import { CONFIG, buildPlayers, makeSequence, peerBearingDeg, starsFor, type Player, type TurnSpec } from './logic'
@@ -20,6 +20,7 @@ import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
 import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
+import { BilingualPromptBanner } from '../../components/BilingualPromptBanner'
 
 const META = GAME_LIST.find((g) => g.id === 'playroom360')!
 
@@ -341,20 +342,11 @@ export function Playroom360Game() {
           )}
         </div>
         <div className="game-bottom">
-          <div className="prompt-banner er-prompt">
-            <div className="er-prompt-lines">
-              {prLines(promptKey, lang, promptParams).map(({ lang: l, text }) => (
-                <span key={l} className={`er-prompt-line er-prompt-${l}`}>
-                  {text}
-                </span>
-              ))}
-            </div>
-            {speechAvailable() && (
-              <button aria-label={t('sayAgain', lang)} onClick={() => say(promptKey, promptParams)}>
-                🔊
-              </button>
-            )}
-          </div>
+          <BilingualPromptBanner
+            lines={prLines(promptKey, lang, promptParams)}
+            lang={lang}
+            onSpeak={() => say(promptKey, promptParams)}
+          />
         </div>
         {phase === 'over' && (
           <GameOverDialog

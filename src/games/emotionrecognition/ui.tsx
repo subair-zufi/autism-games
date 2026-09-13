@@ -8,9 +8,10 @@
  */
 import { useEffect, useState } from 'react'
 import { emotionMeta, type EmotionId } from '../emotionVocab'
-import { speak, speechAvailable } from '../../services/speech'
-import { emotionLabel, t, type Lang, displayLangs } from '../../i18n/strings'
+import { speak } from '../../services/speech'
+import { emotionLabel, type Lang, displayLangs } from '../../i18n/strings'
 import type { GroupPhoto } from './content'
+import { BilingualPromptBanner } from '../../components/BilingualPromptBanner'
 
 /** <img> that shows a spinner until the (possibly slow) photo has loaded.
  *  `onReady` fires when the image becomes visible — the response-latency
@@ -61,16 +62,11 @@ export function BilingualPrompt({
   // Speak the prompt (in the chosen language) when it changes.
   useEffect(() => { speak(speakText, speakLang) }, [speakText, speakLang])
   return (
-    <div className="prompt-banner er-prompt">
-      <div className="er-prompt-lines">
-        {lines.map(({ lang, text }) => (
-          <span key={lang} className={`er-prompt-line er-prompt-${lang}`}>{text}</span>
-        ))}
-      </div>
-      {speechAvailable() && (
-        <button aria-label={t('sayAgain', speakLang)} onClick={() => speak(speakText, speakLang)}>🔊</button>
-      )}
-    </div>
+    <BilingualPromptBanner
+      lines={lines}
+      lang={speakLang}
+      onSpeak={() => speak(speakText, speakLang)}
+    />
   )
 }
 
