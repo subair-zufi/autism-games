@@ -675,6 +675,12 @@ class TrialRecord:
     trial_in_session: int  # 1-based index within this session
     first_attempt_correct: int  # 0/1
     chance: float
+    # Difficulty tier the trial was played at. Essential for the learning-curve
+    # analysis: `chance` only captures the change in option count, not the
+    # subtler cues, faded hints and extra distractors a harder tier adds, so a
+    # child who progressed mid-study looks worse than they are unless level is
+    # controlled for (analysis-guide Q2).
+    level: str
     latency_ms: int | None  # answer latency (may include spoken-prompt time)
     latency_from_prompt_end_ms: int | None  # cleaner RT: measured from prompt end
     hinted: int | None  # 1 if a hint had fired before the answer
@@ -721,6 +727,7 @@ def student_trial_records(
                     trial_in_session=per_session[t.session_id],
                     first_attempt_correct=int(t.correct),
                     chance=round(t.chance, 4),
+                    level=_level(p),
                     latency_ms=t.latency_ms,
                     latency_from_prompt_end_ms=_int_or_none(p.get("latencyFromPromptEndMs")),
                     hinted=_bool_int(p.get("hinted")),

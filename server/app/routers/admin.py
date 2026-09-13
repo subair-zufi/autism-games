@@ -720,6 +720,7 @@ TRIAL_CSV_COLUMNS = DEMO_COLUMNS + (
     "trial_in_session",
     "first_attempt_correct",
     "chance",
+    "level",  # difficulty tier played - control for it in learning curves
     "latency_ms",
     "latency_from_prompt_end_ms",  # cleaner RT (excludes spoken-prompt time)
     "hinted",
@@ -772,6 +773,7 @@ def export_trials_csv(
                     r.trial_in_session,
                     r.first_attempt_correct,
                     r.chance,
+                    r.level,
                     _c(r.latency_ms),
                     _c(r.latency_from_prompt_end_ms),
                     _c(r.hinted),
@@ -1114,7 +1116,7 @@ _CODEBOOK: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("final_score", "sessions", "int", "points", "", "Session final tally (raw per-game, not the standardised score)."),
     ("n_events", "sessions", "int", "count", "", "Number of recorded events attached to the session."),
     # --- level_progress columns ---
-    ("level", "level_progress,raw_events(payload)", "string", "", "easy | medium | hard", "Difficulty tier."),
+    ("level", "level_progress,trials,raw_events(payload)", "string", "", "easy | medium | hard", "Difficulty tier the trial/level was played at. Control for it in learning-curve analyses: chance only captures option count, not the subtler cues and faded hints a harder tier adds."),
     ("attempts", "level_progress", "int", "count", "", "Times this level was attempted."),
     ("best_score", "level_progress", "int", "points", "", "Best raw score achieved on the level."),
     ("best_accuracy", "level_progress", "float", "0-1", "", "Best uncorrected accuracy on the level."),

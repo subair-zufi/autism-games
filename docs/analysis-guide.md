@@ -114,11 +114,35 @@ Same question one step further out: does the **informant-rated ASSP** move too?
   contrast speaks to that — see [protocol §5.3](pre-post-test-protocol.md).
 
 ### Q2 — How fast do children learn? *(learning curves)*
-- **Sheet:** `trials`.
+- **Sheet:** `trials`, filtered to `xr_presenting = 1`.
 - **Columns:** `first_attempt_correct` ~ `trial_in_game` (or session index), grouped
-  by `participant_code` × `game_key`; `latency_from_prompt_end_ms` for automaticity.
+  by `participant_code` × `game_key`; `latency_from_prompt_end_ms` for automaticity;
+  `hinted` for scaffold dependence; **`level` as a covariate — see the warning below**.
 - **Analysis:** mixed-effects logistic growth (trials nested in sessions in children);
   slope = acquisition rate. Compare slopes across subgroups.
+
+> **Control for difficulty, or the curve is wrong.** Children move up levels during the
+> study, and the app does not hold the level fixed. `chance` corrects only for the number
+> of options; it does **not** capture the subtler cues, faded hints and more confusable
+> distractors a harder tier adds. A child who progressed easy → hard mid-study can show a
+> *flat or falling* accuracy curve while genuinely improving. Always put `level` in the
+> model (or fit within-level curves), and report how many children changed level and when.
+
+**Three secondary process measures on the same sheet, all worth a paragraph each:**
+
+- **Speed → automaticity.** `latency_from_prompt_end_ms` (never raw `latency_ms`) against
+  trial number. Accuracy rising *and* latency falling is a stronger learning claim than
+  accuracy alone. Guard: dwell-based selection makes looking instrumental, so pool
+  latencies only within the same `inputMethod` (`raw_events`).
+- **Hints → independence.** The proportion of trials with `hinted = 1` should fall across
+  sessions. A child at ceiling *with* hints is a different result from one at ceiling
+  without them.
+- **Head-scan → search efficiency.** `head_yaw_travel_deg`, `head_yaw_range_deg`,
+  `head_reversals`, `head_to_target_ms`. A child who finds the target with less sweeping
+  and fewer reversals is searching more efficiently — an objective process signal no
+  questionnaire can give you. Caveat: in the two joint-attention games, gaze can be the
+  *selection* method, which makes head yaw instrumental rather than social;
+  `headYawContaminated` in `raw_events` flags exactly those trials — exclude or adjust.
 
 ### Q3 — Pre vs post within child
 - **Sheet:** `summary` — `{skill}_pre` / `{skill}_post` (in-game, VR trials only); or
@@ -126,13 +150,18 @@ Same question one step further out: does the **informant-rated ASSP** move too?
 - **Analysis:** paired tests / repeated-measures; effect sizes (Cohen's *d*, or
   *d_z* for paired). ASSP is analysed on **raw** scores and raw change.
 
-### Q4 — Dose–response and retention
+### Q4 — Dose–response and retention *(the bridge from in-game data to the outcome)*
 - **Sheet:** `dose` (per game) and `summary` (`total_*`, `active_days`).
 - **Columns:** `n_sessions`, `n_scored_trials`, `total_minutes`, `span_days`,
   `median_gap_days` → predict gains. **Count VR sessions only** — desktop demo play is
   not dose.
-- **Analysis:** regress gain on dose; test for a minimal effective dose /
-  diminishing returns; `median_gap_days` speaks to spacing/retention.
+- **Analysis:** regress **battery** gain on dose (ASSP gain exploratorily); test for a
+  minimal effective dose / diminishing returns; `median_gap_days` speaks to
+  spacing/retention. Classroom as a random intercept.
+- **Why this matters more than it looks:** dose is measured objectively by the app, not
+  self-reported, and it varies naturally between children. A dose–response relationship is
+  therefore one of the few pieces of causal evidence available in a small trial — if more
+  play predicts more gain, chance and expectancy explain the pattern less well.
 
 ### Q5 — Who benefits most? *(moderation / ATI)*
 - **Sheet:** `summary`.
@@ -169,6 +198,49 @@ block as a process/attention measure within the VR trials instead.
   scored totals.)
 - **In-game test–retest:** split `trials` by trial or session and correlate; item difficulty
   per emotion/cue from `raw_events`.
+
+---
+
+## 4b. What the in-game metrics are for (and what they are not)
+
+The app produces far more data than the outcome measures do, and it is easy to over-claim
+from it. The division of labour is fixed:
+
+| Question | Evidence | Status |
+|---|---|---|
+| Did the child improve **at the game**? | `summary` `{skill}_pre/post/delta`, `trials` curves | **Process** — never the study's result |
+| Did the trained **skill** improve? | EIT / TOP / JAP | **Primary outcome** |
+| Did it reach **everyday life**? | ASSP | Secondary outcome |
+| Did **more play** produce more gain? | `dose` × battery gain | The link between the two |
+| **How** did they improve? | latency, hints, head-scan, error types | Mechanism |
+| Did they **engage** at all? | sessions, minutes, level progression, on-task | Feasibility / fidelity |
+
+**In-game improvement is confounded with game familiarity, and that is by design.** A child
+gets better at Museum 360 partly because joint attention improved and partly because they
+learned Museum 360. Nothing in the telemetry can separate those two — which is the entire
+reason the battery exists, using different materials in a different room. So:
+
+- **Never report an in-game gain as evidence of efficacy.** It belongs in a "did the
+  intervention take?" section, not in the results for O1.
+- **Do report it**, because a study where children *didn't* improve in-game and *did*
+  improve on the battery would be strange, and one where neither moved tells you the dose or
+  the design failed rather than the concept.
+- The genuinely load-bearing use is the **correlation** between in-game gain and battery
+  gain (Q1) and the **dose–response** relationship (Q4). Those connect the process to the
+  outcome; the raw in-game numbers on their own do not.
+
+### Three traps in `{skill}_delta`
+
+`baseline_score` is the child's **first session** of a game and `latest_score` their
+**last**; `delta` is the difference. Three things break that comparison, all avoidable:
+
+1. **Level changes.** The two sessions may be at different difficulties (see the Q2
+   warning). Check `level` before trusting any delta.
+2. **Too few sessions.** A delta from one or two sessions is noise — apply the stability
+   screen in §3.1.
+3. **Ceiling.** A child who scored 100 in session one cannot improve. Report the baseline
+   distribution alongside any delta, and consider excluding ceiling cases from the
+   dose–response model rather than letting them flatten the slope.
 
 ---
 

@@ -300,7 +300,7 @@ for e in all_events:
 TRIAL_COLS = ["participant_code", "student_id", "gender", "age_years", "age_band",
               "autism_level", "iq_score", "iq_band", "skill", "game_key", "xr_presenting",
               "session_id", "trial_in_game", "trial_in_session", "first_attempt_correct",
-              "chance", "latency_ms", "latency_from_prompt_end_ms", "hinted", "construct",
+              "chance", "level", "latency_ms", "latency_from_prompt_end_ms", "hinted", "construct",
               "cue", "visible_count", "head_yaw_travel_deg", "head_yaw_range_deg",
               "head_reversals", "head_to_target_ms", "timestamp"]
 trial_rows = []
@@ -311,7 +311,7 @@ for r in roster:
         trial_rows.append(demo + [
             tr.skill, tr.game_key, "" if tr.xr_presenting is None else tr.xr_presenting,
             tr.session_id or "", tr.trial_in_game, tr.trial_in_session,
-            tr.first_attempt_correct, tr.chance,
+            tr.first_attempt_correct, tr.chance, tr.level,
             "" if tr.latency_ms is None else tr.latency_ms,
             "" if tr.latency_from_prompt_end_ms is None else tr.latency_from_prompt_end_ms,
             "" if tr.hinted is None else tr.hinted, tr.construct, tr.cue,
