@@ -4,11 +4,9 @@ import { useAuth } from '../state/auth'
 import {
   analytics,
   type EmotionReport,
-  type GameConstructReport,
   type GameScore,
   type ParticipantSkillReport,
   type SkillScore,
-  type SocialNormsReport,
   type StudentReport,
 } from '../services/analytics'
 import { gameById, skillMeta, type Skill } from '../types'
@@ -19,21 +17,23 @@ import { StarIcon } from '../components/icons'
 import { emotionMeta, type EmotionId } from '../games/emotionVocab'
 
 const gameTitle = (key: string) => gameById(key)?.title ?? key
-const fmt = (v: number | null) => (v == null ? '—' : Math.round(v).toString())
 
-/** Friendly labels for the social-norms construct taxonomy (rightway + rulefixer). */
-const CONSTRUCT_LABELS: Record<string, string> = {
-  greetings: 'Greetings',
-  sharing: 'Sharing',
-  turns: 'Turn-Taking',
-  space: 'Personal Space',
-  politeness: 'Politeness',
-  helping: 'Helping',
-  comforting: 'Comforting',
-  inclusion: 'Inclusion',
-  fairness: 'Fairness',
+const LEVEL_LABEL: Record<string, string> = { easy: 'Easy', medium: 'Moderate', hard: 'Hard' }
+
+/**
+ * A ▲/▼ chip compares a game's first session with its most recent one. That is
+ * only fair if both sat at the same difficulty: a child who moved up to Hard can
+ * score lower while genuinely improving, and showing them a red ▼ for it is
+ * simply wrong. When the tiers differ we show the move instead of a chip.
+ */
+function levelChangeNote(g: GameScore): string | undefined {
+  if (g.delta_same_level || g.delta == null) return undefined
+  if (!g.baseline_level || !g.latest_level) return undefined
+  const from = LEVEL_LABEL[g.baseline_level] ?? g.baseline_level
+  const to = LEVEL_LABEL[g.latest_level] ?? g.latest_level
+  return `${from} → ${to}`
 }
-const constructLabel = (id: string) => CONSTRUCT_LABELS[id] ?? id
+const fmt = (v: number | null) => (v == null ? '—' : Math.round(v).toString())
 
 /** Coloured ± improvement chip; hidden when there is nothing to compare. */
 function DeltaChip({ delta }: { delta: number | null }) {
@@ -53,12 +53,15 @@ function ScoreBar({
   color,
   delta,
   sub,
+  note,
 }: {
   label: string
   score: number | null
   color: string
   delta?: number | null
   sub?: string
+  /** Shown in place of the ▲/▼ chip when the change isn't a fair comparison. */
+  note?: string
 }) {
   const played = score != null
   return (
@@ -67,7 +70,11 @@ function ScoreBar({
         <span className="score-bar-label">{label}</span>
         <span className="score-bar-value">
           {fmt(score)}
-          {delta !== undefined && <DeltaChip delta={delta ?? null} />}
+          {note ? (
+            <span className="delta-note" title={note}>{note}</span>
+          ) : (
+            delta !== undefined && <DeltaChip delta={delta ?? null} />
+          )}
         </span>
       </div>
       <div className="score-bar-track">
@@ -101,43 +108,13 @@ function SkillCard({ skill }: { skill: SkillScore }) {
             label={gameTitle(g.game_key)}
             score={g.score}
             color={meta.color}
-            delta={g.delta}
+            delta={g.delta_same_level ? g.delta : undefined}
+            note={levelChangeNote(g)}
             sub={
               g.n_trials > 0
                 ? `${g.n_trials} trials · ${g.n_sessions} session${g.n_sessions === 1 ? '' : 's'}` +
                   (g.median_latency_ms != null ? ` · ${(g.median_latency_ms / 1000).toFixed(1)}s` : '')
                 : 'Not played yet'
-            }
-          />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-/** One social-norms game's per-construct accuracy, pooled across recent sessions. */
-function ConstructReportCard({ report }: { report: GameConstructReport }) {
-  const color = skillMeta('socialnorms').color
-  return (
-    <div className="skill-card" style={{ '--card-accent': color } as React.CSSProperties}>
-      <div className="skill-card-head">
-        <span className="skill-card-title">{gameTitle(report.game_key)}</span>
-        <span className="score-bar-sub">
-          Pooled over last {report.n_sessions_pooled} of {report.session_window} sessions
-        </span>
-      </div>
-      <div className="skill-card-games">
-        {report.constructs.map((c) => (
-          <ScoreBar
-            key={c.construct}
-            label={constructLabel(c.construct)}
-            score={c.score}
-            color={color}
-            sub={
-              c.n_trials > 0
-                ? `${c.n_trials} trials` +
-                  (c.median_latency_ms != null ? ` · ${(c.median_latency_ms / 1000).toFixed(1)}s` : '')
-                : 'Not enough recent data'
             }
           />
         ))}
@@ -154,7 +131,6 @@ export function Progress() {
   const [report, setReport] = useState<StudentReport | null>(null)
   const [emotions, setEmotions] = useState<EmotionReport | null>(null)
   const [skills, setSkills] = useState<ParticipantSkillReport | null>(null)
-  const [socialNorms, setSocialNorms] = useState<SocialNormsReport | null>(null)
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
@@ -162,7 +138,6 @@ export function Progress() {
       setReport(null)
       setEmotions(null)
       setSkills(null)
-      setSocialNorms(null)
       return
     }
     let cancelled = false
@@ -180,10 +155,6 @@ export function Progress() {
       .getSkillReport(activeStudentId)
       .then((r) => !cancelled && setSkills(r))
       .catch(() => !cancelled && setSkills(null))
-    void analytics
-      .getSocialNormsReport(activeStudentId)
-      .then((r) => !cancelled && setSocialNorms(r))
-      .catch(() => !cancelled && setSocialNorms(null))
     return () => {
       cancelled = true
     }
@@ -267,21 +238,6 @@ export function Progress() {
           <p className="empty small">
             {loading ? 'Loading…' : 'No scored gameplay yet. Play a few games to build this participant’s skill profile.'}
           </p>
-        </section>
-      )}
-
-      {socialNorms && socialNorms.games.some((g) => g.constructs.some((c) => c.n_trials > 0)) && (
-        <section className="panel">
-          <h2>Social Norms Profile</h2>
-          <p className="empty small">
-            Per-construct accuracy, pooled across each game's most recent sessions — a single
-            session only has ~2 trials per construct, too few to judge one on its own.
-          </p>
-          <div className="skill-card-list">
-            {socialNorms.games.map((g) => (
-              <ConstructReportCard key={g.game_key} report={g} />
-            ))}
-          </div>
         </section>
       )}
 

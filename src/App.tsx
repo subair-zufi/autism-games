@@ -53,11 +53,6 @@ const GAME_COMPONENTS: Partial<Record<GameId, ComponentType>> = {
   ),
   museum: lazy(() => import('./games/museum/MuseumGame').then((m) => ({ default: m.MuseumGame }))),
   museum360: lazy(() => import('./games/museum360/Museum360Game').then((m) => ({ default: m.Museum360Game }))),
-  rightway: lazy(() => import('./games/rightway/RightWayGame').then((m) => ({ default: m.RightWayGame }))),
-  rightway360: lazy(() =>
-    import('./games/rightway360/RightWay360Game').then((m) => ({ default: m.RightWay360Game })),
-  ),
-  rulefixer: lazy(() => import('./games/rulefixer/RuleFixerGame').then((m) => ({ default: m.RuleFixerGame }))),
   identifyemotions: lazy(() =>
     import('./games/identifyemotions/IdentifyEmotionsGame').then((m) => ({ default: m.IdentifyEmotionsGame })),
   ),

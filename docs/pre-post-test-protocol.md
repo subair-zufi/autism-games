@@ -1,12 +1,28 @@
-# Pre/Post Assessment Battery — Custom Near-Transfer Tests
+# Pre/Post Outcome Measures — Near-Transfer Battery + ASSP
 
-Ages 7–15 · Malayalam administration · three skills (Emotional Identification, Turn-Taking, Joint Attention)
+Ages 7–15 · Malayalam administration · three trained skills (Emotional Identification,
+Turn-Taking, Joint Attention) · intervention delivered in **VR only**
 
-This battery is the **primary outcome measure** of the study. Each subtest mirrors the
-construct its games train (same task logic) while changing every surface feature
-(stimuli, medium, setting, respondent) so a pre→post gain demonstrates **near transfer**,
-not game familiarity. Standardized instruments (VSMS, ATEC-Malayalam) sit *around* this
-battery as secondary/distal measures — see the study protocol.
+The study measures transfer at **two distances**, and the distinction runs through every
+other document:
+
+| | Measure | Question it answers | Role |
+|---|---|---|---|
+| **Near** | The custom battery — **EIT · TOP · JAP** (§§1–3) | Has the trained skill itself improved, away from the game? | **Primary outcome** |
+| **Far** | The **ASSP** (§5) | Has the child's everyday social behaviour changed? | Secondary outcome |
+| **Neither** | **NCT** (§4) + sound-localization (§3, block 3.3) | Would anything have improved anyway? | Discriminant control |
+
+The **battery is the primary outcome**. Each subtest mirrors the construct its games train
+(same task logic) while changing every surface feature (stimuli, medium, setting,
+respondent) so a pre→post gain demonstrates **near transfer**, not game familiarity.
+
+The **ASSP sits alongside it** as the broader, real-world measure: an informant-rated
+questionnaire on the child's everyday social functioning. It answers a question the battery
+cannot — did anything reach the classroom and the home? — and it is deliberately *secondary*,
+because an 8-week intervention is unlikely to move an informant rating far, and a null there
+does not undo a battery gain. There are no other standardized outcome instruments — VSMS and
+ATEC are not used. (The **TRENDS** set may still be licensed as a source of face photographs
+for the EIT; that is a stimulus source, not an outcome measure.)
 
 Design rules applied throughout:
 
@@ -22,7 +38,10 @@ Design rules applied throughout:
    demands is administered pre and post; it should **not** improve. Trained-construct
    gains against a flat control task rule out practice/compliance/maturation effects.
 5. **Chance-corrected scoring.** Every forced-choice item reports raw accuracy and the
-   number of options, so chance level is always recoverable.
+   number of options, so chance level is always recoverable. (The ASSP is a rating scale and
+   is exempt — see §5.)
+6. **One informant, one window, for the ASSP.** The far-transfer measure has its own rules,
+   because its threats are different from a child-administered test's — §5.2.
 
 ---
 
@@ -35,9 +54,12 @@ Design rules applied throughout:
 | 3 | Joint Attention Probe (JAP) | RJA + IJA | Live structured probes, video-coded | 16 | ~10 min |
 | 4 | Non-Social Control Task (NCT) | Discriminant control | Table-top cards, forced choice | 12 | ~4 min |
 
-Total ≈ 40 min including breaks. Order is fixed (1 → 2 → 3 with NCT items interleaved
-after subtest 1) so that IJA probes in subtest 3 arrive when the child no longer treats
-the room as a test situation — IJA must be measured un-announced.
+Total ≈ 40 min of child time including breaks. Order is fixed (1 → 2 → 3 with NCT items
+interleaved after subtest 1) so that IJA probes in subtest 3 arrive when the child no longer
+treats the room as a test situation — IJA must be measured un-announced.
+
+The **ASSP (§5) adds no child time at all** — it is completed by an adult informant away from
+the child, so the total burden on the child is unchanged by including it.
 
 ---
 
@@ -238,7 +260,94 @@ of 6 interleaved after EIT parts 1b and 1d, so it also serves as a pacing break.
 
 ---
 
+## Section 5 — Autism Social Skills Profile (ASSP), the far-transfer measure
+
+The battery above asks whether the trained skill itself improved. This section asks the
+different — and for a thesis, the more interesting — question: **did any of it show up in the
+child's ordinary life?**
+
+### 5.1 The instrument
+
+| | |
+|---|---|
+| **Name** | Autism Social Skills Profile (ASSP) — Bellini & Hopf (2007), *Focus on Autism and Other Developmental Disabilities*, 22(2), 80–87 |
+| **Type** | Informant-rated questionnaire (parent / teacher) — **no child time** |
+| **Items** | 49 |
+| **Response scale** | 4-point frequency: Never / Sometimes / Often / Very Often |
+| **Subscales** | Social Reciprocity · Social Participation–Avoidance · Detrimental Social Behaviours |
+| **Time** | ~15–20 min per child per timepoint, completed by the informant |
+| **When** | T0, T1, T2 — the same schedule as the battery |
+
+> **Fill from the manual before go-live.** Exact item counts per subscale, the reverse-scored
+> item list, raw-score ranges and the published reliability/validity coefficients must be
+> transcribed from the ASSP source and recorded in
+> [SAP §11](preregistration-and-sap.md). Confirm permission for research use **and for
+> translation** at the same time. Nothing in this repo is the authoritative item set.
+
+**Scoring.** Each item scores 1–4; **Detrimental Social Behaviours items are reverse-scored**
+so a higher score always means better social functioning. Reported: the **ASSP total** and the
+**three subscale raw totals**. Analysis uses raw scores and raw change — the published standard
+scores are normed on a US sample, so any standard score is descriptive only, with the mismatch
+stated. Chance correction does not apply (design rule 5).
+
+**Translation.** Forward translation by a bilingual clinician, back-translation by a second
+independent translator, item-by-item reconciliation, then cognitive pre-testing with 3–5 BUDS
+teachers. The **same translated form** is used at T0, T1 and T2 — freeze it; a mid-study
+wording fix breaks the comparison. File the final Malayalam form under `validation/`.
+
+### 5.2 Rules specific to an informant measure
+
+The battery's protections (parallel forms, blinded tester, video coding) do not transfer to a
+questionnaire. Its threats are different, so its rules are too:
+
+1. **Same informant at every timepoint.** The teacher or parent who completes T0 completes T1
+   and T2 for that child. A changed informant is recorded as a protocol deviation.
+2. **Blind to their own previous ratings.** T0 forms are collected and never returned; the
+   informant never rates with the earlier form in view. They are blind to arm where the
+   cluster design allows, and to the hypotheses throughout. They cannot be blind to the
+   child's participation — they work in the school.
+3. **Fixed observation window.** Every rating refers to the child's behaviour over **the
+   preceding 4 weeks**, printed on the form, so the three timepoints cover comparable windows.
+4. **Independent double-rating.** For ≥30% of children a **second informant** (the other of
+   teacher/parent, or a second teacher) completes the ASSP independently at the same
+   timepoint → inter-rater **ICC(2,1)**, target ≥ .70 on the total.
+5. **Rater training.** One short briefing on the anchors, the 4-week window, and "rate what
+   you see, not what you hope", delivered identically to all informants before T0.
+6. **Facilitators do not rate children they facilitate** where another informant is available.
+
+### 5.3 What the ASSP adds, and what it cannot settle
+
+| | Battery (EIT/TOP/JAP) | ASSP |
+|---|---|---|
+| Measures | The child, directly | An adult's impression of the child |
+| Distance from training | Near — same construct, new materials | Far — everyday behaviour |
+| Sensitive over 8 weeks? | Yes, by design | Likely not; a null here is expected, not a failure |
+| Protected against practice/maturation by | The NCT control (§4) | The NCT control (§4) |
+| Protected against **informant expectancy** by | n/a — not informant-rated | Only the waitlist arm, plus rules 5.2.2–5.2.4 |
+
+The last row is the honest limit. The NCT rules out the *child* simply getting better at being
+tested; nothing in a single-arm design rules out a *teacher* expecting improvement and rating
+more warmly the second time. **The waitlist arm is the ASSP's main protection** — its
+informants carry the same expectancy without the intervention — which is a further reason not
+to lose the cluster design ([blueprint §3](study-blueprint-buds.md)).
+
+### 5.4 How the two levels are read together
+
+Pre-specify the interpretation now, so it cannot be chosen after the fact:
+
+| Battery | ASSP | Reading |
+|---|---|---|
+| Gains | Gains | The strongest result: the skill improved **and** reached everyday life. |
+| Gains | Flat | The expected result. Near transfer demonstrated; generalization not yet evident at 8 weeks. Report as such — it is not a failure. |
+| Flat | Gains | Treat with caution: the trained skill did not move, so an informant shift most likely reflects expectancy or a general engagement effect. Do not headline it. |
+| Flat | Flat | No evidence of benefit on either measure. |
+
+---
+
 ## Counterbalancing and session plan
+
+Parallel forms apply to the **battery only**. The ASSP is one fixed translated form at every
+timepoint (`form = SINGLE`) — a rating scale has no item-memory problem to counterbalance.
 
 | Group (random ½) | Pre-test | Post-test |
 |------------------|----------|-----------|
@@ -256,6 +365,10 @@ TOP 2.1 → [IJA probe 2] → TOP 2.2 → [IJA probe 3] → JAP RJA → [IJA pro
 sound-control trials → finish. Breaks on request; battery may split into two sittings on
 consecutive days if needed (split point: after TOP), same split at pre and post.
 
+**ASSP logistics.** Forms are distributed and collected by the data manager, not by the
+intervention facilitators, in the same window as each battery sitting. Completed forms go
+straight into the code-keyed store; the informant never sees a previous timepoint's form.
+
 ---
 
 ## Piloting checklist (before the study proper)
@@ -271,17 +384,46 @@ consecutive days if needed (split point: after TOP), same split at pre and post.
    bilingual clinician; the Malayalam lines above are drafts pending that verification.
 5. **Timing**: confirm ≤45 min including breaks for the youngest/most support-needing pilot child.
 
+**ASSP additions to the pilot** (§5):
+
+6. **Translation validated**: forward–back translation reconciled and cognitively pre-tested
+   with 3–5 BUDS teachers; the Malayalam form then frozen.
+7. **Internal consistency**: Cronbach's α for the total and each subscale on the T0 data,
+   before unblinding, reported alongside the published values. A subscale that does not hold
+   together in this population is reported as such, not quietly dropped.
+8. **Inter-rater agreement**: ICC(2,1) on the ≥30% independently double-rated forms, target
+   ≥ .70 on the total; below that, only the total is interpreted.
+9. **Test–retest SD**: rate 8–12 children twice, 2 weeks apart with no intervention between,
+   to supply the RCI denominator for the ASSP as well as the battery.
+10. **Floor/ceiling**: inspect the T0 total distribution — a sample bunched at the floor
+    cannot show improvement, and that must be said before the study, not after.
+
 ## Analysis (pre-registered endpoints)
 
-Per skill, ONE primary endpoint: EIT part 1c (/12) · TOP composite (WAIT + PARTNER
-gesture/orient + INIT) · JAP split RJA distal+gaze (/8) and IJA (/12). Everything else is
-secondary. Group level: Wilcoxon signed-rank (or paired t) with effect sizes.
-Child level: Reliable Change Index per primary endpoint using pilot test–retest SD —
-report "n of N children showed reliable improvement". NCT and sound-localization must
-show no reliable group change; if they move, treat trained-skill gains with suspicion
-and say so.
+**Primary family — near transfer.** Per skill, ONE primary endpoint: EIT part 1c (/12) ·
+TOP composite (WAIT + PARTNER gesture/orient + INIT) · JAP split RJA distal+gaze (/8) and
+IJA (/12). Group level: Wilcoxon signed-rank (or paired t) with effect sizes. Child level:
+Reliable Change Index per primary endpoint using pilot test–retest SD — report "n of N
+children showed reliable improvement".
+
+**Secondary — far transfer.** ASSP total (raw change), then the three subscales as a
+Holm-corrected family within the secondary set. Reported with effect sizes and CIs; never
+substituted for a primary endpoint, and a null here is interpreted per §5.4.
+
+**Control.** NCT and sound-localization must show no reliable group change; if they move,
+treat trained-skill gains with suspicion and say so.
+
+Everything else is exploratory. Full endpoint table and tests:
+[SAP §6](preregistration-and-sap.md).
 
 ## Game → test mapping (validity trace)
+
+The research condition is the **VR (360°) build only** — six games, two per trained skill.
+Desktop builds exist in the app for demonstration and familiarization and are not part of the
+intervention ([blueprint §8](study-blueprint-buds.md)). The game elements below are shared by
+both builds, so the trace holds for the VR versions the children actually play:
+Emotion Room 360 · Emotion Cinema 360 (emotion) · Playroom 360 · Football 360 (turn-taking) ·
+Museum 360 · Park 360 (joint attention).
 
 | Game element | Test element |
 |---|---|
@@ -295,3 +437,31 @@ and say so.
 | Hand ladder hover → distal; gaze-only trials (~40%) | JAP 3.1 trial tiers |
 | Surprise saliency fade; `awayYaw`; spontaneous vs prompted; share latency | JAP 3.2 probes, hierarchy + LATENCY |
 | (no game analog — control) | NCT; sound-localization trials |
+
+**Far transfer has no element-level trace, by design.** The ASSP is not mirrored from any game
+mechanic — that is the point of it. The intended direction is domain-level only, and no ASSP
+item subset is scored separately:
+
+| Trained skill (VR games) | ASSP domain a gain should surface in |
+|---|---|
+| Emotional identification — Emotion Room 360 · Emotion Cinema 360 | Social Reciprocity (reading and responding to others' states) |
+| Turn-taking — Playroom 360 · Football 360 | Social Reciprocity · Social Participation–Avoidance (sustaining an exchange, joining in) |
+| Joint attention — Museum 360 · Park 360 | Social Reciprocity (responding to bids) · Social Participation–Avoidance (initiating, sharing) |
+
+---
+
+## What changed from version 0.1, and why
+
+Version 0.1 specified this battery (EIT / TOP / JAP / NCT) as the sole outcome, with VSMS and
+ATEC-Malayalam as distal secondary measures. Two changes since:
+
+- The **ASSP was added as the far-transfer secondary measure** (§5), and **VSMS, ATEC and
+  TRENDS-as-an-outcome were dropped**. The battery remains the primary outcome. TRENDS may
+  still be licensed as a stimulus source for the EIT.
+- The **intervention is now the VR build only**; desktop play is demonstration and is excluded
+  from all efficacy and dose analyses.
+- **ISAA** is recorded once at T0 as a participant characteristic alongside the IQ score —
+  never a pre/post outcome.
+
+Anyone reading an older draft, an older analysis script, or the dated documents under
+`docs/superpowers/` should treat this document as authoritative.

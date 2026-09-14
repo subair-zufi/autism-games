@@ -3,7 +3,7 @@
 The games emit very different raw numbers (chance-corrected accuracy for
 the emotion/social quizzes, point tallies with lives for the joint-attention
 and turn-taking scenes, latencies everywhere). To compare a child over time, to
-compare the four target skills, and to compare cohorts, every game has to reduce
+compare the three target skills, and to compare cohorts, every game has to reduce
 to *one* comparable quantity.
 
 The common currency is a **0-100 Skill Score** defined identically for every
@@ -36,12 +36,11 @@ from typing import Iterable, Protocol
 
 # --- Skill taxonomy (keep in sync with src/types.ts GAME_LIST `skill`) --------
 
-SKILLS = ("emotion", "turntaking", "socialnorms", "jointattention")
+SKILLS = ("emotion", "turntaking", "jointattention")
 
 SKILL_LABELS = {
     "emotion": "Emotional Identification",
     "turntaking": "Turn-Taking",
-    "socialnorms": "Social Norms",
     "jointattention": "Joint Attention",
 }
 
@@ -56,9 +55,6 @@ SKILL_BY_GAME = {
     "playroom360": "turntaking",
     "rollback": "turntaking",
     "football360": "turntaking",
-    "rightway": "socialnorms",
-    "rightway360": "socialnorms",
-    "rulefixer": "socialnorms",
     "museum": "jointattention",
     "museum360": "jointattention",
     "discovery": "jointattention",
@@ -69,17 +65,18 @@ GAMES = tuple(SKILL_BY_GAME.keys())
 
 # Games kept in the codebase but pulled off the Home page (the `hidden` flag in
 # src/types.ts GAME_LIST). They still score for research/composite; they're just
-# not part of the player-facing line-up or the admin per-game breakdown.
-HIDDEN_GAMES = ("rightway", "rightway360", "rulefixer")
+# not part of the player-facing line-up or the admin per-game breakdown. None
+# at present — the social-norms games that used to sit here were removed.
+HIDDEN_GAMES: tuple[str, ...] = ()
 
-# The player-facing line-up (12 games): everything on the Home page.
+# The player-facing line-up: everything on the Home page.
 VISIBLE_GAMES = tuple(g for g in GAMES if g not in HIDDEN_GAMES)
 
 # --- Per-game guessing baselines (chance level c) ----------------------------
 # Emotion Recognition answer events do not carry a per-item chance, so it is
 # derived from the level (Easy = 2 choices, Moderate/Hard = 3). Emotion Clips
-# matches CHOICE_COUNT exactly. Right or Wrong / Good Choice record `chance`
-# on every answer, so those are read straight from the payload.
+# matches CHOICE_COUNT exactly. Emotion Room 360 records `chance` on every
+# answer, so that one is read straight from the payload.
 EMOTIONREC_CHANCE = {"easy": 1 / 2, "medium": 1 / 3, "hard": 1 / 3}
 CLIPS_CHANCE = {"easy": 1 / 2, "medium": 1 / 3, "hard": 1 / 4}
 
@@ -201,7 +198,7 @@ def _clips_trials(events: Iterable[EventLike]) -> list[Trial]:
 
 
 def _payload_chance_trials(events: Iterable[EventLike]) -> list[Trial]:
-    """Right or Wrong / Good Choice: `chance` is recorded on every answer."""
+    """Games that record the guessing baseline `chance` on every answer."""
     out: list[Trial] = []
     for e in events:
         if e.event_type != "answer":
@@ -391,11 +388,6 @@ def trials_for_game(game_key: str, events: Iterable[EventLike]) -> list[Trial]:
         # first-attempt answer payloads (chance from the level's choice count),
         # so the same clips scoring applies.
         return _clips_trials(evs)
-    if game_key in ("rightway", "rightway360", "rulefixer"):
-        # Schoolyard 360 is the immersive copy of Right or Wrong — same answer
-        # payloads (`chance` and `construct` on every answer), so the same
-        # payload-chance scoring applies.
-        return _payload_chance_trials(evs)
     if game_key in ("museum", "museum360"):
         # Museum 360 is the immersive copy of Museum Look — same answer
         # payloads, so the same 1/visibleCount guessing baseline applies.
@@ -470,6 +462,18 @@ class GameScore:
     baseline_score: float | None  # first session's score (pre)
     latest_score: float | None  # most recent session's score (post)
     delta: float | None  # latest - baseline (improvement)
+    # The difficulty tier each of those two sessions was mostly played at. The
+    # levels are freely selectable, so the two ends of `delta` need not match —
+    # and when they don't, the delta compares two different tasks. `chance`
+    # corrects for the option count but not for the subtler cues, faded hints
+    # and more confusable distractors a harder tier adds, so a child who
+    # progressed can show a flat or negative delta while genuinely improving.
+    baseline_level: str  # "" when unknown
+    latest_level: str  # "" when unknown
+    # True when the two ends are the same tier, i.e. the delta is a like-for-like
+    # comparison. False means read it with the level change in mind (the UI
+    # suppresses its improvement chip; analysis should model level instead).
+    delta_same_level: bool
 
     def as_dict(self) -> dict:
         return {
@@ -483,6 +487,9 @@ class GameScore:
             "baseline_score": self.baseline_score,
             "latest_score": self.latest_score,
             "delta": self.delta,
+            "baseline_level": self.baseline_level,
+            "latest_level": self.latest_level,
+            "delta_same_level": self.delta_same_level,
         }
 
 
@@ -529,6 +536,16 @@ def _mean(values: list[float]) -> float | None:
     return round(sum(vals) / len(vals), 1) if vals else None
 
 
+def _session_level(trials: list[Trial]) -> str:
+    """The difficulty tier a session was played at — the modal `level`/`difficulty`
+    across its trials, or "" if none recorded. A session normally sits at one
+    tier; the mode covers a facilitator switching part-way through."""
+    levels = [_level(t.payload) for t in trials if t.payload.get("level") or t.payload.get("difficulty")]
+    if not levels:
+        return ""
+    return max(set(levels), key=levels.count)
+
+
 def score_game(game_key: str, events: Iterable[EventLike]) -> GameScore:
     trials = trials_for_game(game_key, events)
     sessions = _sessions_ordered(trials)
@@ -536,6 +553,11 @@ def score_game(game_key: str, events: Iterable[EventLike]) -> GameScore:
     baseline = corrected_score(sessions[0]) if sessions else None
     latest = corrected_score(sessions[-1]) if sessions else None
     delta = round(latest - baseline, 1) if baseline is not None and latest is not None else None
+    baseline_level = _session_level(sessions[0]) if sessions else ""
+    latest_level = _session_level(sessions[-1]) if sessions else ""
+    # Unknown tiers are not evidence of a like-for-like comparison, so an empty
+    # level on either end counts as "not comparable" rather than "same".
+    same_level = bool(baseline_level) and baseline_level == latest_level
     return GameScore(
         game_key=game_key,
         skill=SKILL_BY_GAME.get(game_key, ""),
@@ -547,6 +569,9 @@ def score_game(game_key: str, events: Iterable[EventLike]) -> GameScore:
         baseline_score=baseline,
         latest_score=latest,
         delta=delta,
+        baseline_level=baseline_level,
+        latest_level=latest_level,
+        delta_same_level=same_level,
     )
 
 
@@ -671,8 +696,8 @@ class TrialRecord:
 
     Beyond the scored outcome it carries the process/condition fields recorded on
     the same event, for mechanism and VR-vs-flat analyses. Fields a given game
-    doesn't record are left None (e.g. head-scan telemetry is VR-only, ``cue``
-    is joint-attention only, ``construct`` is social-norms only).
+    doesn't record are left None (e.g. head-scan telemetry is VR-only and
+    ``cue`` is joint-attention only).
     """
 
     skill: str
@@ -683,10 +708,16 @@ class TrialRecord:
     trial_in_session: int  # 1-based index within this session
     first_attempt_correct: int  # 0/1
     chance: float
+    # Difficulty tier the trial was played at. Essential for the learning-curve
+    # analysis: `chance` only captures the change in option count, not the
+    # subtler cues, faded hints and extra distractors a harder tier adds, so a
+    # child who progressed mid-study looks worse than they are unless level is
+    # controlled for (analysis-guide Q2).
+    level: str
     latency_ms: int | None  # answer latency (may include spoken-prompt time)
     latency_from_prompt_end_ms: int | None  # cleaner RT: measured from prompt end
     hinted: int | None  # 1 if a hint had fired before the answer
-    construct: str  # social-norms sub-skill (greetings, sharing, …), else ""
+    construct: str  # kept for export-schema stability; no current game records it
     cue: str  # joint-attention cue (verbal/gesture/orient, pulse/hover/…), else ""
     visible_count: int | None  # options on screen (pointing games) → chance = 1/n
     head_yaw_travel_deg: float | None  # VR scan-path length
@@ -729,6 +760,7 @@ def student_trial_records(
                     trial_in_session=per_session[t.session_id],
                     first_attempt_correct=int(t.correct),
                     chance=round(t.chance, 4),
+                    level=_level(p),
                     latency_ms=t.latency_ms,
                     latency_from_prompt_end_ms=_int_or_none(p.get("latencyFromPromptEndMs")),
                     hinted=_bool_int(p.get("hinted")),
@@ -894,151 +926,3 @@ def _int_or_none(v: object) -> int | None:
 
 def _float_or(v: object, default: float) -> float:
     return float(v) if isinstance(v, (int, float)) else default
-
-
-# --- Per-construct scores (social-norms games) --------------------------------
-# Right or Wrong and Good Choice both tag every answer with a `construct` (see
-# their tallyByConstruct helpers), but a single session only carries ~2 trials
-# per construct — a deliberate fatigue guard (see their content.ts headers).
-# That is too few to read one child's strength/weakness on one construct, so
-# the dashboard pools several recent sessions instead of reading one alone.
-
-SOCIAL_NORMS_GAMES = ("rightway", "rightway360", "rulefixer")
-
-SOCIAL_NORMS_CONSTRUCTS: dict[str, tuple[str, ...]] = {
-    "rightway": ("greetings", "sharing", "turns", "space", "politeness"),
-    # Schoolyard 360 reuses the flat game's item bank, so the same constructs.
-    "rightway360": ("greetings", "sharing", "turns", "space", "politeness"),
-    "rulefixer": ("helping", "comforting", "inclusion", "politeness", "fairness"),
-}
-
-# How many of a student's most recent sessions of a game to pool by default.
-# Each session samples ~2 of the ~4 banked items per construct, so 5 sessions
-# comfortably cover the bank at least once while staying weighted toward
-# current ability rather than a child's very first attempts.
-DEFAULT_CONSTRUCT_SESSION_WINDOW = 5
-
-
-@dataclass
-class ConstructTrial:
-    """One scored opportunity tagged with the construct it measures."""
-
-    correct: bool
-    chance: float
-    latency_ms: int | None
-    session_id: str | None
-    ts: datetime
-    construct: str
-
-
-def _construct_trials(events: Iterable[EventLike]) -> list[ConstructTrial]:
-    """Right or Wrong / Good Choice: `construct` and `chance` are recorded on
-    every answer event (see tallyByConstruct in each game's logic.ts)."""
-    out: list[ConstructTrial] = []
-    for e in events:
-        if e.event_type != "answer":
-            continue
-        p = _p(e)
-        construct = p.get("construct")
-        if "correct" not in p or not isinstance(construct, str):
-            continue
-        out.append(
-            ConstructTrial(
-                correct=_is_true(p["correct"]),
-                chance=_float_or(p.get("chance"), 0.5),
-                latency_ms=_int_or_none(p.get("latencyMs")),
-                session_id=_sid(e),
-                ts=e.created_at,
-                construct=construct,
-            )
-        )
-    return out
-
-
-@dataclass
-class ConstructScore:
-    construct: str
-    score: float | None  # 0-100 chance-corrected, pooled across recent sessions
-    raw_accuracy: float | None  # 0-1, uncorrected
-    n_trials: int
-    median_latency_ms: int | None
-
-    def as_dict(self) -> dict:
-        return {
-            "construct": self.construct,
-            "score": self.score,
-            "raw_accuracy": self.raw_accuracy,
-            "n_trials": self.n_trials,
-            "median_latency_ms": self.median_latency_ms,
-        }
-
-
-@dataclass
-class GameConstructProfile:
-    game_key: str
-    constructs: list[ConstructScore]
-    n_sessions_pooled: int
-    session_window: int
-
-    def as_dict(self) -> dict:
-        return {
-            "game_key": self.game_key,
-            "constructs": [c.as_dict() for c in self.constructs],
-            "n_sessions_pooled": self.n_sessions_pooled,
-            "session_window": self.session_window,
-        }
-
-
-def score_constructs(
-    game_key: str,
-    events: Iterable[EventLike],
-    session_window: int = DEFAULT_CONSTRUCT_SESSION_WINDOW,
-) -> GameConstructProfile:
-    """Per-construct accuracy for one social-norms game, pooled across the
-    student's most recent ``session_window`` sessions of that game (oldest of
-    the window first, so a still-shorter play history just pools everything
-    it has)."""
-    trials = _construct_trials(events)
-    sessions = _sessions_ordered(trials)
-    recent = sessions[-session_window:] if session_window > 0 else sessions
-    pooled = [t for sess in recent for t in sess]
-
-    constructs = SOCIAL_NORMS_CONSTRUCTS.get(game_key, ())
-    by_construct: dict[str, list[ConstructTrial]] = {c: [] for c in constructs}
-    for t in pooled:
-        if t.construct in by_construct:
-            by_construct[t.construct].append(t)
-
-    scores = []
-    for c in constructs:
-        ts = by_construct[c]
-        latencies = [t.latency_ms for t in ts if t.latency_ms is not None]
-        scores.append(
-            ConstructScore(
-                construct=c,
-                score=corrected_score(ts),
-                raw_accuracy=_raw_accuracy(ts),
-                n_trials=len(ts),
-                median_latency_ms=_median([int(x) for x in latencies]),
-            )
-        )
-
-    return GameConstructProfile(
-        game_key=game_key,
-        constructs=scores,
-        n_sessions_pooled=len(recent),
-        session_window=session_window,
-    )
-
-
-def score_social_norms(
-    events: Iterable[EventLike],
-    session_window: int = DEFAULT_CONSTRUCT_SESSION_WINDOW,
-) -> list[GameConstructProfile]:
-    """Per-construct profiles for both social-norms games from one student's
-    event stream (mirrors :func:`score_participant`'s per-game bucketing)."""
-    by_game: dict[str, list[EventLike]] = {g: [] for g in SOCIAL_NORMS_GAMES}
-    for e in events:
-        if e.game_key in by_game:  # type: ignore[attr-defined]
-            by_game[e.game_key].append(e)  # type: ignore[attr-defined]
-    return [score_constructs(g, by_game[g], session_window) for g in SOCIAL_NORMS_GAMES]

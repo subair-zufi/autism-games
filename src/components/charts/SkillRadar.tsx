@@ -1,5 +1,5 @@
 /**
- * Minimal inline-SVG radar (spider) chart for the four skill scores. No deps.
+ * Minimal inline-SVG radar (spider) chart for the skill scores. No deps.
  * Values are 0–100; missing skills (no data yet) are drawn at the centre and
  * their label is dimmed. Generalises to any number of axes ≥ 3.
  */

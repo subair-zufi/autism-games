@@ -44,14 +44,13 @@ PARTICIPANTS = [
 # Which games each profile touches (skill coverage varies on purpose).
 EMOTION = ["emotionrecognition", "identifyemotions", "emotionrecognition360"]
 TURN = ["blocks", "rollback", "football360"]
-NORMS = ["rightway", "rulefixer"]
 JA = ["museum", "discovery", "museum360"]
 VR_GAMES = {"emotionrecognition360", "identifyemotions360", "playroom360",
             "football360", "museum360", "park360"}  # xrPresenting=1 + head telemetry
 
 PROFILE_GAMES = {
-    "completer": EMOTION + TURN + NORMS + JA,          # all four skills
-    "partial": EMOTION + TURN + JA,                    # skips social norms
+    "completer": EMOTION + TURN + JA,                  # all three skills
+    "partial": EMOTION + JA,                           # skips turn-taking
     "dropout": ["emotionrecognition", "museum"],       # a couple, then stops
 }
 PROFILE_SESSIONS = {"completer": (3, 5), "partial": (2, 3), "dropout": (1, 2)}
@@ -63,11 +62,6 @@ CLIPS_CHANCE = {"easy": 0.5, "medium": 1 / 3, "hard": 0.25}
 CUES = ["verbal", "gesture", "orient"]
 MUSEUM_CUES = [("pulse", "gesture", 3), ("hover", "gesture", 4), ("distal", "gaze", 6)]
 EMOTIONS = ["happy", "sad", "angry", "surprised", "scared", "disgust"]
-CONSTRUCTS = {
-    "rightway": ["greetings", "sharing", "turns", "space", "politeness"],
-    "rulefixer": ["helping", "comforting", "inclusion", "politeness", "fairness"],
-    "rightway360": ["greetings", "sharing", "turns", "space", "politeness"],
-}
 
 
 def clamp(x, lo=0.02, hi=0.99):
@@ -182,18 +176,6 @@ def make_events(game, sess_id, student_id, user_id, t0, acc, lat):
                 p.update({"targetBearingDeg": b, "latencyFromPromptEndMs": max(250, int(random.gauss(lat - 700, 300)))})
                 p.update(head_block(b))
             add("roll_return", p, ev_score=score)
-
-    elif game in ("rightway", "rulefixer", "rightway360"):
-        cons = CONSTRUCTS.get(game, CONSTRUCTS["rightway"])
-        for k in range(n):
-            level = random.choice(LEVELS)
-            correct = random.random() < acc
-            score += 1 if correct else 0
-            p = {"construct": random.choice(cons), "correct": correct, "level": level,
-                 "chance": 0.5, "latencyMs": max(500, int(random.gauss(lat, 400)))}
-            if game == "rulefixer":
-                p["picked"] = f"opt{random.randint(1,3)}"
-            add("answer", p, ev_score=score)
 
     elif game in ("museum", "museum360"):
         for k in range(n):
@@ -318,7 +300,7 @@ for e in all_events:
 TRIAL_COLS = ["participant_code", "student_id", "gender", "age_years", "age_band",
               "autism_level", "iq_score", "iq_band", "skill", "game_key", "xr_presenting",
               "session_id", "trial_in_game", "trial_in_session", "first_attempt_correct",
-              "chance", "latency_ms", "latency_from_prompt_end_ms", "hinted", "construct",
+              "chance", "level", "latency_ms", "latency_from_prompt_end_ms", "hinted", "construct",
               "cue", "visible_count", "head_yaw_travel_deg", "head_yaw_range_deg",
               "head_reversals", "head_to_target_ms", "timestamp"]
 trial_rows = []
@@ -329,7 +311,7 @@ for r in roster:
         trial_rows.append(demo + [
             tr.skill, tr.game_key, "" if tr.xr_presenting is None else tr.xr_presenting,
             tr.session_id or "", tr.trial_in_game, tr.trial_in_session,
-            tr.first_attempt_correct, tr.chance,
+            tr.first_attempt_correct, tr.chance, tr.level,
             "" if tr.latency_ms is None else tr.latency_ms,
             "" if tr.latency_from_prompt_end_ms is None else tr.latency_from_prompt_end_ms,
             "" if tr.hinted is None else tr.hinted, tr.construct, tr.cue,
@@ -391,7 +373,7 @@ for s in sorted(sessions, key=lambda s: (code_by_sid[s.student_id], s.started_at
 # is passed (best_accuracy ≥ 70%), mirroring the server's unlock rule. mastered
 # is best_accuracy ≥ 80%. Booleans export as 1/0.
 LEVEL_BASED_GAMES = ["emotionrecognition", "emotionrecognition360", "identifyemotions",
-                     "identifyemotions360", "rightway", "rightway360", "rulefixer"]
+                     "identifyemotions360"]
 LEVEL_PROGRESS_COLS = ["participant_code", "student_id", "user_id", "game_key", "level",
                        "attempts", "best_score", "best_accuracy", "unlocked", "passed",
                        "mastered", "created_at", "updated_at", "gender", "date_of_birth",
@@ -434,12 +416,21 @@ BATTERY_COLS = ["participant_code", "timepoint", "instrument", "form", "raw_scor
                 "n_options", "max_score", "rater_id", "is_double_coded", "assessed_on", "notes"]
 # (instrument, max, n_options, gains for a completer, control?)
 INSTRUMENTS = [
-    ("EIT", 30, 3, 7, False),   # emotion identification, forced choice
+    # Near-transfer battery — the primary outcome.
+    ("EIT", 30, 3, 7, False),     # emotion identification, forced choice
     ("TOP", 21, None, 5, False),  # turn-taking observation
     ("JAP", 16, None, 4, False),  # joint attention probe
-    ("NCT", 12, 4, 0, True),    # non-social control — should NOT improve
-    ("VSMS", None, None, 4, False),  # Vineland social quotient (distal)
-    ("ATEC", None, None, -6, False),  # ATEC total, lower = better (distal)
+    # ASSP — far transfer, secondary. Informant-rated, 49 items scored 1-4 ->
+    # total 49-196; subscale ranges are placeholders until the item counts are
+    # transcribed from the manual. Gains are deliberately smaller than the
+    # battery's: an informant rating moves slowly over 8 weeks.
+    ("ASSP_TOTAL", 196, None, 6, False),
+    ("ASSP_SR", 92, None, 3, False),   # Social Reciprocity
+    ("ASSP_SPA", 60, None, 2, False),  # Social Participation-Avoidance
+    ("ASSP_DSB", 44, None, 1, False),  # Detrimental Social Behaviours (reverse-scored)
+    # Discriminant control — should NOT improve.
+    ("NCT", 12, 4, 0, True),
+    ("SOUNDLOC", 2, None, 0, True),
 ]
 PRE_DAY = date(2026, 5, 28)
 POST_DAY = date(2026, 7, 15)
@@ -448,13 +439,16 @@ for r in roster:
     ability = clamp(0.45 + (r["iq"] - 60) / 100.0, 0.4, 0.82)
     has_post = r["profile"] != "dropout"  # dropouts miss the post battery
     for inst, maxv, nopt, gain, control in INSTRUMENTS:
-        form_pre, form_post = ("A", "B") if r["iq"] % 2 == 0 else ("B", "A")
-        if inst in ("EIT", "TOP", "JAP", "NCT"):
-            pre = int(round((maxv) * clamp(ability - 0.1, 0.3, 0.85)))
-        elif inst == "VSMS":
-            pre = int(round(55 + ability * 35))
-        else:  # ATEC total 20–100, higher = more symptoms
-            pre = int(round(90 - ability * 45))
+        if inst.startswith("ASSP"):
+            # A rating scale has no parallel forms: one fixed translated form.
+            form_pre = form_post = "SINGLE"
+            # ASSP items score 1-4, so the floor is one point per item, not zero.
+            floor = maxv // 4
+            pre = int(round(floor + (maxv - floor) * clamp(ability - 0.1, 0.3, 0.85)))
+        else:
+            # The NCT keeps its two photo sets, alternated pre -> post.
+            form_pre, form_post = ("A", "B") if r["iq"] % 2 == 0 else ("B", "A")
+            pre = int(round(maxv * clamp(ability - 0.1, 0.3, 0.85)))
         battery_rows.append([r["code"], "pre", inst, form_pre, pre, nopt or "",
                              maxv or "", "R1", "false", PRE_DAY.isoformat(), ""])
         if has_post:
@@ -464,17 +458,27 @@ for r in roster:
                 post = min(maxv, max(0, post))
             battery_rows.append([r["code"], "post", inst, form_post, post, nopt or "",
                                  maxv or "", "R1", "false", POST_DAY.isoformat(), ""])
-    # one double-coded EIT-pre per completer (inter-rater reliability illustration)
+    # Two different double-rating designs, one per measurement layer:
+    # a second blinded VIDEO CODER on the battery (Cohen's kappa), and a second
+    # independent INFORMANT on the ASSP (ICC). Both land in the same columns.
     if r["profile"] == "completer":
-        base = next(b for b in battery_rows if b[0] == r["code"] and b[1] == "pre" and b[2] == "EIT")
-        battery_rows.append([r["code"], "pre", "EIT", base[3], base[4] + random.choice([-1, 0, 1]),
-                             3, 30, "R2", "true", PRE_DAY.isoformat(), "second blinded coder"])
+        eit = next(b for b in battery_rows
+                   if b[0] == r["code"] and b[1] == "pre" and b[2] == "EIT")
+        battery_rows.append([r["code"], "pre", "EIT", eit[3],
+                             eit[4] + random.choice([-1, 0, 1]), 3, 30,
+                             "R2", "true", PRE_DAY.isoformat(), "second blinded coder"])
+        assp = next(b for b in battery_rows
+                    if b[0] == r["code"] and b[1] == "pre" and b[2] == "ASSP_TOTAL")
+        battery_rows.append([r["code"], "pre", "ASSP_TOTAL", assp[3],
+                             assp[4] + random.choice([-4, -2, 0, 2, 4]), "", 196,
+                             "R2", "true", PRE_DAY.isoformat(), "second independent informant"])
 
 # --- sheet: summary (ONE row per participant — analysis-ready wide format) ----
-# In-game skill scores (via the real score_participant) + dose totals + battery
+# In-game skill scores (via the real score_participant) + dose totals + outcome
 # pre/post/gain, all on one row: the classic between-subjects SPSS layout.
-SKILL_ORDER = ["emotion", "turntaking", "socialnorms", "jointattention"]
-INSTR_ORDER = ["EIT", "TOP", "JAP", "NCT", "VSMS", "ATEC"]
+SKILL_ORDER = ["emotion", "turntaking", "jointattention"]
+INSTR_ORDER = ["EIT", "TOP", "JAP", "ASSP_TOTAL", "ASSP_SR", "ASSP_SPA", "ASSP_DSB",
+               "NCT", "SOUNDLOC"]
 
 
 def mean_nn(vals):
@@ -574,15 +578,15 @@ readme_lines = [
     ("  summary       — ONE row per child, analysis-ready wide format: in-game skill scores (pre/post/delta, 0-100), dose totals, battery pre/post/gain. Start here for between-subjects analysis.", False),
     ("  trials        — one row per SCORED trial (= /export/trials.csv). first_attempt_correct 0/1, chance, latency, VR fields.", False),
     ("  dose          — one row per participant × game: sessions, trials, minutes, spacing (= /export/dose.csv).", False),
-    ("  battery        — blinded pre/post outcomes EIT/TOP/JAP/NCT + VSMS/ATEC (= the AssessmentScore import format).", False),
+    ("  battery        — pre/post outcomes: EIT/TOP/JAP (near transfer, primary), ASSP total + subscales (far transfer, secondary), NCT/SOUNDLOC controls (= the AssessmentScore import format).", False),
     ("  sessions      — one row per play SESSION: start/end, duration, final score, event count (= /export/sessions.csv). Join to raw_events on session_id.", False),
     ("  level_progress — one row per participant × game × level: attempts, best score/accuracy, unlock/pass/master flags 1/0 (= /export/level_progress.csv).", False),
     ("  raw_events    — one row per recorded EVENT, all payload fields flattened (= /export/events_raw.csv). Source data for SPSS.", False),
     ("", False),
     ("Notes for analysis:", True),
-    ("  · Missingness is intentional: dropouts (P-005) have few sessions and NO post battery; partials skip whole skills.", False),
+    ("  · Missingness is intentional: dropouts (P-005) have few sessions and NO post battery/ASSP; partials skip whole skills.", False),
     ("  · Accuracy rises and latency falls across a game's repeated sessions (a learning curve to detect).", False),
-    ("  · NCT is the discriminant control — it should NOT improve pre→post, unlike the trained constructs.", False),
+    ("  · NCT and SOUNDLOC are the discriminant controls — they should NOT improve pre→post, unlike the battery and ASSP.", False),
     ("  · xr_presenting = 1 rows are VR sessions and carry head-scan telemetry; Schoolyard 360 is flat (0).", False),
     ("  · Chance-correct accuracy yourself:  score = 100*max(0,(p-chance)/(1-chance)).", False),
     ("  · All values are FAKE. Structure mirrors the real exports exactly.", False),

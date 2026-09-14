@@ -113,7 +113,7 @@
             <button class="btn-ghost" id="download-levels" title="Raw: one row per participant × game × level — attempts, best score/accuracy, unlock/pass/master flags">⬇ Level progress CSV</button>
             <button class="btn-ghost" id="download-participants" title="De-identified roster: one row per child — demographics/covariates only, no name or contact">⬇ Participants CSV</button>
             <button class="btn-ghost" id="download-codebook" title="Data dictionary: one row per variable — type, unit, value meanings for every raw column">⬇ Codebook CSV</button>
-            <button class="btn-ghost" id="download-all" style="border-color:var(--accent); color:var(--text);" title="Everything raw in one ZIP: participants + raw events + sessions + level progress + codebook">⬇ All raw (ZIP)</button>
+            <button class="btn-ghost" id="download-all" style="border-color:var(--accent); color:var(--text);" title="Everything as stored, in one ZIP, with no scoring applied: participants + raw events + sessions + level progress + outcome scores + codebook">⬇ All raw (ZIP)</button>
           </div>
         </div>
         <table id="games-table">
@@ -171,17 +171,17 @@
 
       <div class="panel">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; gap:12px; flex-wrap:wrap;">
-          <h2 style="margin:0;">Outcome battery (blinded pre/post)</h2>
+          <h2 style="margin:0;">Outcome scores (pre/post)</h2>
           <div style="display:flex; gap:8px; align-items:center;">
             <button class="btn-ghost" id="dl-assess-template" title="Blank entry grid (timepoint × instrument) for every participant">⬇ Template</button>
-            <button class="btn-ghost" id="dl-assess" title="Download all stored battery scores">⬇ Export scores</button>
-            <label class="btn-ghost" style="cursor:pointer;" title="Import a filled-in battery CSV">⬆ Import
+            <button class="btn-ghost" id="dl-assess" title="Download all stored outcome scores">⬇ Export scores</button>
+            <label class="btn-ghost" style="cursor:pointer;" title="Import a filled-in outcome CSV">⬆ Import
               <input type="file" id="assess-file" accept=".csv,text/csv" style="display:none;" />
             </label>
           </div>
         </div>
         <p style="color:var(--muted); font-size:13px; margin:0 0 6px;">
-          EIT · TOP · JAP · NCT (near-transfer) + VSMS · ATEC (distal). Download the template, have the blinded tester fill <code>raw_score</code> (and <code>n_options</code> for forced-choice), then import. Scores live alongside the game data for transfer analysis.
+EIT · TOP · JAP (near-transfer battery, primary) + ASSP total and subscales (far transfer, informant-rated) + NCT · sound-localization (discriminant control). Download the template, fill <code>raw_score</code> (and <code>n_options</code> for forced-choice items), then import. Scores live alongside the game data for the transfer analysis.
         </p>
         <div class="error" id="assess-status" style="color:var(--muted);"></div>
       </div>

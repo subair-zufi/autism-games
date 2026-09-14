@@ -2,6 +2,11 @@
 
 Scope: Emotion Room 360, Emotion Cinema 360, Playroom 360, Football 360, Museum 360, Park 360.
 (Schoolyard 360 / social-norms games excluded per request.)
+
+> **Note (2026-09-11):** the social-norms games — Right or Wrong, Schoolyard 360 and Good
+> Choice — have since been removed from the app, so the code pointers to them below refer to
+> files that no longer exist. The review itself is kept as the dated record it is.
+
 Lenses: UI/UX, psychometrics, psychology & autism research, VR development.
 Date: 2026-07-16. Reviewed against the code on `main`.
 
@@ -242,9 +247,10 @@ right).
    Emotion Clips/Cinema 360 (shared `identifyemotions/logic.ts`) both drew the correct
    board/card's slot with an independent per-round shuffle; over a 6–12 trial session that could
    land the answer on one side most of the time, biasing the bearing metric. Both now deal the
-   answer slot from a shuffled-cycle bag (same technique as `stageBearings` in
-   `rightway360/logic.ts` and `buildTargets` here) so every slot appears within one trial of
-   every other across a session, with a seam guard against an immediate repeat.
+   answer slot from a shuffled-cycle bag (same technique as `stageBearings` in the
+   since-removed `rightway360/logic.ts`, and `buildTargets` here) so every slot appears
+   within one trial of every other across a session, with a seam guard against an
+   immediate repeat.
    ✅ Also done (2026-07-17): `hinted` on answer events + aligned prompt pricing (M5, P3). Emotion
    Room 360's `answer` event previously carried no signal that its hint had already fired, and a
    hinted correct earned full credit; it now tracks a `hintFiredRef` per round, prices a hinted

@@ -720,10 +720,11 @@ TRIAL_CSV_COLUMNS = DEMO_COLUMNS + (
     "trial_in_session",
     "first_attempt_correct",
     "chance",
+    "level",  # difficulty tier played - control for it in learning curves
     "latency_ms",
     "latency_from_prompt_end_ms",  # cleaner RT (excludes spoken-prompt time)
     "hinted",
-    "construct",  # social-norms sub-skill
+    "construct",  # legacy social-norms sub-skill; blank for every current game
     "cue",  # joint-attention cue type
     "visible_count",  # options on screen (pointing games)
     "head_yaw_travel_deg",  # VR scan-path length
@@ -772,6 +773,7 @@ def export_trials_csv(
                     r.trial_in_session,
                     r.first_attempt_correct,
                     r.chance,
+                    r.level,
                     _c(r.latency_ms),
                     _c(r.latency_from_prompt_end_ms),
                     _c(r.hinted),
@@ -1114,7 +1116,7 @@ _CODEBOOK: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("final_score", "sessions", "int", "points", "", "Session final tally (raw per-game, not the standardised score)."),
     ("n_events", "sessions", "int", "count", "", "Number of recorded events attached to the session."),
     # --- level_progress columns ---
-    ("level", "level_progress,raw_events(payload)", "string", "", "easy | medium | hard", "Difficulty tier."),
+    ("level", "level_progress,trials,raw_events(payload)", "string", "", "easy | medium | hard", "Difficulty tier the trial/level was played at. Control for it in learning-curve analyses: chance only captures option count, not the subtler cues and faded hints a harder tier adds."),
     ("attempts", "level_progress", "int", "count", "", "Times this level was attempted."),
     ("best_score", "level_progress", "int", "points", "", "Best raw score achieved on the level."),
     ("best_accuracy", "level_progress", "float", "0-1", "", "Best uncorrected accuracy on the level."),
@@ -1135,7 +1137,7 @@ _CODEBOOK: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("hinted", "raw_events", "bool01", "", "1 | 0", "A hint had fired before the answer."),
     # --- payload: condition / construct ---
     ("difficulty", "raw_events", "string", "", "easy | medium | hard", "Difficulty tier (VR copies record the level under this name)."),
-    ("construct", "raw_events", "string", "", "greetings | sharing | turns | space | politeness | helping | comforting | inclusion | fairness", "Social-norms sub-skill the item measures."),
+    ("construct", "raw_events", "string", "", "greetings | sharing | turns | space | politeness | helping | comforting | inclusion | fairness", "Legacy social-norms sub-skill, recorded only by the retired social-norms games; blank for every current game."),
     ("cue", "raw_events", "string", "", "verbal | gesture | orient | pulse | hover | distal", "Joint-attention / roll cue level."),
     ("cueKind", "raw_events", "string", "", "gesture | gaze", "Cue modality (museum/JA)."),
     ("answer", "raw_events", "string", "", "happy | sad | angry | surprised | scared | disgust", "Emotion shown (emotion games)."),
@@ -1210,15 +1212,21 @@ def export_codebook_csv(
 def export_all_zip(
     db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
 ) -> StreamingResponse:
-    """Every raw game-metrics export plus the roster and codebook, bundled as one
-    ZIP: participants, raw events, sessions, level progress and the data
-    dictionary — all keyed by participant_code / student_id."""
+    """Everything the platform holds, as stored, bundled as one ZIP: the roster,
+    every recorded event, sessions, level progress, the outcome scores and the
+    data dictionary — all keyed by participant_code / student_id.
+
+    **No scoring is applied to any of it.** These are the source tables; the
+    derived exports (trials.csv, dose.csv) are conveniences built from them and
+    are deliberately not included, so this bundle is unambiguously the raw data
+    for an independent analysis."""
     today = date.today().isoformat()
     datasets = [
         (f"participants_{today}.csv", _participants_table(db)),
         (f"events_raw_{today}.csv", _events_raw_table(db)),
         (f"sessions_{today}.csv", _sessions_table(db)),
         (f"level_progress_{today}.csv", _level_progress_table(db)),
+        (f"assessments_{today}.csv", _assessments_table(db)),
         ("codebook.csv", _codebook_table(db)),
     ]
     buf = io.BytesIO()
@@ -1234,13 +1242,13 @@ def export_all_zip(
 
 
 # ---------------------------------------------------------------------------
-# Outcome battery (blinded pre/post scores) — CSV round-trip
+# Outcome scores (pre/post ASSP + discriminant control) — CSV round-trip
 # ---------------------------------------------------------------------------
 ASSESSMENT_CSV_COLUMNS = (
     "participant_code",
     "timepoint",  # pre | post | followup
-    "instrument",  # EIT | TOP | JAP | NCT | VSMS | ATEC | ...
-    "form",  # A | B (parallel forms), else blank
+    "instrument",  # EIT | TOP | JAP | ASSP_TOTAL | ASSP_SR | ASSP_SPA | ASSP_DSB | NCT | SOUNDLOC | ...
+    "form",  # A | B (parallel forms: battery + NCT) | SINGLE for the ASSP
     "raw_score",
     "n_options",  # forced-choice options → chance = 1/n_options
     "max_score",
@@ -1250,9 +1258,21 @@ ASSESSMENT_CSV_COLUMNS = (
     "notes",
 )
 
-# The near-transfer battery + distal measures a blank template pre-lists per
-# participant (edit/extend freely — import accepts any instrument name).
-TEMPLATE_INSTRUMENTS = ("EIT", "TOP", "JAP", "NCT", "VSMS", "ATEC")
+# The outcome measures a blank template pre-lists per participant: the
+# near-transfer battery (primary), the ASSP total and its three subscales
+# (secondary, far transfer), then the discriminant control block
+# (edit/extend freely — import accepts any instrument name).
+TEMPLATE_INSTRUMENTS = (
+    "EIT",  # Emotion Identification Test
+    "TOP",  # Turn-Taking Observation Probe
+    "JAP",  # Joint Attention Probe
+    "ASSP_TOTAL",
+    "ASSP_SR",  # Social Reciprocity
+    "ASSP_SPA",  # Social Participation-Avoidance
+    "ASSP_DSB",  # Detrimental Social Behaviours (reverse-scored)
+    "NCT",  # non-social control - expected flat
+    "SOUNDLOC",  # non-social orienting control - expected flat
+)
 TEMPLATE_TIMEPOINTS = ("pre", "post")
 _VALID_TIMEPOINTS = ("pre", "post", "followup")
 
@@ -1261,9 +1281,9 @@ _VALID_TIMEPOINTS = ("pre", "post", "followup")
 def assessments_template_csv(
     db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
 ) -> StreamingResponse:
-    """Blank entry template: the battery grid (timepoint × instrument) pre-filled
-    for every participant with a code, ready for a blinded tester to type scores
-    into and re-import."""
+    """Blank entry template: the outcome grid (timepoint × instrument) pre-filled
+    for every participant with a code, ready for the data manager or blinded
+    tester to type scores into and re-import."""
     students = db.scalars(select(Student).order_by(Student.created_at.asc())).all()
     rows: list[list[object]] = []
     for s in students:
@@ -1275,11 +1295,9 @@ def assessments_template_csv(
     return _csv_response(ASSESSMENT_CSV_COLUMNS, rows, "assessment_template.csv")
 
 
-@router.get("/assessments.csv")
-def export_assessments_csv(
-    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
-) -> StreamingResponse:
-    """Export all stored battery scores (round-trips the import format)."""
+def _assessments_table(db: Session) -> tuple[tuple[str, ...], list[list[object]]]:
+    """Every stored outcome score, exactly as entered — no scoring applied.
+    Shared by the CSV endpoint and the all-raw ZIP bundle."""
     rows_q = db.execute(
         select(AssessmentScore, Student.participant_code)
         .join(Student, AssessmentScore.student_id == Student.id)
@@ -1301,7 +1319,16 @@ def export_assessments_csv(
         ]
         for a, code in rows_q
     ]
-    return _csv_response(ASSESSMENT_CSV_COLUMNS, rows, "assessments.csv")
+    return ASSESSMENT_CSV_COLUMNS, rows
+
+
+@router.get("/assessments.csv")
+def export_assessments_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """Export all stored outcome scores (round-trips the import format)."""
+    columns, rows = _assessments_table(db)
+    return _csv_response(columns, rows, "assessments.csv")
 
 
 def _pf(v: str | None) -> float | None:
@@ -1329,7 +1356,7 @@ def import_assessments(
     db: Session = Depends(get_db),
     _: Admin = Depends(get_current_admin),
 ) -> AssessmentImportResult:
-    """Upsert blinded battery scores from CSV text (see ASSESSMENT_CSV_COLUMNS).
+    """Upsert outcome scores from CSV text (see ASSESSMENT_CSV_COLUMNS).
 
     Rows are matched to participants by ``participant_code``. A row updates any
     existing score with the same (participant, timepoint, instrument, form,

@@ -5,10 +5,10 @@ import { useRemoteReport } from '../remote/status'
 /**
  * The band under a game that carries the question the child is being asked.
  *
- * Seven games had their own copy of this markup — the two emotion games, the
- * two social-norms games, Roll Back, Football 360 and Playroom 360 — which is
- * how the trainer's phone ended up showing the question for some games and not
- * others: only the games using the shared `PromptBanner` were reporting it.
+ * Several games had their own copy of this markup — the two emotion games,
+ * Roll Back, Football 360 and Playroom 360 — which is how the trainer's phone
+ * ended up showing the question for some games and not others: only the games
+ * using the shared `PromptBanner` were reporting it.
  * That is the wrong thing to leave to chance. Children in a headset frequently
  * cannot read the question, and a trainer who cannot see it is guessing at what
  * to prompt them with.

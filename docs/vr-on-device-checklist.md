@@ -38,8 +38,8 @@ Build stamp: ________________
 |---|---|---|---|
 | 1.1 | **Login** — sign in, wrong password shows an error, "Remember me" persists. | | |
 | 1.2 | **Play Offline** — download completes; app then runs with no network. | | |
-| 1.3 | **Home** — all four skill sections render; cards readable at headset DPI. | | |
-| 1.4 | **Play-mode toggle** — 🖥️ Desktop / 🥽 VR HMD switches the list. VR shows exactly six games. *(Social Norms has no VR game — confirm that is understood, not a bug report.)* | | |
+| 1.3 | **Home** — all three skill sections render; cards readable at headset DPI. | | |
+| 1.4 | **Play-mode toggle** — 🖥️ Desktop / 🥽 VR HMD switches the list. VR shows exactly six games. | | |
 | 1.5 | **Participants** — add, edit, and select a participant. | | |
 | 1.6 | **Participant guard** — with none selected, a game detail page warns the session will not be recorded, and only offers "Play without recording" after a first tap. | | |
 | 1.7 | **Game detail** — objective, duration, and the difficulty panel with attempts / best %. | | |

@@ -8,7 +8,7 @@ research-relevant, and what is missing.*
 This document is a **data dictionary + relevance assessment + gap analysis** for the
 participant data the app collects and the metrics the dashboards derive from it. It pairs
 with the [study blueprint](study-blueprint-buds.md), the
-[pre/post battery protocol](pre-post-test-protocol.md), the
+[pre/post outcome protocol](pre-post-test-protocol.md), the
 [pre-registration & SAP](preregistration-and-sap.md), and the
 [analysis guide](analysis-guide.md). Where those documents state the *intended* design, this
 one audits what the **code actually stores** (`server/app/models.py`, `scoring.py`, the
@@ -22,9 +22,10 @@ one audits what the **code actually stores** (`server/app/models.py`, `scoring.p
 forced-choice trial keeps its guessing baseline (`chance` / `n_options`) so scores are
 chance-recoverable; first-attempt rules are enforced per game; a single **standardised
 0–100 chance-corrected skill score** makes 2-, 3-, 4-alternative and "wait your turn" tasks
-directly comparable; VR-vs-flat is flagged on every step; dose (sessions, minutes, spacing)
-is derivable; and the outcome battery carries `rater_id` + `is_double_coded` + parallel
-`form` for inter-rater and form-equivalence checks. The exports are de-identified
+directly comparable; the VR/desktop flag is on every step, which is what separates
+intervention data from demo play; dose (sessions, minutes, spacing) is derivable; and the
+outcome table carries `rater_id` + `is_double_coded` + parallel `form` for inter-rater and
+form-equivalence checks. The exports are de-identified
 (participant code + opaque id, never the child's name).
 
 **What is missing or risky (headline).**
@@ -39,6 +40,8 @@ is derivable; and the outcome battery carries `rater_id` + `is_double_coded` + p
    and **no dashboard panel** that joins pre/post battery gains to in-game scores. The
    `summary` sheet in the analysis guide exists *only in the Python dummy generator*, so the
    primary-outcome join, RCI, and the NCT specificity contrast all happen off-platform.
+   (Both the battery and the ASSP are administered off-platform, so only their **scored
+   totals** enter the app — that part is by design, not a gap.)
 3. **Baseline characterization is thinner than the protocol requires** — **ISAA** severity,
    verbal/communication level, language of administration, and the IQ instrument/date are
    not stored (only a bare `iq_score` and a DSM-5 `autism_level`).
@@ -63,7 +66,7 @@ Details and recommendations follow.
 | Play sessions | `game_sessions` | one row per game run | `startSession`/`endSession` |
 | **Gameplay steps** | `game_events` (+ JSONB `payload`) | one row per step/trial | `recordStep` (only when logged in) |
 | Level progression | `level_progress` | one row per (mentor, child, game, level) | `submitProgress` |
-| **Outcome battery** | `assessment_scores` | one row per blinded score | CSV import (blinded tester) |
+| **Outcome scores** | `assessment_scores` | one row per entered score | CSV import (data manager / blinded tester); included in the all-raw ZIP |
 | Admins | `admins` | dashboard operators | seed/admin |
 | Derived scores | *(none — computed on read)* | per trial / game / skill / participant / cohort | `scoring.py` |
 
@@ -130,12 +133,12 @@ recorded (from `sample-data/raw_events.csv` + `useGameAnalytics.ts` enrichment):
 | `latencyFromPromptEndMs` | clean RT (TTS `onend`) | the RT the SAP mandates — **only on 360 emotion games + Football 360** |
 | `hinted` | a hint fired before the answer | scaffold/process |
 | `level` / `difficulty` | Easy/Moderate/Hard tier | per-level chance table; learning |
-| `construct` | social-norms sub-skill (greetings, sharing, …) | per-construct profile |
+| `construct` | legacy social-norms sub-skill (greetings, sharing, …) | archived events only — the social-norms games were removed |
 | `cue`, `cueKind` | joint-attention cue (verbal/gesture/orient; pulse/hover/distal) | RJA cue-fading analysis; `1/partners` chance |
 | `answer`, `picked` | emotion shown vs chosen | confusion matrix |
 | `spontaneous`, `nudges`, `found`, `discovery`, `saliency`, `during` | initiation-JA process | Look-What-I-Found / Park 360 |
 | `headStartYawDeg`, `headEndYawDeg`, `headYawTravelDeg`, `headYawRangeDeg`, `headReversals`, `headSamples`, `headMinPitchDeg`, `headMaxPitchDeg`, `headToTargetMs`, `targetBearingDeg` | VR head-scan telemetry | objective attention markers (O5); **VR only** |
-| `xrPresenting` | 1 = immersive VR, 0 = flat | VR-vs-flat condition (O5) |
+| `xrPresenting` | 1 = immersive VR, 0 = flat (desktop demo) | **inclusion filter**: the intervention is VR-only, so research analyses keep `1` |
 | `inputMethod` | gaze vs controller/pointer | latency pooling guard (dwell ≠ tap) |
 | `headYawContaminated` | JA-in-VR where head yaw is instrumental, not shared attention | exclude/adjust contaminated yaw |
 | *(visibility metrics — `visibilityMetrics()`)* | time the page was hidden mid-trial | exclude trials spanning a headset break / tab switch |
@@ -159,21 +162,26 @@ Per (mentor, child, game, level): `attempts`, `best_score`, `best_accuracy`, `un
   learning curves (use `trials`). `best_accuracy` is uncorrected accuracy, not the
   chance-corrected skill score.
 
-### 2.5 Outcome battery — `assessment_scores` (the primary outcome)
+### 2.5 Outcome scores — `assessment_scores` (the primary outcome)
 
 Per (child, `timepoint`, `instrument`, `form`, `rater_id`): `raw_score`, `n_options`,
 `max_score`, `is_double_coded`, `assessed_on`, `notes`.
 
 - `timepoint` ∈ pre / post / followup (T0/T1/T2).
-- `instrument` ∈ EIT / TOP / JAP / NCT (near-transfer battery) + VSMS / ATEC / TRENDS
-  (distal). Free-text, so any instrument name imports.
-- `form` A/B (parallel forms); `rater_id` + `is_double_coded` support inter-rater κ.
-- Uniqueness is per (child, timepoint, instrument, form, rater) → a second blinded coder is
-  a separate row (IRR), and re-import updates in place.
+- `instrument` ∈ `EIT` / `TOP` / `JAP` (near-transfer battery, **primary**) ·
+  `ASSP_TOTAL` + `ASSP_SR` / `ASSP_SPA` / `ASSP_DSB` (far transfer, **secondary**) ·
+  `NCT` / `SOUNDLOC` (discriminant control). Free-text, so any instrument name imports.
+- `form` = `A`/`B` on the battery and NCT (parallel forms); `SINGLE` on every ASSP row, since
+  a rating scale has no parallel forms.
+- `rater_id` + `is_double_coded` carry two different reliability designs in one pair of
+  columns: on the battery a second **video coder** (Cohen's κ), on the ASSP a second
+  independent **informant** (ICC). The instrument tells you which.
+- Uniqueness is per (child, timepoint, instrument, form, rater) → a second coder or informant
+  is a separate row, and re-import updates in place.
 
-**Relevance verdict:** the schema is exactly right for the confirmatory endpoints and for
-reliability (κ), form equivalence, and chance-correction on the battery. The problem is not
-the schema but that this table is **isolated** from the rest of the platform (§5, G2).
+**Relevance verdict:** the schema carries both measurement layers without change — it was
+general enough that adding the ASSP alongside the battery needed no migration. The problem is
+not the schema but that this table is **isolated** from the rest of the platform (§5, G2).
 
 ---
 
@@ -185,15 +193,14 @@ the schema but that this table is **isolated** from the rest of the platform (§
 | Raw accuracy | uncorrected proportion correct | secondary |
 | `baseline_score` / `latest_score` / `delta` | first vs last **session of that game** | Progress ▲/▼ chips |
 | **Skill Score (per skill)** | equal-weighted mean of that skill's games | Progress radar, Cohort |
-| **Composite social-emotional** | equal-weighted mean of the four skill scores | Progress hero, Participants overview |
-| median latency | per game / emotion / construct | Progress |
+| **Composite social-emotional** | equal-weighted mean of the three skill scores | Progress hero, Participants overview |
+| median latency | per game / emotion | Progress |
 | Emotion confusion matrix | `answer × picked`, first attempts | Progress |
-| Per-construct score | pooled over recent sessions (default 5) | Progress social-norms |
 | Dose summary | sessions, minutes, span, median gap | `dose.csv` |
 | Group stats | mean / SD / mean-delta by cohort or demographic band | Cohort |
 
 **Dashboards:** the **mentor** app shows a per-child Progress dashboard (composite, radar,
-skill breakdown, construct profile, emotion confusion, weekly activity, recent list) and a
+skill breakdown, emotion confusion, weekly activity, recent list) and a
 Cohort comparison (group means ± SD by gender / autism level / age / IQ band). The **admin**
 dashboard shows platform totals, a per-game breakdown with skill score, an activity
 timeseries, a per-participant overview, and the CSV/battery exports.
@@ -211,12 +218,13 @@ as a ▲/▼ chip next to scores and is easy to over-read. The SAP's efficacy te
 | Question (blueprint O1–O8 / analysis guide Q1–Q8) | Data that answers it | Status |
 |---|---|---|
 | O1 Near-transfer efficacy | `assessment_scores` (EIT/TOP/JAP) vs NCT | **stored, but not joined in-app** (G2) |
+| O1b Far transfer | `assessment_scores` (ASSP total + subscales) | **stored, but not joined in-app** (G2) |
 | O2 In-game acquisition | `game_events` → `trials` (`first_attempt_correct` ~ trial index) | ✅ well covered |
 | O3 Dose–response | `game_sessions` → `dose` | ✅ covered |
 | O4 Moderation | `students` (age, gender, autism level, IQ) | ⚠️ covered but ISAA/verbal-level missing (G3) |
-| O5 VR value-add | `payload.xrPresenting` + head-scan block | ✅ covered (flat games have no head telemetry, by design) |
+| O5 VR attention process | `payload.xrPresenting` + head-scan block | ✅ covered (VR-only intervention; the flag also excludes desktop demo play) |
 | O6 VR acceptability (co-primary) | FMS/SSQ/presence/engagement/stop-rule | ❌ **no data model** (G4) |
-| O7 Confusions / sub-skills | `answer×picked`, `construct`, `cue` | ✅ covered |
+| O7 Confusions / sub-skills | `answer×picked`, `cue` | ✅ covered (`construct` only on archived social-norms events) |
 | O8 Reliability / psychometrics | `rater_id`, `is_double_coded`, `form` | ✅ schema present |
 | H1b Between-arm contrast | **arm + cluster** assignment | ❌ **not stored** (G1) |
 | H3 Reliable Change Index | battery pre/post + pilot SD | computed **off-platform** (G2) |
@@ -247,7 +255,8 @@ completer populations are reconstructed by hand.
 `assessment_scores` is **import/export CSV only**. There is:
 
 - **no server `summary` endpoint** — the per-participant `summary` sheet (with `eit_gain`,
-  `top_gain`, `jap_gain`, `nct_gain`, `has_post_battery`, `composite_delta`) that the
+  `top_gain`, `jap_gain`, `assp_total_gain`, `nct_gain`, `has_post_battery`,
+  `composite_delta`) that the
   analysis guide centres on exists **only in `sample-data/generate_dummy_data.py`**, i.e. it
   is a documentation artifact, not a reproducible product export;
 - **no dashboard panel** showing battery scores, pre/post gains, the NCT specificity
@@ -255,16 +264,22 @@ completer populations are reconstructed by hand.
 - no in-app computation of the confirmatory statistics.
 
 *Impact:* the study's headline analysis is done entirely off-platform in R/SPSS from two
-disconnected exports; the app cannot show a researcher "did this child transfer?".
+disconnected exports; the app cannot show a researcher "did this child generalize?".
 
 ### G3 — Baseline characterization is thinner than the protocol
 Blueprint §5 requires **ISAA** severity, **verbal/communication level**, **language of
 administration (Malayalam)**, class, and the IQ **instrument/source/date**. The model stores
-only a bare `iq_score` and a DSM-5 `autism_level`. ISAA (the India-standard severity
-instrument the protocol names) has no field; IQ has no provenance.
+only a bare `iq_score` and a DSM-5 `autism_level`.
+
+**ISAA is a participant characteristic, exactly like the IQ score** — recorded once at T0,
+never a pre/post outcome — so it belongs on the `students` record as a numeric
+**`isaa_score`** sitting beside `iq_score` (with the same treatment downstream: a band for
+grouping, a column in `participants.csv` and the codebook, a moderator in O4). It has no
+field today, and IQ has no provenance.
 
 *Impact:* O4 moderation is limited to age/gender/DSM-level/raw-IQ; ISAA-based severity
-moderation and attrition-by-severity are not possible from stored data.
+moderation and attrition-by-severity are not possible from stored data — the SAP §8
+attrition analysis names ISAA as a covariate it cannot currently source.
 
 ### G4 — The co-primary acceptability outcome (O6) has no data model
 Cybersickness (FMS, VRSQ/SSQ), presence, engagement, sensory tolerance, **stop-rule
@@ -319,12 +334,13 @@ limits O2's RT strand.
 3. Build a server **`summary` export/endpoint** that joins `assessment_scores` gains to the
    standardised in-game scores per participant (the shape the analysis guide already
    documents), so the primary-outcome table is reproducible from the product, not a script. (G2)
-4. Add a dashboard **Outcomes panel**: pre/post battery per instrument, the trained-vs-NCT
-   specificity view, and RCI per child. (G2)
+4. Add a dashboard **Outcomes panel**: pre/post battery per instrument, the ASSP alongside
+   it, the trained-vs-NCT specificity view, and RCI per child. (G2)
 
 **P1 — data quality & scope**
-5. Add **ISAA** severity, verbal/communication level, language, class, and IQ
-   instrument/date to the participant record. (G3)
+5. Add **`isaa_score`** (numeric, alongside `iq_score`, with a band for grouping),
+   verbal/communication level, language, class, and IQ instrument/date to the participant
+   record. (G3)
 6. Give **O6 (VR acceptability)** a data model: per-session FMS/SSQ/presence/engagement, a
    **stop-rule trigger** flag, and an **adverse-event** table. (G4)
 7. Store explicit **missingness/quality flags** (structural-missing vs zero; an
@@ -347,10 +363,10 @@ limits O2's RT strand.
 
 ## 7. One-line answer to the brief
 
-The app keeps a **rich, well-instrumented per-trial telemetry stream and a clean blinded
-outcome-battery table**, and its **covariates are appropriate** — but it is **missing the
+The app keeps a **rich, well-instrumented per-trial telemetry stream and a clean
+outcome-score table** (near-transfer battery, ASSP and control in one schema), and its **covariates are appropriate** — but it is **missing the
 study-design scaffolding** (arm, cluster, timepoint, consent/enrollment), the **in-app
 integration and display of the primary outcome**, part of the **protocol-mandated baseline
-battery** (ISAA, verbal level), any **structured VR-acceptability/adverse-event capture**,
-and **PII segregation**. The telemetry is research-grade; the surrounding *study* data model
+characterization** (ISAA severity, verbal level), any **structured
+VR-acceptability/adverse-event capture**, and **PII segregation**. The telemetry is research-grade; the surrounding *study* data model
 is not yet complete.

@@ -17,13 +17,12 @@ const GROUP_OPTIONS: { id: GroupBy; label: string }[] = [
   { id: 'iq_band', label: 'IQ' },
 ]
 
-// Short x-axis labels for the five metrics (composite + the four skills), in the
+// Short x-axis labels for the four metrics (composite + the three skills), in the
 // order the server returns them (see app/scoring.aggregate_group).
 const METRIC_SHORT: Record<string, string> = {
   composite: 'Overall',
   emotion: 'Emotion',
   turntaking: 'Turns',
-  socialnorms: 'Social',
   jointattention: 'Joint Att.',
 }
 

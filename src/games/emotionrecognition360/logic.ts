@@ -137,7 +137,7 @@ export function makeRound(
  * The correct board's slot index for each round, dealt in shuffled cycles over
  * the level's board positions so a session sweeps every position evenly
  * instead of favouring one side (review M4) — same shuffled-cycle technique as
- * `buildTargets` here and `stageBearings` in rightway360/logic.ts.
+ * `buildTargets` here.
  */
 export function buildAnswerSlots(difficulty: Difficulty, rng: () => number = Math.random): number[] {
   const cfg = CONFIG[difficulty]
