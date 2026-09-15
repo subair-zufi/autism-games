@@ -90,7 +90,7 @@ they are typed by a blinded examiner and imported.
 | `gender` | str | **covariate** | Moderator (O4); free among Male/Female/Other. |
 | `autism_level` | str | **covariate** | DSM-5 Level 1/2/3. *Not* ISAA (see gap G3). |
 | `iq_score` | int | **covariate** | Feeds `iq_band`. No instrument/date/source recorded. |
-| `participant_code` | str | **pseudonymous key** | e.g. `P-2024-001`; unique *per mentor*. The intended analysis id. Nullable — a child with no code is excluded from battery import and templates. |
+| `participant_code` | str | **pseudonymous key** | e.g. `P-2024-001`; unique across the whole study, and never re-issued — a withdrawn child's code is not handed to the next enrolment, so a score imported under it cannot land on the wrong child. The intended analysis id. Nullable — a child with no code is excluded from battery import and templates. |
 | `rehabilitation_centre` | str | descriptive | Could proxy a site/cluster but is **not** used as one. |
 | `parent_guardian_name` | str | operational only | Direct identifier (consent/contact). |
 | `parent_contact` | str | operational only | Direct identifier. |

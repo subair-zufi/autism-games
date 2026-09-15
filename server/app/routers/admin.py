@@ -19,6 +19,7 @@ from ..models import (
     GameEvent,
     GameSession,
     LevelProgress,
+    SessionExperience,
     Student,
     User,
 )
@@ -1082,13 +1083,135 @@ def export_participants_csv(
 # friendly shorthands (id/string/int/float/bool01/datetime/date). Any payload
 # key seen in the live data but missing here is appended at export time so the
 # codebook never silently omits a recorded field.
+# ---------------------------------------------------------------------------
+# Session experience — one row per (participant × visit × rater)
+# ---------------------------------------------------------------------------
+SESSION_UX_CSV_COLUMNS = (
+    "participant_code",
+    "student_id",
+    "visit_date",
+    "visit_index",  # derived: 1st, 2nd, 3rd … visit for this child
+    "session_ordinal",
+    "rater_id",  # "" = the session's own trainer
+    "is_second_rating",  # 1/0
+    "games_played",
+    "minutes",
+    "child_fun",  # 1-5
+    "child_feeling",  # 1-5
+    "child_play_again",  # yes | maybe | no
+    "play_again_num",  # derived: no=0, maybe=1, yes=2
+    "rated_engagement",  # 1-5
+    "rated_independence",  # 1-5
+    "rated_comfort",  # 1-5
+    "rated_enjoyment",  # 1-5
+    "rated_willingness",  # 1-5
+    "stopped_early",  # 1/0
+    "stop_reason",
+    "went_well",
+    "was_difficult",
+    "different_from_last",
+    "recorded_at",
+    "updated_at",
+    "gender",
+    "date_of_birth",
+    "autism_level",
+    "iq_score",
+)
+
+#: Numeric coding for the Again-Again answer, so the item can be plotted and
+#: trend-tested directly. Ordered, not interval — treat it as ordinal.
+_PLAY_AGAIN_NUM = {"no": 0, "maybe": 1, "yes": 2}
+
+
+def _session_ux_table(db: Session) -> tuple[list[str], list[list[object]]]:
+    """(columns, rows) for the per-session user-experience record — one row per
+    (participant × visit × rater), verbatim as the trainer's console saved it.
+
+    ``visit_index`` is the only derived column: the child's visits ordered by
+    date and numbered from 1, which is the x-axis for every across-session plot
+    and saves every analyst deriving it again. Join to ``sessions`` / ``trials``
+    on ``student_id`` + the date — a visit normally spans several games and so
+    several rows there.
+
+    No total score is produced, by design: the items are reported separately.
+    """
+    students = {s.id: s for s in db.scalars(select(Student)).all()}
+    rows_q = db.scalars(
+        select(SessionExperience).order_by(
+            SessionExperience.student_id.asc(),
+            SessionExperience.visit_date.asc(),
+            SessionExperience.session_ordinal.asc(),
+        )
+    ).all()
+
+    # Number each child's visits by date, so the second rating of a visit and
+    # a same-day second session share the index of the visit they describe.
+    visit_index: dict[tuple, int] = {}
+    by_student: dict[object, set] = defaultdict(set)
+    for r in rows_q:
+        by_student[r.student_id].add(r.visit_date)
+    for student_id, dates in by_student.items():
+        for i, d in enumerate(sorted(dates), start=1):
+            visit_index[(student_id, d)] = i
+
+    rows: list[list[object]] = []
+    for r in rows_q:
+        s = students.get(r.student_id)
+        rows.append(
+            [
+                (s.participant_code if s else "") or "",
+                str(r.student_id),
+                r.visit_date.isoformat() if r.visit_date else "",
+                visit_index.get((r.student_id, r.visit_date), ""),
+                r.session_ordinal,
+                r.rater_id or "",
+                int(r.is_second_rating),
+                " ".join(r.games_played) if r.games_played else "",
+                _c(r.minutes),
+                _c(r.child_fun),
+                _c(r.child_feeling),
+                r.child_play_again or "",
+                _c(_PLAY_AGAIN_NUM.get(r.child_play_again or "")),
+                _c(r.rated_engagement),
+                _c(r.rated_independence),
+                _c(r.rated_comfort),
+                _c(r.rated_enjoyment),
+                _c(r.rated_willingness),
+                int(r.stopped_early),
+                r.stop_reason or "",
+                r.went_well or "",
+                r.was_difficult or "",
+                r.different_from_last or "",
+                r.created_at.isoformat() if r.created_at else "",
+                r.updated_at.isoformat() if r.updated_at else "",
+                (s.gender if s else "") or "",
+                s.date_of_birth.isoformat() if s and s.date_of_birth else "",
+                (s.autism_level if s else "") or "",
+                _c(s.iq_score if s else None),
+            ]
+        )
+    return list(SESSION_UX_CSV_COLUMNS), rows
+
+
+@router.get("/export/session_ux.csv")
+def export_session_ux_csv(
+    db: Session = Depends(get_db), _: Admin = Depends(get_current_admin)
+) -> StreamingResponse:
+    """RAW user-experience dump — one row per (participant × visit × rater), as
+    recorded on the trainer's console at the end of each session. Use it for the
+    across-session trajectories; join to ``sessions``/``trials`` on
+    ``student_id`` + date to put each record beside that visit's telemetry."""
+    columns, rows = _session_ux_table(db)
+    return _csv_response(columns, rows, f"session_ux_{date.today().isoformat()}.csv")
+
+
 CODEBOOK_CSV_COLUMNS = ("variable", "appears_in", "type", "unit", "values", "description")
 
 _CODEBOOK: tuple[tuple[str, str, str, str, str, str], ...] = (
     # --- identifiers & keys ---
     ("event_id", "raw_events", "id", "", "UUID", "Unique id of the recorded event row."),
     ("session_id", "raw_events,sessions", "id", "", "", "Play-session id; join raw_events to sessions on this."),
-    ("participant_code", "all", "id", "", "e.g. P-2024-001", "Pseudonymous participant code; the primary analysis key."),
+    ("participant_code", "all", "id", "", "e.g. P-2024-001", "Pseudonymous participant code; the primary analysis key. Unique across the study and never re-issued, so it identifies one child for good."),
     ("student_id", "all", "id", "", "UUID", "Opaque participant id; stable join key across exports."),
     ("user_id", "raw_events,sessions,level_progress", "id", "", "UUID", "Owning mentor/account id."),
     # --- demographics / covariates ---
@@ -1124,6 +1247,29 @@ _CODEBOOK: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("passed", "level_progress", "bool01", "", "1 | 0", "best_accuracy ≥ 70%."),
     ("mastered", "level_progress", "bool01", "", "1 | 0", "best_accuracy ≥ 80%."),
     ("updated_at", "level_progress", "datetime", "", "ISO 8601", "Last time the progress row changed."),
+    # --- session experience (the per-session UX record) ---
+    ("visit_date", "session_ux", "date", "", "YYYY-MM-DD", "Calendar date of the visit the record describes."),
+    ("visit_index", "session_ux", "int", "count", "", "The child's visits ordered by date, numbered from 1 (derived) — the x-axis for across-session plots."),
+    ("session_ordinal", "session_ux", "int", "count", "1", "Which session of that day; 1 unless a day ran two."),
+    ("rater_id", "session_ux,battery", "string", "", "", "Who rated; blank in session_ux means the session's own trainer."),
+    ("is_second_rating", "session_ux", "bool01", "", "1 | 0", "An independent second rating of the same visit, for inter-rater reliability."),
+    ("games_played", "session_ux", "string", "", "space-separated game keys", "Games the visit covered, as recorded by the console."),
+    ("minutes", "session_ux", "int", "minutes", "", "Minutes the child spent in the headset during the visit."),
+    ("child_fun", "session_ux", "int", "1-5", "1 = not at all … 5 = very much", "Child's own fun rating (Smileyometer). Expect a ceiling — read it beside child_play_again."),
+    ("child_feeling", "session_ux", "int", "1-5", "1 = very bad … 5 = completely fine", "How well the child says they feel. 1 or 2 fires the stop rule."),
+    ("child_play_again", "session_ux", "string", "", "yes | maybe | no", "Again-Again item — the item that moves first across sessions."),
+    ("play_again_num", "session_ux", "int", "0-2", "no=0 | maybe=1 | yes=2", "Ordinal coding of child_play_again (derived) — ordered, not interval."),
+    ("rated_engagement", "session_ux", "int", "1-5", "1 = mostly off-task … 5 = absorbed throughout", "Trainer rating, behaviourally anchored."),
+    ("rated_independence", "session_ux", "int", "1-5", "1 = constant hands-on help … 5 = no help at all", "Trainer rating, behaviourally anchored."),
+    ("rated_comfort", "session_ux", "int", "1-5", "1 = clear distress … 5 = fully comfortable", "Trainer rating, behaviourally anchored. Runs the same direction as every other item."),
+    ("rated_enjoyment", "session_ux", "int", "1-5", "1 = none seen … 5 = frequent", "Trainer rating of observed positive affect."),
+    ("rated_willingness", "session_ux", "int", "1-5", "1 = wanted to stop … 5 = clearly wanted more", "Trainer rating of willingness to continue."),
+    ("stopped_early", "session_ux", "bool01", "", "1 | 0", "The stop rule fired. A stopped session is a finding, not missing data."),
+    ("stop_reason", "session_ux", "string", "", "", "Why the session was stopped early."),
+    ("went_well", "session_ux", "string", "", "free text", "Trainer's answer to 'what went well today?'."),
+    ("was_difficult", "session_ux", "string", "", "free text", "Trainer's answer to 'what was difficult today?'."),
+    ("different_from_last", "session_ux", "string", "", "free text", "Trainer's answer to 'anything different from the last session?' — written as a change question on purpose."),
+    ("recorded_at", "session_ux", "datetime", "", "ISO 8601", "When the record was first saved."),
     # --- payload: outcome / accuracy ---
     ("correct", "raw_events", "bool01", "", "1 | 0", "Whether the response was correct."),
     ("firstAttempt", "raw_events", "bool01", "", "1 | 0", "First-attempt success (pointing/roll games close a round on a correct tap)."),
@@ -1227,6 +1373,7 @@ def export_all_zip(
         (f"sessions_{today}.csv", _sessions_table(db)),
         (f"level_progress_{today}.csv", _level_progress_table(db)),
         (f"assessments_{today}.csv", _assessments_table(db)),
+        (f"session_ux_{today}.csv", _session_ux_table(db)),
         ("codebook.csv", _codebook_table(db)),
     ]
     buf = io.BytesIO()

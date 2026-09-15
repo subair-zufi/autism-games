@@ -3,8 +3,11 @@ import { Link } from 'react-router-dom'
 import { GAME_LIST, SKILLS, type Difficulty, type GameId, type PlayMode } from '../types'
 import { useAuth } from '../state/auth'
 import { RemoteParticipants } from '../components/RemoteParticipants'
+import { SessionExperienceForm } from '../components/SessionExperienceForm'
 import { useRemoteLink } from '../state/remote'
 import { RemoteError, relayBase, remoteApi, setRelayBase } from '../remote/client'
+import { analytics } from '../services/analytics'
+import { flushOnReconnect } from '../services/writeQueue'
 import { DEFAULT_MIRROR_INTERVAL_MS } from '../remote/mirror'
 import type { RemoteSettings, RemoteStatus } from '../remote/protocol'
 
@@ -212,6 +215,25 @@ function Console({ code }: { code: string }) {
   const level = (status.level ?? null) as Difficulty | null
   const games = GAME_LIST.filter((g) => !g.hidden && g.mode === mode)
 
+  // Which games this visit has covered, so the session record does not ask the
+  // trainer to remember. A visit normally spans two or three.
+  const [gamesSeen, setGamesSeen] = useState<string[]>([])
+  useEffect(() => {
+    if (!gameId) return
+    setGamesSeen((seen) => (seen.includes(gameId) ? seen : [...seen, gameId]))
+  }, [gameId])
+
+  // Start a new list when the console switches child: one child's games must
+  // never end up on another child's record.
+  useEffect(() => {
+    setGamesSeen([])
+  }, [status.studentId])
+
+  // Records queued on a device that lost Wi-Fi go out as soon as it returns —
+  // and on every console mount, which covers the trainer who closed the app
+  // before the connection came back.
+  useEffect(() => flushOnReconnect(() => analytics.flushPendingWrites()), [])
+
   return (
     <div className="page rc">
       <header className="rc-top">
@@ -332,6 +354,16 @@ function Console({ code }: { code: string }) {
           )
         }
       />
+
+      {status.studentId && (
+        <SessionExperienceForm
+          studentId={status.studentId}
+          studentName={
+            students.find((s) => s.id === status.studentId)?.full_name ?? 'this participant'
+          }
+          gamesPlayed={gamesSeen}
+        />
+      )}
 
       <p className="rc-footnote">
         Switching game while the child is in VR ends the headset session on purpose — the app

@@ -10,7 +10,8 @@ BUDS schools. It does not repeat the instruments; it references them:
 - VR acceptability/usability → [`vr-ux-protocol.md`](vr-ux-protocol.md)
 - Content validity of the games → `validation/content-validity-dossier.docx`
 - Data → sheets/analysis → [`analysis-guide.md`](analysis-guide.md)
-- Forms → `validation/` (consent, ISAA record, ASSP (translated), expert CVI, VR-UX forms)
+- Forms → `validation/` (consent, ISAA record, ASSP (translated), expert CVI,
+  `vr-session-experience-record.*`, `vrnq-rating-sheet.*`)
 
 > **BUDS context assumption (confirm before finalizing).** BUDS is treated here as the
 > Kerala Kudumbashree / Local Self-Government network of special schools for children with
@@ -38,7 +39,7 @@ flat control task; the ASSP total is the secondary endpoint.
 
 ## 2. Objectives, questions, hypotheses
 
-Primary and secondary questions map 1:1 to the [analysis guide](analysis-guide.md) (Q1–Q8).
+Primary and secondary questions map 1:1 to the [analysis guide](analysis-guide.md) (Q1–Q9).
 
 | # | Objective | Question | Endpoint |
 |---|-----------|----------|----------|
@@ -48,7 +49,7 @@ Primary and secondary questions map 1:1 to the [analysis guide](analysis-guide.m
 | O3 | Dose–response | Does more VR play → more gain? Minimal effective dose? | `dose` (VR sessions) × ASSP gain |
 | O4 | Moderation | Who benefits most (IQ, age, autism level, gender)? | Aptitude-by-treatment interactions on `summary` |
 | O5 | VR process / attention | What does head-scan behaviour say about how the child attends in the headset? | `trials` (VR only) + head-scan telemetry |
-| **O6 (co-primary)** | Acceptability | Can these children use, tolerate, enjoy the headset? | VR-UX protocol: n-of-N tolerated a full session; cybersickness safety |
+| **O6 (co-primary)** | User experience | Can these children use, tolerate and enjoy the headset, and does that change across sessions? | Per-session record: n-of-N completed a full session; play-again across sessions; independence trajectory |
 
 **H1 (primary):** trained-skill battery scores improve pre→post with a moderate effect;
 NCT and sound-localization show no reliable change (specificity).
@@ -79,7 +80,7 @@ does not**: the waitlist arm is its main guard against informant expectancy
 ([protocol §5.3](pre-post-test-protocol.md)), so without it any ASSP gain must be reported as
 provisional with expectancy named as the leading alternative explanation.
 
-Either way, the **VR-UX acceptability study (O6)** runs on every child who uses the
+Either way, the **user-experience strand (O6)** runs on every child who uses the
 headset — it is single-arm by nature (descriptive, per-child).
 
 ---
@@ -210,7 +211,8 @@ facilitate where another informant is available (blinding, §10).
 | **Discriminant control** | NCT (12 forced-choice items) + sound-localization (2 trials), child-administered by the blinded tester | [pre-post-test-protocol.md](pre-post-test-protocol.md) §4 | T0, T1, T2 |
 | **Baseline characterization** | ISAA severity, IQ/dev level, demographics — recorded once, as participant characteristics | `validation/isaa-record-form.*` | T0 |
 | **Process / mechanism** | In-app telemetry (trials, latency, head-yaw, dose) | [analysis-guide.md](analysis-guide.md) | continuous |
-| **Acceptability (co-primary O6)** | VR-UX: FMS, VRSQ/SSQ, usability, presence, engagement, sensory | [vr-ux-protocol.md](vr-ux-protocol.md) | each VR session |
+| **User experience (co-primary O6)** | Per-session experience record — eleven fixed items (child ×3, trainer ×5, free text ×3), collected on the trainer console | [vr-ux-protocol.md](vr-ux-protocol.md) | every VR session |
+| **VR software quality** | VRNQ, rated by the expert panel and facilitators — not by the children | [vr-ux-protocol.md](vr-ux-protocol.md) · `validation/vrnq-rating-sheet.*` | once per game |
 | **Content validity** | Expert CVI panel on the games | `validation/content-validity-dossier.docx` + `expert-cvi-rating-form.docx` | pre-study |
 
 The battery is the primary efficacy measure; the ASSP sits beyond it as the far-transfer
@@ -224,7 +226,9 @@ instruments — VSMS, ATEC and TRENDS-as-an-outcome were dropped when the ASSP c
 
 - **Battery examiner is blinded** to arm/dose; does not run intervention sessions.
 - All observation subtests **video-recorded**; a **second blinded coder** scores ≥30% for
-  inter-rater reliability (κ ≥ .80 battery; κ ≥ .75 VR-UX codes).
+  inter-rater reliability (κ ≥ .80). For the user-experience record there is no video
+  coding: a second trainer independently rates Part B on ~1 session in 4, and the
+  agreement between the two raters is reported.
 - **Form counterbalancing (battery):** half A→B, half B→A pre/post; T2 uses the child's
   **pre-test form**. Stratify by age band (7–10 / 11–15).
 - **ASSP informants** are blind to arm (where the cluster design allows), to their own
@@ -251,7 +255,8 @@ instruments — VSMS, ATEC and TRENDS-as-an-outcome were dropped when the ASSP c
   access-controlled file, never in any data sheet or video filename.
 - **ASSP forms:** collected by the data manager, filed by `participant_code` only, never
   returned to the informant; a completed T0 form is never visible when T1 is rated.
-- **Video** (VR-UX coding): stored encrypted, access limited to coders, destroyed per the
+- **Video** (the battery's observation subtests; the user-experience record is not
+  video-coded): stored encrypted, access limited to coders, destroyed per the
   retention plan approved by the IEC.
 - **Backups:** device-local + one encrypted off-device copy; offline-capable if site Wi-Fi
   is unreliable.
@@ -276,17 +281,21 @@ unblinding. Then, per [analysis-guide.md §4](analysis-guide.md):
   report effect sizes over *p*.
 - **O5:** head-scan telemetry on VR trials as a process/attention measure (no flat
   comparison condition exists — the intervention is VR only).
-- **O6:** per-construct, per-child, per-game — **no single UX score**; safety headline =
-  n-of-N tolerated a full session; flag Smileyometer-vs-behaviour discrepancies.
+- **O6** (analysis guide Q9): per-item, per-child — **no single UX score**; safety headline =
+  n-of-N completed a full session; plot each item against `visit_index` per child; lead
+  the engagement story with play-again rather than the fun rating, which sits near its
+  ceiling; flag any rating-vs-behaviour discrepancy explicitly.
 - **Missingness:** pre-declare ITT vs completer; `has_post_battery = 0` flags dropouts.
 
 ---
 
 ## 13. Risk, safety, adverse events
 
-- **Cybersickness** is a safety gate: FMS pre/every-3-min/post, VRSQ/SSQ pre-post, and the
-  **stop rule** (VR-UX protocol §Construct 1) overrides all data collection. A stopped
-  session is a *finding*, not missing data.
+- **Cybersickness** is a safety gate, not a metric: the child is asked how they feel at the
+  end of every session, and the **stop rule** ([VR-UX protocol](vr-ux-protocol.md)) overrides
+  all data collection. No validated sickness score is collected — the item is a
+  pre-specified trigger, and sickness is reported as sessions stopped, not as a score. A
+  stopped session is a *finding*, not missing data.
 - **Photosensitivity/seizure:** screen out un-cleared seizure disorders; brief flashing
   check; medical clearance on file.
 - **Sensory distress / face-proximity aversion** (Emotion Room/Cinema 360): coded, and
@@ -304,10 +313,10 @@ unblinding. Then, per [analysis-guide.md §4](analysis-guide.md):
 | Phase | Weeks | Activities | Gate to next phase |
 |-------|-------|-----------|--------------------|
 | **0. Approvals & content validity** | 1–6 | IEC submission; BUDS/LSGD permission; trial registration; run **expert CVI panel** on the games; finalize translations (forward–back) | Ethics + site approved; CVI acceptable |
-| **1. Setup & telemetry check** | 5–7 | Headsets provisioned; verify telemetry M1–M5 logging (incl. `xrPresenting`); ASSP translation + informant briefing prepared; build analysis pipeline on dummy data; train facilitators + 2 VR-UX coders | Telemetry confirmed; coders calibrated; ASSP form frozen |
-| **2. Pilot** | 7–10 | Battery form-equivalence (8–12 TD children), floor/ceiling, coder κ; ASSP translation validation, test–retest for the RCI, inter-rater ICC; VR stop-rule & comprehension pilot (4–6 children); timing ≤45 min | Piloting checklists (both protocols) passed |
+| **1. Setup & telemetry check** | 5–7 | Headsets provisioned; verify telemetry M1–M5 logging (incl. `xrPresenting`); ASSP translation + informant briefing prepared; build analysis pipeline on dummy data; train facilitators on the Part B anchors until two raters agree | Telemetry confirmed; coders calibrated; trainers calibrated; ASSP form frozen |
+| **2. Pilot** | 7–10 | Battery form-equivalence (8–12 TD children), floor/ceiling, coder κ; ASSP translation validation, test–retest for the RCI, inter-rater ICC; VR stop-rule & comprehension pilot (4–6 children); two trainers rate 5 pilot sessions independently; timing ≤45 min | Piloting checklists (both protocols) passed |
 | **3. Baseline (T0)** | 10–12 | Consent/assent; demographics + ISAA + IQ (participant characteristics); blinded battery Form (A or B) + control block; **ASSP** from the named informant; randomize clusters | All enrolled children baselined |
-| **4. Intervention** | 12–20 | ~8 weeks of **VR** play; continuous telemetry + VR-UX per session; adherence/dose tracking | Dose window complete |
+| **4. Intervention** | 12–20 | ~8 weeks of **VR** play; continuous telemetry + the per-session record after every session; adherence/dose tracking | Dose window complete |
 | **5. Post (T1)** | 20–21 | Blinded battery (alternate form) + control block 3–7 days after the last session; **ASSP** from the same informant; waitlist arm posted then crossed over | Post data collected |
 | **6. Follow-up (T2)** | 24–29 | Battery (pre-test form) + control block + **ASSP** (same informant), 4–8 weeks post; retention | — |
 | **7. Analysis & write-up** | 29–36 | Unblind after lock; run pre-registered plan; report | Manuscript / thesis |
@@ -324,7 +333,8 @@ unblinding. Then, per [analysis-guide.md §4](analysis-guide.md):
 | Blinded examiner(s) | Administer the battery and control block only; no intervention contact |
 | Intervention facilitator(s) + BUDS staff | Run game sessions, support without answering, VR safety |
 | Second informant (≥30% of children) | Independent ASSP rating for inter-rater ICC |
-| Blinded coder ×2 | Video-code the battery + VR-UX; establish IRR |
+| Blinded coder ×2 | Video-code the battery; establish IRR |
+| Second trainer (~1 session in 4) | Independent Part B rating on the user-experience record |
 | Expert panel (pre-study) | CVI ratings on the games |
 | Bilingual clinician | Forward–back translation of all scripts |
 | Data manager | Exports, key separation, backups, pipeline |
@@ -336,13 +346,15 @@ unblinding. Then, per [analysis-guide.md §4](analysis-guide.md):
 Already written (in repo):
 - [x] Pre/post outcome protocol (battery + ASSP) · VR-UX protocol · analysis guide
 - [x] Content-validity dossier + expert CVI rating form
-- [x] Consent, ISAA record, data-request & expert-request letters, VR-UX forms
+- [x] Consent, ISAA record, data-request & expert-request letters, per-session
+      experience record, VRNQ rating sheet
 
 To produce before go-live:
 - [ ] IEC application package + trial registration entry
 - [ ] This master blueprint finalized with BUDS specifics (§4, §5 sample size)
 - [ ] Statistical Analysis Plan / **pre-registration** (lock O1 endpoints + RCI)
-- [ ] Facilitator SOP + ASSP informant briefing + coder manual (battery & VR-UX)
+- [ ] Facilitator SOP + ASSP informant briefing + coder manual (battery) + Part B anchor
+      training for trainers
 - [ ] Data management & retention plan (DPDP-aware)
 - [ ] Adverse-event log template + VR safety/seizure screen
 - [ ] Finalized Malayalam scripts (forward–back verified)

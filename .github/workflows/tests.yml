@@ -1,0 +1,84 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  server:
+    runs-on: ubuntu-latest
+
+    # The suite needs PostgreSQL: the models use JSONB, so SQLite cannot stand
+    # in, and without a database every test skips itself.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: autism_games_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Named *_test because the fixtures drop every table at setup and
+      # teardown, and the suite refuses any database whose name does not say so.
+      TEST_DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/autism_games_test
+      ADMIN_EMAIL: admin@example.com
+      ADMIN_PASSWORD: admin-pass-123
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: server/requirements-dev.txt
+
+      - run: pip install -r requirements-dev.txt
+        working-directory: server
+
+      - name: Check the database is actually reachable
+        working-directory: server
+        run: |
+          # Without this a green run means nothing: every test in the suite
+          # skips itself when it cannot reach a database, so a misconfigured
+          # service would report success having run none of them.
+          python - <<'PY'
+          import os, sys
+          from sqlalchemy import create_engine, text
+          url = os.environ["TEST_DATABASE_URL"]
+          try:
+              with create_engine(url).connect() as c:
+                  c.execute(text("SELECT 1"))
+          except Exception as exc:
+              sys.exit(f"Cannot reach {url}: {exc}")
+          print("database reachable")
+          PY
+
+      # Fixed order, so a red build always reproduces. pytest-randomly is
+      # installed for local use — shuffle before pushing (see server/README.md).
+      - run: pytest -q -p no:randomly
+        working-directory: server

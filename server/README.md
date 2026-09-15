@@ -174,10 +174,22 @@ Point it at the server with `VITE_ANALYTICS_API` (e.g. `http://localhost:8000`).
 ```bash
 cd server
 source .venv/bin/activate
-pip install pytest httpx
-export DATABASE_URL="postgresql+psycopg2://postgres:postgres@localhost:5432/autism_games"
+pip install -r requirements.txt -r requirements-dev.txt
+export TEST_DATABASE_URL="postgresql+psycopg2://postgres:postgres@localhost:5432/autism_games_test"
 pytest
 ```
 
 The suite covers sign-up/login idempotency, auth enforcement, the full event flow, admin
-analytics and user management. It **skips automatically** if no database is reachable.
+analytics and user management, the per-session experience record, and participant-code
+uniqueness. It **skips automatically** if no database is reachable — so a run that reports
+everything skipped is not a passing run. Check the count.
+
+Use `TEST_DATABASE_URL`, not `DATABASE_URL`: the fixtures drop every table at setup and
+teardown, and the suite refuses to run against a database whose name does not say `test`.
+
+### Test order
+
+`pytest-randomly` shuffles the order on every run, which is how several tests that quietly
+depended on a sibling having run first were found. A failure prints the seed; reproduce it
+with `pytest -p randomly --randomly-seed=<seed>`, or pin the order with `-p no:randomly`.
+CI runs the fixed order so a red build always reproduces; shuffle locally before you push.

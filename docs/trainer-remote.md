@@ -44,6 +44,7 @@ again except one thing — see *The one press* below.
 | Voice, sound, language, selection method | Changes the session settings live. |
 | Participant | Chooses who the session is recorded against, and adds or removes participants without leaving the console. |
 | Show / hide view | Starts and stops the mirror image. |
+| **End-of-session record** | Opens the eleven-question user-experience form for the selected child, and saves it against that child and today's date. |
 
 ### The question the child is being asked
 
@@ -205,3 +206,38 @@ Three things keep it that way, and each of them was a bug first:
   instead of replaying the session.
 - Anything older than a minute is read but not carried out, so a headset coming
   back from sleep never acts on instructions the trainer gave long ago.
+
+## The end-of-session record
+
+The user-experience objective's instrument lives on this console rather than on
+paper, for one reason: filled in here it arrives already carrying the child and
+the date, so it lines up with that visit's telemetry without anybody re-typing a
+participant code into a spreadsheet. It appears once a participant is selected.
+
+Eleven questions in three parts, about three minutes:
+
+- **Part A — the child.** Three pictorial questions. The trainer reads each one
+  aloud and turns the phone to the child, who points. Answering 1 or 2 on "how
+  well do you feel now?" raises the stop rule on screen.
+- **Part B — the trainer.** Five ratings, with the behavioural anchors shown
+  beside each one rather than on a sheet nobody has to hand.
+- **Part C — free text.** What went well, what was difficult, and what was
+  different from last time. The last question is answerable because the form
+  shows what was written at the previous session.
+
+Every scale runs 1 (low) to 5 (high), comfort included, so no scale is inverted
+against another and every item plots the same way up.
+
+**It works with no Wi-Fi.** The record is written to the device first and sent
+afterwards; if the connection is down the console says so, and the record goes
+out by itself when the network returns or the next time the console is opened.
+Re-sending cannot create a duplicate — the endpoint is idempotent per
+(participant, date, session of that day, rater) — so a correction is just the
+form saved again.
+
+**Second ratings.** Ticking *independent second rating* and giving a rater id
+stores the record alongside the trainer's rather than overwriting it. That pair
+is what the inter-rater agreement is computed from; see
+[the analysis guide](analysis-guide.md).
+
+Everything lands in `/api/admin/export/session_ux.csv` and in the raw ZIP.
