@@ -70,6 +70,22 @@ def trainer(client):
     return h, student["id"]
 
 
+@pytest.fixture
+def participant(client, trainer):
+    """A participant of this test's own, under the shared trainer.
+
+    Tests that assert on stored rows (rather than on one response) need a child
+    nobody else has written to: which visits exist, and what number each one is,
+    are properties of one child's whole history, so sharing would make the
+    expectations depend on which test ran first.
+    """
+    h, _ = trainer
+    student_id = client.post(
+        "/api/students", json={"full_name": "Solo"}, headers=h
+    ).json()["id"]
+    return h, student_id
+
+
 def _form(student_id: str, **over):
     body = {
         "student_id": student_id,
@@ -109,10 +125,10 @@ def test_saves_a_record(client, trainer):
     assert body["stopped_early"] is False
 
 
-def test_resubmitting_the_same_visit_updates_in_place(client, trainer):
+def test_resubmitting_the_same_visit_updates_in_place(client, participant):
     """The console re-sends a queued record after the Wi-Fi returns without
     knowing whether the first attempt landed, so a repeat must not duplicate."""
-    h, student_id = trainer
+    h, student_id = participant
     client.post("/api/session-experience", json=_form(student_id), headers=h)
     r = client.post(
         "/api/session-experience", json=_form(student_id, child_fun=3, went_well="Corrected."), headers=h
@@ -126,9 +142,10 @@ def test_resubmitting_the_same_visit_updates_in_place(client, trainer):
     assert same_visit[0]["went_well"] == "Corrected."
 
 
-def test_second_rater_is_a_separate_row(client, trainer):
+def test_second_rater_is_a_separate_row(client, participant):
     """The reliability subsample needs two independent ratings of one visit."""
-    h, student_id = trainer
+    h, student_id = participant
+    client.post("/api/session-experience", json=_form(student_id), headers=h)
     r = client.post(
         "/api/session-experience",
         json=_form(student_id, rater_id="coder-2", is_second_rating=True, rated_engagement=3),
@@ -190,16 +207,16 @@ def test_cannot_record_against_another_mentors_child(client, trainer):
     assert r.status_code == 404
 
 
-def test_export_numbers_the_visits_and_codes_play_again(client, trainer):
+def test_export_numbers_the_visits_and_codes_play_again(client, participant):
     """visit_index is the x-axis of every across-session plot, and
     play_again_num makes the Again-Again item directly plottable."""
-    h, student_id = trainer
-    client.post("/api/session-experience", json=_form(student_id), headers=h)
-    client.post(
-        "/api/session-experience",
-        json=_form(student_id, visit_date="2026-09-05", child_play_again="maybe"),
-        headers=h,
-    )
+    h, student_id = participant
+    for visit, again in (("2026-09-01", "yes"), ("2026-09-03", "no"), ("2026-09-05", "maybe")):
+        client.post(
+            "/api/session-experience",
+            json=_form(student_id, visit_date=visit, child_play_again=again),
+            headers=h,
+        )
 
     admin_token = client.post(
         "/api/admin/login",
@@ -215,14 +232,15 @@ def test_export_numbers_the_visits_and_codes_play_again(client, trainer):
     rows = list(csv.DictReader(io.StringIO(csv_text)))
     assert "visit_index" in rows[0] and "play_again_num" in rows[0]
 
-    by_date = {r["visit_date"]: r for r in rows if r["rater_id"] == ""}
-    assert by_date["2026-09-01"]["visit_index"] == "1"
-    assert by_date["2026-09-03"]["visit_index"] == "2"
-    assert by_date["2026-09-05"]["visit_index"] == "3"
-    assert by_date["2026-09-05"]["play_again_num"] == "1"  # maybe
+    mine = {r["visit_date"]: r for r in rows if r["student_id"] == student_id}
+    assert mine["2026-09-01"]["visit_index"] == "1"
+    assert mine["2026-09-03"]["visit_index"] == "2"
+    assert mine["2026-09-05"]["visit_index"] == "3"
+    assert mine["2026-09-05"]["play_again_num"] == "1"  # maybe
+    assert mine["2026-09-03"]["play_again_num"] == "0"  # no
     # The server issues the participant code; the record carries it so the
     # export keys on the same pseudonym as every other sheet.
-    assert by_date["2026-09-01"]["participant_code"].startswith("P-")
+    assert mine["2026-09-01"]["participant_code"].startswith("P-")
 
 
 def test_export_has_no_total_score_column(client, trainer):

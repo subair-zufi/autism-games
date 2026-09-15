@@ -666,8 +666,15 @@ def test_raw_events_export_recodes_booleans_to_1_0(client):
 
     r = client.get("/api/admin/export/events_raw.csv", headers=_admin_headers(client))
     assert r.status_code == 200, r.text
+    # Match on student_id, not participant_code: earlier tests in this module
+    # record emotionrecognition events too, some with no firstAttempt at all,
+    # and participant codes are only sequential *per mentor* — so every mentor
+    # the module signs up has a P-<year>-001. student_id is a UUID and is the
+    # only identifier here that is unique across the whole export.
     row = next(
-        row for row in _csv_rows(r.text) if row.get("participant_code") and row["game_key"] == "emotionrecognition"
+        row
+        for row in _csv_rows(r.text)
+        if row["student_id"] == sid and row["game_key"] == "emotionrecognition"
     )
     assert row["correct"] == "1"
     assert row["firstAttempt"] == "0"
@@ -719,7 +726,6 @@ def test_level_progress_export(client):
     ).json()["access_token"]
     h = {"Authorization": f"Bearer {token}"}
     sid = client.post("/api/students", json={"full_name": "Lev"}, headers=h).json()["id"]
-    code = client.get("/api/students", headers=h).json()[0]["participant_code"]
 
     # Pass easy (8/10) → easy mastered, medium unlocked.
     client.post(
@@ -730,10 +736,12 @@ def test_level_progress_export(client):
 
     r = client.get("/api/admin/export/level_progress.csv", headers=_admin_headers(client))
     assert r.status_code == 200, r.text
+    # student_id, not participant_code: codes are sequential per mentor, so
+    # every mentor in this module has a P-<year>-001 (see the raw-events test).
     rows = {
         row["level"]: row
         for row in _csv_rows(r.text)
-        if row["participant_code"] == code and row["game_key"] == "emotionrecognition"
+        if row["student_id"] == sid and row["game_key"] == "emotionrecognition"
     }
     assert rows["easy"]["attempts"] == "1"
     assert rows["easy"]["best_score"] == "8"
