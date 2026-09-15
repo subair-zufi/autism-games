@@ -533,3 +533,85 @@ class RemoteStateOut(BaseModel):
     frame_rev: int = 0
     headset_online: bool
     last_seq: int
+
+
+# ---------------------------------------------------------------------------
+# Session experience (the per-session user-experience record)
+# ---------------------------------------------------------------------------
+#: The three answers the Again-Again question allows.
+PLAY_AGAIN_VALUES = ("yes", "maybe", "no")
+
+#: Every rating on this record, child and trainer alike, runs 1 (low) to 5
+#: (high). Keeping one direction across the whole instrument is what stops a
+#: rater inverting a scale by accident and an analyst plotting one upside down.
+_Rating = int | None
+
+
+class SessionExperienceIn(BaseModel):
+    """One completed session record, posted by the trainer's console.
+
+    Every answer is optional so a partly-finished form still saves — a session
+    cut short by the stop rule has no fun rating to give, and losing the whole
+    record because of that would throw away the very sessions the acceptability
+    objective most needs.
+    """
+
+    student_id: uuid.UUID
+    visit_date: date
+    session_ordinal: int = Field(default=1, ge=1, le=10)
+    rater_id: str = Field(default="", max_length=80)
+    is_second_rating: bool = False
+
+    games_played: list[str] | None = None
+    minutes: int | None = Field(default=None, ge=0, le=600)
+
+    child_fun: _Rating = Field(default=None, ge=1, le=5)
+    child_feeling: _Rating = Field(default=None, ge=1, le=5)
+    child_play_again: str | None = Field(default=None, max_length=10)
+
+    rated_engagement: _Rating = Field(default=None, ge=1, le=5)
+    rated_independence: _Rating = Field(default=None, ge=1, le=5)
+    rated_comfort: _Rating = Field(default=None, ge=1, le=5)
+    rated_enjoyment: _Rating = Field(default=None, ge=1, le=5)
+    rated_willingness: _Rating = Field(default=None, ge=1, le=5)
+
+    went_well: str | None = Field(default=None, max_length=2000)
+    was_difficult: str | None = Field(default=None, max_length=2000)
+    different_from_last: str | None = Field(default=None, max_length=2000)
+
+    stopped_early: bool = False
+    stop_reason: str | None = Field(default=None, max_length=500)
+
+
+class SessionExperiencePublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    student_id: uuid.UUID
+    visit_date: date
+    session_ordinal: int
+    rater_id: str
+    is_second_rating: bool
+
+    games_played: list[str] | None
+    minutes: int | None
+
+    child_fun: int | None
+    child_feeling: int | None
+    child_play_again: str | None
+
+    rated_engagement: int | None
+    rated_independence: int | None
+    rated_comfort: int | None
+    rated_enjoyment: int | None
+    rated_willingness: int | None
+
+    went_well: str | None
+    was_difficult: str | None
+    different_from_last: str | None
+
+    stopped_early: bool
+    stop_reason: str | None
+
+    created_at: datetime
+    updated_at: datetime

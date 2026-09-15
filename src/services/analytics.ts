@@ -21,6 +21,8 @@
  * (e.g. VITE_ANALYTICS_API=http://localhost:8000). Defaults to same-origin "".
  */
 
+import { enqueue, flush, pendingCount } from "./writeQueue";
+
 const API_BASE: string =
   (import.meta as any).env?.VITE_ANALYTICS_API ?? "";
 
@@ -48,6 +50,49 @@ export interface SignupInput {
   education_level?: string;
   institution?: string;
   field_of_study?: string;
+}
+
+/** One completed session user-experience record. Every rating runs 1 (low) to
+ *  5 (high), comfort included, so no scale is inverted against another. */
+export interface SessionExperienceInput {
+  student_id: string;
+  /** The visit, as YYYY-MM-DD. Records join to telemetry on child + day. */
+  visit_date: string;
+  session_ordinal?: number;
+  /** "" is the session's own trainer; a name marks an independent second
+   *  rating for the inter-rater reliability subsample. */
+  rater_id?: string;
+  is_second_rating?: boolean;
+
+  games_played?: string[] | null;
+  minutes?: number | null;
+
+  child_fun?: number | null;
+  child_feeling?: number | null;
+  child_play_again?: "yes" | "maybe" | "no" | null;
+
+  rated_engagement?: number | null;
+  rated_independence?: number | null;
+  rated_comfort?: number | null;
+  rated_enjoyment?: number | null;
+  rated_willingness?: number | null;
+
+  went_well?: string | null;
+  was_difficult?: string | null;
+  different_from_last?: string | null;
+
+  stopped_early?: boolean;
+  stop_reason?: string | null;
+}
+
+export interface SessionExperience extends SessionExperienceInput {
+  id: string;
+  session_ordinal: number;
+  rater_id: string;
+  is_second_rating: boolean;
+  stopped_early: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 /** Editable mentor-profile fields (Complete Your Profile / Profile screens). */
@@ -499,6 +544,60 @@ class AnalyticsClient {
       // Never let analytics break gameplay.
       console.warn("[analytics] failed to record step:", err);
     }
+  }
+
+  /**
+   * Save the session's user-experience record.
+   *
+   * Unlike the rest of this client, a failure here is *not* swallowed into
+   * nothing: the record is queued to localStorage first and sent afterwards, so
+   * a site with no Wi-Fi does not cost the study a session it can never
+   * re-create. `queued` in the result tells the console whether to say "saved"
+   * or "saved on this device — will sync".
+   *
+   * The endpoint is idempotent per (participant, date, session of that day,
+   * rater), so re-sending a queued record cannot produce a duplicate row even
+   * when the first attempt reached the server and only its reply was lost.
+   */
+  async submitSessionExperience(
+    input: SessionExperienceInput,
+  ): Promise<{ saved: boolean; queued: boolean }> {
+    if (!this.token) return { saved: false, queued: false };
+    const key = `session-experience:${input.student_id}:${input.visit_date}:${
+      input.session_ordinal ?? 1
+    }:${input.rater_id ?? ""}`;
+
+    enqueue(key, "/api/session-experience", input);
+    const sent = await flush((path, body) =>
+      this.request(path, { method: "POST", body: JSON.stringify(body) }),
+    );
+    return { saved: sent > 0, queued: pendingCount() > 0 };
+  }
+
+  /** Every record held for one child, oldest first. The console shows the last
+   *  one so "anything different from the last session?" can be answered. */
+  async listSessionExperience(studentId: string): Promise<SessionExperience[]> {
+    if (!this.token) return [];
+    try {
+      return await this.request<SessionExperience[]>(
+        `/api/session-experience?student_id=${encodeURIComponent(studentId)}`,
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  /** Retry anything the queue is still holding. Returns how many got through. */
+  async flushPendingWrites(): Promise<number> {
+    if (!this.token) return 0;
+    return flush((path, body) =>
+      this.request(path, { method: "POST", body: JSON.stringify(body) }),
+    );
+  }
+
+  /** How many records are waiting for a connection. */
+  pendingWriteCount(): number {
+    return pendingCount();
   }
 }
 

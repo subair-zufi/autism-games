@@ -1290,3 +1290,122 @@ button:active, a:active, [role='button']:active { filter: brightness(0.93); }
   text-transform: uppercase; color: var(--m-muted); margin-bottom: 6px;
 }
 .rc-prompt-text { margin: 0; font-size: 1.25rem; font-weight: 700; line-height: 1.35; }
+
+/* --- End-of-session experience record (trainer console) ------------------ */
+/* Sized for a thumb on a phone held in one hand while the other steadies a
+   headset: every target is at least 44px, and the faces are large enough that
+   a child can point at one when the phone is turned towards them. */
+.sx h3 {
+  font-size: 0.85rem;
+  margin: 18px 0 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--m-line, #e2e2e2);
+}
+.sx-open { width: 100%; }
+.sx-date { max-width: 220px; }
+
+.sx-item {
+  border: 0;
+  margin: 0 0 14px;
+  padding: 0;
+}
+.sx-item legend {
+  display: block;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 6px;
+}
+.sx-ml {
+  display: block;
+  font-weight: 400;
+  font-size: 0.78rem;
+  color: var(--m-muted, #666);
+}
+
+.sx-faces,
+.sx-rating {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.sx-face,
+.sx-num,
+.sx-word {
+  flex: 1 1 0;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--m-line, #cfcfcf);
+  border-radius: 10px;
+  background: var(--m-card, #fff);
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+.sx-face {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+}
+.sx-face-n {
+  font-size: 0.72rem;
+  color: var(--m-muted, #666);
+}
+.sx-num,
+.sx-word {
+  font-weight: 700;
+  padding: 10px 4px;
+}
+.sx-face.on,
+.sx-num.on,
+.sx-word.on {
+  border-color: currentColor;
+  border-width: 2px;
+  background: var(--m-accent-soft, #e8f0ff);
+}
+/* The selected state must not rest on colour alone — these screens are used in
+   bright rooms, on cheap phones, by people who may not see it. */
+.sx-face.on .sx-face-n::after,
+.sx-num.on::after,
+.sx-word.on::after {
+  content: ' ✓';
+}
+
+.sx-anchors {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 4px 0 0;
+  font-size: 0.72rem;
+  color: var(--m-muted, #666);
+}
+
+.sx-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  font-size: 0.85rem;
+}
+.sx-check input { width: 20px; height: 20px; }
+
+.sx-last {
+  margin: 0 0 6px;
+  padding: 8px 10px;
+  border-left: 3px solid var(--m-line, #cfcfcf);
+  background: var(--m-soft, #f6f6f6);
+  font-size: 0.8rem;
+}
+
+.sx textarea {
+  width: 100%;
+  font: inherit;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--m-line, #cfcfcf);
+  background: var(--m-card, #fff);
+  color: inherit;
+  resize: vertical;
+}
