@@ -126,16 +126,18 @@ describe('AnalyticsClient student support', () => {
     expect(analytics.activeStudentId).toBe('stu-2')
   })
 
-  it('startSession attaches the active student_id', async () => {
+  it('startSession mints the id itself and attaches the active student_id', async () => {
     await login()
     analytics.setActiveStudent('stu-1')
-    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'sess-1' }))
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'ignored' }))
 
     const id = await analytics.startSession('emotions')
 
-    expect(id).toBe('sess-1')
+    // The client chooses the id so a session started with no network can still
+    // group the steps recorded under it; the server takes it as given.
+    expect(id).toMatch(/^[0-9a-f-]{36}$/)
     const { body } = lastCall()
-    expect(body).toMatchObject({ game_key: 'emotions', student_id: 'stu-1' })
+    expect(body).toMatchObject({ id, game_key: 'emotions', student_id: 'stu-1' })
   })
 
   it('recordStep attaches the active student_id', async () => {

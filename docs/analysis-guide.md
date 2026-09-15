@@ -90,7 +90,16 @@ aggregate `correct` and `chance` per whatever grouping you choose.
    `raw_events` included (`correct`, `firstAttempt`, `xrPresenting`, `hinted`,
    `unlocked`/`passed`/`mastered`, …); empty cells are system-missing.
    `xr_presenting` is `1` (VR) / `0` (flat) / blank (not recorded).
-6. **`raw_events` columns are stable.** The flattened payload columns follow a
+6. **Offline play is recorded, not lost.** Sessions, steps and the session
+   record are written to the device before they are sent, and go out when the
+   connection returns. Session ids are minted on the device, so a run played
+   through a Wi-Fi outage still groups its steps under one `session_id`. Two
+   consequences for analysis: `started_at` is when the row reached the server,
+   so use `raw_events.client_timestamp` for anything time-sensitive; and a
+   `session_id` present in `raw_events` but absent from `sessions` means the
+   opening write never landed — rare, but check for it rather than assuming the
+   join is total.
+7. **`raw_events` columns are stable.** The flattened payload columns follow a
    pinned order (every known field first, always, even when empty; genuinely new
    fields only ever appended after them), so a saved import / column map keeps
    working across exports — new data never shifts the existing columns.

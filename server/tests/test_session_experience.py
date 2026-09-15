@@ -240,3 +240,80 @@ def test_export_has_no_total_score_column(client, trainer):
     # iq_score is a participant covariate, not a score derived from this record.
     derived = [c for c in cols if c != "iq_score"]
     assert not any("total" in c or "score" in c for c in derived)
+
+
+# ---------------------------------------------------------------------------
+# Client-minted session ids — what lets a device with no network group the
+# steps it records offline (see src/services/writeQueue.ts).
+# ---------------------------------------------------------------------------
+def test_session_accepts_a_client_minted_id(client, trainer):
+    h, student_id = trainer
+    sid = "11111111-1111-4111-8111-111111111111"
+    r = client.post(
+        "/api/sessions", json={"id": sid, "game_key": "museum360", "student_id": student_id}, headers=h
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["id"] == sid
+
+
+def test_replaying_a_client_minted_session_is_not_an_error(client, trainer):
+    """The queue re-sends without knowing whether the first attempt landed."""
+    h, student_id = trainer
+    sid = "22222222-2222-4222-8222-222222222222"
+    body = {"id": sid, "game_key": "park360", "student_id": student_id}
+
+    first = client.post("/api/sessions", json=body, headers=h)
+    second = client.post("/api/sessions", json=body, headers=h)
+
+    assert first.status_code == 201 and second.status_code == 201
+    assert first.json()["id"] == second.json()["id"] == sid
+
+
+def test_events_recorded_offline_attach_to_the_replayed_session(client, trainer):
+    h, student_id = trainer
+    sid = "33333333-3333-4333-8333-333333333333"
+    client.post(
+        "/api/sessions", json={"id": sid, "game_key": "museum360", "student_id": student_id}, headers=h
+    )
+    r = client.post(
+        "/api/events",
+        json={
+            "game_key": "museum360",
+            "event_type": "answer",
+            "student_id": student_id,
+            "session_id": sid,
+            "payload": {"correct": True},
+        },
+        headers=h,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["session_id"] == sid
+
+
+def test_a_session_id_belonging_to_someone_else_is_not_taken_over(client, trainer):
+    h, student_id = trainer
+    sid = "44444444-4444-4444-8444-444444444444"
+    client.post(
+        "/api/sessions", json={"id": sid, "game_key": "museum360", "student_id": student_id}, headers=h
+    )
+
+    intruder = client.post(
+        "/api/auth/signup",
+        json={"email": "intruder@example.com", "password": "secret123", "full_name": "Nope"},
+    ).json()["access_token"]
+    r = client.post(
+        "/api/sessions",
+        json={"id": sid, "game_key": "museum360"},
+        headers={"Authorization": f"Bearer {intruder}"},
+    )
+    # Reported as absent, not as taken: a client must not be able to probe for
+    # sessions it cannot see.
+    assert r.status_code == 404
+
+
+def test_a_session_without_an_id_still_gets_one(client, trainer):
+    """Every caller that does not mint an id keeps the old behaviour."""
+    h, student_id = trainer
+    r = client.post("/api/sessions", json={"game_key": "museum360", "student_id": student_id}, headers=h)
+    assert r.status_code == 201, r.text
+    assert r.json()["id"]

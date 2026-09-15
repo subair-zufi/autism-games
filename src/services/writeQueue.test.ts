@@ -1,10 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { clearQueue, enqueue, flush, flushOnReconnect, pending, pendingCount } from './writeQueue'
+import {
+  clearQueue,
+  enqueue,
+  flush,
+  flushOnReconnect,
+  pending,
+  pendingCount,
+  resetFlushState,
+} from './writeQueue'
 
 describe('writeQueue', () => {
   beforeEach(() => {
     localStorage.clear()
     clearQueue()
+    resetFlushState()
   })
 
   it('keeps a write that could not be sent', async () => {
@@ -82,6 +91,62 @@ describe('writeQueue', () => {
     stop()
     window.dispatchEvent(new Event('online'))
     expect(run).toHaveBeenCalledTimes(2) // torn down
+  })
+
+  it('drops a write the server refused for good, so the rest can go', async () => {
+    enqueue('bad', '/api/events', { n: 1 })
+    enqueue('good', '/api/events', { n: 2 })
+    const send = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('404'))
+      .mockResolvedValueOnce({})
+
+    const sent = await flush(send, (err) => (err as Error).message === '404')
+
+    expect(sent).toBe(2) // the refused one is counted as dealt with, not stuck
+    expect(pendingCount()).toBe(0)
+  })
+
+  it('keeps a transient failure queued even when a permanence check is given', async () => {
+    enqueue('k1', '/api/events', {})
+    const send = vi.fn().mockRejectedValue(new Error('network down'))
+
+    await flush(send, (err) => (err as Error).message === '404')
+
+    expect(pendingCount()).toBe(1)
+  })
+
+  it('does not send the same entry twice when two flushes overlap', async () => {
+    enqueue('k1', '/api/events', { n: 1 })
+    let release: () => void = () => {}
+    const gate = new Promise<void>((r) => {
+      release = r
+    })
+    const send = vi.fn().mockImplementation(async () => {
+      await gate
+    })
+
+    const a = flush(send)
+    const b = flush(send) // second caller joins rather than starting a pass
+    release()
+    await Promise.all([a, b])
+
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('picks up a write queued while a flush was already running', async () => {
+    enqueue('k1', '/api/events', { n: 1 })
+    const send = vi.fn().mockImplementation(async (_p: string, body: unknown) => {
+      if ((body as { n: number }).n === 1) {
+        enqueue('k2', '/api/events', { n: 2 })
+        void flush(send) // what recordStep does on the next step
+      }
+    })
+
+    await flush(send)
+
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(pendingCount()).toBe(0)
   })
 
   it('degrades to not-queued rather than throwing when storage is unusable', () => {

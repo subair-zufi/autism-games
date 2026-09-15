@@ -20,9 +20,17 @@
  */
 
 const QUEUE_KEY = 'ag_write_queue'
-/** Enough for a long gap on site; beyond this the oldest entries are dropped
- *  rather than letting a broken flush fill the device's storage. */
-const MAX_ENTRIES = 200
+/**
+ * Enough for a long gap on site; beyond this the oldest entries are dropped
+ * rather than letting a broken flush fill the device's storage.
+ *
+ * Sized for telemetry, not for the session records: a 20-minute game session
+ * produces on the order of a hundred steps, so this holds roughly a full day of
+ * play with no network at all. Overflow drops the oldest first, which can
+ * orphan the steps of a session whose opening write has gone — those then fail
+ * permanently on replay and are dropped in turn, rather than wedging the queue.
+ */
+const MAX_ENTRIES = 2000
 
 export interface QueuedWrite {
   /** Identity of the record, not of the attempt — re-queuing replaces. */
@@ -35,6 +43,17 @@ export interface QueuedWrite {
 
 /** Sends one entry. Resolves on success; rejects to leave it queued. */
 export type SendFn = (path: string, body: unknown) => Promise<unknown>
+
+/**
+ * Says whether a rejection means "this will never work" rather than "not right
+ * now".
+ *
+ * Without it one entry the server refuses — a step naming a session that was
+ * dropped on overflow, say — is retried forever at the head of the queue and
+ * every later record waits behind it. A permanent failure is dropped so the
+ * rest can go; a transient one keeps its place.
+ */
+export type IsPermanent = (err: unknown) => boolean
 
 function read(): QueuedWrite[] {
   try {
@@ -77,37 +96,93 @@ export function clearQueue(): void {
   write([])
 }
 
-/**
- * Try to send everything queued, oldest first.
- *
- * Stops at the first failure and leaves that entry (and everything behind it)
- * queued: if the network is down, the second attempt will fail too, and the
- * order records were made in is worth keeping. Returns how many got through.
- */
-export async function flush(send: SendFn): Promise<number> {
+/** Test seam: forget any in-progress flush. */
+export function resetFlushState(): void {
+  inFlight = null
+  queuedDuringFlush = false
+}
+
+/** One pass over the queue. `blocked` means it stopped on a transient failure. */
+async function drain(
+  send: SendFn,
+  isPermanent?: IsPermanent,
+): Promise<{ sent: number; blocked: boolean }> {
   let sent = 0
   for (;;) {
     const entries = read()
-    if (entries.length === 0) return sent
+    if (entries.length === 0) return { sent, blocked: false }
 
     const entry = entries[0]
     try {
       await send(entry.path, entry.body)
-    } catch {
-      // Re-read rather than reusing `entries`: a write queued while this was
-      // in flight would otherwise be overwritten by the stale copy.
-      const current = read()
-      const idx = current.findIndex((e) => e.key === entry.key)
-      if (idx >= 0) {
-        current[idx] = { ...current[idx], attempts: current[idx].attempts + 1 }
-        write(current)
+    } catch (err) {
+      if (!isPermanent?.(err)) {
+        // Re-read rather than reusing `entries`: a write queued while this was
+        // in flight would otherwise be overwritten by the stale copy.
+        const current = read()
+        const idx = current.findIndex((e) => e.key === entry.key)
+        if (idx >= 0) {
+          current[idx] = { ...current[idx], attempts: current[idx].attempts + 1 }
+          write(current)
+        }
+        return { sent, blocked: true }
       }
-      return sent
+      // Permanently refused: drop it and keep going, so it cannot hold up
+      // everything recorded after it.
+      console.warn('[writeQueue] dropping a permanently refused write:', entry.path, err)
     }
 
     write(read().filter((e) => e.key !== entry.key))
     sent += 1
   }
+}
+
+/** A flush already running. Telemetry calls flush after every step, and two
+ *  passes over one queue would send the same entry twice — and events, unlike
+ *  the session record, are not idempotent. */
+let inFlight: Promise<number> | null = null
+/** Something was queued while a flush was running; go round again so it does
+ *  not sit there until the next call. */
+let queuedDuringFlush = false
+
+/**
+ * Try to send everything queued, oldest first.
+ *
+ * Stops at the first transient failure and leaves that entry (and everything
+ * behind it) queued: if the network is down the next attempt will fail too, and
+ * the order records were made in is worth keeping. Entries `isPermanent` marks
+ * as refused for good are dropped instead, so they cannot block the queue.
+ *
+ * Concurrent calls join the flush already in progress rather than starting a
+ * second pass over the same entries. Returns how many got through.
+ */
+export function flush(send: SendFn, isPermanent?: IsPermanent): Promise<number> {
+  if (inFlight) {
+    queuedDuringFlush = true
+    return inFlight
+  }
+
+  const run = async (): Promise<number> => {
+    let total = 0
+    for (;;) {
+      queuedDuringFlush = false
+      const { sent, blocked } = await drain(send, isPermanent)
+      total += sent
+      if (blocked || !queuedDuringFlush) return total
+    }
+  }
+
+  // The work is deferred by a microtask so `inFlight` is set before any `send`
+  // can run. An async function body would instead run synchronously as far as
+  // its first await — which is the send itself — so a flush triggered from
+  // inside that send (recordStep queues and flushes on every step) would find
+  // `inFlight` still null and start a second pass over the same entries,
+  // posting them twice. Events are not idempotent; that would be duplicate data.
+  const started = Promise.resolve().then(run)
+  inFlight = started
+  return started.finally(() => {
+    inFlight = null
+  })
 }
 
 /**

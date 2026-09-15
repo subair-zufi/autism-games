@@ -23,6 +23,35 @@
 
 import { enqueue, flush, pendingCount } from "./writeQueue";
 
+/** An error carrying the HTTP status, so the write queue can tell a server
+ *  that refused a record for good from one that is merely unreachable. */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+/**
+ * Whether a failed write should be dropped rather than retried forever.
+ *
+ * A 4xx means the server understood and refused: a step naming a session that
+ * overflowed out of the queue, a participant since deleted. Retrying cannot
+ * help, and the entry would sit at the head of the queue holding up every
+ * record behind it. 401 is excluded — a signed-out trainer signing back in
+ * fixes that, and their data must survive until they do. So are 408 and 429,
+ * which are explicitly "try again".
+ */
+function isPermanentFailure(err: unknown): boolean {
+  const status = err instanceof ApiError ? err.status : 0;
+  if (status === 401 || status === 408 || status === 429) return false;
+  return status >= 400 && status < 500;
+}
+
+
 const API_BASE: string =
   (import.meta as any).env?.VITE_ANALYTICS_API ?? "";
 
@@ -30,6 +59,21 @@ const API_BASE: string =
  *  another server at runtime (a laptop on the room's Wi-Fi when there is no
  *  internet), so it needs to know what "default" means — see remote/client.ts. */
 export const DEFAULT_API_BASE = API_BASE;
+/** A client-side id for a session or a queue entry. `randomUUID` is absent on
+ *  http:// origins and older WebViews — the headset is sometimes both — so fall
+ *  back rather than throw in the middle of a session. */
+function newId(): string {
+  const c = globalThis.crypto;
+  if (c?.randomUUID) return c.randomUUID();
+  const b = new Uint8Array(16);
+  if (c?.getRandomValues) c.getRandomValues(b);
+  else for (let i = 0; i < 16; i += 1) b[i] = Math.floor(Math.random() * 256);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map((n) => n.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
 const TOKEN_KEY = "ag_player_token";
 const STUDENT_KEY = "ag_active_student";
 
@@ -401,7 +445,7 @@ class AnalyticsClient {
     const res = await fetch(API_BASE + path, { ...init, headers });
     if (res.status === 401) {
       this.logout();
-      throw new Error("Unauthorized");
+      throw new ApiError("Unauthorized", 401);
     }
     if (!res.ok) {
       let detail = `Request failed (${res.status})`;
@@ -410,7 +454,7 @@ class AnalyticsClient {
       } catch {
         /* ignore */
       }
-      throw new Error(detail);
+      throw new ApiError(detail, res.status);
     }
     return (res.status === 204 ? null : await res.json()) as T;
   }
@@ -487,37 +531,43 @@ class AnalyticsClient {
   /**
    * Start a play session. Returns the session id, or null if not logged in.
    * The active student (if any) is attached automatically.
+   *
+   * The id is minted here rather than by the server, because a device with no
+   * network still has to group the steps it is about to record: without an id
+   * of its own, every step played through a Wi-Fi outage would arrive
+   * unattached to any session, and session-level dose would be lost for exactly
+   * the visits hardest to repeat. The server takes the id as given and treats a
+   * replay of it as the same session.
    */
   async startSession(gameKey: string): Promise<string | null> {
     if (!this.token) return null;
-    try {
-      const s = await this.request<{ id: string }>("/api/sessions", {
-        method: "POST",
-        body: JSON.stringify({ game_key: gameKey, student_id: this.studentId }),
-      });
-      return s.id;
-    } catch (err) {
-      // Never let analytics break gameplay.
-      console.warn("[analytics] failed to start session:", err);
-      return null;
-    }
+    const id = newId();
+    enqueue(`session:${id}`, "/api/sessions", {
+      id,
+      game_key: gameKey,
+      student_id: this.studentId,
+    });
+    void this.drainQueue();
+    return id;
   }
 
   async endSession(sessionId: string, finalScore?: number): Promise<void> {
     if (!this.token) return;
-    try {
-      await this.request(`/api/sessions/${sessionId}/end`, {
-        method: "POST",
-        body: JSON.stringify({ final_score: finalScore ?? null }),
-      });
-    } catch (err) {
-      console.warn("[analytics] failed to end session:", err);
-    }
+    enqueue(`session-end:${sessionId}`, `/api/sessions/${sessionId}/end`, {
+      final_score: finalScore ?? null,
+    });
+    await this.drainQueue();
   }
 
   /**
    * Record a single game step. No-op (resolves silently) if the player is not
    * logged in, so this is safe to call from anywhere in game code.
+   *
+   * Queued before it is sent, and never awaited on the network: a step is the
+   * unit the primary endpoint is built from, so losing a run of them to a
+   * dropped connection costs trial data and dose that cannot be collected
+   * again. Queuing keeps the old promise — this still never blocks or breaks a
+   * game — while giving the steps somewhere to wait.
    */
   async recordStep(
     gameKey: string,
@@ -526,24 +576,17 @@ class AnalyticsClient {
     opts: { stepIndex?: number; score?: number; sessionId?: string } = {},
   ): Promise<void> {
     if (!this.token) return;
-    try {
-      await this.request("/api/events", {
-        method: "POST",
-        body: JSON.stringify({
-          game_key: gameKey,
-          event_type: eventType,
-          step_index: opts.stepIndex,
-          score: opts.score,
-          student_id: this.studentId,
-          session_id: opts.sessionId,
-          payload: payload ?? null,
-          client_timestamp: new Date().toISOString(),
-        }),
-      });
-    } catch (err) {
-      // Never let analytics break gameplay.
-      console.warn("[analytics] failed to record step:", err);
-    }
+    enqueue(`event:${newId()}`, "/api/events", {
+      game_key: gameKey,
+      event_type: eventType,
+      step_index: opts.stepIndex,
+      score: opts.score,
+      student_id: this.studentId,
+      session_id: opts.sessionId,
+      payload: payload ?? null,
+      client_timestamp: new Date().toISOString(),
+    });
+    await this.drainQueue();
   }
 
   /**
@@ -568,9 +611,7 @@ class AnalyticsClient {
     }:${input.rater_id ?? ""}`;
 
     enqueue(key, "/api/session-experience", input);
-    const sent = await flush((path, body) =>
-      this.request(path, { method: "POST", body: JSON.stringify(body) }),
-    );
+    const sent = await this.drainQueue();
     return { saved: sent > 0, queued: pendingCount() > 0 };
   }
 
@@ -589,9 +630,15 @@ class AnalyticsClient {
 
   /** Retry anything the queue is still holding. Returns how many got through. */
   async flushPendingWrites(): Promise<number> {
-    if (!this.token) return 0;
-    return flush((path, body) =>
-      this.request(path, { method: "POST", body: JSON.stringify(body) }),
+    return this.drainQueue();
+  }
+
+  /** Send queued writes, in the order they were made. */
+  private drainQueue(): Promise<number> {
+    if (!this.token) return Promise.resolve(0);
+    return flush(
+      (path, body) => this.request(path, { method: "POST", body: JSON.stringify(body) }),
+      isPermanentFailure,
     );
   }
 

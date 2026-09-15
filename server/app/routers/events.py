@@ -51,10 +51,33 @@ def start_session(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
 ) -> SessionPublic:
-    """Open a play session so a run of steps can be grouped together (optional)."""
+    """Open a play session so a run of steps can be grouped together (optional).
+
+    Idempotent when the client supplies ``id``: replaying a session that was
+    queued on a device with no network returns the existing row instead of
+    failing, so the retry that follows a lost reply cannot strand the steps
+    recorded under that id.
+    """
     if data.student_id is not None:
         resolve_owned_student(db, user, data.student_id)
+
+    if data.id is not None:
+        existing = db.get(GameSession, data.id)
+        if existing is not None:
+            # Someone else's id is reported as absent rather than taken: a
+            # client must not be able to probe for sessions it cannot see.
+            if existing.user_id != user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="Session not found."
+                )
+            return SessionPublic.model_validate(existing)
+
     session = GameSession(user_id=user.id, student_id=data.student_id, game_key=data.game_key)
+    # Only set it when the client sent one, so the column default still applies
+    # for every caller that does not (rather than relying on how the ORM treats
+    # an explicit None).
+    if data.id is not None:
+        session.id = data.id
     db.add(session)
     db.commit()
     db.refresh(session)

@@ -125,6 +125,14 @@ class StudentPublic(StudentBase):
 class SessionStartRequest(BaseModel):
     game_key: str = Field(max_length=80)
     student_id: uuid.UUID | None = None
+    #: Optional client-minted session id.
+    #:
+    #: A device with no network cannot be told what id the server would have
+    #: chosen, yet the steps it records offline have to name the session they
+    #: belong to. So the client mints the id, groups its steps under it, and
+    #: replays the whole run when the connection returns. Omit it and the
+    #: server allocates one as before.
+    id: uuid.UUID | None = None
 
 
 class SessionEndRequest(BaseModel):
