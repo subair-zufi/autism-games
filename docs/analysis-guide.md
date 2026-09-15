@@ -137,33 +137,6 @@ Same question one step further out: does the **informant-rated ASSP** move too?
   for the child, not **informant expectancy** on the ASSP. Only the between-arm (waitlist)
   contrast speaks to that — see [protocol §5.3](pre-post-test-protocol.md).
 
-### Q6 — What was the user experience? *(exploratory)*
-Can these children use, tolerate and enjoy the headset — and does that change as
-the sessions go on?
-
-- **Sheet:** `session_ux` (one row per participant × visit × rater).
-- **Across sessions:** plot each item against `visit_index` per child. The shape
-  of the line is the finding — settling in, steady, or deteriorating.
-- **The item that moves:** `play_again_num` (no=0, maybe=1, yes=2). Children
-  shift on this before they shift on `child_fun`, which sits near its ceiling
-  from the first session — report both and say so.
-- **Safety headline:** `stopped_early` — n-of-N children who completed a full
-  session, with `stop_reason` coded by type.
-- **Reliability:** rows with `is_second_rating = 1` are an independent rating of
-  the same visit. Agreement between them and the `rater_id = ""` row on the five
-  `rated_*` items is what makes Part B more than one person's impression.
-- **Open text:** `went_well`, `was_difficult`, `different_from_last` — code
-  thematically. The last is written as a change question on purpose and carries
-  the trajectory.
-- **Join to telemetry:** on `student_id` + the date. A visit normally spans
-  several games, so it matches *several* rows in `sessions` / `trials`, not one.
-
-**Report the items separately.** There is no total score in the export and none
-should be computed: summing them would assert a single-factor structure this
-record has never been shown to have. Where a child's rating and their behaviour
-disagree — high `child_fun`, but `stopped_early = 1` — believe the behaviour and
-report the mismatch.
-
 ### Q2 — How fast do children learn? *(learning curves)*
 - **Sheet:** `trials`, filtered to `xr_presenting = 1`.
 - **Columns:** `first_attempt_correct` ~ `trial_in_game` (or session index), grouped
@@ -249,6 +222,33 @@ block as a process/attention measure within the VR trials instead.
   scored totals.)
 - **In-game test–retest:** split `trials` by trial or session and correlate; item difficulty
   per emotion/cue from `raw_events`.
+
+### Q9 — What was the user experience? *(exploratory)*
+Can these children use, tolerate and enjoy the headset — and does that change as
+the sessions go on?
+
+- **Sheet:** `session_ux` (one row per participant × visit × rater).
+- **Across sessions:** plot each item against `visit_index` per child. The shape
+  of the line is the finding — settling in, steady, or deteriorating.
+- **The item that moves:** `play_again_num` (no=0, maybe=1, yes=2). Children
+  shift on this before they shift on `child_fun`, which sits near its ceiling
+  from the first session — report both and say so.
+- **Safety headline:** `stopped_early` — n-of-N children who completed a full
+  session, with `stop_reason` coded by type.
+- **Reliability:** rows with `is_second_rating = 1` are an independent rating of
+  the same visit. Agreement between them and the `rater_id = ""` row on the five
+  `rated_*` items is what makes Part B more than one person's impression.
+- **Open text:** `went_well`, `was_difficult`, `different_from_last` — code
+  thematically. The last is written as a change question on purpose and carries
+  the trajectory.
+- **Join to telemetry:** on `student_id` + the date. A visit normally spans
+  several games, so it matches *several* rows in `sessions` / `trials`, not one.
+
+**Report the items separately.** There is no total score in the export and none
+should be computed: summing them would assert a single-factor structure this
+record has never been shown to have. Where a child's rating and their behaviour
+disagree — high `child_fun`, but `stopped_early = 1` — believe the behaviour and
+report the mismatch.
 
 ---
 
