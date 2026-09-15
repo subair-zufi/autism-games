@@ -1,0 +1,7 @@
+# Test-only dependencies. Install alongside requirements.txt to run the suite:
+#   pip install -r requirements.txt -r requirements-dev.txt
+-r requirements.txt
+
+pytest==9.1.1
+httpx==0.28.1          # the FastAPI TestClient transport
+pytest-randomly==5.0.0 # shuffles test order; see the Tests section of README.md

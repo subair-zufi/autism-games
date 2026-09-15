@@ -210,7 +210,7 @@ facilitate where another informant is available (blinding, §10).
 | **Discriminant control** | NCT (12 forced-choice items) + sound-localization (2 trials), child-administered by the blinded tester | [pre-post-test-protocol.md](pre-post-test-protocol.md) §4 | T0, T1, T2 |
 | **Baseline characterization** | ISAA severity, IQ/dev level, demographics — recorded once, as participant characteristics | `validation/isaa-record-form.*` | T0 |
 | **Process / mechanism** | In-app telemetry (trials, latency, head-yaw, dose) | [analysis-guide.md](analysis-guide.md) | continuous |
-| **Acceptability (co-primary O6)** | VR-UX: FMS, VRSQ/SSQ, usability, presence, engagement, sensory | [vr-ux-protocol.md](vr-ux-protocol.md) | each VR session |
+| **Acceptability (co-primary O6)** | VR-UX. Two options, not yet settled — the full battery, or the eleven-question per-session record the trainer console now collects | [vr-ux-protocol.md](vr-ux-protocol.md) (see the status note at the top) | each VR session |
 | **Content validity** | Expert CVI panel on the games | `validation/content-validity-dossier.docx` + `expert-cvi-rating-form.docx` | pre-study |
 
 The battery is the primary efficacy measure; the ASSP sits beyond it as the far-transfer

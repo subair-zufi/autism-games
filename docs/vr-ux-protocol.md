@@ -3,6 +3,26 @@
 Ages 7–15 · Malayalam administration · Meta Quest, six 360° games
 (Emotion Room 360, Emotion Cinema 360, Playroom 360, Football 360, Museum 360, Park 360)
 
+> **Status — read before using this document.** Several user-experience instruments now
+> exist in this repository, and they are **alternatives, not a set to run together**. The
+> choice between them is open; nothing here has been retired.
+>
+> | Instrument | Where | What it answers | Burden |
+> |---|---|---|---|
+> | **This protocol** | below | the full five-construct battery: VRSQ/SSQ, IPQ presence items, video coding to κ, caregiver forms | ~15 min of instruments per session, plus two trained video coders |
+> | **Per-session experience record** | `validation/vr-session-experience-record.*`, and built into the trainer console | eleven fixed questions (child ×3, trainer ×5, free text ×3) after every session | ~3 min per session, no video coding |
+> | **VRNQ rating sheet** | `validation/vrnq-rating-sheet.*` | whether each of the six games is good enough VR software for research use — rated by adults, not children | once per game, per rater |
+> | *(superseded)* `validation/vr-session-ux-form.*` | — | an earlier one-page snapshot; the per-session record replaces it and can show change across sessions, which it cannot | — |
+>
+> **The decision that is still open:** whether the study runs this protocol's battery or the
+> lighter per-session record as its user-experience measure. The battery is the more
+> defensible of the two and answers more constructs; the per-session record is the one a
+> facilitator can actually complete after each of ~24 sessions per child, and the only one
+> that yields a per-child trajectory. Running both would mean two instruments after every
+> session. Until this is settled, the analysis plan (`analysis-guide.md` Q6) and the
+> exported `session_ux` sheet describe the per-session record, because that is what the app
+> now collects.
+
 This is an **acceptability / usability measure, not an efficacy measure.** It answers
 "can these children use, tolerate, and enjoy the headset and the games?" — a
 precondition for the intervention, and a moderator to report alongside outcomes. Efficacy
