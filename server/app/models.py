@@ -10,6 +10,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Sequence,
     String,
     UniqueConstraint,
     func,
@@ -22,6 +23,18 @@ from .database import Base
 
 def _uuid() -> uuid.UUID:
     return uuid.uuid4()
+
+
+#: Supplies the number in a participant code.
+#:
+#: A sequence rather than a count of existing rows, because numbers must never
+#: be handed out twice. Participants can be removed from the trainer console,
+#: and a count would then issue the withdrawn child's code to the next one
+#: enrolled — at which point an imported battery or ASSP score filed under that
+#: code, or a consent form carrying it, would attach to the wrong child. A
+#: sequence only ever moves forward, including across a delete and across a
+#: year boundary.
+participant_code_seq = Sequence("participant_code_seq", metadata=Base.metadata)
 
 
 class User(Base):
@@ -86,6 +99,14 @@ class Student(Base):
     """
 
     __tablename__ = "students"
+    __table_args__ = (
+        # Globally unique, not per mentor. The code is the analysis key: every
+        # export is joined on it and the code-to-identity map is kept on it, so
+        # two children sharing one would silently merge in the analysis. Codes
+        # used to be numbered per mentor, which gave every mentor account their
+        # own P-<year>-001.
+        UniqueConstraint("participant_code", name="uq_students_participant_code"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=_uuid)
     mentor_id: Mapped[uuid.UUID] = mapped_column(
@@ -104,7 +125,8 @@ class Student(Base):
     autism_level: Mapped[str | None] = mapped_column(String(40))
     iq_score: Mapped[int | None] = mapped_column(Integer)
     rehabilitation_centre: Mapped[str | None] = mapped_column(String(200))
-    # Human-readable participant code (e.g. "P-2024-001"), unique per mentor.
+    # Human-readable participant code (e.g. "P-2024-001"), unique across the
+    # whole study. Nullable: a child added before codes existed has none.
     participant_code: Mapped[str | None] = mapped_column(String(40))
 
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

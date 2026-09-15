@@ -494,12 +494,16 @@ def test_student_extended_fields_and_code(client):
         },
         headers=h,
     ).json()
-    assert a["participant_code"] == "P-%d-001" % __import__("datetime").datetime.now().year
+    year = __import__("datetime").datetime.now().year
+    assert a["participant_code"].startswith("P-%d-" % year)
     assert a["autism_level"] == "Level 2" and a["iq_score"] == 85
 
-    # Second student gets the next sequential code.
+    # Second student gets the next code in the sequence. The numbers run across
+    # the whole study rather than restarting per mentor, so what this asserts is
+    # that they advance — not that this mentor's first child is 001.
     b = client.post("/api/students", json={"full_name": "Zoe Chen"}, headers=h).json()
-    assert b["participant_code"].endswith("-002")
+    tail = lambda code: int(code.rsplit("-", 1)[1])
+    assert tail(b["participant_code"]) == tail(a["participant_code"]) + 1
 
 
 def test_student_report_shape(client):

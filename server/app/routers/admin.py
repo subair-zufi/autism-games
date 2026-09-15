@@ -1211,7 +1211,7 @@ _CODEBOOK: tuple[tuple[str, str, str, str, str, str], ...] = (
     # --- identifiers & keys ---
     ("event_id", "raw_events", "id", "", "UUID", "Unique id of the recorded event row."),
     ("session_id", "raw_events,sessions", "id", "", "", "Play-session id; join raw_events to sessions on this."),
-    ("participant_code", "all", "id", "", "e.g. P-2024-001", "Pseudonymous participant code; the primary analysis key."),
+    ("participant_code", "all", "id", "", "e.g. P-2024-001", "Pseudonymous participant code; the primary analysis key. Unique across the study and never re-issued, so it identifies one child for good."),
     ("student_id", "all", "id", "", "UUID", "Opaque participant id; stable join key across exports."),
     ("user_id", "raw_events,sessions,level_progress", "id", "", "UUID", "Owning mentor/account id."),
     # --- demographics / covariates ---
