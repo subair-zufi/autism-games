@@ -1,5 +1,6 @@
 import type { Object3D } from 'three'
 import type { DwellProfile } from '../types'
+import type { RayFilterConfig } from './oneEuro'
 
 /**
  * Gaze selection for the 360 games — the pure part.
@@ -88,12 +89,36 @@ export interface DwellTuning {
   tolDeg: number
   /** a slip shorter than this costs nothing */
   graceMs: number
+  /** how hard the shake is smoothed out of the ray before any of the above
+   *  (`oneEuro.ts`) — the first line of defence, where the three settings above
+   *  are what happens to the slips it does not catch */
+  ray: RayFilterConfig
 }
 
 export const DWELL_PROFILES: Record<DwellProfile, DwellTuning> = {
-  standard: { dwellMs: DWELL_MS, tolDeg: CONFIRM_TOL_DEG, graceMs: CONFIRM_GRACE_MS },
-  extended: { dwellMs: 1100, tolDeg: 10, graceMs: 300 },
-  'high-support': { dwellMs: 700, tolDeg: 14, graceMs: 450 },
+  standard: {
+    dwellMs: DWELL_MS,
+    tolDeg: CONFIRM_TOL_DEG,
+    graceMs: CONFIRM_GRACE_MS,
+    // light: a child who holds steady has nothing to smooth, and would only
+    // feel the lag
+    ray: { minCutoffHz: 1.2, beta: 0.08 },
+  },
+  extended: {
+    dwellMs: 1100,
+    tolDeg: 10,
+    graceMs: 300,
+    ray: { minCutoffHz: 0.8, beta: 0.06 },
+  },
+  'high-support': {
+    dwellMs: 700,
+    tolDeg: 14,
+    graceMs: 450,
+    // heavy at rest, and slower to open up: this child's "still" is another
+    // child's small movement, so the filter has to hold on longer before it
+    // decides the head is going somewhere
+    ray: { minCutoffHz: 0.5, beta: 0.05 },
+  },
 }
 
 /**

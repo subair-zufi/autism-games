@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { useSettings } from '../state/settings'
 import type { DwellProfile } from '../types'
 import { noteAim } from './confirmTracking'
+import { GazeRayFilter } from './oneEuro'
 import {
   ARM_MS,
   DWELL_PROFILES,
@@ -34,10 +35,11 @@ import {
  * `onClick` handlers work untouched.
  *
  * Neither stage asks for precision the child has not already shown. The chip
- * catches a gaze pointing anywhere within `CONFIRM_TOL_DEG` of it, not only a
- * ray that physically lands on it, and a dwell that slips off drains instead of
- * resetting — between them these are what let a child with an unsteady head
- * answer at all. See `headAim.ts`.
+ * catches a gaze pointing anywhere near it, not only a ray that physically
+ * lands on it; a dwell that slips off drains instead of resetting; and the ray
+ * itself is smoothed before any of that (`oneEuro.ts`). Between them these are
+ * what let a child with an unsteady head answer at all, and how far each one
+ * goes is the child's steadiness profile. See `headAim.ts`.
  *
  * `confirmSide` picks where the chip parks. `"on"` — the default, and what
  * every scene now uses — hovers it just in front of the candidate's own
@@ -105,11 +107,31 @@ function HeadSelectActive({
   const tuning = DWELL_PROFILES[profile]
   const camera = useThree((s) => s.camera)
 
-  // The ray pointer's "space" is the head itself: its world matrix is the head
-  // pose inside a session, and −z (the pointer's default direction) is exactly
-  // where the child is looking. Same camera `HeadSampler` reads its yaw from.
+  // The ray pointer's "space" is the head — but a SMOOTHED copy of it, not the
+  // camera itself. Its position is the real eye and its rotation is the camera's
+  // run through `oneEuro`, so a tremor is taken out of the ray before it can
+  // slip off a chip, while a deliberate turn still tracks. −z (the pointer's
+  // default direction) is where the child is looking.
+  //
+  // Only the ray. The rendered camera is untouched — a view that lags the head
+  // invites simulator sickness — and `HeadSampler` keeps sampling the raw
+  // camera, because head yaw is a recorded outcome and a smoothed version of it
+  // would measure this filter rather than the child.
+  const rayFilter = useMemo(() => new GazeRayFilter(), [])
+  const rayspace = useMemo(() => new THREE.Object3D(), [])
+  const rawQuat = useMemo(() => new THREE.Quaternion(), [])
   const spaceRef = useRef<THREE.Object3D | null>(null)
-  spaceRef.current = camera
+  spaceRef.current = rayspace
+
+  // Ahead of the pointer system's own move, which runs at −50: the ray has to
+  // be built from this frame's smoothed pose, not last frame's.
+  useFrame((_, dt) => {
+    camera.getWorldPosition(rayspace.position)
+    camera.getWorldQuaternion(rawQuat)
+    rayspace.quaternion.copy(rayFilter.filter(rawQuat, dt, tuning.ray))
+    // no parent and no r3f render pass of its own, so nothing else will
+    rayspace.updateMatrixWorld(true)
+  }, -100)
 
   const pointerState = useMemo(() => ({ headSelect: true }), [])
   const pointer = useRayPointer(spaceRef, pointerState, undefined, 'gaze')
@@ -177,13 +199,15 @@ function HeadSelectActive({
     const rawTarget = findSelectTarget(inter?.object)
 
     camera.getWorldPosition(camPos)
-    fwd.set(0, 0, -1).applyQuaternion(camera.quaternion)
+    // the smoothed ray, not the raw camera: the cone below and the reticle that
+    // rides it must agree with where the pointer actually looked
+    fwd.set(0, 0, -1).applyQuaternion(rayspace.quaternion)
 
     // Two ways to be "on the chip". The ray physically hitting it, as before —
-    // and the gaze merely POINTING within CONFIRM_TOL_DEG of where it sits, for
-    // a child whose head will not hold still long enough to keep a ray inside a
-    // few degrees (see headAim.ts). The chip stays small; only what it catches
-    // grows.
+    // and the gaze merely POINTING within this child's `tolDeg` of where it
+    // sits, for a head that will not hold still long enough to keep a ray
+    // inside a few degrees (see headAim.ts). The chip stays small; only what it
+    // catches grows.
     //
     // The cone is withheld while the ray rests on a DIFFERENT selectable option.
     // At the ends of Museum 360's row two pedestals are only ~10deg apart, so a

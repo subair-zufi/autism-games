@@ -16,8 +16,9 @@ const DWELL_PROFILE_PILLS: ReadonlyArray<[DwellProfile, string]> = [
 
 const DWELL_PROFILE_SUB: Record<DwellProfile, string> = {
   standard: 'Hold the ✓ for about 1.6 seconds — for a child who can keep their head still',
-  extended: 'Shorter hold, wider ✓, more forgiving of a wobble',
-  'high-support': 'Shortest hold and the widest ✓ — for a child whose head will not hold still',
+  extended: 'Shorter hold, wider ✓, steadier pointer, more forgiving of a wobble',
+  'high-support':
+    'Shortest hold, widest ✓ and the steadiest pointer — for a child whose head will not hold still',
 }
 
 export function Profile() {

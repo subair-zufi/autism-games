@@ -326,12 +326,14 @@ describe('steadiness profiles', () => {
       expect(tunings[i].dwellMs).toBeLessThan(tunings[i - 1].dwellMs)
       expect(tunings[i].tolDeg).toBeGreaterThan(tunings[i - 1].tolDeg)
       expect(tunings[i].graceMs).toBeGreaterThan(tunings[i - 1].graceMs)
+      // and the shake is taken out of the ray harder before any of that
+      expect(tunings[i].ray.minCutoffHz).toBeLessThan(tunings[i - 1].ray.minCutoffHz)
     }
   })
 
   it('leaves the standard profile exactly as the constants define it', () => {
     // an unchanged setup has to behave identically to before the dial existed
-    expect(DWELL_PROFILES.standard).toEqual({
+    expect(DWELL_PROFILES.standard).toMatchObject({
       dwellMs: DWELL_MS,
       tolDeg: CONFIRM_TOL_DEG,
       graceMs: CONFIRM_GRACE_MS,
