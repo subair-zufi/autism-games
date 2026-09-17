@@ -1,10 +1,12 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useRayPointer, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { useSettings } from '../state/settings'
 import type { DwellProfile } from '../types'
 import { noteAim } from './confirmTracking'
+import { setArmed } from './armed'
+import { useRemoteIntent } from '../remote/intents'
 import { GazeRayFilter } from './oneEuro'
 import {
   ARM_MS,
@@ -138,6 +140,25 @@ function HeadSelectActive({
 
   const aim = useMemo(createAimState, [])
 
+  /**
+   * A Confirm pressed on the trainer's phone, waiting for the next frame.
+   *
+   * For the children where no amount of dwell forgiveness is enough: they can
+   * orient to the right answer and hold it long enough to arm, and cannot hold
+   * it long enough to confirm. The trainer releases the choice the CHILD made —
+   * there is no way from the phone to pick a different one — so the trial still
+   * measures what the child attended to. Resolved in the frame loop rather than
+   * here so every answer leaves through one path, with this frame's pointer
+   * state, and the press cannot land mid-way through a frame's reasoning.
+   */
+  const pendingConfirm = useRef(false)
+  useRemoteIntent('confirm', () => {
+    pendingConfirm.current = true
+  })
+
+  // stop reporting a choice the trainer could confirm once this game is gone
+  useEffect(() => () => setArmed(false), [])
+
   const reticle = useRef<THREE.Group>(null)
   const tick = useRef<THREE.Group>(null)
   const arcGeo = useRef<THREE.RingGeometry>(null)
@@ -227,9 +248,18 @@ function HeadSelectActive({
     const onConfirm = onChip || nearChip
     const target = onConfirm ? null : rawTarget
     const r = advanceAim(aim, { target, onConfirm }, dt * 1000, tuning.dwellMs, ARM_MS, tuning.graceMs)
+
+    // A trainer's Confirm answers only a choice that is armed RIGHT NOW. Their
+    // console's view of that is up to a second old, so a press that arrives
+    // after the child has looked away does nothing rather than answering for a
+    // choice they have abandoned.
+    const assisted = pendingConfirm.current && !r.fire && r.candidate != null
+    pendingConfirm.current = false
+
     // Before the fire below, which dispatches the click synchronously and so
     // ends with the game reading these totals back out.
-    noteAim(r)
+    noteAim(assisted ? { ...r, fire: true, byFacilitator: true } : r)
+    setArmed(r.candidate != null)
     // Anchor the confirm chip's "on"-mode point to the gaze spot on the CURRENT
     // candidate only — not to any target the ray happens to graze. Updating it
     // for a not-yet-armed target teleported the chip in front of whatever the
@@ -361,9 +391,10 @@ function HeadSelectActive({
       }
     }
 
-    if (r.fire && r.candidate != null) {
+    if ((r.fire || assisted) && r.candidate != null) {
       const candidate = r.candidate
       clearCandidate(aim)
+      setArmed(false)
       commit(candidate)
     }
   })

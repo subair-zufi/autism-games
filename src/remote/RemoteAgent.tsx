@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GAME_LIST } from '../types'
 import { useSettings } from '../state/settings'
+import { isArmed } from '../games/armed'
 import { useAuth } from '../state/auth'
 import { useRemoteLink } from '../state/remote'
 import { currentXrSession, isXrPresenting } from '../services/xrPresence'
@@ -210,6 +211,7 @@ export function buildStatus(): RemoteStatus {
     level: gameId ? settings.difficulty[gameId] ?? null : null,
     phase: report.phase ?? (gameId ? 'start' : 'menu'),
     vrActive: isXrPresenting(),
+    armed: isArmed(),
     score: report.score ?? null,
     progress: report.progress ?? null,
     prompt: report.prompt ?? null,

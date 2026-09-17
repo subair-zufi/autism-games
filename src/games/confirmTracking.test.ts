@@ -22,6 +22,7 @@ describe('confirmTracking', () => {
       dwellDrainedMs: 0,
       dwellArmToConfirmMs: null,
       dwellArmedNoConfirm: false,
+      dwellConfirmedBy: null,
     })
   })
 
@@ -37,6 +38,7 @@ describe('confirmTracking', () => {
     expect(m.dwellArmToConfirmMs).toBe(1400)
     expect(m.dwellArmCount).toBe(1)
     expect(m.dwellArmedNoConfirm).toBe(false)
+    expect(m.dwellConfirmedBy).toBe('child')
   })
 
   it('counts what an unsteady head cost, not how many frames it took', () => {
@@ -88,6 +90,34 @@ describe('confirmTracking', () => {
     const m = confirmMetrics()
     expect(m.dwellArmToConfirmMs).toBeNull()
     expect(m.dwellArmedNoConfirm).toBe(false)
+  })
+
+  it('marks a trial the trainer finished, and leaves the child cost unmeasured', () => {
+    beginConfirmWindow()
+    noteAim(armed(), 0)
+    // the child held their choice for 3s and could not close the dwell; the
+    // trainer released it from their phone
+    noteAim(slip(200), 1500)
+    noteAim({ ...fired(), byFacilitator: true }, 3000)
+
+    const m = confirmMetrics()
+    expect(m.dwellConfirmedBy).toBe('facilitator')
+    // 3000ms here would be an ADULT's reaction time recorded as the child's
+    // confirmation cost — the one number this whole field exists to isolate
+    expect(m.dwellArmToConfirmMs).toBeNull()
+    // the child's attention half of the trial still stands, and is still counted
+    expect(m.dwellArmCount).toBe(1)
+    expect(m.dwellConfirmBreaks).toBe(1)
+    // an answer did happen, so this is not a trial that produced nothing
+    expect(m.dwellArmedNoConfirm).toBe(false)
+  })
+
+  it('forgets who confirmed when a new window opens', () => {
+    beginConfirmWindow()
+    noteAim(armed(), 0)
+    noteAim({ ...fired(), byFacilitator: true }, 500)
+    beginConfirmWindow()
+    expect(confirmMetrics().dwellConfirmedBy).toBeNull()
   })
 
   it('forgets the previous trial when a new window opens', () => {

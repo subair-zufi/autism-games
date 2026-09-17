@@ -285,6 +285,29 @@ function Console({ code }: { code: string }) {
           ↻ Play again
         </button>
       </div>
+      {/* Only while the child is actually selecting by gaze in a headset —
+          elsewhere there is no armed choice for it to release. */}
+      {status.vrActive && status.settings?.inputMethod === 'dwell' && (
+        <div className="rc-actions">
+          <button
+            className="rc-btn go"
+            type="button"
+            disabled={!status.armed}
+            onClick={() => void send('confirm', {}, 'Confirmed their choice')}
+          >
+            ✓ {status.armed ? 'Confirm their choice' : 'Nothing chosen yet'}
+          </button>
+        </div>
+      )}
+      {status.vrActive && status.settings?.inputMethod === 'dwell' && (
+        <p className="rc-note">
+          Press this for a child who can look at the right answer but cannot hold still long
+          enough to finish the ✓. It answers with <em>their</em> choice — the one the mirror
+          shows the ✓ sitting on — and there is no way from here to pick a different one. Trials
+          you finish this way are recorded as confirmed by you, so their response time is left
+          out of the analysis rather than being yours.
+        </p>
+      )}
       {note && <p className="rc-note">{note}</p>}
 
       <section className="rc-section">

@@ -137,6 +137,14 @@ describe('the rest of the controls', () => {
     expect(calls.intents).toEqual(['play', 'restart'])
   })
 
+  it('passes a trainer Confirm through to whatever is listening', () => {
+    const { ctx, calls } = makeCtx()
+    // it lands on the game's HeadSelect, which decides whether a choice is
+    // actually armed — the console's view of that is up to a second old
+    void applyRemoteCommand({ type: 'confirm', payload: {} } as RemoteCommand, ctx)
+    expect(calls.intents).toEqual(['confirm'])
+  })
+
   it('passes settings through and switches participant', async () => {
     const { ctx, calls } = makeCtx()
     await applyRemoteCommand({ type: 'setting', payload: { voiceOn: false } } as RemoteCommand, ctx)

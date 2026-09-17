@@ -78,6 +78,11 @@ export async function applyRemoteCommand(cmd: RemoteCommand, ctx: RemoteContext)
       case 'restart':
         ctx.emit('restart')
         return
+      case 'confirm':
+        // no-op unless a game's HeadSelect is mounted with a choice armed; the
+        // headset decides, because the console's view of that is a second old
+        ctx.emit('confirm')
+        return
       case 'setLevel': {
         const level = cmd.payload.level
         if (!LEVELS.has(level)) return

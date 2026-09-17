@@ -444,7 +444,7 @@ def test_trial_records_carry_the_gaze_confirmation_cost():
             {
                 "correct": True, "chance": 0.33, "latencyMs": 3400, "xrPresenting": True,
                 "inputMethod": "dwell", "dwellProfile": "high-support",
-                "dwellArmToConfirmMs": 1200,
+                "dwellConfirmedBy": "child", "dwellArmToConfirmMs": 1200,
                 "dwellConfirmBreaks": 2, "dwellDrainedMs": 340, "dwellArmCount": 1,
                 "dwellArmedNoConfirm": False,
             },
@@ -456,6 +456,31 @@ def test_trial_records_carry_the_gaze_confirmation_cost():
     # the setting is a condition on the trial: the dwell time is a floor on
     # response latency, so latency is not comparable without it
     assert r.dwell_profile == "high-support"
+    assert r.dwell_confirmed_by == "child"
+
+
+def test_trial_records_mark_a_trial_the_trainer_finished():
+    # The child oriented to the right exhibit and could not close the dwell, so
+    # the trainer released their choice from the remote. Accuracy stands — the
+    # child picked it — but no confirm interval is recorded, because the one
+    # that happened was an adult's reaction time.
+    evs = [
+        ev(
+            "museum360",
+            "answer",
+            {
+                "correct": True, "firstAttempt": True, "chance": 0.33,
+                "xrPresenting": True, "inputMethod": "dwell",
+                "dwellProfile": "high-support",
+                "dwellConfirmedBy": "facilitator", "dwellConfirmBreaks": 6,
+            },
+        )
+    ]
+    r = scoring.student_trial_records(evs)[0]
+    assert r.dwell_confirmed_by == "facilitator"
+    assert r.dwell_arm_to_confirm_ms is None
+    assert r.first_attempt_correct == 1
+    assert r.dwell_confirm_breaks == 6
 
 
 def test_trial_records_leave_confirmation_cost_blank_off_gaze():
@@ -467,6 +492,7 @@ def test_trial_records_leave_confirmation_cost_blank_off_gaze():
     assert r.dwell_arm_to_confirm_ms is None
     assert r.dwell_confirm_breaks is None
     assert r.dwell_profile == ""
+    assert r.dwell_confirmed_by == ""
 
 
 def test_trial_records_map_cue_and_flat_condition():

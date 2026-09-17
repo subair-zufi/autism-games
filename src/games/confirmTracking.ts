@@ -40,6 +40,7 @@ let drainedMs = 0
 let armedAt: number | null = null
 let armToConfirmMs: number | null = null
 let confirms = 0
+let confirmedBy: 'child' | 'facilitator' | null = null
 
 /** Open a fresh window at cue/stimulus onset. */
 export function beginConfirmWindow(): void {
@@ -49,6 +50,7 @@ export function beginConfirmWindow(): void {
   armedAt = null
   armToConfirmMs = null
   confirms = 0
+  confirmedBy = null
 }
 
 /**
@@ -63,6 +65,9 @@ export interface AimEvents {
   drainedMs: number
   brokeOff: boolean
   fire: boolean
+  /** the trainer released this answer from their phone, rather than the child
+   *  completing the dwell themselves (`remote/intents.ts`) */
+  byFacilitator?: boolean
 }
 
 export function noteAim(ev: AimEvents, now: number = performance.now()): void {
@@ -76,10 +81,19 @@ export function noteAim(ev: AimEvents, now: number = performance.now()): void {
   if (ev.drainedMs > 0) drainedMs += ev.drainedMs
   if (ev.fire) {
     confirms += 1
-    // null when the arming happened before this trial's window opened — an
-    // unmeasurable interval is better left missing than reported from the
-    // window's start, which would be a made-up number
-    if (armedAt !== null) armToConfirmMs = Math.max(0, Math.round(now - armedAt))
+    confirmedBy = ev.byFacilitator === true ? 'facilitator' : 'child'
+    // Left null when the trainer released it: the interval would then be an
+    // adult's reaction time, which is not what this field means and would
+    // quietly contaminate the very measure it exists to isolate. The child did
+    // not complete the confirmation, so their cost for this trial is unknown,
+    // and `dwellConfirmedBy` says why it is missing.
+    //
+    // Also null when the arming happened before this trial's window opened —
+    // an unmeasurable interval is better left missing than reported from the
+    // window's start, which would be a made-up number.
+    if (armedAt !== null && ev.byFacilitator !== true) {
+      armToConfirmMs = Math.max(0, Math.round(now - armedAt))
+    }
     armedAt = null
   }
 }
@@ -99,8 +113,21 @@ export interface ConfirmMetrics {
    * The child chose something and never managed to answer it. The trials that
    * motivated all of this: attention succeeded, the motor confirmation did
    * not. Scoring these as "did not find the target" is the confound.
+   *
+   * False when the trainer stepped in and released the choice — that trial did
+   * produce an answer. `dwellConfirmedBy` is what marks those; the two together
+   * separate "could not confirm, and no answer happened" from "could not
+   * confirm, and an adult finished it".
    */
   dwellArmedNoConfirm: boolean
+  /**
+   * Who released the answer. `facilitator` means the child oriented to their
+   * choice themselves — that half of the trial stands — but an adult pressed
+   * the button, so nothing about their motor control can be read from it, and
+   * `dwellArmToConfirmMs` is deliberately blank. Null when nothing was
+   * confirmed this trial.
+   */
+  dwellConfirmedBy: 'child' | 'facilitator' | null
 }
 
 /** Summarise the confirm activity since `beginConfirmWindow`. */
@@ -111,6 +138,7 @@ export function confirmMetrics(): ConfirmMetrics {
     dwellDrainedMs: Math.round(drainedMs),
     dwellArmToConfirmMs: armToConfirmMs,
     dwellArmedNoConfirm: armCount > 0 && confirms === 0,
+    dwellConfirmedBy: confirmedBy,
   }
 }
 

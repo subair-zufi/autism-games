@@ -734,6 +734,7 @@ TRIAL_CSV_COLUMNS = DEMO_COLUMNS + (
     "head_reversals",  # VR back-and-forth (hesitation)
     "head_to_target_ms",  # VR time until head first on target
     "dwell_profile",  # steadiness setting the gaze dwell ran at - control for it
+    "dwell_confirmed_by",  # child, or facilitator if the trainer released it
     "dwell_arm_to_confirm_ms",  # gaze confirm cost, target-finding removed
     "dwell_confirm_breaks",  # times an unsteady head broke the dwell
     "timestamp",
@@ -790,6 +791,7 @@ def export_trials_csv(
                     _c(r.head_reversals),
                     _c(r.head_to_target_ms),
                     r.dwell_profile,
+                    r.dwell_confirmed_by,
                     _c(r.dwell_arm_to_confirm_ms),
                     _c(r.dwell_confirm_breaks),
                     r.ts.isoformat(),
@@ -1320,6 +1322,7 @@ _CODEBOOK: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("headToTargetMs", "raw_events", "int", "ms", "", "Time until the head first pointed at the target (VR)."),
     # --- payload: gaze-dwell condition + confirmation cost (VR dwell trials only) ---
     ("dwellProfile", "raw_events", "string", "", "standard | extended | high-support", "How forgiving the gaze dwell was set to be for this child. A CONDITION, not an outcome: the dwell time is a floor on response latency (standard 1600ms, extended 1100ms, high support 700ms), so never pool latency across settings without adjusting."),
+    ("dwellConfirmedBy", "raw_events", "string", "", "child | facilitator", "Who released the answer. 'facilitator' = the trainer pressed Confirm on the remote for a child who oriented to their choice but could not hold still long enough to finish the dwell. They still picked the target, so accuracy stands; their motor performance does not, and dwellArmToConfirmMs is blank on these. Report how many trials were assisted, and check they are not concentrated in one group."),
     ("dwellArmToConfirmMs", "raw_events", "int", "ms", "", "Time from choosing an option by gaze to the answer landing — the confirmation cost with target-finding removed. Model it separately; leaving it inside latency confounds motor control with attention."),
     ("dwellConfirmBreaks", "raw_events", "int", "count", "", "Times an unsteady head broke the confirm dwell. A head-steadiness index measured during play; high values mean this child's accuracy needs interpreting with care."),
     ("dwellDrainedMs", "raw_events", "int", "ms", "", "Dwell progress lost to those breaks — graded severity, where the count is not."),
