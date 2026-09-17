@@ -156,6 +156,17 @@ export interface AimResult {
   armed: boolean
   /** confirmed this frame — fire the click on `AimState.candidate` */
   fire: boolean
+  /**
+   * Per-frame events, for `confirmTracking` to total up. They are reported
+   * rather than counted here because this module is deliberately pure: the
+   * same rules have to be replayable in a test without a clock or a headset.
+   */
+  /** a new candidate was claimed this frame */
+  armedNew: boolean
+  /** dwell lost to a slip off the chip this frame (ms of progress, not of time) */
+  drainedMs: number
+  /** this frame is where a slip first started costing — one per slip, not per frame */
+  brokeOff: boolean
 }
 
 /** Advances the aim state by one frame. */
@@ -175,7 +186,7 @@ export function advanceAim(
 
     if (state.candidate == null) {
       state.confirmMs = 0
-      return { candidate: null, progress: 0, armProgress: 0, armed: false, fire: false }
+      return { ...QUIET }
     }
 
     state.confirmMs += dtMs
@@ -184,16 +195,16 @@ export function advanceAim(
     if (fire) {
       // the caller reads `state.candidate` to know what to click, then clears
       state.confirmMs = 0
-      return { candidate: state.candidate, progress: 1, armProgress: 0, armed: true, fire: true }
+      return { ...QUIET, candidate: state.candidate, progress: 1, armed: true, fire: true }
     }
-    return { candidate: state.candidate, progress, armProgress: 0, armed: true, fire: false }
+    return { ...QUIET, candidate: state.candidate, progress, armed: true }
   }
 
   // Off the chip, progress drains rather than resetting (see CONFIRM_GRACE_MS).
   // The ring keeps showing what is left, so an unsteady child watches it ebb
   // back a little instead of snapping to empty — which is also far less
   // discouraging to sit through.
-  drainConfirm(state, dtMs)
+  const slip = drainConfirm(state, dtMs)
   const progress = confirmProgress(state, dwellMs)
 
   if (input.target == null) {
@@ -201,7 +212,13 @@ export function advanceAim(
     state.hoverMs = 0
     // the candidate deliberately survives looking at nothing — the child has to
     // cross empty scenery to get from the face down to the chip beneath it
-    return { candidate: state.candidate, progress, armProgress: 0, armed: false, fire: false }
+    return {
+      ...QUIET,
+      candidate: state.candidate,
+      progress,
+      drainedMs: slip.ms,
+      brokeOff: slip.broke,
+    }
   }
 
   if (input.target !== state.hover) {
@@ -209,7 +226,9 @@ export function advanceAim(
     state.hoverMs = 0
   }
   state.hoverMs += dtMs
+  let armedNew = false
   if (state.hoverMs >= armMs && state.candidate !== input.target) {
+    armedNew = true
     state.candidate = input.target
     // Dwell earned toward the previous choice must never answer for this one.
     // Without the grace window an off-chip frame already wiped it; with the
@@ -225,7 +244,22 @@ export function advanceAim(
     armProgress: Math.min(1, state.hoverMs / armMs),
     armed: true,
     fire: false,
+    armedNew,
+    drainedMs: slip.ms,
+    brokeOff: slip.broke,
   }
+}
+
+/** A frame in which nothing worth counting happened. */
+const QUIET: AimResult = {
+  candidate: null,
+  progress: 0,
+  armProgress: 0,
+  armed: false,
+  fire: false,
+  armedNew: false,
+  drainedMs: 0,
+  brokeOff: false,
 }
 
 function confirmProgress(state: AimState, dwellMs: number): number {
@@ -240,16 +274,20 @@ function confirmProgress(state: AimState, dwellMs: number): number {
  * charged once — tracking the slip's total length rather than per-frame means
  * the cost of looking away is the same whatever the frame rate.
  */
-function drainConfirm(state: AimState, dtMs: number): void {
+function drainConfirm(state: AimState, dtMs: number): { ms: number; broke: boolean } {
   if (state.candidate == null || state.confirmMs === 0) {
     state.confirmMs = 0
     state.offChipMs = 0
-    return
+    return { ms: 0, broke: false }
   }
   const chargedBefore = Math.max(0, state.offChipMs - CONFIRM_GRACE_MS)
   state.offChipMs += dtMs
   const chargedNow = Math.max(0, state.offChipMs - CONFIRM_GRACE_MS)
-  state.confirmMs = Math.max(0, state.confirmMs - (chargedNow - chargedBefore) * CONFIRM_DECAY)
+  const lost = Math.min(state.confirmMs, (chargedNow - chargedBefore) * CONFIRM_DECAY)
+  state.confirmMs -= lost
+  // one break per slip, counted where the grace window is first exceeded —
+  // not once per frame, which would only measure the frame rate
+  return { ms: lost, broke: chargedBefore === 0 && chargedNow > 0 }
 }
 
 /** Called after a fired selection has been dispatched. */

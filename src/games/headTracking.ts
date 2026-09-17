@@ -22,6 +22,7 @@
  * is unit-testable without a WebGL context.
  */
 
+import { beginConfirmWindow } from './confirmTracking'
 import { beginVisibilityWindow } from '../services/visibility'
 
 /** how often <HeadSampler> writes a pose (Hz) */
@@ -54,15 +55,17 @@ export function angDiffDeg(a: number, b: number): number {
 /**
  * Open a fresh telemetry window at stimulus/cue onset.
  *
- * Also opens the page-visibility window. Every game already calls this at the
- * exact moment a trial begins, so it is the one place that knows where a trial
- * starts — and `useGameAnalytics` reports how much of that window the child
- * spent with the page hidden, alongside these head metrics.
+ * Also opens the page-visibility and gaze-confirm windows. Every game already
+ * calls this at the exact moment a trial begins, so it is the one place that
+ * knows where a trial starts — and `useGameAnalytics` reports how much of that
+ * window the child spent with the page hidden, and what the confirm step cost
+ * them, alongside these head metrics.
  */
 export function beginHeadWindow(now: number = performance.now()): void {
   buf.length = 0
   windowStart = now
   beginVisibilityWindow(now)
+  beginConfirmWindow()
 }
 
 /** The most recent sampled yaw (deg), or 0 before any sample has arrived —

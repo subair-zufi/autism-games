@@ -3,6 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useRayPointer, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { useSettings } from '../state/settings'
+import { noteAim } from './confirmTracking'
 import {
   CONFIRM_TOL_DEG,
   advanceAim,
@@ -187,6 +188,9 @@ function HeadSelectActive({
     const onConfirm = onChip || nearChip
     const target = onConfirm ? null : rawTarget
     const r = advanceAim(aim, { target, onConfirm }, dt * 1000)
+    // Before the fire below, which dispatches the click synchronously and so
+    // ends with the game reading these totals back out.
+    noteAim(r)
     // Anchor the confirm chip's "on"-mode point to the gaze spot on the CURRENT
     // candidate only — not to any target the ray happens to graze. Updating it
     // for a not-yet-armed target teleported the chip in front of whatever the

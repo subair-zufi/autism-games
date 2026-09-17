@@ -242,3 +242,72 @@ describe('confirm tolerance cone', () => {
     }
   })
 })
+
+/**
+ * `confirmTracking` totals these up per trial; the rules stay here so the whole
+ * thing is replayable without a clock or a headset.
+ */
+describe('what the selection loop reports for telemetry', () => {
+  it('announces a new choice once, not on every frame it stays chosen', () => {
+    const s = createAimState()
+    const { root } = target()
+
+    expect(advanceAim(s, { ...LOOK, target: root }, ARM_MS / 2).armedNew).toBe(false)
+    expect(advanceAim(s, { ...LOOK, target: root }, ARM_MS / 2).armedNew).toBe(true)
+    expect(advanceAim(s, { ...LOOK, target: root }, ARM_MS).armedNew).toBe(false)
+  })
+
+  it('counts one break per slip, however many frames it spans', () => {
+    const s = createAimState()
+    const { root } = target()
+    advanceAim(s, { ...LOOK, target: root }, ARM_MS)
+    advanceAim(s, CONFIRM, DWELL_MS * 0.8)
+
+    // a slip long enough to cost, spread over several frames
+    const frames = [CONFIRM_GRACE_MS + 50, 16, 16, 16]
+    const broke = frames.map((dt) => advanceAim(s, { ...LOOK, target: root }, dt).brokeOff)
+    expect(broke).toEqual([true, false, false, false])
+
+    // back on the chip, then off again: that is a second break
+    advanceAim(s, CONFIRM, 100)
+    expect(advanceAim(s, { ...LOOK, target: root }, CONFIRM_GRACE_MS + 50).brokeOff).toBe(true)
+  })
+
+  it('charges nothing for a wobble inside the grace window', () => {
+    const s = createAimState()
+    const { root } = target()
+    advanceAim(s, { ...LOOK, target: root }, ARM_MS)
+    advanceAim(s, CONFIRM, DWELL_MS * 0.5)
+
+    const r = advanceAim(s, { ...LOOK, target: root }, CONFIRM_GRACE_MS / 2)
+    expect(r.drainedMs).toBe(0)
+    expect(r.brokeOff).toBe(false)
+  })
+
+  it('reports the dwell actually lost, never more than was there', () => {
+    const s = createAimState()
+    const { root } = target()
+    advanceAim(s, { ...LOOK, target: root }, ARM_MS)
+    advanceAim(s, CONFIRM, 100)
+
+    // a slip that would drain far past empty: only the 100ms held can be lost,
+    // or the totals would report dwell the child never earned
+    const r = advanceAim(s, { ...LOOK, target: root }, DWELL_MS * 4)
+    expect(r.drainedMs).toBe(100)
+    expect(r.progress).toBe(0)
+
+    // and an already-empty ring costs nothing more
+    expect(advanceAim(s, { ...LOOK, target: root }, DWELL_MS).drainedMs).toBe(0)
+  })
+
+  it('reports the drain in dwell lost, which is slower than time spent away', () => {
+    const s = createAimState()
+    const { root } = target()
+    advanceAim(s, { ...LOOK, target: root }, ARM_MS)
+    advanceAim(s, CONFIRM, DWELL_MS * 0.9)
+
+    const away = CONFIRM_GRACE_MS + 400
+    const r = advanceAim(s, { ...LOOK, target: root }, away)
+    expect(r.drainedMs).toBeCloseTo(400 * CONFIRM_DECAY)
+  })
+})

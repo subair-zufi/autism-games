@@ -12,6 +12,7 @@ vi.mock('../services/analytics', () => ({
 import { useGameAnalytics } from './useGameAnalytics'
 import { beginHeadWindow } from './headTracking'
 import { notePageHidden, notePageVisible, resetVisibilityForTest } from '../services/visibility'
+import { noteAim, resetConfirmForTest } from './confirmTracking'
 import { analytics } from '../services/analytics'
 import { useSettings } from '../state/settings'
 
@@ -20,6 +21,7 @@ describe('useGameAnalytics', () => {
     vi.clearAllMocks()
     useSettings.getState().setInputMethod('dwell')
     resetVisibilityForTest()
+    resetConfirmForTest()
   })
 
   it('starts a session lazily on the first recordStep, then reuses it', async () => {
@@ -108,5 +110,43 @@ describe('useGameAnalytics', () => {
     expect(p.pageWasHidden).toBe(true)
     expect(p.pageHideCount).toBe(1)
     expect(p.pageHiddenMs).toBeGreaterThanOrEqual(2500)
+  })
+
+  it('tags a gaze trial with what the confirm step cost the child', async () => {
+    const inXr = { getState: () => ({ session: {} }) }
+    const { result } = renderHook(() => useGameAnalytics('museum360', inXr))
+
+    beginHeadWindow(0)
+    // found the exhibit, then fought an unsteady head to confirm it
+    noteAim({ armedNew: true, drainedMs: 0, brokeOff: false, fire: false }, 2000)
+    noteAim({ armedNew: false, drainedMs: 120, brokeOff: true, fire: false }, 2600)
+    noteAim({ armedNew: false, drainedMs: 0, brokeOff: false, fire: true }, 4200)
+
+    await act(async () => { result.current.recordStep('answer') })
+    expect((analytics.recordStep as any).mock.calls[0][2]).toMatchObject({
+      dwellArmToConfirmMs: 2200,
+      dwellConfirmBreaks: 1,
+      dwellDrainedMs: 120,
+      dwellArmedNoConfirm: false,
+    })
+  })
+
+  it('leaves the confirm fields off a step gaze dwell did not answer', async () => {
+    const inXr = { getState: () => ({ session: {} }) }
+    const flat = { getState: () => ({ session: undefined }) }
+    beginHeadWindow(0)
+    noteAim({ armedNew: true, drainedMs: 0, brokeOff: false, fire: false }, 0)
+
+    // a controller answered this one: a 0 here would read as "armed nothing"
+    useSettings.getState().setInputMethod('controller')
+    const byController = renderHook(() => useGameAnalytics('museum360', inXr))
+    await act(async () => { byController.result.current.recordStep('answer') })
+    expect((analytics.recordStep as any).mock.calls[0][2]).not.toHaveProperty('dwellArmCount')
+
+    // and a flat-screen game has no confirm step at all
+    useSettings.getState().setInputMethod('dwell')
+    const onScreen = renderHook(() => useGameAnalytics('museum360', flat))
+    await act(async () => { onScreen.result.current.recordStep('answer') })
+    expect((analytics.recordStep as any).mock.calls[1][2]).not.toHaveProperty('dwellArmCount')
   })
 })
