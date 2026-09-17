@@ -27,6 +27,45 @@ export const ARM_MS = 320
 export const DWELL_MS = 1600
 
 /**
+ * Forgiveness for a child who cannot hold their head still.
+ *
+ * Quest testing turned up children who found the right exhibit, looked
+ * straight at the tick, and still never answered. The cause was here: the
+ * confirm dwell used to reset to zero the instant the ray left the chip, so at
+ * 72Hz a single 14ms wobble threw away every millisecond earned. A postural
+ * tremor crosses the chip's edge several times a second, so the dwell was
+ * *accumulating* far past DWELL_MS while never once running CONTINUOUSLY that
+ * long. From the outside it read as inattention; it was the software deleting
+ * their work.
+ *
+ * So progress now drains instead of resetting — the standard dwell-tolerance
+ * arrangement from gaze-typing and AAC systems. A slip shorter than the grace
+ * window costs nothing at all (that is the tremor case: wobbles are brief).
+ * Past it, progress falls at CONFIRM_DECAY times the rate it filled, so a
+ * genuine look away still empties the ring — just over ~2x the time it took to
+ * fill, not instantly.
+ */
+export const CONFIRM_GRACE_MS = 200
+/** Drain rate past the grace window, as a fraction of the fill rate. */
+export const CONFIRM_DECAY = 0.5
+
+/**
+ * How far off the chip the gaze may point and still count as resting on it.
+ *
+ * The other half of the same problem. The drawn chip is only a few degrees
+ * across, while the exhibit the child already located is 11-18deg wide — so the
+ * game congratulated them on an easy aim and then demanded one several times
+ * harder, from a child whose head will not cooperate. Widening the *catchment*
+ * rather than the chip keeps the tick small enough to hide none of the exhibit
+ * while asking for roughly the precision they have already demonstrated.
+ *
+ * `HeadSelect` applies this only when the ray is over the candidate itself or
+ * over nothing — never when it has moved to a different option. See the call
+ * site for why that matters.
+ */
+export const CONFIRM_TOL_DEG = 7
+
+/**
  * Objects opt in to being selectable by carrying `userData.headSelect`. Marking
  * is explicit rather than "anything with an onClick" because the scenes are
  * full of clickable furniture we do *not* want a wandering gaze to trip — and
@@ -69,10 +108,34 @@ export interface AimState {
   candidate: Object3D | null
   /** dwell accumulated on the confirm chip */
   confirmMs: number
+  /** how long the gaze has been off the chip, for the grace window */
+  offChipMs: number
 }
 
 export function createAimState(): AimState {
-  return { hover: null, hoverMs: 0, candidate: null, confirmMs: 0 }
+  return { hover: null, hoverMs: 0, candidate: null, confirmMs: 0, offChipMs: 0 }
+}
+
+/** A direction, as plain numbers so the cone rule is testable without a scene. */
+export type Vec3 = readonly [number, number, number]
+
+/** Angle between two directions, in degrees. Zero-length counts as "nowhere
+ *  near", so a missing chip position can never confirm anything. */
+export function angleBetweenDeg(a: Vec3, b: Vec3): number {
+  const la = Math.hypot(a[0], a[1], a[2])
+  const lb = Math.hypot(b[0], b[1], b[2])
+  if (la === 0 || lb === 0) return 180
+  const cos = (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (la * lb)
+  return (Math.acos(Math.min(1, Math.max(-1, cos))) * 180) / Math.PI
+}
+
+/** Whether the gaze points close enough to the chip to count as resting on it. */
+export function withinConfirmCone(
+  gaze: Vec3,
+  towardChip: Vec3,
+  tolDeg: number = CONFIRM_TOL_DEG,
+): boolean {
+  return angleBetweenDeg(gaze, towardChip) <= tolDeg
 }
 
 export interface AimInput {
@@ -108,6 +171,7 @@ export function advanceAim(
     // glancing back up starts it cleanly
     state.hover = null
     state.hoverMs = 0
+    state.offChipMs = 0
 
     if (state.candidate == null) {
       state.confirmMs = 0
@@ -125,14 +189,19 @@ export function advanceAim(
     return { candidate: state.candidate, progress, armProgress: 0, armed: true, fire: false }
   }
 
-  state.confirmMs = 0
+  // Off the chip, progress drains rather than resetting (see CONFIRM_GRACE_MS).
+  // The ring keeps showing what is left, so an unsteady child watches it ebb
+  // back a little instead of snapping to empty — which is also far less
+  // discouraging to sit through.
+  drainConfirm(state, dtMs)
+  const progress = confirmProgress(state, dwellMs)
 
   if (input.target == null) {
     state.hover = null
     state.hoverMs = 0
     // the candidate deliberately survives looking at nothing — the child has to
     // cross empty scenery to get from the face down to the chip beneath it
-    return { candidate: state.candidate, progress: 0, armProgress: 0, armed: false, fire: false }
+    return { candidate: state.candidate, progress, armProgress: 0, armed: false, fire: false }
   }
 
   if (input.target !== state.hover) {
@@ -140,15 +209,47 @@ export function advanceAim(
     state.hoverMs = 0
   }
   state.hoverMs += dtMs
-  if (state.hoverMs >= armMs) state.candidate = input.target
+  if (state.hoverMs >= armMs && state.candidate !== input.target) {
+    state.candidate = input.target
+    // Dwell earned toward the previous choice must never answer for this one.
+    // Without the grace window an off-chip frame already wiped it; with the
+    // window, a gaze that slipped off the chip and settled on a neighbouring
+    // option would otherwise carry that progress across and fire for it.
+    state.confirmMs = 0
+    state.offChipMs = 0
+  }
 
   return {
     candidate: state.candidate,
-    progress: 0,
+    progress: confirmProgress(state, dwellMs),
     armProgress: Math.min(1, state.hoverMs / armMs),
     armed: true,
     fire: false,
   }
+}
+
+function confirmProgress(state: AimState, dwellMs: number): number {
+  if (state.candidate == null) return 0
+  return Math.min(1, state.confirmMs / dwellMs)
+}
+
+/**
+ * Bleeds off confirm progress for a frame spent away from the chip.
+ *
+ * Only the part of the slip beyond the grace window is charged, and it is
+ * charged once — tracking the slip's total length rather than per-frame means
+ * the cost of looking away is the same whatever the frame rate.
+ */
+function drainConfirm(state: AimState, dtMs: number): void {
+  if (state.candidate == null || state.confirmMs === 0) {
+    state.confirmMs = 0
+    state.offChipMs = 0
+    return
+  }
+  const chargedBefore = Math.max(0, state.offChipMs - CONFIRM_GRACE_MS)
+  state.offChipMs += dtMs
+  const chargedNow = Math.max(0, state.offChipMs - CONFIRM_GRACE_MS)
+  state.confirmMs = Math.max(0, state.confirmMs - (chargedNow - chargedBefore) * CONFIRM_DECAY)
 }
 
 /** Called after a fired selection has been dispatched. */
@@ -157,4 +258,5 @@ export function clearCandidate(state: AimState): void {
   state.hover = null
   state.hoverMs = 0
   state.confirmMs = 0
+  state.offChipMs = 0
 }

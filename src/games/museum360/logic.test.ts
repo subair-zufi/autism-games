@@ -19,11 +19,13 @@ import {
   makeRound,
   pointsFor,
   slotBearing,
+  slotHeadingDeg,
   slotPosition,
   starsFor,
   supportedTier,
   trialCue,
 } from './logic'
+import { CONFIRM_TOL_DEG } from '../headAim'
 
 const rng = (seq: number[]) => {
   let i = 0
@@ -208,4 +210,26 @@ test('errorType splits near-misses from picks far around the room', () => {
   expect(errorType([...visible], 'bird', 'doll')).toBe('adjacent')
   expect(errorType([...visible], 'butterfly', 'doll')).toBe('far')
   expect(errorType([...visible], 'butterfly', 'balloon')).toBe('far')
+})
+
+/**
+ * The gaze confirm chip catches anything within `CONFIRM_TOL_DEG` of it, so the
+ * row has to stay wider apart than that — otherwise a child who has genuinely
+ * moved on to the next pedestal could still sit inside the previous chip's cone
+ * and answer for the exhibit they just left. `HeadSelect` also withholds the
+ * cone whenever the ray rests on a different selectable option, so this is the
+ * second of two guards; it is here because widening the arc or adding a sixth
+ * exhibit is what would quietly erode the margin.
+ *
+ * The tightest pair is at the ends of the row: the arc is centred on the
+ * avatar, not the child, so from where the child stands the outer pedestals
+ * crowd together.
+ */
+test('every pedestal stays further apart than the confirm cone', () => {
+  for (const n of [3, 4, 5]) {
+    const headings = Array.from({ length: n }, (_, i) => slotHeadingDeg(i, n))
+    for (let i = 1; i < n; i++) {
+      expect(headings[i] - headings[i - 1]).toBeGreaterThan(CONFIRM_TOL_DEG)
+    }
+  }
 })

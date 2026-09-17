@@ -2,12 +2,17 @@ import { describe, expect, it } from 'vitest'
 import { Object3D } from 'three'
 import {
   ARM_MS,
+  CONFIRM_DECAY,
+  CONFIRM_GRACE_MS,
+  CONFIRM_TOL_DEG,
   DWELL_MS,
   advanceAim,
+  angleBetweenDeg,
   clearCandidate,
   createAimState,
   findSelectTarget,
   isConfirmChip,
+  withinConfirmCone,
 } from './headAim'
 
 /** a marked target with a plain child, like the scenes' hit volumes */
@@ -120,18 +125,6 @@ describe('two-stage selection', () => {
     expect(advanceAim(s, CONFIRM, DWELL_MS).candidate).toBe(b)
   })
 
-  it('abandons a half-finished confirm if the gaze leaves the chip', () => {
-    const s = createAimState()
-    const { root } = target()
-    advanceAim(s, { ...LOOK, target: root }, ARM_MS)
-
-    advanceAim(s, CONFIRM, DWELL_MS * 0.9)
-    advanceAim(s, { ...LOOK, target: root }, 100) // glanced back up at the face
-    const r = advanceAim(s, CONFIRM, DWELL_MS * 0.2)
-    expect(r.fire).toBe(false)
-    expect(r.progress).toBeCloseTo(0.2)
-  })
-
   it('does nothing on the chip when no candidate has been chosen', () => {
     const s = createAimState()
     const r = advanceAim(s, CONFIRM, DWELL_MS * 3)
@@ -149,5 +142,103 @@ describe('two-stage selection', () => {
     const after = advanceAim(s, CONFIRM, DWELL_MS)
     expect(after.fire).toBe(false)
     expect(after.candidate).toBeNull()
+  })
+})
+
+/**
+ * Both rules exist for the same finding: children who located the right exhibit
+ * and looked straight at the tick, yet never answered. See `headAim.ts`.
+ */
+describe('forgiving an unsteady head', () => {
+  /** arm `root` and get the confirm dwell most of the way there */
+  function nearlyConfirmed() {
+    const s = createAimState()
+    const { root } = target()
+    advanceAim(s, { ...LOOK, target: root }, ARM_MS)
+    advanceAim(s, CONFIRM, DWELL_MS * 0.9)
+    return { s, root }
+  }
+
+  it('charges nothing for a wobble shorter than the grace window', () => {
+    const { s } = nearlyConfirmed()
+    // the tremor case: off the chip, but only for a moment
+    advanceAim(s, { ...LOOK, target: null }, CONFIRM_GRACE_MS / 2)
+    expect(advanceAim(s, CONFIRM, DWELL_MS * 0.2).fire).toBe(true)
+  })
+
+  it('reaches an answer through a steady tremor, which a reset never could', () => {
+    const s = createAimState()
+    const { root } = target()
+    advanceAim(s, { ...LOOK, target: root }, ARM_MS)
+
+    // ~4Hz wobble: on the chip most of the time, off it briefly, over and over.
+    // Under the old rule each slip emptied the ring and this never terminated.
+    let fired = false
+    for (let i = 0; i < 12 && !fired; i++) {
+      fired = advanceAim(s, CONFIRM, 200).fire
+      if (!fired) advanceAim(s, { ...LOOK, target: root }, 50)
+    }
+    expect(fired).toBe(true)
+  })
+
+  it('drains a real look away rather than erasing it', () => {
+    const { s, root } = nearlyConfirmed()
+
+    const away = 1000
+    const drained = advanceAim(s, { ...LOOK, target: root }, away)
+    const charged = (away - CONFIRM_GRACE_MS) * CONFIRM_DECAY
+    expect(drained.progress).toBeCloseTo((DWELL_MS * 0.9 - charged) / DWELL_MS)
+    expect(drained.progress).toBeGreaterThan(0)
+
+    // still short of an answer — the slip cost real progress, just not all of it
+    expect(advanceAim(s, CONFIRM, DWELL_MS * 0.2).fire).toBe(false)
+  })
+
+  it('empties the ring if the gaze stays away long enough', () => {
+    const { s, root } = nearlyConfirmed()
+    const r = advanceAim(s, { ...LOOK, target: root }, DWELL_MS * 4)
+    expect(r.progress).toBe(0)
+  })
+
+  it('never answers for an option the gaze has moved on from', () => {
+    const { s } = nearlyConfirmed()
+    const other = target().root
+
+    // settling on a neighbour re-arms it; the dwell earned for the first
+    // exhibit must not carry across and fire for this one
+    advanceAim(s, { ...LOOK, target: other }, ARM_MS)
+    expect(s.candidate).toBe(other)
+    const r = advanceAim(s, CONFIRM, DWELL_MS * 0.5)
+    expect(r.fire).toBe(false)
+    expect(r.progress).toBeCloseTo(0.5)
+  })
+})
+
+describe('confirm tolerance cone', () => {
+  /** a direction `deg` to the right of straight ahead */
+  const off = (deg: number) =>
+    [Math.sin((deg * Math.PI) / 180), 0, -Math.cos((deg * Math.PI) / 180)] as const
+
+  it('measures the angle between two directions', () => {
+    expect(angleBetweenDeg([0, 0, -1], [0, 0, -1])).toBeCloseTo(0)
+    expect(angleBetweenDeg([0, 0, -1], [1, 0, 0])).toBeCloseTo(90)
+    expect(angleBetweenDeg([0, 0, -1], off(30))).toBeCloseTo(30)
+  })
+
+  it('treats a zero-length direction as nowhere near, never as a hit', () => {
+    expect(angleBetweenDeg([0, 0, -1], [0, 0, 0])).toBe(180)
+    expect(withinConfirmCone([0, 0, -1], [0, 0, 0])).toBe(false)
+  })
+
+  it('catches a gaze pointing near the chip, not one pointing away', () => {
+    expect(withinConfirmCone([0, 0, -1], off(CONFIRM_TOL_DEG - 2))).toBe(true)
+    expect(withinConfirmCone([0, 0, -1], off(CONFIRM_TOL_DEG + 2))).toBe(false)
+  })
+
+  it('is wider than the ray-on-chip test it forgives, in every direction', () => {
+    for (const deg of [0, 3, 6]) {
+      expect(withinConfirmCone([0, 0, -1], off(deg))).toBe(true)
+      expect(withinConfirmCone([0, 0, -1], off(-deg))).toBe(true)
+    }
   })
 })
