@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { Object3D } from 'three'
+import type { DwellProfile } from '../types'
 import {
   ARM_MS,
   CONFIRM_DECAY,
   CONFIRM_GRACE_MS,
   CONFIRM_TOL_DEG,
   DWELL_MS,
+  DWELL_PROFILES,
   advanceAim,
   angleBetweenDeg,
   clearCandidate,
@@ -309,5 +311,59 @@ describe('what the selection loop reports for telemetry', () => {
     const away = CONFIRM_GRACE_MS + 400
     const r = advanceAim(s, { ...LOOK, target: root }, away)
     expect(r.drainedMs).toBeCloseTo(400 * CONFIRM_DECAY)
+  })
+})
+
+describe('steadiness profiles', () => {
+  const ORDER: DwellProfile[] = ['standard', 'extended', 'high-support']
+
+  it('gets more forgiving in every direction as support goes up', () => {
+    const tunings = ORDER.map((id) => DWELL_PROFILES[id])
+    for (let i = 1; i < tunings.length; i++) {
+      // a shorter hold to sustain, a wider chip to stay inside, and a longer
+      // wobble that costs nothing — all three, or a child is only helped on
+      // one of the three ways an unsteady head fails
+      expect(tunings[i].dwellMs).toBeLessThan(tunings[i - 1].dwellMs)
+      expect(tunings[i].tolDeg).toBeGreaterThan(tunings[i - 1].tolDeg)
+      expect(tunings[i].graceMs).toBeGreaterThan(tunings[i - 1].graceMs)
+    }
+  })
+
+  it('leaves the standard profile exactly as the constants define it', () => {
+    // an unchanged setup has to behave identically to before the dial existed
+    expect(DWELL_PROFILES.standard).toEqual({
+      dwellMs: DWELL_MS,
+      tolDeg: CONFIRM_TOL_DEG,
+      graceMs: CONFIRM_GRACE_MS,
+    })
+  })
+
+  it('keeps every profile long enough that a glance cannot answer', () => {
+    // the arm/confirm split is what stops an accidental answer, but a dwell
+    // shorter than the arming time would let one gesture do both
+    for (const id of ORDER) expect(DWELL_PROFILES[id].dwellMs).toBeGreaterThan(ARM_MS * 2)
+  })
+
+  it('answers sooner on a loosened profile, from the same unsteady gaze', () => {
+    const play = (t: { dwellMs: number; graceMs: number }) => {
+      const s = createAimState()
+      const { root } = target()
+      advanceAim(s, { ...LOOK, target: root }, ARM_MS, t.dwellMs, ARM_MS, t.graceMs)
+      // a child whose gaze keeps slipping off for 250ms at a time
+      let ms = 0
+      for (let i = 0; i < 400; i++) {
+        ms += 100
+        if (advanceAim(s, CONFIRM, 100, t.dwellMs, ARM_MS, t.graceMs).fire) return ms
+        ms += 250
+        advanceAim(s, { ...LOOK, target: root }, 250, t.dwellMs, ARM_MS, t.graceMs)
+      }
+      return null
+    }
+
+    const standard = play(DWELL_PROFILES.standard)
+    const support = play(DWELL_PROFILES['high-support'])
+    expect(support).not.toBeNull()
+    expect(standard).not.toBeNull()
+    expect(support!).toBeLessThan(standard!)
   })
 })

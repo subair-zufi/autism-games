@@ -9,7 +9,7 @@
  */
 import type { Difficulty, GameId, PlayMode } from '../types'
 import type { Lang } from '../i18n/strings'
-import type { InputMethod } from '../types'
+import type { DwellProfile, InputMethod } from '../types'
 
 /** Bumped when a command's meaning changes incompatibly. Reported in status so
  *  a console on an older build can say so instead of silently doing nothing. */
@@ -21,6 +21,7 @@ export interface RemoteSettings {
   soundOn: boolean
   language: Lang
   inputMethod: InputMethod
+  dwellProfile: DwellProfile
   playMode: PlayMode
 }
 

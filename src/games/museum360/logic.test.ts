@@ -213,19 +213,23 @@ test('errorType splits near-misses from picks far around the room', () => {
 })
 
 /**
- * The gaze confirm chip catches anything within `CONFIRM_TOL_DEG` of it, so the
- * row has to stay wider apart than that — otherwise a child who has genuinely
- * moved on to the next pedestal could still sit inside the previous chip's cone
- * and answer for the exhibit they just left. `HeadSelect` also withholds the
- * cone whenever the ray rests on a different selectable option, so this is the
- * second of two guards; it is here because widening the arc or adding a sixth
- * exhibit is what would quietly erode the margin.
+ * At the default steadiness setting the confirm cone stays narrower than the
+ * gap between two pedestals, so even a gaze resting on nothing between them
+ * cannot finish a confirm for the exhibit it has left. That margin is free at
+ * `CONFIRM_TOL_DEG` and this pins it, because widening the arc or adding a
+ * sixth exhibit is what would quietly spend it.
+ *
+ * It is the second of two guards, and the weaker one: the looser profiles in
+ * `DWELL_PROFILES` deliberately open the cone wider than this gap, for children
+ * who cannot otherwise answer at all. What holds at every setting is
+ * `HeadSelect`'s rule that the cone is never applied while the ray rests on a
+ * different selectable option — so moving on always means re-arming.
  *
  * The tightest pair is at the ends of the row: the arc is centred on the
  * avatar, not the child, so from where the child stands the outer pedestals
  * crowd together.
  */
-test('every pedestal stays further apart than the confirm cone', () => {
+test('the default confirm cone stays narrower than the gap between pedestals', () => {
   for (const n of [3, 4, 5]) {
     const headings = Array.from({ length: n }, (_, i) => slotHeadingDeg(i, n))
     for (let i = 1; i < n; i++) {

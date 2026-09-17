@@ -655,7 +655,8 @@ RAW_PAYLOAD_ORDER = (
     "targetBearingDeg", "headStartYawDeg", "headEndYawDeg", "headYawTravelDeg",
     "headYawRangeDeg", "headReversals", "headSamples", "headMinPitchDeg",
     "headMaxPitchDeg", "headToTargetMs",
-    # gaze-dwell confirmation cost (VR dwell trials only)
+    # gaze-dwell condition + confirmation cost (VR dwell trials only)
+    "dwellProfile",
     "dwellArmToConfirmMs", "dwellConfirmBreaks", "dwellDrainedMs", "dwellArmCount",
     "dwellArmedNoConfirm",
     # bookkeeping
@@ -734,6 +735,11 @@ class TrialRecord:
     # out again: the confirm interval with target-finding removed, and how often
     # an unsteady head broke the dwell (a head-steadiness index measured during
     # ordinary play). Blank for controller trials and flat-screen play.
+    # Which steadiness setting the dwell ran at (types.ts DwellProfile). A
+    # condition variable, not an outcome: the dwell time is a floor on response
+    # latency, so trials played at different settings must not be pooled
+    # without it. Blank for controller trials and flat-screen play.
+    dwell_profile: str
     dwell_arm_to_confirm_ms: int | None
     dwell_confirm_breaks: int | None
     ts: datetime
@@ -783,6 +789,7 @@ def student_trial_records(
                     head_yaw_range_deg=_num_or_none(p.get("headYawRangeDeg")),
                     head_reversals=_int_or_none(p.get("headReversals")),
                     head_to_target_ms=_int_or_none(p.get("headToTargetMs")),
+                    dwell_profile=str(p.get("dwellProfile")) if p.get("dwellProfile") else "",
                     dwell_arm_to_confirm_ms=_int_or_none(p.get("dwellArmToConfirmMs")),
                     dwell_confirm_breaks=_int_or_none(p.get("dwellConfirmBreaks")),
                     ts=t.ts,

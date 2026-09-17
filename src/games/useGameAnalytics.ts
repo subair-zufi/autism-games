@@ -68,7 +68,12 @@ export function useGameAnalytics(gameKey: GameId, xrStore?: XrStoreLike) {
       // purpose: a recorded 0 then always means "the child armed nothing",
       // never "this game has no dwell step" — the difference between a finding
       // and an artefact of which games are in the roster.
-      ...(presenting && inputMethod === 'dwell' ? confirmMetrics() : {}),
+      // …and how forgiving the dwell was set to be for this child. Response
+      // latency is bounded below by the dwell time, so trials played at
+      // different settings cannot be pooled without it.
+      ...(presenting && inputMethod === 'dwell'
+        ? { dwellProfile: useSettings.getState().dwellProfile, ...confirmMetrics() }
+        : {}),
     }
   }, [xrPresenting, gameKey])
 

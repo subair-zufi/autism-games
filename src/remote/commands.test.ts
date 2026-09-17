@@ -150,12 +150,28 @@ describe('the rest of the controls', () => {
     await applyRemoteCommand(
       {
         type: 'setting',
-        payload: { language: 'klingon', voiceOn: 'yes', inputMethod: 'dwell' },
+        payload: {
+          language: 'klingon',
+          voiceOn: 'yes',
+          inputMethod: 'dwell',
+          dwellProfile: 'featherweight',
+        },
       } as unknown as RemoteCommand,
       ctx,
     )
-    // Only the value this build actually understands survives.
+    // Only the value this build actually understands survives. An unknown
+    // steadiness setting is dropped rather than persisted onto the headset,
+    // where it would leave the child with no working dwell at all.
     expect(calls.settings).toEqual([{ inputMethod: 'dwell' }])
+  })
+
+  it('lets the trainer loosen the dwell for an unsteady child mid-session', async () => {
+    const { ctx, calls } = makeCtx()
+    await applyRemoteCommand(
+      { type: 'setting', payload: { dwellProfile: 'high-support' } } as RemoteCommand,
+      ctx,
+    )
+    expect(calls.settings).toEqual([{ dwellProfile: 'high-support' }])
   })
 
   it('does not touch settings when nothing in the payload is usable', async () => {

@@ -733,6 +733,7 @@ TRIAL_CSV_COLUMNS = DEMO_COLUMNS + (
     "head_yaw_range_deg",  # VR widest span visited
     "head_reversals",  # VR back-and-forth (hesitation)
     "head_to_target_ms",  # VR time until head first on target
+    "dwell_profile",  # steadiness setting the gaze dwell ran at - control for it
     "dwell_arm_to_confirm_ms",  # gaze confirm cost, target-finding removed
     "dwell_confirm_breaks",  # times an unsteady head broke the dwell
     "timestamp",
@@ -788,6 +789,7 @@ def export_trials_csv(
                     _c(r.head_yaw_range_deg),
                     _c(r.head_reversals),
                     _c(r.head_to_target_ms),
+                    r.dwell_profile,
                     _c(r.dwell_arm_to_confirm_ms),
                     _c(r.dwell_confirm_breaks),
                     r.ts.isoformat(),
@@ -1316,7 +1318,8 @@ _CODEBOOK: tuple[tuple[str, str, str, str, str, str], ...] = (
     ("headMinPitchDeg", "raw_events", "float", "deg", "", "Lowest head pitch visited (VR)."),
     ("headMaxPitchDeg", "raw_events", "float", "deg", "", "Highest head pitch visited (VR)."),
     ("headToTargetMs", "raw_events", "int", "ms", "", "Time until the head first pointed at the target (VR)."),
-    # --- payload: gaze-dwell confirmation cost (VR dwell trials only) ---
+    # --- payload: gaze-dwell condition + confirmation cost (VR dwell trials only) ---
+    ("dwellProfile", "raw_events", "string", "", "standard | extended | high-support", "How forgiving the gaze dwell was set to be for this child. A CONDITION, not an outcome: the dwell time is a floor on response latency (standard 1600ms, extended 1100ms, high support 700ms), so never pool latency across settings without adjusting."),
     ("dwellArmToConfirmMs", "raw_events", "int", "ms", "", "Time from choosing an option by gaze to the answer landing — the confirmation cost with target-finding removed. Model it separately; leaving it inside latency confounds motor control with attention."),
     ("dwellConfirmBreaks", "raw_events", "int", "count", "", "Times an unsteady head broke the confirm dwell. A head-steadiness index measured during play; high values mean this child's accuracy needs interpreting with care."),
     ("dwellDrainedMs", "raw_events", "int", "ms", "", "Dwell progress lost to those breaks — graded severity, where the count is not."),

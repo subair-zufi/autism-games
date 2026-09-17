@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Difficulty, GameId, InputMethod, PlayMode } from '../types'
+import type { Difficulty, DwellProfile, GameId, InputMethod, PlayMode } from '../types'
 import type { Lang } from '../i18n/strings'
 
 interface SettingsState {
@@ -18,6 +18,10 @@ interface SettingsState {
   // target, or the controller ray. Set once per child at intake, and also
   // switchable in-world (the headset hides this page).
   inputMethod: InputMethod
+  // How forgiving that gaze dwell is for this child — set at intake from how
+  // steadily they can hold a look, and changeable from the trainer's remote
+  // when a session shows the setting was wrong. Recorded on every gaze step.
+  dwellProfile: DwellProfile
   // Whether the child has completed the one-time shared VR/360 practice
   // scene (look-around + tap gesture) — every 360 game checks this before its
   // very first real session so headset novelty isn't confounded with the
@@ -29,8 +33,15 @@ interface SettingsState {
   setDifficulty: (game: GameId, d: Difficulty) => void
   setPlayMode: (mode: PlayMode) => void
   setInputMethod: (m: InputMethod) => void
+  setDwellProfile: (p: DwellProfile) => void
   setVrPracticeDone: (v: boolean) => void
 }
+
+const DWELL_PROFILE_IDS: ReadonlySet<string> = new Set<DwellProfile>([
+  'standard',
+  'extended',
+  'high-support',
+])
 
 export const useSettings = create<SettingsState>()(
   persist(
@@ -42,6 +53,9 @@ export const useSettings = create<SettingsState>()(
       playMode: 'desktop',
       // gaze by default: nothing to hold, which is the point of the whole feature
       inputMethod: 'dwell',
+      // the tuning every child played before the profile existed, so an
+      // unchanged setup keeps behaving exactly as it did
+      dwellProfile: 'standard',
       vrPracticeDone: false,
       setVoiceOn: (voiceOn) => set({ voiceOn }),
       setSoundOn: (soundOn) => set({ soundOn }),
@@ -50,6 +64,7 @@ export const useSettings = create<SettingsState>()(
         set((s) => ({ difficulty: { ...s.difficulty, [game]: d } })),
       setPlayMode: (playMode) => set({ playMode }),
       setInputMethod: (inputMethod) => set({ inputMethod }),
+      setDwellProfile: (dwellProfile) => set({ dwellProfile }),
       setVrPracticeDone: (vrPracticeDone) => set({ vrPracticeDone }),
     }),
     {
@@ -70,6 +85,12 @@ export const useSettings = create<SettingsState>()(
             p.inputMethod === 'dwell' || p.inputMethod === 'controller'
               ? p.inputMethod
               : current.inputMethod,
+          // a headset carrying a value this build doesn't know would otherwise
+          // index DWELL_PROFILES to undefined and leave the child unable to
+          // select at all
+          dwellProfile: DWELL_PROFILE_IDS.has(p.dwellProfile as string)
+            ? (p.dwellProfile as DwellProfile)
+            : current.dwellProfile,
         }
       },
     },

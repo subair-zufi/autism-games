@@ -4,6 +4,21 @@ import { useAuth } from '../state/auth'
 import { useSettings } from '../state/settings'
 import { initials } from '../lib/participant'
 import { RemoteControlCard } from '../components/RemoteControlCard'
+import type { DwellProfile } from '../types'
+
+/** Label and one-line meaning for each steadiness setting (types.ts
+ *  `DwellProfile`; the numbers are in games/headAim.ts `DWELL_PROFILES`). */
+const DWELL_PROFILE_PILLS: ReadonlyArray<[DwellProfile, string]> = [
+  ['standard', '🎯 Standard'],
+  ['extended', '🫱 Extended'],
+  ['high-support', '🤝 High support'],
+]
+
+const DWELL_PROFILE_SUB: Record<DwellProfile, string> = {
+  standard: 'Hold the ✓ for about 1.6 seconds — for a child who can keep their head still',
+  extended: 'Shorter hold, wider ✓, more forgiving of a wobble',
+  'high-support': 'Shortest hold and the widest ✓ — for a child whose head will not hold still',
+}
 
 export function Profile() {
   const navigate = useNavigate()
@@ -16,10 +31,12 @@ export function Profile() {
   const soundOn = useSettings((s) => s.soundOn)
   const language = useSettings((s) => s.language)
   const inputMethod = useSettings((s) => s.inputMethod)
+  const dwellProfile = useSettings((s) => s.dwellProfile)
   const setVoiceOn = useSettings((s) => s.setVoiceOn)
   const setSoundOn = useSettings((s) => s.setSoundOn)
   const setLanguage = useSettings((s) => s.setLanguage)
   const setInputMethod = useSettings((s) => s.setInputMethod)
+  const setDwellProfile = useSettings((s) => s.setDwellProfile)
 
   const [editing, setEditing] = useState(false)
   const [fullName, setFullName] = useState(user?.full_name ?? '')
@@ -112,7 +129,7 @@ export function Profile() {
             <span className="settings-label-title">Selection · VR games</span>
             <span className="settings-label-sub">
               {inputMethod === 'dwell'
-                ? 'Look at the answer, then look at the ✓ that appears below it'
+                ? 'Look at the answer, then hold on the ✓ that appears on it'
                 : 'Point the controller at the answer and press the trigger'}
             </span>
           </div>
@@ -134,12 +151,42 @@ export function Profile() {
         <p className="settings-note">
           You can also switch inside the headset — the two buttons under the in-world Quit
           control. Gaze dwell needs nothing held, and takes two steps on purpose: resting on
-          something marks it and floats a ✓ beneath it, and only looking at that ✓ answers, so
+          something marks it and floats a ✓ on it, and only holding on that ✓ answers, so
           a child can study every face without picking one by accident. The controller stays
           available in both modes, so choosing Controller only turns gaze selection{' '}
           <em>off</em> — useful when an adult is driving the session and should not answer just
           by looking around.
         </p>
+
+        {inputMethod === 'dwell' && (
+          <>
+            <div className="settings-row">
+              <div className="settings-label">
+                <span className="settings-label-title">Steadiness support · gaze</span>
+                <span className="settings-label-sub">{DWELL_PROFILE_SUB[dwellProfile]}</span>
+              </div>
+              <div className="settings-toggles">
+                {DWELL_PROFILE_PILLS.map(([id, label]) => (
+                  <button
+                    key={id}
+                    className={dwellProfile === id ? 'toggle-pill on' : 'toggle-pill'}
+                    onClick={() => setDwellProfile(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="settings-note">
+              Set this from how steadily the child can hold a look, not from how well they play.
+              A child who finds the right answer but cannot keep their head still long enough to
+              confirm it scores the same as one who never found it — move them up a step and
+              watch whether they start answering. Every recorded trial carries the setting it was
+              played at, so it can be controlled for in the analysis; response time cannot be
+              compared across settings without it, because the hold itself is part of the time.
+            </p>
+          </>
+        )}
 
         <div className="settings-toggles">
           <button className={voiceOn ? 'toggle-pill on' : 'toggle-pill'} onClick={() => setVoiceOn(!voiceOn)}>

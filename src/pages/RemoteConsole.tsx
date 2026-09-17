@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { GAME_LIST, SKILLS, type Difficulty, type GameId, type PlayMode } from '../types'
+import { GAME_LIST, SKILLS, type Difficulty, type DwellProfile, type GameId, type PlayMode } from '../types'
 import { useAuth } from '../state/auth'
 import { RemoteParticipants } from '../components/RemoteParticipants'
 import { SessionExperienceForm } from '../components/SessionExperienceForm'
@@ -476,9 +476,41 @@ function SettingsPanel({
         >
           👁 {settings.inputMethod === 'dwell' ? 'Look to choose' : 'Controller'}
         </button>
+        {settings.inputMethod === 'dwell' && (
+          <button
+            type="button"
+            className="rc-chip"
+            onClick={() =>
+              void send('setting', { dwellProfile: nextDwellProfile(settings.dwellProfile) }, 'Steadiness')
+            }
+          >
+            🤝 {DWELL_PROFILE_LABEL[settings.dwellProfile] ?? settings.dwellProfile}
+          </button>
+        )}
       </div>
     </section>
   )
+}
+
+/**
+ * Cycles the steadiness setting from the trainer's phone.
+ *
+ * The point of doing it from here is that the child is mid-session with the
+ * headset on: a child who keeps finding the right answer and failing to confirm
+ * it can be moved up a step and tried again without taking the headset off,
+ * which is otherwise the only way to reach Profile → Steadiness.
+ */
+const DWELL_ORDER: readonly DwellProfile[] = ['standard', 'extended', 'high-support']
+
+const DWELL_PROFILE_LABEL: Record<DwellProfile, string> = {
+  standard: 'Standard hold',
+  extended: 'Extended hold',
+  'high-support': 'High support',
+}
+
+function nextDwellProfile(current: DwellProfile | undefined): DwellProfile {
+  const i = DWELL_ORDER.indexOf(current as DwellProfile)
+  return DWELL_ORDER[(i + 1) % DWELL_ORDER.length]
 }
 
 function phaseLabel(status: Partial<RemoteStatus>): string {

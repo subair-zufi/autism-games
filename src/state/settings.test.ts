@@ -63,3 +63,32 @@ test('stale saved state (missing newer game keys) still gets defaults', async ()
   expect(s.difficulty.museum).toBe('hard') // saved value kept
   expect(s.difficulty.emotionrecognition).toBe('easy') // new key filled from defaults
 })
+
+test('a saved steadiness setting this build does not know falls back to standard', async () => {
+  // an unknown value would index DWELL_PROFILES to undefined, leaving the child
+  // with no working dwell at all — worse than the setting simply being wrong
+  localStorage.setItem(
+    'autism-settings',
+    JSON.stringify({ state: { dwellProfile: 'featherweight' }, version: 0 }),
+  )
+  await useSettings.persist.rehydrate()
+  expect(useSettings.getState().dwellProfile).toBe('standard')
+})
+
+test('a saved steadiness setting that is still valid is kept', async () => {
+  localStorage.setItem(
+    'autism-settings',
+    JSON.stringify({ state: { dwellProfile: 'high-support' }, version: 0 }),
+  )
+  await useSettings.persist.rehydrate()
+  expect(useSettings.getState().dwellProfile).toBe('high-support')
+})
+
+test('a store saved before the steadiness setting existed gets the standard one', async () => {
+  localStorage.setItem(
+    'autism-settings',
+    JSON.stringify({ state: { inputMethod: 'dwell' }, version: 0 }),
+  )
+  await useSettings.persist.rehydrate()
+  expect(useSettings.getState().dwellProfile).toBe('standard')
+})

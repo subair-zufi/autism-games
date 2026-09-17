@@ -3,9 +3,11 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useRayPointer, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { useSettings } from '../state/settings'
+import type { DwellProfile } from '../types'
 import { noteAim } from './confirmTracking'
 import {
-  CONFIRM_TOL_DEG,
+  ARM_MS,
+  DWELL_PROFILES,
   advanceAim,
   angleBetweenDeg,
   clearCandidate,
@@ -24,8 +26,8 @@ import {
  *
  * Selection is two-stage, because in these games looking at the options *is*
  * the task — see `headAim.ts`. Resting the gaze on something marks it as the
- * candidate and floats a ✓ chip just beside it; dwelling on that chip is what
- * answers. Scanning across faces never answers.
+ * candidate and floats a ✓ chip on it; dwelling on that chip is what answers.
+ * Scanning across faces never answers.
  *
  * Targets opt in with `userData={{ headSelect: true }}`. A confirmed selection
  * is re-emitted as an ordinary click on the candidate, so every game's existing
@@ -37,20 +39,26 @@ import {
  * resetting — between them these are what let a child with an unsteady head
  * answer at all. See `headAim.ts`.
  *
- * `confirmSide` picks where the chip parks. `"below"` (the default) floats it
- * under the candidate. `"on"` instead hovers it just in front of the
- * candidate's own surface, along the same ray the gaze already used to arm
- * it — so confirming needs no head movement at all, not even a nod. That
- * matters most in the joint-attention/turn-taking games: any extra move
- * requires looking away from the very thing the trial is about right after
- * correctly orienting to it, on top of the neck strain of a sustained tilt.
+ * `confirmSide` picks where the chip parks. `"on"` — the default, and what
+ * every scene now uses — hovers it just in front of the candidate's own
+ * surface, along the same ray the gaze already used to arm it, so confirming
+ * needs no head movement at all, not even a nod.
+ *
+ * `"below"` floats it under the candidate instead, which asks for a downward
+ * nod AND a sustained hold in neck flexion. That was the original default and
+ * the emotion games kept it longest; participant testing retired it. It is the
+ * worst case for a child with poor head control — exactly the children the
+ * dwell forgiveness in `headAim.ts` exists for — and it also requires looking
+ * away from the very thing the trial is about right after correctly orienting
+ * to it. Kept, with its cone ceiling below, for a scene where the chip would
+ * cover something the child must keep seeing; nothing uses it today.
  */
 
 /** Reticle size as a fraction of its distance — ~2.5° wide at any range. */
 const RETICLE_ANGULAR = 0.045
 /** Confirm chip size as a fraction of its distance — deliberately bigger.
- *  ~6deg wide. Its *catchment* is wider still (CONFIRM_TOL_DEG); the drawn chip
- *  stays modest so it hides as little of the exhibit as possible. */
+ *  ~6deg wide. Its *catchment* is wider still (the profile's `tolDeg`); the
+ *  drawn chip stays modest so it hides as little of the exhibit as possible. */
 const CHIP_ANGULAR = 0.11
 /** Theta segments in the dwell arc; also the resolution of its fill. */
 const ARC_SEGMENTS = 48
@@ -65,7 +73,7 @@ const DEFAULT_GAP_BELOW = 1.1
 const DEFAULT_GAP_ON = 0.5
 
 export function HeadSelect({
-  confirmSide = 'below',
+  confirmSide = 'on',
   confirmGap,
 }: {
   confirmSide?: 'below' | 'on'
@@ -76,18 +84,25 @@ export function HeadSelect({
 }) {
   const session = useXR((s) => s.session)
   const inputMethod = useSettings((s) => s.inputMethod)
+  const profile = useSettings((s) => s.dwellProfile)
   if (!session || inputMethod !== 'dwell') return null
   const gap = confirmGap ?? (confirmSide === 'on' ? DEFAULT_GAP_ON : DEFAULT_GAP_BELOW)
-  return <HeadSelectActive confirmSide={confirmSide} confirmGap={gap} />
+  return <HeadSelectActive confirmSide={confirmSide} confirmGap={gap} profile={profile} />
 }
 
 function HeadSelectActive({
   confirmSide,
   confirmGap,
+  profile,
 }: {
   confirmSide: 'below' | 'on'
   confirmGap: number
+  profile: DwellProfile
 }) {
+  // How forgiving this child's dwell is (types.ts `DwellProfile`). Read as a
+  // value rather than baked in, so the trainer can loosen it from the remote
+  // mid-session without leaving the game.
+  const tuning = DWELL_PROFILES[profile]
   const camera = useThree((s) => s.camera)
 
   // The ray pointer's "space" is the head itself: its world matrix is the head
@@ -183,11 +198,11 @@ function HeadSelectActive({
       withinConfirmCone(
         [fwd.x, fwd.y, fwd.z],
         [chipWorld.x - camPos.x, chipWorld.y - camPos.y, chipWorld.z - camPos.z],
-        Math.min(CONFIRM_TOL_DEG, coneLimit.current),
+        Math.min(tuning.tolDeg, coneLimit.current),
       )
     const onConfirm = onChip || nearChip
     const target = onConfirm ? null : rawTarget
-    const r = advanceAim(aim, { target, onConfirm }, dt * 1000)
+    const r = advanceAim(aim, { target, onConfirm }, dt * 1000, tuning.dwellMs, ARM_MS, tuning.graceMs)
     // Before the fire below, which dispatches the click synchronously and so
     // ends with the game reading these totals back out.
     noteAim(r)
@@ -261,23 +276,33 @@ function HeadSelectActive({
           // same ray keeps the same apparent screen position, so confirming
           // needs no head movement at all.
           const dist = Math.max(camPos.distanceTo(armPoint), 0.3)
-          const scale = dist * CHIP_ANGULAR
           box.getSize(size)
-          const clearance = Math.max(size.x, size.y, size.z) * 0.5 + scale * confirmGap
+          const clearance = Math.max(size.x, size.y, size.z) * 0.5 + dist * CHIP_ANGULAR * confirmGap
           toCam.copy(camPos).sub(armPoint).normalize()
           chip.current.position.copy(armPoint).addScaledVector(toCam, clearance)
           chip.current.quaternion.copy(camera.quaternion)
-          chip.current.scale.setScalar(scale)
         } else {
           box.getCenter(centre)
           const dist = Math.max(camPos.distanceTo(centre), 0.3)
-          const scale = dist * CHIP_ANGULAR
           // x/z stay pinned to the candidate's own bearing — only the pitch
           // changes, so confirming never asks for a head turn, only a nod.
-          chip.current.position.set(centre.x, box.min.y - scale * confirmGap, centre.z)
+          chip.current.position.set(
+            centre.x,
+            box.min.y - dist * CHIP_ANGULAR * confirmGap,
+            centre.z,
+          )
           chip.current.quaternion.copy(camera.quaternion)
-          chip.current.scale.setScalar(scale)
         }
+        // Size the chip from where it ENDED UP, not from the candidate it was
+        // measured against. The clearance above pushes it toward the head — by
+        // half the hit volume in "on" mode — so scaling it at the candidate's
+        // distance drew it nearer and therefore bigger than CHIP_ANGULAR says,
+        // and by an amount that grew with the hit volume. On the emotion games'
+        // 2.1m boards that is half again too large, covering the very face the
+        // trial is about. Measuring from the chip's own distance makes
+        // CHIP_ANGULAR mean what it claims: the same apparent size in every
+        // game, whatever it is parked in front of.
+        chip.current.scale.setScalar(Math.max(camPos.distanceTo(chip.current.position), 0.3) * CHIP_ANGULAR)
         chip.current.visible = true
         // what next frame's tolerance cone aims at
         chip.current.updateWorldMatrix(true, false)

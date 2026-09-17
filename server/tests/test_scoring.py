@@ -50,7 +50,8 @@ def test_ordered_payload_columns_is_stable_and_appends_extras():
     assert cols_few.index("correct") < cols_few.index("chance") < cols_few.index("headYawTravelDeg")
     # the dwell-cost block is appended after the head block, so adding it moved
     # no existing column in a saved SPSS/R import
-    assert cols_few.index("headToTargetMs") < cols_few.index("dwellArmToConfirmMs")
+    assert cols_few.index("headToTargetMs") < cols_few.index("dwellProfile")
+    assert cols_few.index("dwellProfile") < cols_few.index("dwellArmToConfirmMs")
 
 
 def test_ordered_payload_columns_appends_unknown_keys_sorted():
@@ -442,7 +443,8 @@ def test_trial_records_carry_the_gaze_confirmation_cost():
             "answer",
             {
                 "correct": True, "chance": 0.33, "latencyMs": 3400, "xrPresenting": True,
-                "inputMethod": "dwell", "dwellArmToConfirmMs": 1200,
+                "inputMethod": "dwell", "dwellProfile": "high-support",
+                "dwellArmToConfirmMs": 1200,
                 "dwellConfirmBreaks": 2, "dwellDrainedMs": 340, "dwellArmCount": 1,
                 "dwellArmedNoConfirm": False,
             },
@@ -451,6 +453,9 @@ def test_trial_records_carry_the_gaze_confirmation_cost():
     r = scoring.student_trial_records(evs)[0]
     assert r.dwell_arm_to_confirm_ms == 1200
     assert r.dwell_confirm_breaks == 2
+    # the setting is a condition on the trial: the dwell time is a floor on
+    # response latency, so latency is not comparable without it
+    assert r.dwell_profile == "high-support"
 
 
 def test_trial_records_leave_confirmation_cost_blank_off_gaze():
@@ -461,6 +466,7 @@ def test_trial_records_leave_confirmation_cost_blank_off_gaze():
     )[0]
     assert r.dwell_arm_to_confirm_ms is None
     assert r.dwell_confirm_breaks is None
+    assert r.dwell_profile == ""
 
 
 def test_trial_records_map_cue_and_flat_condition():

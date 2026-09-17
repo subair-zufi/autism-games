@@ -1,12 +1,12 @@
 import type { Object3D } from 'three'
+import type { DwellProfile } from '../types'
 
 /**
  * Gaze selection for the 360 games — the pure part.
  *
  * Selection is deliberately **two-stage**. Resting the gaze on something makes
- * it the *candidate* and pops a confirm chip near it — below by default, or
- * hovering right on its surface in the games that pass `confirmSide="on"`;
- * only dwelling on that chip answers. A single-stage dwell cannot work in
+ * it the *candidate* and hovers a confirm chip on its surface; only dwelling on
+ * that chip answers. A single-stage dwell cannot work in
  * these games, because
  * looking at the options **is the task** — Emotion Room asks the child to scan
  * faces to find an emotion, so the first face they examined was being scored as
@@ -64,6 +64,37 @@ export const CONFIRM_DECAY = 0.5
  * site for why that matters.
  */
 export const CONFIRM_TOL_DEG = 7
+
+/**
+ * The three tunings, chosen per child (`settings.dwellProfile`).
+ *
+ * `standard` is the constants above — the setting every child played until
+ * participant testing showed it excludes the ones who cannot hold their head
+ * still. The looser two trade the free geometric margin the narrow cone enjoyed
+ * for a child who can otherwise not answer at all; what stops a wide cone
+ * answering for the wrong option is not that margin but `HeadSelect`'s rule
+ * that the cone is never applied while the ray rests on a different option,
+ * which holds at any width.
+ *
+ * Shorter dwells are safe here because what prevents an accidental answer is
+ * the arm/confirm split, not the length of the dwell — see the two-stage note
+ * at the top of this file. They are not free, though: response latency cannot
+ * fall below the dwell time, so the profile has to travel with the data.
+ */
+export interface DwellTuning {
+  /** how long the gaze must rest on the chip to answer */
+  dwellMs: number
+  /** how far off the chip the gaze may point and still count */
+  tolDeg: number
+  /** a slip shorter than this costs nothing */
+  graceMs: number
+}
+
+export const DWELL_PROFILES: Record<DwellProfile, DwellTuning> = {
+  standard: { dwellMs: DWELL_MS, tolDeg: CONFIRM_TOL_DEG, graceMs: CONFIRM_GRACE_MS },
+  extended: { dwellMs: 1100, tolDeg: 10, graceMs: 300 },
+  'high-support': { dwellMs: 700, tolDeg: 14, graceMs: 450 },
+}
 
 /**
  * Objects opt in to being selectable by carrying `userData.headSelect`. Marking
@@ -176,6 +207,7 @@ export function advanceAim(
   dtMs: number,
   dwellMs: number = DWELL_MS,
   armMs: number = ARM_MS,
+  graceMs: number = CONFIRM_GRACE_MS,
 ): AimResult {
   if (input.onConfirm) {
     // looking at the chip is not looking at a target: drop the arming timer so
@@ -204,7 +236,7 @@ export function advanceAim(
   // The ring keeps showing what is left, so an unsteady child watches it ebb
   // back a little instead of snapping to empty — which is also far less
   // discouraging to sit through.
-  const slip = drainConfirm(state, dtMs)
+  const slip = drainConfirm(state, dtMs, graceMs)
   const progress = confirmProgress(state, dwellMs)
 
   if (input.target == null) {
@@ -274,15 +306,19 @@ function confirmProgress(state: AimState, dwellMs: number): number {
  * charged once — tracking the slip's total length rather than per-frame means
  * the cost of looking away is the same whatever the frame rate.
  */
-function drainConfirm(state: AimState, dtMs: number): { ms: number; broke: boolean } {
+function drainConfirm(
+  state: AimState,
+  dtMs: number,
+  graceMs: number,
+): { ms: number; broke: boolean } {
   if (state.candidate == null || state.confirmMs === 0) {
     state.confirmMs = 0
     state.offChipMs = 0
     return { ms: 0, broke: false }
   }
-  const chargedBefore = Math.max(0, state.offChipMs - CONFIRM_GRACE_MS)
+  const chargedBefore = Math.max(0, state.offChipMs - graceMs)
   state.offChipMs += dtMs
-  const chargedNow = Math.max(0, state.offChipMs - CONFIRM_GRACE_MS)
+  const chargedNow = Math.max(0, state.offChipMs - graceMs)
   const lost = Math.min(state.confirmMs, (chargedNow - chargedBefore) * CONFIRM_DECAY)
   state.confirmMs -= lost
   // one break per slip, counted where the grace window is first exceeded —
