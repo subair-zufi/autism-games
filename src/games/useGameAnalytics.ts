@@ -2,6 +2,7 @@ import { useCallback, useRef } from 'react'
 import { analytics } from '../services/analytics'
 import { useSettings } from '../state/settings'
 import { visibilityMetrics } from '../services/visibility'
+import { confirmMetrics } from './confirmTracking'
 import { GAME_LIST, type GameId } from '../types'
 
 /**
@@ -62,6 +63,17 @@ export function useGameAnalytics(gameKey: GameId, xrStore?: XrStoreLike) {
       // trial spanning a headset break otherwise looks like a very slow
       // response. Recorded on every step so such trials can be excluded.
       ...visibilityMetrics(),
+      // What the gaze confirm step cost the child (games/confirmTracking.ts),
+      // and only where gaze dwell is what answered. Absent elsewhere on
+      // purpose: a recorded 0 then always means "the child armed nothing",
+      // never "this game has no dwell step" — the difference between a finding
+      // and an artefact of which games are in the roster.
+      // …and how forgiving the dwell was set to be for this child. Response
+      // latency is bounded below by the dwell time, so trials played at
+      // different settings cannot be pooled without it.
+      ...(presenting && inputMethod === 'dwell'
+        ? { dwellProfile: useSettings.getState().dwellProfile, ...confirmMetrics() }
+        : {}),
     }
   }, [xrPresenting, gameKey])
 

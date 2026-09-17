@@ -1,14 +1,23 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useRayPointer, useXR } from '@react-three/xr'
 import * as THREE from 'three'
 import { useSettings } from '../state/settings'
+import type { DwellProfile } from '../types'
+import { noteAim } from './confirmTracking'
+import { setArmed } from './armed'
+import { useRemoteIntent } from '../remote/intents'
+import { GazeRayFilter } from './oneEuro'
 import {
+  ARM_MS,
+  DWELL_PROFILES,
   advanceAim,
+  angleBetweenDeg,
   clearCandidate,
   createAimState,
   findSelectTarget,
   isConfirmChip,
+  withinConfirmCone,
 } from './headAim'
 
 /**
@@ -20,26 +29,41 @@ import {
  *
  * Selection is two-stage, because in these games looking at the options *is*
  * the task — see `headAim.ts`. Resting the gaze on something marks it as the
- * candidate and floats a ✓ chip just beside it; dwelling on that chip is what
- * answers. Scanning across faces never answers.
+ * candidate and floats a ✓ chip on it; dwelling on that chip is what answers.
+ * Scanning across faces never answers.
  *
  * Targets opt in with `userData={{ headSelect: true }}`. A confirmed selection
  * is re-emitted as an ordinary click on the candidate, so every game's existing
  * `onClick` handlers work untouched.
  *
- * `confirmSide` picks where the chip parks. `"below"` (the default) floats it
- * under the candidate. `"on"` instead hovers it just in front of the
- * candidate's own surface, along the same ray the gaze already used to arm
- * it — so confirming needs no head movement at all, not even a nod. That
- * matters most in the joint-attention/turn-taking games: any extra move
- * requires looking away from the very thing the trial is about right after
- * correctly orienting to it, on top of the neck strain of a sustained tilt.
+ * Neither stage asks for precision the child has not already shown. The chip
+ * catches a gaze pointing anywhere near it, not only a ray that physically
+ * lands on it; a dwell that slips off drains instead of resetting; and the ray
+ * itself is smoothed before any of that (`oneEuro.ts`). Between them these are
+ * what let a child with an unsteady head answer at all, and how far each one
+ * goes is the child's steadiness profile. See `headAim.ts`.
+ *
+ * `confirmSide` picks where the chip parks. `"on"` — the default, and what
+ * every scene now uses — hovers it just in front of the candidate's own
+ * surface, along the same ray the gaze already used to arm it, so confirming
+ * needs no head movement at all, not even a nod.
+ *
+ * `"below"` floats it under the candidate instead, which asks for a downward
+ * nod AND a sustained hold in neck flexion. That was the original default and
+ * the emotion games kept it longest; participant testing retired it. It is the
+ * worst case for a child with poor head control — exactly the children the
+ * dwell forgiveness in `headAim.ts` exists for — and it also requires looking
+ * away from the very thing the trial is about right after correctly orienting
+ * to it. Kept, with its cone ceiling below, for a scene where the chip would
+ * cover something the child must keep seeing; nothing uses it today.
  */
 
 /** Reticle size as a fraction of its distance — ~2.5° wide at any range. */
 const RETICLE_ANGULAR = 0.045
-/** Confirm chip size as a fraction of its distance — deliberately bigger. */
-const CHIP_ANGULAR = 0.075
+/** Confirm chip size as a fraction of its distance — deliberately bigger.
+ *  ~6deg wide. Its *catchment* is wider still (the profile's `tolDeg`); the
+ *  drawn chip stays modest so it hides as little of the exhibit as possible. */
+const CHIP_ANGULAR = 0.11
 /** Theta segments in the dwell arc; also the resolution of its fill. */
 const ARC_SEGMENTS = 48
 
@@ -53,7 +77,7 @@ const DEFAULT_GAP_BELOW = 1.1
 const DEFAULT_GAP_ON = 0.5
 
 export function HeadSelect({
-  confirmSide = 'below',
+  confirmSide = 'on',
   confirmGap,
 }: {
   confirmSide?: 'below' | 'on'
@@ -64,30 +88,76 @@ export function HeadSelect({
 }) {
   const session = useXR((s) => s.session)
   const inputMethod = useSettings((s) => s.inputMethod)
+  const profile = useSettings((s) => s.dwellProfile)
   if (!session || inputMethod !== 'dwell') return null
   const gap = confirmGap ?? (confirmSide === 'on' ? DEFAULT_GAP_ON : DEFAULT_GAP_BELOW)
-  return <HeadSelectActive confirmSide={confirmSide} confirmGap={gap} />
+  return <HeadSelectActive confirmSide={confirmSide} confirmGap={gap} profile={profile} />
 }
 
 function HeadSelectActive({
   confirmSide,
   confirmGap,
+  profile,
 }: {
   confirmSide: 'below' | 'on'
   confirmGap: number
+  profile: DwellProfile
 }) {
+  // How forgiving this child's dwell is (types.ts `DwellProfile`). Read as a
+  // value rather than baked in, so the trainer can loosen it from the remote
+  // mid-session without leaving the game.
+  const tuning = DWELL_PROFILES[profile]
   const camera = useThree((s) => s.camera)
 
-  // The ray pointer's "space" is the head itself: its world matrix is the head
-  // pose inside a session, and −z (the pointer's default direction) is exactly
-  // where the child is looking. Same camera `HeadSampler` reads its yaw from.
+  // The ray pointer's "space" is the head — but a SMOOTHED copy of it, not the
+  // camera itself. Its position is the real eye and its rotation is the camera's
+  // run through `oneEuro`, so a tremor is taken out of the ray before it can
+  // slip off a chip, while a deliberate turn still tracks. −z (the pointer's
+  // default direction) is where the child is looking.
+  //
+  // Only the ray. The rendered camera is untouched — a view that lags the head
+  // invites simulator sickness — and `HeadSampler` keeps sampling the raw
+  // camera, because head yaw is a recorded outcome and a smoothed version of it
+  // would measure this filter rather than the child.
+  const rayFilter = useMemo(() => new GazeRayFilter(), [])
+  const rayspace = useMemo(() => new THREE.Object3D(), [])
+  const rawQuat = useMemo(() => new THREE.Quaternion(), [])
   const spaceRef = useRef<THREE.Object3D | null>(null)
-  spaceRef.current = camera
+  spaceRef.current = rayspace
+
+  // Ahead of the pointer system's own move, which runs at −50: the ray has to
+  // be built from this frame's smoothed pose, not last frame's.
+  useFrame((_, dt) => {
+    camera.getWorldPosition(rayspace.position)
+    camera.getWorldQuaternion(rawQuat)
+    rayspace.quaternion.copy(rayFilter.filter(rawQuat, dt, tuning.ray))
+    // no parent and no r3f render pass of its own, so nothing else will
+    rayspace.updateMatrixWorld(true)
+  }, -100)
 
   const pointerState = useMemo(() => ({ headSelect: true }), [])
   const pointer = useRayPointer(spaceRef, pointerState, undefined, 'gaze')
 
   const aim = useMemo(createAimState, [])
+
+  /**
+   * A Confirm pressed on the trainer's phone, waiting for the next frame.
+   *
+   * For the children where no amount of dwell forgiveness is enough: they can
+   * orient to the right answer and hold it long enough to arm, and cannot hold
+   * it long enough to confirm. The trainer releases the choice the CHILD made —
+   * there is no way from the phone to pick a different one — so the trial still
+   * measures what the child attended to. Resolved in the frame loop rather than
+   * here so every answer leaves through one path, with this frame's pointer
+   * state, and the press cannot land mid-way through a frame's reasoning.
+   */
+  const pendingConfirm = useRef(false)
+  useRemoteIntent('confirm', () => {
+    pendingConfirm.current = true
+  })
+
+  // stop reporting a choice the trainer could confirm once this game is gone
+  useEffect(() => () => setArmed(false), [])
 
   const reticle = useRef<THREE.Group>(null)
   const tick = useRef<THREE.Group>(null)
@@ -96,6 +166,21 @@ function HeadSelectActive({
   const chip = useRef<THREE.Group>(null)
 
   const camPos = useMemo(() => new THREE.Vector3(), [])
+  const fwd = useMemo(() => new THREE.Vector3(), [])
+  /** Where the chip sat at the end of last frame, and whether it was up at all.
+   *  The chip is positioned later in this same callback, so the tolerance cone
+   *  is tested against the previous frame — one frame of lag no eye can see,
+   *  and much simpler than splitting the frame in two. */
+  const chipWorld = useMemo(() => new THREE.Vector3(), [])
+  const chipLive = useRef(false)
+  /** Ceiling on the tolerance cone, so it can never reach back to the candidate
+   *  itself — see where it is set, in the "below" branch below. */
+  const coneLimit = useRef(Infinity)
+  /** The last intersection seen while a chip was up. A cone confirm can land
+   *  while the ray is over scenery that carries no pointer listener and so has
+   *  no intersection at all; `commit` needs *some* event to retarget, or the
+   *  answer is silently dropped after the candidate has already been cleared. */
+  const lastInter = useRef<NonNullable<ReturnType<typeof pointer.getIntersection>> | null>(null)
   const box = useMemo(() => new THREE.Box3(), [])
   const centre = useMemo(() => new THREE.Vector3(), [])
   const size = useMemo(() => new THREE.Vector3(), [])
@@ -117,7 +202,7 @@ function HeadSelectActive({
    */
   const commit = useCallback(
     (candidate: THREE.Object3D) => {
-      const current = pointer.getIntersection()
+      const current = pointer.getIntersection() ?? lastInter.current
       if (current == null) return
       pointer.setIntersection({ ...current, object: candidate })
       const now = performance.now()
@@ -131,9 +216,50 @@ function HeadSelectActive({
   // intersection read here is this frame's.
   useFrame((_, dt) => {
     const inter = pointer.getIntersection()
-    const onConfirm = isConfirmChip(inter?.object)
-    const target = onConfirm ? null : findSelectTarget(inter?.object)
-    const r = advanceAim(aim, { target, onConfirm }, dt * 1000)
+    if (inter != null) lastInter.current = inter
+    const rawTarget = findSelectTarget(inter?.object)
+
+    camera.getWorldPosition(camPos)
+    // the smoothed ray, not the raw camera: the cone below and the reticle that
+    // rides it must agree with where the pointer actually looked
+    fwd.set(0, 0, -1).applyQuaternion(rayspace.quaternion)
+
+    // Two ways to be "on the chip". The ray physically hitting it, as before —
+    // and the gaze merely POINTING within this child's `tolDeg` of where it
+    // sits, for a head that will not hold still long enough to keep a ray
+    // inside a few degrees (see headAim.ts). The chip stays small; only what it
+    // catches grows.
+    //
+    // The cone is withheld while the ray rests on a DIFFERENT selectable option.
+    // At the ends of Museum 360's row two pedestals are only ~10deg apart, so a
+    // gaze that has genuinely moved on could otherwise sit inside the old chip's
+    // cone and finish a confirm for the exhibit it just left — answering for
+    // something the child is demonstrably no longer looking at. Moving on must
+    // mean re-arming, which is what the raw hit test still decides.
+    const onChip = isConfirmChip(inter?.object)
+    const nearChip =
+      chipLive.current &&
+      (rawTarget == null || rawTarget === aim.candidate) &&
+      withinConfirmCone(
+        [fwd.x, fwd.y, fwd.z],
+        [chipWorld.x - camPos.x, chipWorld.y - camPos.y, chipWorld.z - camPos.z],
+        Math.min(tuning.tolDeg, coneLimit.current),
+      )
+    const onConfirm = onChip || nearChip
+    const target = onConfirm ? null : rawTarget
+    const r = advanceAim(aim, { target, onConfirm }, dt * 1000, tuning.dwellMs, ARM_MS, tuning.graceMs)
+
+    // A trainer's Confirm answers only a choice that is armed RIGHT NOW. Their
+    // console's view of that is up to a second old, so a press that arrives
+    // after the child has looked away does nothing rather than answering for a
+    // choice they have abandoned.
+    const assisted = pendingConfirm.current && !r.fire && r.candidate != null
+    pendingConfirm.current = false
+
+    // Before the fire below, which dispatches the click synchronously and so
+    // ends with the game reading these totals back out.
+    noteAim(assisted ? { ...r, fire: true, byFacilitator: true } : r)
+    setArmed(r.candidate != null)
     // Anchor the confirm chip's "on"-mode point to the gaze spot on the CURRENT
     // candidate only — not to any target the ray happens to graze. Updating it
     // for a not-yet-armed target teleported the chip in front of whatever the
@@ -145,8 +271,6 @@ function HeadSelectActive({
     // gaze move to a different option and re-arm it cleanly.
     if (target != null && target === r.candidate && inter != null) armPoint.copy(inter.point)
 
-    camera.getWorldPosition(camPos)
-
     // --- reticle ---------------------------------------------------------
     // The dot alone tracks the gaze at all times, like an ordinary pointer.
     // The ring and its dwell arc — the "tick mark" — only appear once the
@@ -155,14 +279,25 @@ function HeadSelectActive({
     // the background on every glance, which read as distracting noise rather
     // than feedback.
     if (reticle.current != null) {
-      if (inter == null) {
-        reticle.current.visible = false
-      } else {
+      if (inter != null) {
         reticle.current.visible = true
         // nudge toward the head so it never z-fights the surface it lands on
         reticle.current.position.copy(inter.point).lerp(camPos, 0.02)
         reticle.current.quaternion.copy(camera.quaternion)
         reticle.current.scale.setScalar(Math.max(inter.distance, 0.3) * RETICLE_ANGULAR)
+      } else if (onConfirm) {
+        // Confirming by cone while the ray is over scenery that carries no
+        // pointer listener — common, since nothing is intersected unless it has
+        // a handler. There is no surface to sit on, so ride the gaze ray at the
+        // chip's own distance. Without this the ring, a child of this group,
+        // would disappear exactly while it was filling.
+        const d = Math.max(camPos.distanceTo(chipWorld), 0.3)
+        reticle.current.visible = true
+        reticle.current.position.copy(camPos).addScaledVector(fwd, d)
+        reticle.current.quaternion.copy(camera.quaternion)
+        reticle.current.scale.setScalar(d * RETICLE_ANGULAR)
+      } else {
+        reticle.current.visible = false
       }
     }
     if (tick.current != null) {
@@ -195,36 +330,71 @@ function HeadSelectActive({
           // same ray keeps the same apparent screen position, so confirming
           // needs no head movement at all.
           const dist = Math.max(camPos.distanceTo(armPoint), 0.3)
-          const scale = dist * CHIP_ANGULAR
           box.getSize(size)
-          const clearance = Math.max(size.x, size.y, size.z) * 0.5 + scale * confirmGap
+          const clearance = Math.max(size.x, size.y, size.z) * 0.5 + dist * CHIP_ANGULAR * confirmGap
           toCam.copy(camPos).sub(armPoint).normalize()
           chip.current.position.copy(armPoint).addScaledVector(toCam, clearance)
           chip.current.quaternion.copy(camera.quaternion)
-          chip.current.scale.setScalar(scale)
         } else {
           box.getCenter(centre)
           const dist = Math.max(camPos.distanceTo(centre), 0.3)
-          const scale = dist * CHIP_ANGULAR
           // x/z stay pinned to the candidate's own bearing — only the pitch
           // changes, so confirming never asks for a head turn, only a nod.
-          chip.current.position.set(centre.x, box.min.y - scale * confirmGap, centre.z)
+          chip.current.position.set(
+            centre.x,
+            box.min.y - dist * CHIP_ANGULAR * confirmGap,
+            centre.z,
+          )
           chip.current.quaternion.copy(camera.quaternion)
-          chip.current.scale.setScalar(scale)
         }
+        // Size the chip from where it ENDED UP, not from the candidate it was
+        // measured against. The clearance above pushes it toward the head — by
+        // half the hit volume in "on" mode — so scaling it at the candidate's
+        // distance drew it nearer and therefore bigger than CHIP_ANGULAR says,
+        // and by an amount that grew with the hit volume. On the emotion games'
+        // 2.1m boards that is half again too large, covering the very face the
+        // trial is about. Measuring from the chip's own distance makes
+        // CHIP_ANGULAR mean what it claims: the same apparent size in every
+        // game, whatever it is parked in front of.
+        chip.current.scale.setScalar(Math.max(camPos.distanceTo(chip.current.position), 0.3) * CHIP_ANGULAR)
         chip.current.visible = true
+        // what next frame's tolerance cone aims at
+        chip.current.updateWorldMatrix(true, false)
+        chip.current.getWorldPosition(chipWorld)
+        chipLive.current = true
+
+        // Ceiling on that cone, so it can never reach back to the candidate's
+        // own surface. In "below" mode answering is meant to need a nod DOWN to
+        // the chip; a cone wide enough to still cover the face would quietly
+        // turn this back into single-stage dwell — resting on a face would
+        // answer for it, the exact Midas-touch failure the two stages exist to
+        // prevent (headAim.ts). Half the gap to the candidate's centre leaves
+        // room to forgive a wobble while never crossing back, whatever a
+        // scene's board size or viewing distance happens to be.
+        // "on" mode needs no ceiling: its chip sits ON the line of sight to the
+        // candidate by design, so a cone that reaches it is the whole point.
+        coneLimit.current =
+          confirmSide === 'on'
+            ? Infinity
+            : 0.5 *
+              angleBetweenDeg(
+                [centre.x - camPos.x, centre.y - camPos.y, centre.z - camPos.z],
+                [chipWorld.x - camPos.x, chipWorld.y - camPos.y, chipWorld.z - camPos.z],
+              )
       } else {
         // `visible = false` is not enough on its own: raycasting ignores it, so
         // a hidden chip left in place would still swallow the ray and stop any
         // face behind it from ever becoming a candidate. Park it out of reach.
         chip.current.visible = false
         chip.current.position.set(0, -1e4, 0)
+        chipLive.current = false
       }
     }
 
-    if (r.fire && r.candidate != null) {
+    if ((r.fire || assisted) && r.candidate != null) {
       const candidate = r.candidate
       clearCandidate(aim)
+      setArmed(false)
       commit(candidate)
     }
   })

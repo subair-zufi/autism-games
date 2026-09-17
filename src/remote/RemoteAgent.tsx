@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { GAME_LIST } from '../types'
 import { useSettings } from '../state/settings'
+import { isArmed } from '../games/armed'
 import { useAuth } from '../state/auth'
 import { useRemoteLink } from '../state/remote'
 import { currentXrSession, isXrPresenting } from '../services/xrPresence'
@@ -95,6 +96,7 @@ export function RemoteAgent() {
         if (patch.soundOn !== undefined) s.setSoundOn(patch.soundOn)
         if (patch.language !== undefined) s.setLanguage(patch.language)
         if (patch.inputMethod !== undefined) s.setInputMethod(patch.inputMethod)
+        if (patch.dwellProfile !== undefined) s.setDwellProfile(patch.dwellProfile)
         if (patch.playMode !== undefined) s.setPlayMode(patch.playMode)
       },
       setStudent: (studentId) => {
@@ -209,6 +211,7 @@ export function buildStatus(): RemoteStatus {
     level: gameId ? settings.difficulty[gameId] ?? null : null,
     phase: report.phase ?? (gameId ? 'start' : 'menu'),
     vrActive: isXrPresenting(),
+    armed: isArmed(),
     score: report.score ?? null,
     progress: report.progress ?? null,
     prompt: report.prompt ?? null,
@@ -217,6 +220,7 @@ export function buildStatus(): RemoteStatus {
       soundOn: settings.soundOn,
       language: settings.language,
       inputMethod: settings.inputMethod,
+      dwellProfile: settings.dwellProfile,
       playMode: settings.playMode,
     },
     studentId: auth.activeStudentId,

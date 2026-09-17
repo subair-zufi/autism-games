@@ -12,7 +12,17 @@
  */
 import { useEffect, useRef } from 'react'
 
-export type RemoteIntent = 'play' | 'restart'
+/**
+ * `confirm` is the odd one out: it is handled inside a game's Canvas by
+ * `HeadSelect` rather than by a screen, and it answers with the choice the
+ * CHILD has already made by looking. The trainer cannot pick an option from
+ * their phone — only release one the child arrived at themselves — so a child
+ * who can orient to the target but cannot hold still long enough to confirm it
+ * still produces a trial that measures their attention. Steps record who
+ * released the answer (`dwellConfirmedBy`), because the motor half of the trial
+ * did not happen when it was the adult.
+ */
+export type RemoteIntent = 'play' | 'restart' | 'confirm'
 
 type Handler = () => void
 

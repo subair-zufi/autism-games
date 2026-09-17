@@ -39,12 +39,37 @@ again except one thing — see *The one press* below.
 |---|---|
 | **Quit to Home** | Ends the immersive session properly and returns to the app's Home page. |
 | **Play / Play again** | Presses the Play button on whatever start, level or result screen is showing. |
+| **Confirm their choice** | Answers with the option the child has already chosen by looking at it. Appears only while they are selecting by gaze in a headset, and is greyed out until something is chosen. See below. |
 | Any game | Opens it. Sets the level first, if one was chosen. |
 | Level (easy / medium / hard) | Sets the level for the game currently open; it applies at the next start. |
 | Voice, sound, language, selection method | Changes the session settings live. |
+| Steadiness | Moves the child between the three gaze settings mid-session, for one who keeps finding the right answer and failing to confirm it. |
 | Participant | Chooses who the session is recorded against, and adds or removes participants without leaving the console. |
 | Show / hide view | Starts and stops the mirror image. |
 | **End-of-session record** | Opens the eleven-question user-experience form for the selected child, and saves it against that child and today's date. |
+
+### Confirming for a child who cannot hold still
+
+Some children can look straight at the right answer and still not hold their head
+steady enough to finish the ✓. Loosening **Steadiness** is the first thing to try.
+Where even the most forgiving setting is not enough, **Confirm their choice**
+finishes it for them.
+
+Two things it deliberately cannot do:
+
+- **It cannot choose.** It only releases the option the child has already arrived
+  at by looking — the one the mirror shows the ✓ sitting on. There is no way from
+  the console to pick a different one, so the child's orienting is still what
+  selects the target, which is the thing these games measure.
+- **It cannot answer for a choice they have left.** The console's view of what is
+  chosen is up to a second old, so the headset re-checks when the press lands. If
+  the child has looked away by then, nothing happens.
+
+Trials finished this way are recorded as `dwellConfirmedBy = facilitator`, and
+their confirm time is left blank rather than recording an adult's reaction time
+as the child's. The child's accuracy on those trials stands; nothing about their
+motor control does. Report how many trials were assisted, and check they are not
+concentrated in one group.
 
 ### The question the child is being asked
 

@@ -63,6 +63,23 @@ export type PlayMode = 'desktop' | 'vr'
  */
 export type InputMethod = 'dwell' | 'controller'
 
+/**
+ * How much the gaze dwell forgives an unsteady head — set per child at intake.
+ *
+ * Participant testing found children who followed the cue correctly and could
+ * not hold their gaze on the confirm tick long enough to answer. One setting
+ * cannot serve both them and a child who holds steady: loosen it for everyone
+ * and a steady child answers things they only glanced at; keep it tight and the
+ * unsteady child cannot answer at all. So it is a per-child dial, and the games
+ * record which setting was in force (`dwellProfile` on every gaze step) so it
+ * is a documented covariate rather than an uncontrolled source of variance —
+ * response latency in particular is bounded below by the dwell time, so trials
+ * played at different settings must never be pooled without adjustment.
+ *
+ * The numbers live in `games/headAim.ts` (`DWELL_PROFILES`).
+ */
+export type DwellProfile = 'standard' | 'extended' | 'high-support'
+
 export interface GameMeta {
   id: GameId
   title: string

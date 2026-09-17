@@ -31,6 +31,7 @@ export interface RemoteContext {
 const LEVELS: ReadonlySet<string> = new Set<Difficulty>(['easy', 'medium', 'hard'])
 const LANGS: ReadonlySet<unknown> = new Set(['en', 'ml'])
 const INPUT_METHODS: ReadonlySet<unknown> = new Set(['dwell', 'controller'])
+const DWELL_PROFILES: ReadonlySet<unknown> = new Set(['standard', 'extended', 'high-support'])
 const PLAY_MODES: ReadonlySet<unknown> = new Set(['desktop', 'vr'])
 
 /**
@@ -46,6 +47,7 @@ function cleanSettings(patch: Partial<RemoteSettings>): Partial<RemoteSettings> 
   if (typeof patch.soundOn === 'boolean') out.soundOn = patch.soundOn
   if (LANGS.has(patch.language)) out.language = patch.language
   if (INPUT_METHODS.has(patch.inputMethod)) out.inputMethod = patch.inputMethod
+  if (DWELL_PROFILES.has(patch.dwellProfile)) out.dwellProfile = patch.dwellProfile
   if (PLAY_MODES.has(patch.playMode)) out.playMode = patch.playMode
   return out
 }
@@ -75,6 +77,11 @@ export async function applyRemoteCommand(cmd: RemoteCommand, ctx: RemoteContext)
         return
       case 'restart':
         ctx.emit('restart')
+        return
+      case 'confirm':
+        // no-op unless a game's HeadSelect is mounted with a choice armed; the
+        // headset decides, because the console's view of that is a second old
+        ctx.emit('confirm')
         return
       case 'setLevel': {
         const level = cmd.payload.level

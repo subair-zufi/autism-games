@@ -48,6 +48,10 @@ def test_ordered_payload_columns_is_stable_and_appends_extras():
     assert cols_many[: len(scoring.RAW_PAYLOAD_ORDER)] == list(scoring.RAW_PAYLOAD_ORDER)
     # correct precedes chance precedes the head-scan block, and never reorders.
     assert cols_few.index("correct") < cols_few.index("chance") < cols_few.index("headYawTravelDeg")
+    # the dwell-cost block is appended after the head block, so adding it moved
+    # no existing column in a saved SPSS/R import
+    assert cols_few.index("headToTargetMs") < cols_few.index("dwellProfile")
+    assert cols_few.index("dwellProfile") < cols_few.index("dwellArmToConfirmMs")
 
 
 def test_ordered_payload_columns_appends_unknown_keys_sorted():
@@ -427,6 +431,68 @@ def test_trial_records_carry_process_and_condition_fields():
     assert r.latency_from_prompt_end_ms == 700
     assert (r.head_yaw_travel_deg, r.head_reversals, r.head_to_target_ms) == (55.5, 2, 900)
     assert r.construct == "" and r.cue == "" and r.visible_count is None  # not this game
+
+
+def test_trial_records_carry_the_gaze_confirmation_cost():
+    # A gaze trial: the child took 3.4s to answer, but only 1.2s of that was
+    # confirming a choice they had already made, across two dwell breaks. Without
+    # these two the motor cost sits inside latency and inside the accuracy score.
+    evs = [
+        ev(
+            "museum360",
+            "answer",
+            {
+                "correct": True, "chance": 0.33, "latencyMs": 3400, "xrPresenting": True,
+                "inputMethod": "dwell", "dwellProfile": "high-support",
+                "dwellConfirmedBy": "child", "dwellArmToConfirmMs": 1200,
+                "dwellConfirmBreaks": 2, "dwellDrainedMs": 340, "dwellArmCount": 1,
+                "dwellArmedNoConfirm": False,
+            },
+        )
+    ]
+    r = scoring.student_trial_records(evs)[0]
+    assert r.dwell_arm_to_confirm_ms == 1200
+    assert r.dwell_confirm_breaks == 2
+    # the setting is a condition on the trial: the dwell time is a floor on
+    # response latency, so latency is not comparable without it
+    assert r.dwell_profile == "high-support"
+    assert r.dwell_confirmed_by == "child"
+
+
+def test_trial_records_mark_a_trial_the_trainer_finished():
+    # The child oriented to the right exhibit and could not close the dwell, so
+    # the trainer released their choice from the remote. Accuracy stands — the
+    # child picked it — but no confirm interval is recorded, because the one
+    # that happened was an adult's reaction time.
+    evs = [
+        ev(
+            "museum360",
+            "answer",
+            {
+                "correct": True, "firstAttempt": True, "chance": 0.33,
+                "xrPresenting": True, "inputMethod": "dwell",
+                "dwellProfile": "high-support",
+                "dwellConfirmedBy": "facilitator", "dwellConfirmBreaks": 6,
+            },
+        )
+    ]
+    r = scoring.student_trial_records(evs)[0]
+    assert r.dwell_confirmed_by == "facilitator"
+    assert r.dwell_arm_to_confirm_ms is None
+    assert r.first_attempt_correct == 1
+    assert r.dwell_confirm_breaks == 6
+
+
+def test_trial_records_leave_confirmation_cost_blank_off_gaze():
+    # controller trial: no dwell step happened, so a 0 would be a fabricated
+    # "perfectly steady" reading rather than system-missing
+    r = scoring.student_trial_records(
+        [ev("museum360", "answer", {"correct": True, "chance": 0.33, "inputMethod": "controller"})]
+    )[0]
+    assert r.dwell_arm_to_confirm_ms is None
+    assert r.dwell_confirm_breaks is None
+    assert r.dwell_profile == ""
+    assert r.dwell_confirmed_by == ""
 
 
 def test_trial_records_map_cue_and_flat_condition():

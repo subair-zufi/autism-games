@@ -9,7 +9,7 @@
  */
 import type { Difficulty, GameId, PlayMode } from '../types'
 import type { Lang } from '../i18n/strings'
-import type { InputMethod } from '../types'
+import type { DwellProfile, InputMethod } from '../types'
 
 /** Bumped when a command's meaning changes incompatibly. Reported in status so
  *  a console on an older build can say so instead of silently doing nothing. */
@@ -21,6 +21,7 @@ export interface RemoteSettings {
   soundOn: boolean
   language: Lang
   inputMethod: InputMethod
+  dwellProfile: DwellProfile
   playMode: PlayMode
 }
 
@@ -34,6 +35,9 @@ export type RemoteCommand =
   | { type: 'play'; payload: Record<string, never> }
   /** Play the same level again from a result screen. */
   | { type: 'restart'; payload: Record<string, never> }
+  /** Answer with the choice the child has already armed by looking at it. Does
+   *  nothing unless something is armed — see `RemoteIntent`. */
+  | { type: 'confirm'; payload: Record<string, never> }
   /** End the session and go Home — the "get them out of there" button. */
   | { type: 'quit'; payload: Record<string, never> }
   /** Change a level. Defaults to the game currently open. */
@@ -69,6 +73,10 @@ export interface RemoteStatus {
   phase: RemotePhase
   /** True while a headset session is actually presenting. */
   vrActive: boolean
+  /** The child has a choice armed and is trying to confirm it, so the trainer's
+   *  Confirm control would do something. Up to a status interval old: the
+   *  headset re-checks when the press lands. */
+  armed: boolean
   /** Points, and any "3 / 8"-style progress the game shows next to them. */
   score: number | null
   progress: string | null
@@ -102,7 +110,8 @@ export interface RemoteEnvelope {
  * than crash the loop that is the child's only way out of a game.
  */
 const KNOWN: ReadonlySet<string> = new Set<RemoteCommandType>([
-  'goto', 'home', 'play', 'restart', 'quit', 'setLevel', 'setting', 'participant', 'mirror', 'ping',
+  'goto', 'home', 'play', 'restart', 'confirm', 'quit', 'setLevel', 'setting', 'participant',
+  'mirror', 'ping',
 ])
 
 export function parseCommand(envelope: RemoteEnvelope): RemoteCommand | null {

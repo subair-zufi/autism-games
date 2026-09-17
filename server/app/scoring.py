@@ -655,6 +655,10 @@ RAW_PAYLOAD_ORDER = (
     "targetBearingDeg", "headStartYawDeg", "headEndYawDeg", "headYawTravelDeg",
     "headYawRangeDeg", "headReversals", "headSamples", "headMinPitchDeg",
     "headMaxPitchDeg", "headToTargetMs",
+    # gaze-dwell condition + confirmation cost (VR dwell trials only)
+    "dwellProfile", "dwellConfirmedBy",
+    "dwellArmToConfirmMs", "dwellConfirmBreaks", "dwellDrainedMs", "dwellArmCount",
+    "dwellArmedNoConfirm",
     # bookkeeping
     "round", "slot", "count", "target", "method", "source", "kind", "clip",
     "freezeKind", "errorType", "during",
@@ -724,6 +728,26 @@ class TrialRecord:
     head_yaw_range_deg: float | None  # VR widest span visited
     head_reversals: int | None  # VR back-and-forth (hesitation)
     head_to_target_ms: int | None  # VR time until head first pointed at the target
+    # Gaze-dwell confirmation cost, separated from the attention measure above.
+    # A child who found the target and could not hold their head steady enough
+    # to confirm it scores the same as one who never found it, which puts a
+    # motor difference inside the joint-attention outcome. These two carry it
+    # out again: the confirm interval with target-finding removed, and how often
+    # an unsteady head broke the dwell (a head-steadiness index measured during
+    # ordinary play). Blank for controller trials and flat-screen play.
+    # Which steadiness setting the dwell ran at (types.ts DwellProfile). A
+    # condition variable, not an outcome: the dwell time is a floor on response
+    # latency, so trials played at different settings must not be pooled
+    # without it. Blank for controller trials and flat-screen play.
+    dwell_profile: str
+    # Who released the answer: "child", or "facilitator" when the trainer
+    # pressed Confirm from their remote for a child who could orient to their
+    # choice but not hold still long enough to finish the dwell. The child still
+    # picked the target, so accuracy stands; nothing about their motor control
+    # does, which is why dwell_arm_to_confirm_ms is blank on those trials.
+    dwell_confirmed_by: str
+    dwell_arm_to_confirm_ms: int | None
+    dwell_confirm_breaks: int | None
     ts: datetime
 
 
@@ -771,6 +795,10 @@ def student_trial_records(
                     head_yaw_range_deg=_num_or_none(p.get("headYawRangeDeg")),
                     head_reversals=_int_or_none(p.get("headReversals")),
                     head_to_target_ms=_int_or_none(p.get("headToTargetMs")),
+                    dwell_profile=str(p.get("dwellProfile")) if p.get("dwellProfile") else "",
+                    dwell_confirmed_by=str(p.get("dwellConfirmedBy")) if p.get("dwellConfirmedBy") else "",
+                    dwell_arm_to_confirm_ms=_int_or_none(p.get("dwellArmToConfirmMs")),
+                    dwell_confirm_breaks=_int_or_none(p.get("dwellConfirmBreaks")),
                     ts=t.ts,
                 )
             )

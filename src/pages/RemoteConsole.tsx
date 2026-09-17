@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { GAME_LIST, SKILLS, type Difficulty, type GameId, type PlayMode } from '../types'
+import { GAME_LIST, SKILLS, type Difficulty, type DwellProfile, type GameId, type PlayMode } from '../types'
 import { useAuth } from '../state/auth'
 import { RemoteParticipants } from '../components/RemoteParticipants'
 import { SessionExperienceForm } from '../components/SessionExperienceForm'
@@ -285,6 +285,29 @@ function Console({ code }: { code: string }) {
           ↻ Play again
         </button>
       </div>
+      {/* Only while the child is actually selecting by gaze in a headset —
+          elsewhere there is no armed choice for it to release. */}
+      {status.vrActive && status.settings?.inputMethod === 'dwell' && (
+        <div className="rc-actions">
+          <button
+            className="rc-btn go"
+            type="button"
+            disabled={!status.armed}
+            onClick={() => void send('confirm', {}, 'Confirmed their choice')}
+          >
+            ✓ {status.armed ? 'Confirm their choice' : 'Nothing chosen yet'}
+          </button>
+        </div>
+      )}
+      {status.vrActive && status.settings?.inputMethod === 'dwell' && (
+        <p className="rc-note">
+          Press this for a child who can look at the right answer but cannot hold still long
+          enough to finish the ✓. It answers with <em>their</em> choice — the one the mirror
+          shows the ✓ sitting on — and there is no way from here to pick a different one. Trials
+          you finish this way are recorded as confirmed by you, so their response time is left
+          out of the analysis rather than being yours.
+        </p>
+      )}
       {note && <p className="rc-note">{note}</p>}
 
       <section className="rc-section">
@@ -476,9 +499,41 @@ function SettingsPanel({
         >
           👁 {settings.inputMethod === 'dwell' ? 'Look to choose' : 'Controller'}
         </button>
+        {settings.inputMethod === 'dwell' && (
+          <button
+            type="button"
+            className="rc-chip"
+            onClick={() =>
+              void send('setting', { dwellProfile: nextDwellProfile(settings.dwellProfile) }, 'Steadiness')
+            }
+          >
+            🤝 {DWELL_PROFILE_LABEL[settings.dwellProfile] ?? settings.dwellProfile}
+          </button>
+        )}
       </div>
     </section>
   )
+}
+
+/**
+ * Cycles the steadiness setting from the trainer's phone.
+ *
+ * The point of doing it from here is that the child is mid-session with the
+ * headset on: a child who keeps finding the right answer and failing to confirm
+ * it can be moved up a step and tried again without taking the headset off,
+ * which is otherwise the only way to reach Profile → Steadiness.
+ */
+const DWELL_ORDER: readonly DwellProfile[] = ['standard', 'extended', 'high-support']
+
+const DWELL_PROFILE_LABEL: Record<DwellProfile, string> = {
+  standard: 'Standard hold',
+  extended: 'Extended hold',
+  'high-support': 'High support',
+}
+
+function nextDwellProfile(current: DwellProfile | undefined): DwellProfile {
+  const i = DWELL_ORDER.indexOf(current as DwellProfile)
+  return DWELL_ORDER[(i + 1) % DWELL_ORDER.length]
 }
 
 function phaseLabel(status: Partial<RemoteStatus>): string {
