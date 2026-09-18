@@ -156,8 +156,12 @@ Same question one step further out: does the **informant-rated ASSP** move too?
 
 - **Speed → automaticity.** `latency_from_prompt_end_ms` (never raw `latency_ms`) against
   trial number. Accuracy rising *and* latency falling is a stronger learning claim than
-  accuracy alone. Guard: dwell-based selection makes looking instrumental, so pool
-  latencies only within the same `inputMethod` (`raw_events`).
+  accuracy alone. Two guards, both hard: dwell-based selection makes looking instrumental,
+  so pool latencies only within the same `inputMethod` — **and only within the same
+  `dwellProfile`**. The dwell time is a *floor* on response latency (1600 ms at Standard,
+  1100 ms Extended, 700 ms High support), so a child moved to a looser setting mid-study
+  gets faster by definition, with no learning involved. Put `dwellProfile` in the model the
+  same way you put `level` in, and report who changed setting and when.
 - **Hints → independence.** The proportion of trials with `hinted = 1` should fall across
   sessions. A child at ceiling *with* hints is a different result from one at ceiling
   without them.
@@ -205,6 +209,28 @@ block as a process/attention measure within the VR trials instead.
 - **If you do look at desktop rows**, it is a descriptive comparison of a demo surface
   against the intervention, confounded by who played what and when. Label it exploratory,
   never as O5 evidence.
+
+**Separating what the child attended to from what their body could do.** Gaze trials also
+carry the cost of the *confirm* step, which is motor, not attentional. This matters because
+the two were previously inseparable: a child who oriented to the right exhibit and could not
+hold their head still enough to confirm it scored exactly like one who never found it, so a
+motor difference sat inside the joint-attention outcome — depressing the scores of precisely
+the children whose scores get interpreted.
+
+- **Columns:** `dwell_arm_to_confirm_ms` (time from choosing to answering, with
+  target-finding removed), `dwell_confirm_breaks` (times an unsteady head broke the dwell)
+  on `trials`; `dwellDrainedMs`, `dwellArmCount`, `dwellArmedNoConfirm` on `raw_events`.
+- **Use it as a covariate, not an outcome.** `dwell_confirm_breaks` is effectively a
+  head-steadiness index measured during ordinary play. Where it is high, read that child's
+  accuracy with care, and say so.
+- **`dwellArmedNoConfirm = 1`** is the pure confound trial: the child chose, and no answer
+  ever happened. Count them per child before concluding anything about attention.
+- **Assisted trials.** `dwell_confirmed_by = facilitator` means the trainer released the
+  child's choice from the remote. The child still picked the target, so **accuracy stands**;
+  their motor performance does not, and `dwell_arm_to_confirm_ms` is deliberately blank on
+  those rows rather than recording an adult's reaction time. Report how many trials were
+  assisted, and check they are not concentrated in one group — if assistance correlates with
+  condition it is a confound in the accuracy measure too, not only the motor one.
 
 ### Q7 — What's confused / which sub-skills lag?
 - **Sheet:** `raw_events`, `event_type = answer`.
@@ -332,6 +358,13 @@ complete account of the training without leaning on a fragile difference score.
   **informant** (ICC).
 - **`xr_presenting` is an inclusion filter, not a contrast:** `1` = the VR intervention,
   `0` = desktop demo play, blank = not recorded.
+- **`dwellProfile` is a condition the child was played under,** set from how steadily they
+  can hold a look and changeable mid-session. It sets a floor on response latency, so it
+  belongs in any latency model and must never be pooled across. It is *not* a child
+  characteristic to interpret directly — `dwell_confirm_breaks` is the measured one.
+- **The `dwell*` fields are absent, not zero, off gaze.** They are written only for
+  immersive VR trials answered by dwell, so a `0` always means "armed nothing" and never
+  "this game has no dwell step". Filter on presence, not on value.
 
 ---
 

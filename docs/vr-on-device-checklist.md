@@ -47,7 +47,7 @@ Build stamp: ________________
 | 1.9 | **Progress** — skill scores and charts render for a participant with data. | | |
 | 1.10 | **Cohort** — group view renders. | | |
 | 1.11 | **Profile → Language** — English / മലയാളം switches game text and speech. | | |
-| 1.12 | **Profile → Selection** — Gaze dwell / Controller. | | |
+| 1.12 | **Profile → Selection** — Gaze dwell / Controller. With Gaze dwell chosen, a **Steadiness support · gaze** row appears below it (Standard / Extended / High support); with Controller it is hidden. | | |
 | 1.13 | **Profile → Voice / Sounds** — both toggles take effect in a game. | | |
 | 1.14 | **Log out** returns to login and clears the session. | | |
 
@@ -64,10 +64,14 @@ Do these once, in any game, then spot-check elsewhere.
 | 2.3 | **HUD height [unmeasured]** — prompt is a glance up, not a neck tilt. Then **crouch to child height** and re-enter VR. | The HUD should hang *lower* for a shorter wearer, holding the same angle. If it stays put and you must crane, eye-height anchoring is not working. | | |
 | 2.4 | **Score panel angle** — check Emotion Room 360 and Emotion Cinema 360 specifically. | These sit highest (~25–29° up by calculation). Neck extension rather than an eye flick = too high. | | |
 | 2.5 | **Prompt legibility** — in-world text readable without leaning. Repeat in Malayalam (longer script). | Clipped or shrunk-to-fit text. | | |
-| 2.6 | **Gaze dwell** — two-stage: rest on a target to arm it (~0.3 s), then hold the ✓ chip beneath it (~1.6 s). | Selections firing while merely looking around; chip so low it is uncomfortable to hold. | | |
+| 2.6 | **Gaze dwell** — two-stage: rest on a target to arm it (~0.3 s), then hold the ✓ that appears **on** it (~1.6 s at Standard). Confirming needs no head movement — the ✓ sits on the line of sight you armed with. | Selections firing while merely looking around. A ✓ parked *below* the answer, needing a downward nod: that was retired, and seeing it means a stale build (re-check 0.1). | | |
+| 2.6a | **Steadiness settings** — in Profile, try each of Standard / Extended / High support in the same game. The hold gets shorter and the ✓ catches a less precise look as you go up (1.6 s → 1.1 s → 0.7 s). | No change in feel between settings. Also watch the opposite failure: at High support, answers landing on things you only glanced at. | | |
+| 2.6b | **Dwell forgiveness** — while holding the ✓, deliberately flick your gaze off it briefly and back. | The ring should ebb and recover, **not** snap to empty. Resetting to zero on a small wobble is the bug this replaced. | | |
+| 2.6c | **Moving on re-arms** — arm one answer, then look at a *different* one and hold the ✓ there. | The first answer must never be the one that fires. If it does, stop and report: that is a wrong-answer bug, not a comfort issue. | | |
 | 2.7 | **Controller** — ray selects; gaze no longer fires on its own. | | | |
 | 2.8 | **In-world Quit** — bottom **left** in every game. Ends the session *and* returns to Home. | Unreachable, overlaps the game, or fires by accident. | | |
 | 2.9 | **In-world selection switch** — directly under Quit; changes method mid-session. | | | |
+| 2.9a | **Trainer confirm** (needs the remote paired, §see trainer-remote.md) — in a gaze session, arm an answer by looking and have the trainer press **Confirm their choice** on the phone. | The button should be greyed out until something is armed. It must answer with *what you armed*, never a different option. Look away first, then have them press: nothing should happen. | | |
 | 2.10 | **Camera restore** — quit a game and look at the flat page. | Scene rendered through a wide off-axis frustum — most content off-screen. | | |
 | 2.11 | **Warm-up (first run)** — clear site data, launch a VR game: an unscored practice scene (tap the star ahead, then one each side). | | | |
 | 2.12 | **Warm-up on a shared headset** — now launch a *different* VR game. | It will **not** reappear. It is remembered per *device*, not per child, with no reset in the UI. **On a shared research headset only the first participant ever sees it.** Decide if that is acceptable before testing children. | | |

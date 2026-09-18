@@ -162,7 +162,16 @@ Recorded automatically, and outranking the ratings where they disagree:
 | Games covered by the visit | `session_ux.games_played` |
 | Trials attempted and completed | `trials`, `raw_events` |
 | Head-yaw scanning during the response window | `raw_events` (VR only) |
+| Whether the child could physically complete the answer | `raw_events.dwellConfirmBreaks`, `dwellArmedNoConfirm` (gaze trials only) |
+| Trials the trainer had to finish for them | `raw_events.dwellConfirmedBy = facilitator` |
 | VR vs flat mode | `raw_events.xrPresenting` — every intervention analysis filters to 1 |
+
+The two gaze rows are an **access** signal, and they belong in the acceptability write-up
+rather than only the mechanism one. A child repeatedly choosing the right answer and failing
+to confirm it is not tolerating the interface, whatever they point to on item 2 — and unlike
+the ratings, it is visible per trial. Where it is high, move that child up a steadiness
+setting (Profile → Steadiness support, or the trainer's phone mid-session) and record that you did:
+it changes the response-latency floor, so the analysis has to know.
 
 These are also the prerequisites flagged in the
 [VR games expert review](vr-games-expert-review.md): the mode flag, head-yaw sampling at

@@ -140,14 +140,25 @@ recorded (from `sample-data/raw_events.csv` + `useGameAnalytics.ts` enrichment):
 | `headStartYawDeg`, `headEndYawDeg`, `headYawTravelDeg`, `headYawRangeDeg`, `headReversals`, `headSamples`, `headMinPitchDeg`, `headMaxPitchDeg`, `headToTargetMs`, `targetBearingDeg` | VR head-scan telemetry | objective attention markers (O5); **VR only** |
 | `xrPresenting` | 1 = immersive VR, 0 = flat (desktop demo) | **inclusion filter**: the intervention is VR-only, so research analyses keep `1` |
 | `inputMethod` | gaze vs controller/pointer | latency pooling guard (dwell ≠ tap) |
+| `dwellProfile` | which steadiness setting the gaze dwell ran at (`standard` / `extended` / `high-support`) | **condition, not outcome.** The dwell time is a floor on response latency (1600 / 1100 / 700 ms), so latency is not comparable across settings without it |
+| `dwellArmToConfirmMs` | ms from the child choosing an option by gaze to the answer landing | the confirmation cost with target-finding removed — model it as its own term instead of leaving it inside `latencyMs` |
+| `dwellConfirmBreaks`, `dwellDrainedMs` | times an unsteady head broke the confirm dwell, and the dwell that cost | a head-steadiness index measured during ordinary play; the ms value grades severity where the count does not |
+| `dwellArmCount`, `dwellArmedNoConfirm` | options chosen this trial; chose one and never managed to answer it | `>1` = switched target. `dwellArmedNoConfirm` is the confound case: attention succeeded, motor confirmation did not |
+| `dwellConfirmedBy` | `child`, or `facilitator` when the trainer released the answer from the remote | the child still picked the target, so accuracy stands; **nothing about their motor control does**, and `dwellArmToConfirmMs` is deliberately blank on these. Report how many trials were assisted and check they are not concentrated in one group |
 | `headYawContaminated` | JA-in-VR where head yaw is instrumental, not shared attention | exclude/adjust contaminated yaw |
 | *(visibility metrics — `visibilityMetrics()`)* | time the page was hidden mid-trial | exclude trials spanning a headset break / tab switch |
 | `boardCount`, `count`, `round`, `slot`, `target`, `method`, `source`, `kind`, `clip`, `freezeKind`, `errorType` | per-game bookkeeping / error typing | error analysis, replay reconstruction |
 
+The seven `dwell*` keys are written **only where gaze dwell is what answered** (immersive VR
+*and* `inputMethod = dwell`), and are absent otherwise rather than zero — so a recorded `0`
+always means "the child armed nothing", never "this game has no dwell step". Four of them
+(`dwell_profile`, `dwell_confirmed_by`, `dwell_arm_to_confirm_ms`, `dwell_confirm_breaks`)
+are also carried on the trial-level sheet.
+
 **Relevance verdict:** this is the core research asset and it is well-designed — chance is
 always recoverable, first attempts are separable, condition flags (VR, input, visibility,
-contaminated yaw) are present, and mechanism telemetry (head scan) is captured where it is
-meaningful. Two caveats: **clean RT coverage is partial** (only some games record
+contaminated yaw, steadiness setting) are present, and mechanism telemetry (head scan, and
+now the cost of the confirm step itself) is captured where it is meaningful. Two caveats: **clean RT coverage is partial** (only some games record
 `latencyFromPromptEndMs`; the SAP forbids using raw `latencyMs` for RT claims → RT analysis
 is limited to that subset), and payload is schema-less JSONB, so field presence must be
 validated per go-live (the M1–M5 telemetry pre-checks in the blueprint).
