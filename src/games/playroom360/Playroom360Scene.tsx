@@ -188,11 +188,12 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
     <VRHudAnchor designEyeY={EYE_Y}>
       <TextPanel text={score} position={[0, 3.02, -6.4]} width={2.2} height={0.5} font={110} />
       <TextPanel text={prompt} position={[0, 2.45, -6.4]} width={4.4} height={0.72} font={64} />
-      {/* left of the outermost seated peer (≈−31°) — clear of the table, with
-          a bit more margin than the peer's own edge */}
-      <VRQuitButton bearingDeg={-56} label={quit} />
+      {/* well left of the outermost seated peer (≈−31°) and clear of the table —
+          pushed further out than the play area so a stray gaze never reaches it
+          and the controller-only Quit takes a deliberate glance left */}
+      <VRQuitButton bearingDeg={-78} label={quit} />
       {/* selection-method switch, directly under Quit in the same controls corner */}
-      <VRInputSwitch bearingDeg={-56} />
+      <VRInputSwitch bearingDeg={-78} />
     </VRHudAnchor>
   )
 }

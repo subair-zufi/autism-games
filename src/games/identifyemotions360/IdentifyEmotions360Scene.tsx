@@ -566,11 +566,13 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
     <VRHudAnchor designEyeY={EYE_Y}>
       <TextPanel text={prompt} position={[0, topY + 0.45, z]} width={3.8} height={0.64} font={64} />
       <TextPanel text={score} position={[0, topY + 1.08, z]} width={1.8} height={0.44} font={88} />
-      {/* left of the outermost answer card — the widest "why?" cause cards
-          reach to ≈−39°, so this needs real margin, not just clearance */}
-      <VRQuitButton bearingDeg={-50} label={quit} />
+      {/* well left of the outermost answer card — the widest "why?" cause cards
+          reach to ≈−39°, so this is pushed further out than the play area so a
+          stray gaze never reaches it and the controller-only Quit takes a
+          deliberate glance left */}
+      <VRQuitButton bearingDeg={-74} label={quit} />
       {/* selection-method switch, directly under Quit in the same controls corner */}
-      <VRInputSwitch bearingDeg={-50} />
+      <VRInputSwitch bearingDeg={-74} />
     </VRHudAnchor>
   )
 }

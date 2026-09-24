@@ -21,12 +21,25 @@ import { exitVrToHome } from './exitVr'
  * mid-session. It still never resets or skips the game itself; the run is
  * simply abandoned, and nothing about it is scored differently.
  *
- * Placed by BEARING, not raw coordinates: each game passes a `bearingDeg` just
- * outside its own left-most interactive element (boards / cards / players /
- * discoveries), so the button sits right at the edge of that game's activity
- * arc — a small glance left to reach — and can never overlap or hide the game
- * or its answer options. It rides low and turns to face the child. Drop one
- * inside each game's `VRHud` (rendered only while `inSession`).
+ * Controller-only, never gaze. In participant testing an autistic child's gaze
+ * drifted onto this panel mid-round and the dwell selected it, quitting the game
+ * by accident — the one control where an accidental select is unrecoverable. So
+ * unlike every other in-world control it does NOT carry `userData.headSelect`:
+ * `HeadSelect` only ever arms objects that opt in with that flag, so a wandering
+ * gaze can no longer reach this button at all. The facilitator's controller ray
+ * still fires the `onClick` below (controllers stay live in either input mode),
+ * which is the intended — and now only — way to leave a session early. A
+ * dwell-only child with no controller reaches the controller/gaze `VRInputSwitch`
+ * (still gaze-selectable) to hand control over, or the facilitator uses the
+ * phone remote's Quit.
+ *
+ * Placed by BEARING, not raw coordinates: each game passes a `bearingDeg` set
+ * well outside its own left-most interactive element (boards / cards / players /
+ * discoveries) — further out than the other controls, so the panel sits clear of
+ * the game's activity arc rather than at its edge, keeping it out of the child's
+ * view during play and out of easy accidental reach. It can never overlap or
+ * hide the game or its answer options. It rides low and turns to face the child.
+ * Drop one inside each game's `VRHud` (rendered only while `inSession`).
  */
 export function VRQuitButton({
   bearingDeg,
@@ -85,10 +98,9 @@ export function VRQuitButton({
     <mesh
       position={[x, height, z]}
       rotation={[0, rotY, 0]}
-      // gaze-selectable, or a child set to dwell has no way out of the headset
-      // at all. Safe to dwell on: it sits outside every game's activity arc,
-      // so a wandering gaze does not land here on the way to an answer.
-      userData={{ headSelect: true }}
+      // Deliberately NOT `headSelect`: gaze must never be able to arm this
+      // button (see the component doc). A controller ray still fires this
+      // `onClick`, so the facilitator can always quit; a wandering gaze cannot.
       onClick={(e) => {
         e.stopPropagation()
         // Ends the session, waits for the flat page to be painting again, and
