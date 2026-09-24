@@ -199,11 +199,12 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
     <VRHudAnchor designEyeY={EYE_Y}>
       <TextPanel text={score} position={[0, 3.9, -7.4]} width={2.6} height={0.62} font={110} />
       <TextPanel text={prompt} position={[0, 3.15, -7.4]} width={4.6} height={0.8} font={64} />
-      {/* left of the outermost discovery (flower ≈−52°) — clear of the play
-          area, with a bit more margin than the flower's own edge */}
-      <VRQuitButton bearingDeg={-74} label={quit} />
+      {/* well left of the outermost discovery (flower ≈−52°) and clear of the
+          play area — pushed further out than the play area so a stray gaze never
+          reaches it and the controller-only Quit takes a deliberate glance left */}
+      <VRQuitButton bearingDeg={-85} label={quit} />
       {/* selection-method switch, directly under Quit in the same controls corner */}
-      <VRInputSwitch bearingDeg={-74} />
+      <VRInputSwitch bearingDeg={-85} />
     </VRHudAnchor>
   )
 }
