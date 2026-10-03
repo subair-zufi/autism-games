@@ -1,4 +1,5 @@
 import type { Difficulty } from '../../types'
+import { shuffle } from '../emotionVocab'
 
 /**
  * Park 360 — *initiating* joint attention (IJA), immersive.
@@ -45,9 +46,52 @@ export const DISCOVERIES: DiscoveryMeta[] = [
   { id: 'gem', bearingDeg: 14, radius: 5.4 },
 ]
 
-/** the friend plays at the right edge of the arc, absorbed in their flowerbed */
+/** default / first-round friend bearing (right edge of the arc) */
 export const FRIEND_BEARING_DEG = 40
 export const FRIEND_RADIUS = 4.6
+
+/**
+ * Candidate friend bearings, both sides of centre, all inside the front arc.
+ * The friend no longer stands in one fixed spot every round (review R2): the
+ * turn toward the friend — half the IJA loop — was becoming a learned motor
+ * habit, and a constant friend-directed head-turn cost could not be separated
+ * from it in the telemetry.
+ */
+export const FRIEND_SLOTS_DEG = [-40, -25, 25, 40]
+/** the friend keeps at least this far from the round's surprise (degrees) */
+export const FRIEND_SURPRISE_MIN_SEP_DEG = 15
+
+/**
+ * The friend's bearing per round, dealt in shuffled cycles over FRIEND_SLOTS_DEG
+ * so a session sweeps both sides evenly instead of a fixed habitual turn — the
+ * same shuffled-cycle technique as `buildAnswerSlots` in emotionrecognition360.
+ */
+export function buildFriendBearings(goal: number, rng: () => number = Math.random): number[] {
+  const out: number[] = []
+  while (out.length < goal) {
+    const cycle = shuffle([...FRIEND_SLOTS_DEG], rng)
+    // avoid the same bearing twice in a row across the cycle seam
+    if (out.length > 0 && cycle[0] === out[out.length - 1] && cycle.length > 1) {
+      ;[cycle[0], cycle[1]] = [cycle[1], cycle[0]]
+    }
+    out.push(...cycle)
+  }
+  return out.slice(0, goal)
+}
+
+/**
+ * Keep the friend clear of the round's surprise: if the dealt bearing lands
+ * within FRIEND_SURPRISE_MIN_SEP_DEG of the surprise, fall back to the slot
+ * farthest from it (which, for every discovery spot in DISCOVERIES, is always
+ * well outside the separation band).
+ */
+export function clearFriendBearing(friendDeg: number, discoveryDeg: number): number {
+  if (Math.abs(friendDeg - discoveryDeg) >= FRIEND_SURPRISE_MIN_SEP_DEG) return friendDeg
+  return FRIEND_SLOTS_DEG.reduce(
+    (best, s) => (Math.abs(s - discoveryDeg) > Math.abs(best - discoveryDeg) ? s : best),
+    FRIEND_SLOTS_DEG[0],
+  )
+}
 
 export function discoveryMeta(id: DiscoveryId): DiscoveryMeta {
   return DISCOVERIES.find((d) => d.id === id)!
@@ -64,9 +108,9 @@ export function discoveryPosition(id: DiscoveryId): [number, number] {
   return bearingToXZ((m.bearingDeg * Math.PI) / 180, m.radius)
 }
 
-/** Floor [x, z] where the friend stands. */
-export function friendPosition(): [number, number] {
-  return bearingToXZ((FRIEND_BEARING_DEG * Math.PI) / 180, FRIEND_RADIUS)
+/** Floor [x, z] where the friend stands, for a given bearing. */
+export function friendPosition(bearingDeg: number = FRIEND_BEARING_DEG): [number, number] {
+  return bearingToXZ((bearingDeg * Math.PI) / 180, FRIEND_RADIUS)
 }
 
 /** The child's head-turn to face the surprise, in signed degrees — recorded
@@ -133,11 +177,18 @@ export function starsFor(spontaneousShares: number, goal: number): number {
 
 export interface Round {
   discovery: DiscoveryId
+  /** where the friend stands this round (signed degrees, kept clear of the surprise) */
+  friendBearingDeg: number
 }
 
-export function makeRound(prev: DiscoveryId | null, rng: () => number = Math.random): Round {
+export function makeRound(
+  prev: DiscoveryId | null,
+  friendBearingDeg: number = FRIEND_BEARING_DEG,
+  rng: () => number = Math.random,
+): Round {
   const pool = DISCOVERIES.filter((d) => d.id !== prev)
-  return { discovery: pool[Math.floor(rng() * pool.length)].id }
+  const discovery = pool[Math.floor(rng() * pool.length)].id
+  return { discovery, friendBearingDeg: clearFriendBearing(friendBearingDeg, discoveryBearingDeg(discovery)) }
 }
 
 /** ms the calm empty park lingers before the next surprise pops (randomised). */

@@ -12,7 +12,9 @@ import { t } from '../../i18n/strings'
 import { playGentle, playSuccess, playTap } from '../../services/sounds'
 import {
   CONFIG,
+  FRIEND_BEARING_DEG,
   NO_SHARE_TIMEOUT_MS,
+  buildFriendBearings,
   discoveryBearingDeg,
   makeRound,
   pickFriend,
@@ -99,6 +101,10 @@ export function Park360Game() {
   /** Hard only: logs once if the round goes unacted-on this long (review §3.6) */
   const noShareTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const noShareLogged = useRef(false)
+  /** the session's friend bearings, dealt once at start so both sides are swept
+   *  evenly across the session instead of a fixed habitual turn (review R2) */
+  const friendBag = useRef<number[]>([])
+  const roundIdx = useRef(0)
 
   useEffect(() => () => clearTimers(), [])
 
@@ -158,6 +164,8 @@ export function Park360Game() {
     setStreak(0)
     setStars(0)
     setFriend(pickFriend())
+    friendBag.current = buildFriendBearings(cfg.goal)
+    roundIdx.current = 0
     setPhase('playing')
     beginRound(null)
   }
@@ -183,7 +191,10 @@ export function Park360Game() {
     noShareLogged.current = false
     eventReadyAt.current = null
     shareLatency.current = null
-    const next = makeRound(prev)
+    const bag = friendBag.current
+    const friendDeg = bag.length > 0 ? bag[roundIdx.current % bag.length] : FRIEND_BEARING_DEG
+    roundIdx.current += 1
+    const next = makeRound(prev, friendDeg)
     // the park stays calm for a beat so the pop-in is a genuine event
     spawnTimer.current = setTimeout(() => {
       setRound(next)
@@ -317,6 +328,9 @@ export function Park360Game() {
         order,
         discovery: round.discovery,
         targetBearingDeg: discoveryBearingDeg(round.discovery),
+        // where the friend stood this round — the friend-directed turn is no
+        // longer a constant, so its cost can be modelled per trial (R2)
+        friendBearingDeg: round.friendBearingDeg,
         ...head,
         points,
         score: nextScore,
@@ -360,6 +374,7 @@ export function Park360Game() {
             found={found}
             friend={friend}
             friendLabel={lang === 'ml' ? friend.name : friend.nameEn}
+            friendBearingDeg={round.friendBearingDeg}
             friendState={friendState}
             awayYaw={cfg.awayYaw}
             nudge={nudge}

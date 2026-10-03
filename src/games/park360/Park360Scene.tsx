@@ -15,6 +15,7 @@ import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
 import { VRHudAnchor } from '../VRHudAnchor'
 import {
+  FRIEND_RADIUS,
   bearingToXZ,
   discoveryPosition,
   dragDistance,
@@ -66,6 +67,8 @@ export interface Park360SceneProps {
   friend: Friend
   /** display name in the app language (canvas texture, so it shows inside VR too) */
   friendLabel: string
+  /** where the friend (and their flowerbed) stand this round — varies per round (R2) */
+  friendBearingDeg: number
   friendState: 'away' | 'curious' | 'celebrating'
   /** radians the friend is turned away from the child (fades with difficulty) */
   awayYaw: number
@@ -324,20 +327,8 @@ function ParkWorld() {
         <meshStandardMaterial color="#c8b08a" />
       </Instanced>
 
-      {/* the friend's flowerbed — what they are busy looking at */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[FLOWERBED[0], 0.01, FLOWERBED[2]]}>
-        <circleGeometry args={[0.9, 24]} />
-        <meshStandardMaterial color="#9a7a52" />
-      </mesh>
-      <Instanced items={FLOWER_STEMS}>
-        <cylinderGeometry args={[0.025, 0.025, 0.4, 6]} />
-        <meshStandardMaterial color="#4d8a3d" />
-      </Instanced>
-      {/* the blooms differ only in colour, which instancing carries per-instance */}
-      <Instanced items={FLOWER_BLOOMS}>
-        <sphereGeometry args={[0.11, 10, 10]} />
-        <meshStandardMaterial />
-      </Instanced>
+      {/* the friend's flowerbed now travels with the friend (see <Flowerbed>
+          in the play layer), since the friend's spot varies per round (R2) */}
 
       {/* sun + a few drifting-still clouds */}
       <mesh position={[16, 22, -26]}>
@@ -429,24 +420,39 @@ const FENCE_RAILS: Placement[] = FENCE_BEARINGS.slice(0, -1).map((deg) => {
   }
 })
 
-/** where the friend's flowerbed sits */
-const FLOWERBED: [number, number, number] = (() => {
-  const [x, z] = bearingToXZ((53 * Math.PI) / 180, 4.9)
-  return [x, 0, z]
-})()
-
 const FLOWER_COLORS = ['#e2554c', '#f5c542', '#b07fe0', '#f473b9', '#5aa9e6']
 const FLOWER_OFFSETS = FLOWER_COLORS.map((_, i) => {
   const a = (i / FLOWER_COLORS.length) * Math.PI * 2
   return [Math.cos(a) * 0.45, Math.sin(a) * 0.45] as const
 })
-const FLOWER_STEMS: Placement[] = FLOWER_OFFSETS.map(([ox, oz]) => ({
-  pos: [FLOWERBED[0] + ox, 0.2, FLOWERBED[2] + oz],
-}))
-const FLOWER_BLOOMS: Placement[] = FLOWER_OFFSETS.map(([ox, oz], i) => ({
-  pos: [FLOWERBED[0] + ox, 0.44, FLOWERBED[2] + oz],
-  color: FLOWER_COLORS[i],
-}))
+
+/** the friend's flowerbed — placed just beyond the friend along their bearing,
+ *  so the set-dressing follows the friend wherever they stand this round (R2) */
+function Flowerbed({ bearingDeg }: { bearingDeg: number }) {
+  const [bx, bz] = bearingToXZ((bearingDeg * Math.PI) / 180, FRIEND_RADIUS + 0.7)
+  const stems: Placement[] = FLOWER_OFFSETS.map(([ox, oz]) => ({ pos: [bx + ox, 0.2, bz + oz] }))
+  const blooms: Placement[] = FLOWER_OFFSETS.map(([ox, oz], i) => ({
+    pos: [bx + ox, 0.44, bz + oz],
+    color: FLOWER_COLORS[i],
+  }))
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[bx, 0.01, bz]}>
+        <circleGeometry args={[0.9, 24]} />
+        <meshStandardMaterial color="#9a7a52" />
+      </mesh>
+      <Instanced items={stems}>
+        <cylinderGeometry args={[0.025, 0.025, 0.4, 6]} />
+        <meshStandardMaterial color="#4d8a3d" />
+      </Instanced>
+      {/* the blooms differ only in colour, which instancing carries per-instance */}
+      <Instanced items={blooms}>
+        <sphereGeometry args={[0.11, 10, 10]} />
+        <meshStandardMaterial />
+      </Instanced>
+    </group>
+  )
+}
 
 /** four puffs make a cloud; the instance scale carries both the puff's own
  *  radius and the cloud's overall size */
@@ -488,6 +494,7 @@ function SceneInner(props: Park360SceneProps) {
           onTap={props.onTapDiscovery}
         />
       )}
+      <Flowerbed bearingDeg={props.friendBearingDeg} />
       <FriendKid {...props} />
     </group>
   )
@@ -736,6 +743,7 @@ function FriendKid({
   discovery,
   friend,
   friendLabel,
+  friendBearingDeg,
   friendState,
   awayYaw,
   nudge,
@@ -746,7 +754,7 @@ function FriendKid({
   const armL = useRef<THREE.Group>(null)
   const armR = useRef<THREE.Group>(null)
   const ring = useRef<THREE.Mesh>(null)
-  const [x, z] = friendPosition()
+  const [x, z] = friendPosition(friendBearingDeg)
   const look = friend.look
   const initialized = useRef(false)
 

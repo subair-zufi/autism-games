@@ -3,11 +3,15 @@ import {
   CONFIG,
   DISCOVERIES,
   FRIEND_BEARING_DEG,
+  FRIEND_SLOTS_DEG,
+  FRIEND_SURPRISE_MIN_SEP_DEG,
   FRIENDS,
   FRONT_HALF_ARC_DEG,
   NO_SHARE_TIMEOUT_MS,
   POINTS,
   STREAK_LEN,
+  buildFriendBearings,
+  clearFriendBearing,
   discoveryBearingDeg,
   discoveryMeta,
   discoveryPosition,
@@ -46,10 +50,13 @@ describe('park360 discoveries (identical game design to Look What I Found!)', ()
     }
   })
 
-  it('keeps the friend inside the front half-circle too', () => {
+  it('keeps the friend inside the front half-circle too — every slot', () => {
     expect(Math.abs(FRIEND_BEARING_DEG)).toBeLessThanOrEqual(FRONT_HALF_ARC_DEG)
-    const [, z] = friendPosition()
-    expect(z).toBeLessThan(0)
+    for (const slot of FRIEND_SLOTS_DEG) {
+      expect(Math.abs(slot)).toBeLessThanOrEqual(FRONT_HALF_ARC_DEG)
+      const [, z] = friendPosition(slot)
+      expect(z).toBeLessThan(0)
+    }
   })
 
   it('reports the signed head-turn bearing per surprise', () => {
@@ -62,9 +69,9 @@ describe('park360 discoveries (identical game design to Look What I Found!)', ()
 describe('makeRound', () => {
   it('never repeats the previous surprise', () => {
     const rng = seededRng(7)
-    let prev = makeRound(null, rng).discovery
+    let prev = makeRound(null, FRIEND_BEARING_DEG, rng).discovery
     for (let i = 0; i < 200; i++) {
-      const next = makeRound(prev, rng).discovery
+      const next = makeRound(prev, FRIEND_BEARING_DEG, rng).discovery
       expect(next).not.toBe(prev)
       prev = next
     }
@@ -74,8 +81,51 @@ describe('makeRound', () => {
     const rng = seededRng(3)
     const ids = DISCOVERIES.map((d) => d.id)
     for (let i = 0; i < 50; i++) {
-      expect(ids).toContain(makeRound(null, rng).discovery)
+      expect(ids).toContain(makeRound(null, FRIEND_BEARING_DEG, rng).discovery)
     }
+  })
+
+  it('keeps the friend clear of the round surprise (R2)', () => {
+    const rng = seededRng(13)
+    for (const slot of FRIEND_SLOTS_DEG) {
+      for (let i = 0; i < 60; i++) {
+        const r = makeRound(null, slot, rng)
+        const gap = Math.abs(r.friendBearingDeg - discoveryBearingDeg(r.discovery))
+        expect(gap).toBeGreaterThanOrEqual(FRIEND_SURPRISE_MIN_SEP_DEG)
+        expect(FRIEND_SLOTS_DEG).toContain(r.friendBearingDeg)
+      }
+    }
+  })
+})
+
+describe('friend position varies across a session (R2)', () => {
+  it('deals a full session of bearings, all valid slots, no immediate repeat', () => {
+    const rng = seededRng(21)
+    const goal = CONFIG.hard.goal
+    const bag = buildFriendBearings(goal, rng)
+    expect(bag).toHaveLength(goal)
+    for (let i = 0; i < bag.length; i++) {
+      expect(FRIEND_SLOTS_DEG).toContain(bag[i])
+      if (i > 0) expect(bag[i]).not.toBe(bag[i - 1])
+    }
+    // a session visibly sweeps more than one spot (not a fixed habitual turn)
+    expect(new Set(bag).size).toBeGreaterThan(1)
+  })
+
+  it('sweeps both sides of centre over enough rounds', () => {
+    const bag = buildFriendBearings(40, seededRng(2))
+    expect(bag.some((b) => b < 0)).toBe(true)
+    expect(bag.some((b) => b > 0)).toBe(true)
+  })
+
+  it('clearFriendBearing only moves a bearing that is too close', () => {
+    // flower sits at -52; a -40 friend is only 12 deg away -> must move
+    expect(clearFriendBearing(-40, -52)).not.toBe(-40)
+    expect(Math.abs(clearFriendBearing(-40, -52) - -52)).toBeGreaterThanOrEqual(
+      FRIEND_SURPRISE_MIN_SEP_DEG,
+    )
+    // a +40 friend is well clear of the same surprise -> unchanged
+    expect(clearFriendBearing(40, -52)).toBe(40)
   })
 })
 
