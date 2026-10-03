@@ -176,6 +176,21 @@ export function IdentifyEmotionsGame() {
     playVideo()
   }
 
+  /** A manual "Watch again" tap — logged as self-monitoring data, mirroring the
+   *  Emotion Cinema 360 twin so the 2D and VR arms record it the same way
+   *  (review R6). Scoring is untouched: a replay before answering stays a first
+   *  try. The flat game has no automatic replay, so every replay is manual. */
+  function requestReplay() {
+    if (locked || !q) return
+    recordStep('replay_request', {
+      clip: q.clip.slug,
+      round: idx,
+      stage,
+      sinceFreezeMs: frozenAtRef.current === null ? null : Math.round(performance.now() - frozenAtRef.current),
+    })
+    replay()
+  }
+
   function advance(nextScore: number) {
     if (idx + 1 >= quiz.length) {
       const chance = 1 / CHOICE_COUNT[level]
@@ -321,7 +336,7 @@ export function IdentifyEmotionsGame() {
             onEnded={onEnded}
           />
           {stage === 'emotion' && (
-            <button className="replay-btn" onClick={replay} disabled={locked}>{t('watchAgain', lang)}</button>
+            <button className="replay-btn" onClick={requestReplay} disabled={locked}>{t('watchAgain', lang)}</button>
           )}
         </div>
         {celebrating && <div className="celebrate">⭐</div>}

@@ -285,6 +285,22 @@ export function IdentifyEmotions360Game() {
     playFrom(qRef.current!.clip.src)
   }
 
+  /** A *manual* "Watch again" tap — the child choosing a second look before
+   *  committing. Logged as self-monitoring data (review R6); the automatic
+   *  post-wrong-answer replay calls `replay()` directly and is not logged here
+   *  (the preceding wrong `answer` event already captures it). Scoring is
+   *  untouched — a replay before answering still counts as a first try. */
+  function requestReplay() {
+    if (locked || !q) return
+    recordStep('replay_request', {
+      clip: q.clip.slug,
+      round: idx,
+      stage,
+      sinceFreezeMs: frozenAtRef.current === null ? null : Math.round(performance.now() - frozenAtRef.current),
+    })
+    replay()
+  }
+
   function pick(id: EmotionId) {
     if (!frozen || locked || stage !== 'emotion' || wrong.includes(id) || !q) return
     attemptRef.current += 1
@@ -441,7 +457,7 @@ export function IdentifyEmotions360Game() {
               onPickCause={pickCause}
               onNextFromCause={nextFromCause}
               nextLabel={t(idx + 1 >= quiz.length ? 'finish' : 'next', lang)}
-              onReplay={replay}
+              onReplay={requestReplay}
               replayLabel={t('watchAgain', lang)}
               celebrating={celebrating}
               lang={lang}
@@ -456,7 +472,7 @@ export function IdentifyEmotions360Game() {
               the flat game has); inside a headset the DOM is invisible and the
               scene card is the one that does the work */}
           {stage === 'emotion' && frozen && (
-            <button className="replay-btn" onClick={replay} disabled={locked}>
+            <button className="replay-btn" onClick={requestReplay} disabled={locked}>
               {t('watchAgain', lang)}
             </button>
           )}
