@@ -468,6 +468,8 @@ export function IdentifyEmotions360Game() {
               lang={lang}
               hudScore={`⭐ ${score}`}
               hudPrompt={promptText}
+              hudDone={idx + (locked ? 1 : 0)}
+              hudGoal={sessionLength(difficulty)}
               hudQuit={t('vrQuit', lang)}
             />
           )}

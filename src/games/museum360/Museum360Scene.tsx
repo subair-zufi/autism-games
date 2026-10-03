@@ -15,6 +15,7 @@ import { angDiffDeg, latestYawDeg } from '../headTracking'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
 import { VRHudAnchor } from '../VRHudAnchor'
+import { VRProgressDots } from '../VRProgressDots'
 import {
   AVATAR_Z,
   OBJECT_RADIUS,
@@ -53,6 +54,9 @@ export interface Museum360SceneProps {
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
+  /** session progress for the in-world TEACCH dot row (R8): completed / total */
+  hudDone: number
+  hudGoal: number
   /** localized "Quit" label for the in-world VR-only exit control */
   hudQuit: string
 }
@@ -83,7 +87,13 @@ export function Museum360Scene(props: Museum360SceneProps) {
         <RotundaRoom />
         <SceneInner {...props} />
         <VRStarBurst trigger={props.celebrate} />
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
+        <VRHud
+          score={props.hudScore}
+          prompt={props.hudPrompt}
+          quit={props.hudQuit}
+          done={props.hudDone}
+          goal={props.hudGoal}
+        />
       </XR>
     </Canvas>
   )
@@ -167,11 +177,24 @@ function LookControls() {
  * helper's bearing (0°) — the natural "home" direction the child returns to
  * between trials. Rendered only while a session is presenting.
  */
-function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
+function VRHud({
+  score,
+  prompt,
+  quit,
+  done,
+  goal,
+}: {
+  score: string
+  prompt: string
+  quit: string
+  done: number
+  goal: number
+}) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
     <VRHudAnchor designEyeY={EYE_Y}>
+      <VRProgressDots done={done} goal={goal} position={[0, 5.0, -7.6]} />
       <TextPanel text={score} position={[0, 4.35, -7.6]} width={2.6} height={0.62} font={110} />
       <TextPanel text={prompt} position={[0, 3.55, -7.6]} width={4.6} height={0.8} font={64} />
       {/* well left of the outermost pedestal (≈−33°) and clear of the exhibits —

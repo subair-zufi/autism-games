@@ -13,6 +13,7 @@ import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
 import { VRHudAnchor } from '../VRHudAnchor'
+import { VRProgressDots } from '../VRProgressDots'
 import {
   boardPosition,
   dragDistance,
@@ -48,6 +49,9 @@ export interface EmotionRecognition360SceneProps {
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
+  /** session progress for the in-world TEACCH dot row (R8): completed / total */
+  hudDone: number
+  hudGoal: number
   /** localized "Quit" label for the in-world VR-only exit control */
   hudQuit: string
 }
@@ -82,7 +86,13 @@ export function EmotionRecognition360Scene(props: EmotionRecognition360SceneProp
         <GalleryRoom />
         <BoardRow {...props} />
         <VRStarBurst show={props.answered && props.pickedIndex === props.answerIndex} />
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
+        <VRHud
+          score={props.hudScore}
+          prompt={props.hudPrompt}
+          quit={props.hudQuit}
+          done={props.hudDone}
+          goal={props.hudGoal}
+        />
       </XR>
     </Canvas>
   )
@@ -248,7 +258,19 @@ function Planter({ x, z }: { x: number; z: number }) {
  * 0 — the natural "home" direction. Rendered only while a session is
  * presenting, and hung above the boards so they never block a tap.
  */
-function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
+function VRHud({
+  score,
+  prompt,
+  quit,
+  done,
+  goal,
+}: {
+  score: string
+  prompt: string
+  quit: string
+  done: number
+  goal: number
+}) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
@@ -257,6 +279,7 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
     // 360 game (see hudAnchor.ts). minOffsetY stops the panels short of the
     // boards for a short wearer instead of letting the two overlap.
     <VRHudAnchor designEyeY={EYE_Y} minOffsetY={-0.25}>
+      <VRProgressDots done={done} goal={goal} position={[0, 4.32, -4.2]} width={2.4} />
       <TextPanel text={prompt} position={[0, 3.15, -4.2]} width={4.2} height={0.72} font={70} />
       <TextPanel text={score} position={[0, 3.8, -4.2]} width={2.4} height={0.55} font={96} />
       {/* well left of the outermost board (≈−32°) and clear of the faces —

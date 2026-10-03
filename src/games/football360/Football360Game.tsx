@@ -458,6 +458,8 @@ export function Football360Game() {
             lang={lang}
             hudScore={`⭐ ${score} · ⚽ ${returned} / ${goal} · ❤️ ${lives}`}
             hudPrompt={fbLine(promptKey, lang, promptParams)}
+            hudDone={returned}
+            hudGoal={goal}
             hudQuit={t('vrQuit', lang)}
             celebrate={stage === 'rolling'}
             hudWin={fbLine('winPop', lang)}

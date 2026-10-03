@@ -13,6 +13,7 @@ import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
 import { VRHudAnchor } from '../VRHudAnchor'
+import { VRProgressDots } from '../VRProgressDots'
 import {
   EYE_Y,
   SCREEN_DISTANCE,
@@ -75,6 +76,9 @@ export interface IdentifyEmotions360SceneProps {
   /** HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
+  /** session progress for the in-world TEACCH dot row (R8): completed / total */
+  hudDone: number
+  hudGoal: number
   /** localized "Quit" label for the in-world VR-only exit control */
   hudQuit: string
 }
@@ -110,7 +114,13 @@ export function IdentifyEmotions360Scene(props: IdentifyEmotions360SceneProps) {
         <AnswerLayer {...props} />
         {props.celebrating && <Celebration />}
         <VRStarBurst show={props.celebrating} />
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
+        <VRHud
+          score={props.hudScore}
+          prompt={props.hudPrompt}
+          quit={props.hudQuit}
+          done={props.hudDone}
+          goal={props.hudGoal}
+        />
       </XR>
     </Canvas>
   )
@@ -552,7 +562,19 @@ function Celebration() {
   )
 }
 
-function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
+function VRHud({
+  score,
+  prompt,
+  quit,
+  done,
+  goal,
+}: {
+  score: string
+  prompt: string
+  quit: string
+  done: number
+  goal: number
+}) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   // Both HUD lines sit ABOVE the screen (a marquee), right where the child is
@@ -564,6 +586,7 @@ function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: s
   const z = -SCREEN_DISTANCE + 0.2
   return (
     <VRHudAnchor designEyeY={EYE_Y}>
+      <VRProgressDots done={done} goal={goal} position={[0, topY + 1.62, z]} width={2.2} />
       <TextPanel text={prompt} position={[0, topY + 0.45, z]} width={3.8} height={0.64} font={64} />
       <TextPanel text={score} position={[0, topY + 1.08, z]} width={1.8} height={0.44} font={88} />
       {/* well left of the outermost answer card — the widest "why?" cause cards

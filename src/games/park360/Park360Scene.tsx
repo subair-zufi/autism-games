@@ -14,6 +14,7 @@ import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
 import { VRHudAnchor } from '../VRHudAnchor'
+import { VRProgressDots } from '../VRProgressDots'
 import {
   FRIEND_RADIUS,
   bearingToXZ,
@@ -79,6 +80,9 @@ export interface Park360SceneProps {
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
+  /** session progress for the in-world TEACCH dot row (R8): completed / total */
+  hudDone: number
+  hudGoal: number
   /** localized "Quit" label for the in-world VR-only exit control */
   hudQuit: string
 }
@@ -112,7 +116,13 @@ export function Park360Scene(props: Park360SceneProps) {
         <ParkWorld />
         <SceneInner {...props} />
         <VRStarBurst show={props.friendState === 'celebrating'} />
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
+        <VRHud
+          score={props.hudScore}
+          prompt={props.hudPrompt}
+          quit={props.hudQuit}
+          done={props.hudDone}
+          goal={props.hudGoal}
+        />
       </XR>
     </Canvas>
   )
@@ -195,11 +205,24 @@ function LookControls() {
  * rounds. Rendered only while a session is presenting. Kept below the
  * rainbow's sky spot so the panels never block a tap on it.
  */
-function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
+function VRHud({
+  score,
+  prompt,
+  quit,
+  done,
+  goal,
+}: {
+  score: string
+  prompt: string
+  quit: string
+  done: number
+  goal: number
+}) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
     <VRHudAnchor designEyeY={EYE_Y}>
+      <VRProgressDots done={done} goal={goal} position={[0, 4.5, -7.4]} />
       <TextPanel text={score} position={[0, 3.9, -7.4]} width={2.6} height={0.62} font={110} />
       <TextPanel text={prompt} position={[0, 3.15, -7.4]} width={4.6} height={0.8} font={64} />
       {/* well left of the outermost discovery (flower ≈−52°) and clear of the

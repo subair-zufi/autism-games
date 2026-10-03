@@ -382,6 +382,8 @@ export function Park360Game() {
             onTapFriend={tapFriend}
             hudScore={`⭐ ${score} · ✨ ${shared} / ${cfg.goal}`}
             hudPrompt={parkLine('prompt', lang)}
+            hudDone={shared}
+            hudGoal={cfg.goal}
             hudQuit={t('vrQuit', lang)}
           />
           {!hintSeen && (

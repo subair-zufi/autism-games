@@ -14,6 +14,7 @@ import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
 import { VRHudAnchor } from '../VRHudAnchor'
+import { VRProgressDots } from '../VRProgressDots'
 import {
   bearingToXZ,
   dragDistance,
@@ -62,6 +63,9 @@ export interface Football360SceneProps {
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
+  /** session progress for the in-world TEACCH dot row (R8): completed / total */
+  hudDone: number
+  hudGoal: number
   /** localized "Quit" label for the in-world VR-only exit control */
   hudQuit: string
   /** true right after a correct pass — shows the celebratory "Great pass!" banner */
@@ -98,7 +102,13 @@ export function Football360Scene(props: Football360SceneProps) {
         <HeadSampler />
         <FootballGround />
         <SceneInner {...props} />
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
+        <VRHud
+          score={props.hudScore}
+          prompt={props.hudPrompt}
+          quit={props.hudQuit}
+          done={props.hudDone}
+          goal={props.hudGoal}
+        />
         <VRWinBanner show={props.celebrate} text={props.hudWin} />
         <VRStarBurst show={props.celebrate} />
       </XR>
@@ -181,11 +191,24 @@ function LookControls() {
  * session, so the same lines are mirrored on floating panels at bearing 0 —
  * above the teammates, the natural "home" direction between rallies.
  */
-function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
+function VRHud({
+  score,
+  prompt,
+  quit,
+  done,
+  goal,
+}: {
+  score: string
+  prompt: string
+  quit: string
+  done: number
+  goal: number
+}) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
     <VRHudAnchor designEyeY={EYE_Y}>
+      <VRProgressDots done={done} goal={goal} position={[0, 5.3, -8.2]} width={2.8} />
       <TextPanel text={score} position={[0, 4.6, -8.2]} width={2.6} height={0.62} font={110} />
       <TextPanel text={prompt} position={[0, 3.8, -8.2]} width={4.8} height={0.8} font={64} />
       {/* well left of the outermost teammate (≈−50°) and clear of the players —

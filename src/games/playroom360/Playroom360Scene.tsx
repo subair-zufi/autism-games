@@ -14,6 +14,7 @@ import { HeadSampler } from '../HeadSampler'
 import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
 import { VRHudAnchor } from '../VRHudAnchor'
+import { VRProgressDots } from '../VRProgressDots'
 import {
   BLOCK_H,
   BLOCK_W,
@@ -63,6 +64,9 @@ export interface Playroom360SceneProps {
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
+  /** session progress for the in-world TEACCH dot row (R8): completed / total */
+  hudDone: number
+  hudGoal: number
   /** "Tap me!" bubble line over the hand-off friend (already in the chosen language) */
   bubbleTap: string
   /** localized "Quit" label for the in-world VR-only exit control */
@@ -99,7 +103,13 @@ export function Playroom360Scene(props: Playroom360SceneProps) {
         <PlayroomRoom />
         <SceneInner {...props} />
         <VRStarBurst show={props.celebrate} />
-        <VRHud score={props.hudScore} prompt={props.hudPrompt} quit={props.hudQuit} />
+        <VRHud
+          score={props.hudScore}
+          prompt={props.hudPrompt}
+          quit={props.hudQuit}
+          done={props.hudDone}
+          goal={props.hudGoal}
+        />
       </XR>
     </Canvas>
   )
@@ -181,11 +191,24 @@ function LookControls() {
  * session, so the same lines are mirrored on floating panels at bearing 0 —
  * above the friends, the natural "home" direction of the play table.
  */
-function VRHud({ score, prompt, quit }: { score: string; prompt: string; quit: string }) {
+function VRHud({
+  score,
+  prompt,
+  quit,
+  done,
+  goal,
+}: {
+  score: string
+  prompt: string
+  quit: string
+  done: number
+  goal: number
+}) {
   const inSession = useXR((s) => !!s.session)
   if (!inSession) return null
   return (
     <VRHudAnchor designEyeY={EYE_Y}>
+      <VRProgressDots done={done} goal={goal} position={[0, 3.55, -6.4]} width={2.4} />
       <TextPanel text={score} position={[0, 3.02, -6.4]} width={2.2} height={0.5} font={110} />
       <TextPanel text={prompt} position={[0, 2.45, -6.4]} width={4.4} height={0.72} font={64} />
       {/* well left of the outermost seated peer (≈−31°) and clear of the table —

@@ -292,6 +292,8 @@ export function Museum360Game() {
             onCueReady={handleCueReady}
             hudScore={`⭐ ${score} · 🔍 ${found} / ${goal}`}
             hudPrompt={museum360Line(promptKey, lang)}
+            hudDone={found}
+            hudGoal={goal}
             hudQuit={t('vrQuit', lang)}
           />
           {!hintSeen && (

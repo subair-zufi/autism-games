@@ -328,6 +328,8 @@ export function Playroom360Game() {
             celebrate={celebrating}
             hudScore={`🧱 ${score} / ${config.rounds}`}
             hudPrompt={prLine(promptKey, lang, promptParams)}
+            hudDone={score}
+            hudGoal={config.rounds}
             hudQuit={t('vrQuit', lang)}
             bubbleTap={prLine(gazeSelect ? 'bubbleMyTurnGaze' : 'bubbleMyTurn', lang)}
           />
