@@ -100,7 +100,7 @@ export function IdentifyEmotionsGame() {
         return
       }
       // pausedRef marks the FREEZE pause, which must never be resumed here
-      if (!pausedRef.current && phase === 'playing' && v.src) void v.play().catch(() => {})
+      if (!pausedRef.current && phase === 'playing' && v.src) playVideo()
     }
     document.addEventListener('visibilitychange', onChange)
     return () => document.removeEventListener('visibilitychange', onChange)
@@ -153,6 +153,18 @@ export function IdentifyEmotionsGame() {
     frozenAtRef.current = performance.now()
   }
 
+  // Play the clip, retrying muted if an unmuted autoplay is rejected, so the
+  // clip always plays rather than silently failing (R1). The fallback is sticky
+  // for the session; every answer step records the live audio state (`audioOn`).
+  function playVideo() {
+    const v = videoRef.current
+    if (!v) return
+    void v.play().catch(() => {
+      v.muted = true
+      void v.play().catch(() => {})
+    })
+  }
+
   /** "Watch again" — rewind and replay up to the freeze. */
   function replay() {
     if (locked) return
@@ -161,7 +173,7 @@ export function IdentifyEmotionsGame() {
     pausedRef.current = false
     setFrozen(false)
     v.currentTime = 0
-    void v.play()
+    playVideo()
   }
 
   function advance(nextScore: number) {
@@ -201,6 +213,9 @@ export function IdentifyEmotionsGame() {
       attempt: attemptRef.current,
       latencyMs,
       freezeKind: q.freezeKind,
+      // whether the clip's audio was actually on for this trial — distinguishes
+      // normal (unmuted) trials from muted-fallback ones in analysis (R1)
+      audioOn: !(videoRef.current?.muted ?? false),
     }
     if (id === q.answer) {
       setLocked(true)
@@ -208,7 +223,7 @@ export function IdentifyEmotionsGame() {
       playSuccess()
       praise()
       // Positive reinforcement, then resume the clip before moving on.
-      void videoRef.current?.play()
+      playVideo()
       const nextScore = score + (firstTryRef.current ? 1 : 0)
       recordStep('answer', { ...base, correct: true, score: nextScore }, { score: nextScore })
       setTimeout(() => {

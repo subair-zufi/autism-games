@@ -179,7 +179,7 @@ export function IdentifyEmotions360Game() {
       }
       // pausedRef marks the FREEZE pause, which must never be resumed here
       if (!pausedRef.current && phase === 'playing' && videoEl.src) {
-        void videoEl.play().catch(() => {})
+        playVideo()
       }
     }
     document.addEventListener('visibilitychange', onChange)
@@ -220,6 +220,16 @@ export function IdentifyEmotions360Game() {
     advanceTimer.current = null
   }
 
+  // Play the clip, retrying muted if an unmuted autoplay is rejected, so the
+  // clip always plays rather than silently failing (R1). The fallback is sticky
+  // for the session; every answer step records the live audio state (`audioOn`).
+  function playVideo() {
+    void videoEl.play().catch(() => {
+      videoEl.muted = true
+      void videoEl.play().catch(() => {})
+    })
+  }
+
   function playFrom(src: string) {
     pausedRef.current = false
     setFrozen(false)
@@ -228,7 +238,7 @@ export function IdentifyEmotions360Game() {
       videoEl.load()
     }
     videoEl.currentTime = 0
-    void videoEl.play().catch(() => {})
+    playVideo()
   }
 
   function startQuestion(quizArr: VideoQuestion[], i: number) {
@@ -291,6 +301,9 @@ export function IdentifyEmotions360Game() {
       latencyFromPromptEndMs,
       ...headMetrics(),
       freezeKind: q.freezeKind,
+      // whether the clip's audio was actually on for this trial — distinguishes
+      // normal (unmuted) trials from muted-fallback ones in analysis (R1)
+      audioOn: !videoEl.muted,
     }
     if (id === q.answer) {
       setLocked(true)
@@ -298,7 +311,7 @@ export function IdentifyEmotions360Game() {
       playSuccess()
       praise()
       // reward, then resume the clip to its peak before moving on
-      void videoEl.play().catch(() => {})
+      playVideo()
       const firstTry = firstTryRef.current
       const nextScore = score + pointsFor(firstTry)
       const nextFirstTry = firstTryCount + (firstTry ? 1 : 0)
