@@ -41,7 +41,7 @@ export interface Player {
  *  - `verbal`  : partner says "roll it to me!" + a glowing arc to their hands.
  *  - `gesture` : no words; partner raises/opens hands and leans in.
  *  - `orient`  : subtle body/gaze orientation only — the child must *infer*
- *                who is ready and, in `selfInitiate` rounds, start the rally.
+ *                who is ready and, in initiate rallies, start the rally.
  */
 export type CueMode = 'verbal' | 'gesture' | 'orient'
 
@@ -62,11 +62,14 @@ export interface RollConfig {
   /** how the ready cue is presented (fades with difficulty). */
   cue: CueMode
   /**
-   * On some hard rounds there is *no* incoming roll: a partner signals
+   * How many rallies in the session have *no* incoming roll — a partner signals
    * availability and the child must *initiate* the exchange. Trains the
-   * initiate-vs-respond distinction Block Buddies never touches.
+   * initiate-vs-respond distinction Block Buddies never touches. A fixed,
+   * evenly-spread count per level (review R5), not a per-rally coin flip, so the
+   * initiate-vs-respond construct is counterbalanced. Kept identical to Football
+   * 360's twin.
    */
-  selfInitiate: boolean
+  initiateCount: number
 }
 
 /**
@@ -75,9 +78,28 @@ export interface RollConfig {
  * and the hard tier adds child-initiated rallies.
  */
 export const CONFIG: Record<Difficulty, RollConfig> = {
-  easy:   { partners: 1, rounds: 5,  rollTravelMs: 1100, readyDelayMs: 500, cue: 'verbal',  selfInitiate: false },
-  medium: { partners: 2, rounds: 7,  rollTravelMs: 900,  readyDelayMs: 650, cue: 'gesture', selfInitiate: false },
-  hard:   { partners: 3, rounds: 10, rollTravelMs: 750,  readyDelayMs: 800, cue: 'orient',  selfInitiate: true },
+  easy:   { partners: 1, rounds: 5,  rollTravelMs: 1100, readyDelayMs: 500, cue: 'verbal',  initiateCount: 0 },
+  medium: { partners: 2, rounds: 7,  rollTravelMs: 900,  readyDelayMs: 650, cue: 'gesture', initiateCount: 0 },
+  hard:   { partners: 3, rounds: 10, rollTravelMs: 750,  readyDelayMs: 800, cue: 'orient',  initiateCount: 3 },
+}
+
+/**
+ * Which rallies are child-initiated (no incoming roll), as a fixed schedule:
+ * exactly `count` of them, spread evenly, and never the opening rally (index 0
+ * is always a response so the child learns the loop before being asked to start
+ * one). Modelled on Museum's cue schedule (review R5). Kept identical to
+ * Football 360's twin.
+ */
+export function buildInitiateSchedule(count: number, rounds: number): boolean[] {
+  const out: boolean[] = Array(rounds).fill(false)
+  // never the opening rally -> initiate rallies live in indices 1..rounds-1
+  const slots = Math.max(0, rounds - 1)
+  const n = Math.min(count, slots)
+  for (let i = 0; i < n; i++) {
+    const pos = 1 + Math.floor(((i + 0.5) * slots) / n)
+    out[Math.min(pos, rounds - 1)] = true
+  }
+  return out
 }
 
 /** correct returns needed to win a session (mirrors Museum's GOAL). */
@@ -137,14 +159,16 @@ export function makeSequence(
 ): Rally[] {
   const partnerIdx = players.map((_, i) => i).filter((i) => i >= 1)
   const seq: Rally[] = []
+  // a fixed, evenly-spread set of initiate rallies rather than a per-rally
+  // coin flip, so the initiate-vs-respond construct is counterbalanced (R5)
+  const initiateSchedule = buildInitiateSchedule(config.initiateCount, config.rounds)
   let prevTo = -1
   for (let r = 0; r < config.rounds; r++) {
     // avoid the same target twice in a row so the "who's ready" read stays live
     const candidates = partnerIdx.length > 1 ? partnerIdx.filter((i) => i !== prevTo) : partnerIdx
     const to = pick(candidates, rng)
     const distractors = partnerIdx.filter((i) => i !== to)
-    // in self-initiate tiers, ~1 in 3 rallies have no incoming roll
-    const initiate = config.selfInitiate && rng() < 0.34
+    const initiate = initiateSchedule[r]
     const from = initiate ? -1 : pick(partnerIdx, rng)
     seq.push({ from, to, distractors, initiate })
     prevTo = to

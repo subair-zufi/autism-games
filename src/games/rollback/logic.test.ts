@@ -4,6 +4,7 @@ import {
   GOAL,
   POINTS,
   STREAK_LEN,
+  buildInitiateSchedule,
   buildPlayers,
   makeSequence,
   classifyReturn,
@@ -35,10 +36,23 @@ describe('rollback logic (reciprocal turn-taking)', () => {
     expect(CONFIG.hard.cue).toBe('orient')
   })
 
-  it('only hard mode asks the child to initiate rallies', () => {
-    expect(CONFIG.easy.selfInitiate).toBe(false)
-    expect(CONFIG.medium.selfInitiate).toBe(false)
-    expect(CONFIG.hard.selfInitiate).toBe(true)
+  it('only hard mode asks the child to initiate rallies (a fixed count)', () => {
+    expect(CONFIG.easy.initiateCount).toBe(0)
+    expect(CONFIG.medium.initiateCount).toBe(0)
+    expect(CONFIG.hard.initiateCount).toBeGreaterThan(0)
+  })
+
+  it('buildInitiateSchedule places exactly count rallies, evenly, never first (R5)', () => {
+    const sched = buildInitiateSchedule(3, 10)
+    expect(sched).toHaveLength(10)
+    expect(sched.filter(Boolean)).toHaveLength(3)
+    expect(sched[0]).toBe(false)
+    const positions = sched.flatMap((v, i) => (v ? [i] : []))
+    for (let i = 1; i < positions.length; i++) {
+      expect(positions[i] - positions[i - 1]).toBeGreaterThan(1)
+    }
+    expect(buildInitiateSchedule(99, 5).filter(Boolean)).toHaveLength(4)
+    expect(buildInitiateSchedule(0, 10).some(Boolean)).toBe(false)
   })
 
   it('GOAL matches the rally count per difficulty', () => {
@@ -83,12 +97,12 @@ describe('rollback logic (reciprocal turn-taking)', () => {
     expect(seq.every((r) => !r.initiate)).toBe(true)
   })
 
-  it('hard mode mixes child-initiated rallies in (from = -1 iff initiate)', () => {
+  it('hard mode has exactly the configured initiate count, never first (from = -1 iff initiate)', () => {
     const cfg = CONFIG.hard
     const players = buildPlayers(cfg.partners)
     const seq = makeSequence(cfg, players, seeded(5))
-    expect(seq.some((r) => r.initiate)).toBe(true)
-    expect(seq.some((r) => !r.initiate)).toBe(true)
+    expect(seq.filter((r) => r.initiate)).toHaveLength(cfg.initiateCount)
+    expect(seq[0].initiate).toBe(false)
     for (const rally of seq) {
       if (rally.initiate) expect(rally.from).toBe(-1)
       else {
