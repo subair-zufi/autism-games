@@ -38,6 +38,7 @@ import {
 import { LevelResult, LevelSelect } from '../../components/LevelScreens'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { BilingualPromptBanner } from '../../components/BilingualPromptBanner'
+import { useRemoteIntent } from '../../remote/intents'
 
 export const GAME_KEY = 'identifyemotions'
 
@@ -293,6 +294,10 @@ export function IdentifyEmotionsGame() {
   useEffect(() => {
     if (frozen && !celebrating && stage === 'emotion') speak(freezeSpeak, lang)
   }, [frozen, celebrating, stage, freezeSpeak, lang])
+
+  // Let the trainer replay the clip from the phone — the same "Watch again" the
+  // child has on screen, for when the child cannot reach it themselves.
+  useRemoteIntent('replay', requestReplay)
 
   if (phase === 'select' || !q) {
     return (

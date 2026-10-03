@@ -40,6 +40,7 @@ again except one thing — see *The one press* below.
 | **Quit to Home** | Ends the immersive session properly and returns to the app's Home page. |
 | **Play / Play again** | Presses the Play button on whatever start, level or result screen is showing. |
 | **Confirm their choice** | Answers with the option the child has already chosen by looking at it. Appears only while they are selecting by gaze in a headset, and is greyed out until something is chosen. See below. |
+| **Watch again** | Replays the current clip from the start, the same as the in-world "Watch again" card. Appears only in Emotion Cinema (immersive and flat) while a session is playing, for a child who wants a second look but cannot reach the card themselves. A replay before answering still counts as a first try. |
 | Any game | Opens it. Sets the level first, if one was chosen. |
 | Level (easy / medium / hard) | Sets the level for the game currently open; it applies at the next start. |
 | Voice, sound, language, selection method | Changes the session settings live. |

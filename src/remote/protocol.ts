@@ -40,6 +40,9 @@ export type RemoteCommand =
   | { type: 'confirm'; payload: Record<string, never> }
   /** End the session and go Home — the "get them out of there" button. */
   | { type: 'quit'; payload: Record<string, never> }
+  /** Replay the current clip from the start ("Watch again") — only Emotion
+   *  Cinema (360 and flat) listens; a no-op on any other screen. */
+  | { type: 'replay'; payload: Record<string, never> }
   /** Change a level. Defaults to the game currently open. */
   | { type: 'setLevel'; payload: { level: Difficulty; gameId?: GameId } }
   /** Change one or more session settings. */
@@ -110,7 +113,7 @@ export interface RemoteEnvelope {
  * than crash the loop that is the child's only way out of a game.
  */
 const KNOWN: ReadonlySet<string> = new Set<RemoteCommandType>([
-  'goto', 'home', 'play', 'restart', 'confirm', 'quit', 'setLevel', 'setting', 'participant',
+  'goto', 'home', 'play', 'restart', 'confirm', 'quit', 'replay', 'setLevel', 'setting', 'participant',
   'mirror', 'ping',
 ])
 

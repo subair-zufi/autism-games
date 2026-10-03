@@ -22,4 +22,11 @@ describe('parseCommand', () => {
   it('tolerates a missing payload', () => {
     expect(parseCommand({ seq: 3, type: 'play' } as never)).toEqual({ type: 'play', payload: {} })
   })
+
+  it('knows the trainer Watch-again, so Emotion Cinema can be replayed from the phone', () => {
+    expect(parseCommand({ seq: 5, type: 'replay', payload: {} })).toEqual({
+      type: 'replay',
+      payload: {},
+    })
+  })
 })

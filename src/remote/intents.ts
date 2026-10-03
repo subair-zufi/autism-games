@@ -22,7 +22,7 @@ import { useEffect, useRef } from 'react'
  * released the answer (`dwellConfirmedBy`), because the motor half of the trial
  * did not happen when it was the adult.
  */
-export type RemoteIntent = 'play' | 'restart' | 'confirm'
+export type RemoteIntent = 'play' | 'restart' | 'confirm' | 'replay'
 
 type Handler = () => void
 

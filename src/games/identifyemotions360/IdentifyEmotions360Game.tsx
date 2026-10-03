@@ -28,6 +28,7 @@ import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
 import { beginHeadWindow, headMetrics } from '../headTracking'
 import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
+import { useRemoteIntent } from '../../remote/intents'
 
 const META = GAME_LIST.find((g) => g.id === 'identifyemotions360')!
 
@@ -212,6 +213,10 @@ export function IdentifyEmotions360Game() {
       })
     }
   }, [frozen, celebrating, stage, q, lang])
+
+  // Let the trainer replay the clip from the phone — the same "Watch again" the
+  // child has in-world, for when the child cannot reach it themselves.
+  useRemoteIntent('replay', requestReplay)
 
   function clearTimers() {
     if (replayTimer.current) clearTimeout(replayTimer.current)

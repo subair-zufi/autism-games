@@ -145,6 +145,14 @@ describe('the rest of the controls', () => {
     expect(calls.intents).toEqual(['confirm'])
   })
 
+  it('passes a trainer Watch-again through as a replay intent', () => {
+    const { ctx, calls } = makeCtx()
+    // only Emotion Cinema registers 'replay'; elsewhere emit returns 0 and it
+    // is a quiet no-op
+    void applyRemoteCommand({ type: 'replay', payload: {} } as RemoteCommand, ctx)
+    expect(calls.intents).toEqual(['replay'])
+  })
+
   it('passes settings through and switches participant', async () => {
     const { ctx, calls } = makeCtx()
     await applyRemoteCommand({ type: 'setting', payload: { voiceOn: false } } as RemoteCommand, ctx)

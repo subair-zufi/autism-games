@@ -83,6 +83,11 @@ export async function applyRemoteCommand(cmd: RemoteCommand, ctx: RemoteContext)
         // headset decides, because the console's view of that is a second old
         ctx.emit('confirm')
         return
+      case 'replay':
+        // "Watch again": only Emotion Cinema (360 / flat) registers this intent,
+        // so it is a quiet no-op on any other screen
+        ctx.emit('replay')
+        return
       case 'setLevel': {
         const level = cmd.payload.level
         if (!LEVELS.has(level)) return

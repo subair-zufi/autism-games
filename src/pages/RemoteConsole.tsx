@@ -285,6 +285,17 @@ function Console({ code }: { code: string }) {
           ↻ Play again
         </button>
       </div>
+      {/* "Watch again" only means something in Emotion Cinema (360 / flat),
+          where a clip plays and can be replayed; on any other game it is a
+          no-op, so the button is shown only there, while a session is live. */}
+      {(status.gameId === 'identifyemotions360' || status.gameId === 'identifyemotions') &&
+        status.phase === 'playing' && (
+          <div className="rc-actions">
+            <button className="rc-btn" type="button" onClick={() => void send('replay', {}, 'Watch again')}>
+              ↻ Watch again
+            </button>
+          </div>
+        )}
       {/* Only while the child is actually selecting by gaze in a headset —
           elsewhere there is no armed choice for it to release. */}
       {status.vrActive && status.settings?.inputMethod === 'dwell' && (
