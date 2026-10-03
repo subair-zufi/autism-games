@@ -14,6 +14,7 @@ import {
   makeSequence,
   peerBearingDeg,
   peerPosition,
+  peerWaitMs,
 } from './logic'
 
 function seeded(seed: number) {
@@ -70,6 +71,12 @@ describe('playroom360 logic (same rotation as Block Buddies)', () => {
     expect(CONFIG.hard).toMatchObject({ players: 5, rounds: 10, shuffle: true })
     // every level places blocks with a single tap — no grab-and-drag anywhere
     expect(Object.values(CONFIG).some((c) => 'grab' in c)).toBe(false)
+  })
+
+  it('fades peer-wait jitter in with difficulty: none -> some -> more (review R3)', () => {
+    expect(CONFIG.easy.jitter).toBe(0)
+    expect(CONFIG.easy.jitter).toBeLessThan(CONFIG.medium.jitter)
+    expect(CONFIG.medium.jitter).toBeLessThan(CONFIG.hard.jitter)
   })
 
   it('blocks stack on the table top by BLOCK_H', () => {
@@ -134,5 +141,27 @@ describe('stars reward waiting, not placing', () => {
    */
   it('does not vary with rounds played when nothing was rushed', () => {
     expect(starsFor(5, 5)).toBe(starsFor(10, 10))
+  })
+})
+
+describe('peerWaitMs jitters the peer think-time (review R3)', () => {
+  it('returns the base unchanged when jitter is 0 (easy is predictable)', () => {
+    const rng = seeded(1)
+    for (let i = 0; i < 20; i++) expect(peerWaitMs(1300, 0, rng)).toBe(1300)
+  })
+
+  it('stays within the +/- band for the base', () => {
+    const rng = seeded(9)
+    for (let i = 0; i < 500; i++) {
+      const w = peerWaitMs(2400, 0.4, rng)
+      expect(w).toBeGreaterThanOrEqual(Math.round(2400 * 0.6))
+      expect(w).toBeLessThanOrEqual(Math.round(2400 * 1.4))
+    }
+  })
+
+  it('actually varies across draws at hard (not a fixed interval)', () => {
+    const rng = seeded(3)
+    const draws = new Set(Array.from({ length: 30 }, () => peerWaitMs(2400, 0.4, rng)))
+    expect(draws.size).toBeGreaterThan(1)
   })
 })

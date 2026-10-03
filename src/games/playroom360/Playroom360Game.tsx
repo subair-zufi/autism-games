@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { GAME_LIST } from '../../types'
 import { useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
@@ -9,7 +9,7 @@ import { WebGLGate } from '../../components/WebGLGate'
 import { praise, speakAll } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
-import { CONFIG, buildPlayers, makeSequence, peerBearingDeg, starsFor, type Player, type TurnSpec } from './logic'
+import { CONFIG, buildPlayers, makeSequence, peerBearingDeg, peerWaitMs, starsFor, type Player, type TurnSpec } from './logic'
 import { useLevelProgress } from '../progression'
 import { prLine, prLines, prSpeak, type Playroom360MessageKey } from './strings'
 import { Playroom360Scene } from './Playroom360Scene'
@@ -71,6 +71,10 @@ export function Playroom360Game() {
   const [handoffTo, setHandoffTo] = useState<Player | null>(null)
   // Brief ⭐ pop over the scene on each block placed (matches the praise voice).
   const [celebrating, setCelebrating] = useState(false)
+  // How long the most recent peer turn actually made the child wait (base ±
+  // jitter) — logged on the child's events so impatience can be modelled
+  // against the real wait rather than the nominal level constant (review R3).
+  const lastPeerWaitMs = useRef<number | null>(null)
   /** the one-time "drag to look around" hint, dismissed on the first look */
   const [hintSeen, setHintSeen] = useState(false)
   /** whether this browser can enter immersive VR (Quest etc.) — shows the button */
@@ -146,6 +150,7 @@ export function Playroom360Game() {
     setHintSeen(false)
     setImpatientTaps(0)
     setStars(0)
+    lastPeerWaitMs.current = null
     setPhase('playing')
   }
 
@@ -181,11 +186,15 @@ export function Playroom360Game() {
       const peer = players[turn.playerIndex]
       const childIsNext = sequence[index + 1]?.kind === 'child'
       say(childIsNext ? 'sayPeerNext' : 'sayPeerWait', { name: peer.name })
-      const t1 = setTimeout(() => setReaching(true), config.peerTurnMs * 0.55)
+      // a fresh jittered wait for this turn (easy = the flat base, higher tiers
+      // vary it so the interval is no longer perfectly predictable)
+      const wait = peerWaitMs(config.peerTurnMs, config.jitter)
+      lastPeerWaitMs.current = wait
+      const t1 = setTimeout(() => setReaching(true), wait * 0.55)
       const t2 = setTimeout(() => {
         setReaching(false)
         setIndex((i) => i + 1)
-      }, config.peerTurnMs)
+      }, wait)
       return () => {
         clearTimeout(t1)
         clearTimeout(t2)
@@ -214,7 +223,7 @@ export function Playroom360Game() {
     praise()
     setCelebrating(true)
     setTimeout(() => setCelebrating(false), 1300)
-    recordStep('place_block', { round, slot: index % config.players, method: 'tap', ...headMetrics() }, { score: score + 1 })
+    recordStep('place_block', { round, slot: index % config.players, method: 'tap', peerWaitMs: lastPeerWaitMs.current, ...headMetrics() }, { score: score + 1 })
     // Drop the block now (it appears), then require an explicit hand-off to
     // the next player before their turn begins — unless this was the last turn.
     const nextTurn = sequence[index + 1] ?? null
@@ -231,7 +240,7 @@ export function Playroom360Game() {
     if (handoffTo) {
       // tapped the block mid hand-off: remind them to pass first
       say('sayPassFirst', { name: handoffTo.name })
-      recordStep('impatient_tap', { round, during: 'handoff', source: 'tap' })
+      recordStep('impatient_tap', { round, during: 'handoff', source: 'tap', peerWaitMs: lastPeerWaitMs.current })
       return
     }
     say('sayWaitTurn')
@@ -239,6 +248,7 @@ export function Playroom360Game() {
       round,
       activePlayer: turn ? players[turn.playerIndex]?.id : undefined,
       source: 'tap',
+      peerWaitMs: lastPeerWaitMs.current,
     })
   }
 

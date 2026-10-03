@@ -41,8 +41,15 @@ export interface BlockConfig {
   players: number
   /** how many full rounds (the child gets one turn per round) */
   rounds: number
-  /** how long a peer "thinks" before placing, in ms */
+  /** how long a peer "thinks" before placing, in ms (the base, before jitter) */
   peerTurnMs: number
+  /**
+   * Fraction the peer's think-time is randomly varied by each turn (0 = none).
+   * Waiting for a *predictable* interval is a much easier skill than waiting for
+   * an unpredictable one; tolerance for uncertainty is the real turn-taking
+   * stressor, so it fades in with difficulty (review R3).
+   */
+  jitter: number
   /**
    * When false, every round uses the same fixed rotation so the child can
    * *anticipate* their turn — the core of turn-taking. When true, the order is
@@ -59,9 +66,21 @@ export interface BlockConfig {
  * dropped for a consistent tap across all levels.
  */
 export const CONFIG: Record<Difficulty, BlockConfig> = {
-  easy: { players: 3, rounds: 5, peerTurnMs: 1300, shuffle: false },
-  medium: { players: 4, rounds: 7, peerTurnMs: 1800, shuffle: false },
-  hard: { players: 5, rounds: 10, peerTurnMs: 2400, shuffle: true },
+  easy: { players: 3, rounds: 5, peerTurnMs: 1300, jitter: 0, shuffle: false },
+  medium: { players: 4, rounds: 7, peerTurnMs: 1800, jitter: 0.2, shuffle: false },
+  hard: { players: 5, rounds: 10, peerTurnMs: 2400, jitter: 0.4, shuffle: true },
+}
+
+/**
+ * The actual think-time for one peer turn: the base wait varied by ±`jitter`.
+ * With jitter 0 it returns the base unchanged (easy stays perfectly
+ * predictable); higher tiers vary the wait so the child must tolerate
+ * uncertainty (review R3). The wait is logged per turn so impatience can be
+ * modelled against how long the child was actually asked to wait.
+ */
+export function peerWaitMs(base: number, jitter: number, rng: () => number = Math.random): number {
+  if (jitter <= 0) return base
+  return Math.round(base * (1 + (rng() * 2 - 1) * jitter))
 }
 
 /**
