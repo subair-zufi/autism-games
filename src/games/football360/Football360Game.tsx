@@ -82,8 +82,8 @@ export function Football360Game() {
   const { recordStep, finishGame, resetSession } = useGameAnalytics('football360', xrStore)
   // Per-level progression: FIRST-ATTEMPT correct returns out of the level's
   // goal — the same numerator the server's `_rollback_trials` counts. The
-  // denominator stays `goal` (never the rallies actually reached), so a
-  // session that ends early on lives reads as the partial level it was.
+  // session is no-fail and always runs to the goal (review R4), so the
+  // denominator `goal` is always a complete attempt.
   const { submit } = useLevelProgress('football360')
 
   // Speak a line in the chosen language. `onEnd` (used for the ready cue) fires
@@ -294,20 +294,14 @@ export function Football360Game() {
     return () => clearTimeout(t)
   }, [phase, ri, stage]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function loseLife() {
-    const next = lives - 1
-    setLives(next)
-    if (next <= 0) {
-      setCompleted(false)
-      setStars(starsFor(false, 0))
-      say('sayLose')
-      reportScore('football360', score)
-      // out of lives: the level was still attempted, so it is reported against
-      // the full goal rather than silently dropped
-      void submit(difficulty, firstTries, goal)
-      finishGame(score)
-      setPhase('over')
-    }
+  // A slip (premature pass or wrong-partner) costs a life as visible, gentle
+  // feedback, but never ends the session — Football 360 is now no-fail like
+  // every other game in the suite, so the struggling child (the clinically
+  // most interesting one) still plays every rally through to the goal rather
+  // than being cut off with the fewest trials (review R4). Lives floor at 0 and
+  // only scale the end-of-session stars via starsFor(completed, livesLeft).
+  function slip() {
+    setLives((n) => Math.max(0, n - 1))
   }
 
   /** The child passes the ball to teammate `i` (scene tap / VR ray). */
@@ -331,7 +325,7 @@ export function Football360Game() {
         cue: config.cue,
         initiate: true, // every round is child-initiated in this flow
       })
-      loseLife()
+      slip()
       return
     }
     const now = performance.now()
@@ -396,7 +390,7 @@ export function Football360Game() {
         targetBearingDeg: playerHeadingDeg(rally.to, config.partners),
       })
       setStage('reject')
-      loseLife()
+      slip()
     }
   }
 
