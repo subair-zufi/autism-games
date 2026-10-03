@@ -64,7 +64,13 @@ export interface RollConfig {
    * cue_ready, no time pressure" convention.
    */
   readyDelayMs: number
-  /** how the ready cue is presented (fades with difficulty). */
+  /**
+   * How the ready cue is presented. `cue` and `partners` are independent
+   * difficulty axes (review R7): the default ladder fades the cue AND grows the
+   * set size together, but either can be set without the other, and both are
+   * recorded on every rally event so a failure can be attributed to reading the
+   * cue vs handling the set size rather than being confounded.
+   */
   cue: CueMode
   /**
    * How many rallies in the session have *no* incoming pass — a teammate signals

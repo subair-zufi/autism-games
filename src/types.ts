@@ -244,6 +244,14 @@ export const GAME_LIST: GameMeta[] = [
     objective: 'Turn-taking · reciprocity: read who is ready for the ball (voice → gesture → body cue) and roll it back',
     duration: '5–10 min',
     hasLevels: false,
+    // the default ladder couples two independent axes — cue modality and set
+    // size — which are logged separately per rally so analysis can tell them
+    // apart (review R7); documented here so the coupling is explicit
+    levelNotes: {
+      easy: '1 partner · asks out loud for the ball · 5 rallies',
+      medium: '2 partners · hands-up gesture, no words · 7 rallies',
+      hard: '3 partners · body and gaze only · 10 rallies, some child-started',
+    },
   },
   {
     id: 'football360',

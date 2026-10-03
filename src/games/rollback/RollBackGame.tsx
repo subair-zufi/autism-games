@@ -122,6 +122,7 @@ export function RollBackGame() {
         rally: ri,
         to: players[rally.to].id,
         cue: config.cue,
+        partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
         initiate: rally.initiate,
       })
       if (config.cue === 'verbal') say('sayVerbalCue', { name: biName(players[rally.to]) })
@@ -203,6 +204,7 @@ export function RollBackGame() {
         picked: players[i]?.id,
         during: stage,
         cue: config.cue,
+        partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
         initiate: rally.initiate,
       })
       loseLife()
@@ -230,6 +232,7 @@ export function RollBackGame() {
           target: players[rally.to].id,
           picked: players[i].id,
           cue: config.cue,
+          partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
           initiate: rally.initiate,
           firstAttempt,
           latencyMs,
@@ -254,6 +257,7 @@ export function RollBackGame() {
         target: players[rally.to].id,
         picked: players[i].id,
         cue: config.cue,
+        partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
         initiate: rally.initiate,
         latencyMs,
       })

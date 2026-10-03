@@ -213,6 +213,7 @@ export function Football360Game() {
         rally: ri,
         to: players[rally.to].id,
         cue: config.cue,
+        partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
         initiate: true, // every round is child-initiated in this flow
         // how far the child must turn to face the ready teammate — the 360
         // attention-shift size, recorded like Museum 360's targetBearingDeg
@@ -323,6 +324,7 @@ export function Football360Game() {
         picked: players[i]?.id,
         during: stage,
         cue: config.cue,
+        partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
         initiate: true, // every round is child-initiated in this flow
       })
       slip()
@@ -356,6 +358,7 @@ export function Football360Game() {
           target: players[rally.to].id,
           picked: players[i].id,
           cue: config.cue,
+          partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
           initiate: true, // every round is child-initiated in this flow
           firstAttempt,
           latencyMs,
@@ -383,6 +386,7 @@ export function Football360Game() {
         target: players[rally.to].id,
         picked: players[i].id,
         cue: config.cue,
+        partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
         initiate: true, // every round is child-initiated in this flow
         latencyMs,
         latencyFromPromptEndMs,
