@@ -9,7 +9,18 @@ import { WebGLGate } from '../../components/WebGLGate'
 import { praise, speakAll } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
-import { CONFIG, buildPlayers, makeSequence, peerBearingDeg, peerWaitMs, starsFor, type Player, type TurnSpec } from './logic'
+import {
+  CONFIG,
+  buildPlayers,
+  inTurnRatio,
+  makeSequence,
+  peerBearingDeg,
+  peerWaitMs,
+  sessionAccuracy,
+  starsForAccuracy,
+  type Player,
+  type TurnSpec,
+} from './logic'
 import { useLevelProgress } from '../progression'
 import { prLine, prLines, prSpeak, type Playroom360MessageKey } from './strings'
 import { Playroom360Scene } from './Playroom360Scene'
@@ -18,11 +29,16 @@ import { useVrSessionActive } from '../vrSession'
 import { VRWaitingRoom } from '../VRWaitingRoom'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
-import { beginHeadWindow, headMetrics } from '../headTracking'
+import { beginHeadWindow, headMetrics, headWatchProportion } from '../headTracking'
 import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
 import { BilingualPromptBanner } from '../../components/BilingualPromptBanner'
 
 const META = GAME_LIST.find((g) => g.id === 'playroom360')!
+
+/** how close (deg) the child's facing must be to the active peer to count as
+ *  "watching" them — looser than the answer-landing tolerance, since watching a
+ *  peer is a gaze in their direction, not a precise fixation (review R9) */
+const PEER_WATCH_TOL_DEG = 20
 
 /**
  * Playroom 360 — the immersive first-person copy of Block Buddies. The turn
@@ -75,6 +91,15 @@ export function Playroom360Game() {
   // jitter) — logged on the child's events so impatience can be modelled
   // against the real wait rather than the nominal level constant (review R3).
   const lastPeerWaitMs = useRef<number | null>(null)
+  // R9 composite sub-scores, accumulated across the session:
+  //  - peer-watch: mean fraction of each peer turn spent looking at the peer
+  //  - own-turn latency: how long the child took to place on their own turn
+  //    (reported only, never scored — a calm slow placement is not a failure)
+  const peerWatchSum = useRef(0)
+  const peerTurnCount = useRef(0)
+  const ownTurnLatencySum = useRef(0)
+  const ownTurnCount = useRef(0)
+  const ownTurnStart = useRef<number | null>(null)
   /** the one-time "drag to look around" hint, dismissed on the first look */
   const [hintSeen, setHintSeen] = useState(false)
   /** whether this browser can enter immersive VR (Quest etc.) — shows the button */
@@ -151,6 +176,11 @@ export function Playroom360Game() {
     setImpatientTaps(0)
     setStars(0)
     lastPeerWaitMs.current = null
+    peerWatchSum.current = 0
+    peerTurnCount.current = 0
+    ownTurnLatencySum.current = 0
+    ownTurnCount.current = 0
+    ownTurnStart.current = null
     setPhase('playing')
   }
 
@@ -168,13 +198,30 @@ export function Playroom360Game() {
   useEffect(() => {
     if (phase !== 'playing') return
     if (turn === null) {
-      const finalScore = sequence.filter((t) => t.kind === 'child').length
-      reportScore('playroom360', finalScore)
-      // same placements/actions pair the stars are computed from, so the
-      // child's reward and the recorded accuracy can never disagree
-      void submit(difficulty, finalScore, finalScore + impatientTaps)
-      setStars(starsFor(finalScore, finalScore + impatientTaps))
-      finishGame(finalScore)
+      const placements = sequence.filter((t) => t.kind === 'child').length
+      const peerWatch = peerTurnCount.current > 0 ? peerWatchSum.current / peerTurnCount.current : 0
+      const meanOwnLatencyMs =
+        ownTurnCount.current > 0 ? Math.round(ownTurnLatencySum.current / ownTurnCount.current) : null
+      // the composite both the stars and the recorded accuracy derive from, so
+      // a passive child (waits, never watches) no longer reads as a perfect
+      // turn-taker (review R9); latency is reported, not scored
+      const acc = sessionAccuracy({ placements, impatientTaps, peerWatch })
+      const round2 = (n: number) => Math.round(n * 100) / 100
+      reportScore('playroom360', placements)
+      recordStep('session_scores', {
+        inTurnRatio: round2(inTurnRatio(placements, impatientTaps)),
+        peerWatchProportion: round2(peerWatch),
+        meanOwnTurnLatencyMs: meanOwnLatencyMs,
+        composite: round2(acc),
+        placements,
+        impatientTaps,
+        peerTurns: peerTurnCount.current,
+      })
+      // submit the composite as the accuracy (num/100), so the server-recorded
+      // accuracy and the child-facing stars can never disagree
+      void submit(difficulty, Math.round(acc * 100), 100)
+      setStars(starsForAccuracy(acc))
+      finishGame(placements)
       say('sayWin')
       playSuccess()
       setPhase('over')
@@ -184,14 +231,31 @@ export function Playroom360Game() {
       // Hold the peer's turn until the child has passed it to them.
       if (handoffTo) return
       const peer = players[turn.playerIndex]
+      const peerBearing = peerBearingDeg(turn.playerIndex, config.players)
       const childIsNext = sequence[index + 1]?.kind === 'child'
       say(childIsNext ? 'sayPeerNext' : 'sayPeerWait', { name: peer.name })
+      // open a head-telemetry window at the START of the peer's turn, so we can
+      // measure whether the child watched the active peer rather than tuning out
+      // (review R9) — not just at hand-off as before
+      beginHeadWindow()
       // a fresh jittered wait for this turn (easy = the flat base, higher tiers
       // vary it so the interval is no longer perfectly predictable)
       const wait = peerWaitMs(config.peerTurnMs, config.jitter)
       lastPeerWaitMs.current = wait
       const t1 = setTimeout(() => setReaching(true), wait * 0.55)
       const t2 = setTimeout(() => {
+        // how much of this peer turn the child spent looking at the active peer
+        const watch = headWatchProportion(peerBearing, PEER_WATCH_TOL_DEG)
+        peerWatchSum.current += watch
+        peerTurnCount.current += 1
+        recordStep('peer_turn', {
+          round,
+          activePlayer: peer.id,
+          peerBearingDeg: peerBearing,
+          watchProportion: Math.round(watch * 100) / 100,
+          peerWaitMs: wait,
+          ...headMetrics(peerBearing),
+        })
         setReaching(false)
         setIndex((i) => i + 1)
       }, wait)
@@ -208,8 +272,10 @@ export function Playroom360Game() {
       say(gazeSelect ? 'promptPlaceGaze' : 'promptPlace')
     }
     // open a head-telemetry window (measures where they look during their own
-    // turn and the hand-off) and wait for the tap
+    // turn and the hand-off) and wait for the tap; stamp the own-turn start so
+    // the placement latency can be reported (R9, descriptive only)
     beginHeadWindow()
+    if (!handoffTo) ownTurnStart.current = performance.now()
   }, [index, phase, handoffTo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // current round number (0-based) for analytics payloads
@@ -223,7 +289,24 @@ export function Playroom360Game() {
     praise()
     setCelebrating(true)
     setTimeout(() => setCelebrating(false), 1300)
-    recordStep('place_block', { round, slot: index % config.players, method: 'tap', peerWaitMs: lastPeerWaitMs.current, ...headMetrics() }, { score: score + 1 })
+    const ownTurnLatencyMs =
+      ownTurnStart.current === null ? null : Math.round(performance.now() - ownTurnStart.current)
+    if (ownTurnLatencyMs !== null) {
+      ownTurnLatencySum.current += ownTurnLatencyMs
+      ownTurnCount.current += 1
+    }
+    recordStep(
+      'place_block',
+      {
+        round,
+        slot: index % config.players,
+        method: 'tap',
+        peerWaitMs: lastPeerWaitMs.current,
+        ownTurnLatencyMs,
+        ...headMetrics(),
+      },
+      { score: score + 1 },
+    )
     // Drop the block now (it appears), then require an explicit hand-off to
     // the next player before their turn begins — unless this was the last turn.
     const nextTurn = sequence[index + 1] ?? null

@@ -10,7 +10,10 @@ import {
   TOWER_MAX,
   blockY,
   buildPlayers,
+  inTurnRatio,
+  sessionAccuracy,
   starsFor,
+  starsForAccuracy,
   makeSequence,
   peerBearingDeg,
   peerPosition,
@@ -141,6 +144,44 @@ describe('stars reward waiting, not placing', () => {
    */
   it('does not vary with rounds played when nothing was rushed', () => {
     expect(starsFor(5, 5)).toBe(starsFor(10, 10))
+  })
+})
+
+describe('R9 composite score — engagement, not just inhibition', () => {
+  it('inTurnRatio is placements over all actions, 0 when none', () => {
+    expect(inTurnRatio(10, 0)).toBe(1)
+    expect(inTurnRatio(8, 2)).toBeCloseTo(0.8)
+    expect(inTurnRatio(0, 0)).toBe(0)
+  })
+
+  it('starsForAccuracy uses the same 0.8 / 0.5 thresholds', () => {
+    expect(starsForAccuracy(1)).toBe(3)
+    expect(starsForAccuracy(0.8)).toBe(3)
+    expect(starsForAccuracy(0.5)).toBe(2)
+    expect(starsForAccuracy(0.49)).toBe(1)
+  })
+
+  it('a passive child (never taps out of turn, never watches) scores materially below an engaged one', () => {
+    // passive: perfect inhibition but no attention at all
+    const passive = sessionAccuracy({ placements: 10, impatientTaps: 0, peerWatch: 0 })
+    // engaged: same inhibition AND watches the peers
+    const engaged = sessionAccuracy({ placements: 10, impatientTaps: 0, peerWatch: 0.9 })
+    expect(passive).toBeCloseTo(0.5) // was a perfect 1.0 under the old metric
+    expect(engaged).toBeGreaterThan(0.9)
+    // and that difference is material in the reward the child sees
+    expect(starsForAccuracy(passive)).toBe(2)
+    expect(starsForAccuracy(engaged)).toBe(3)
+  })
+
+  it('a dysregulated child (out-of-turn taps and no watching) scores lowest', () => {
+    const acc = sessionAccuracy({ placements: 6, impatientTaps: 6, peerWatch: 0.1 })
+    expect(acc).toBeLessThan(0.5)
+    expect(starsForAccuracy(acc)).toBe(1)
+  })
+
+  it('clamps an out-of-range watch proportion', () => {
+    expect(sessionAccuracy({ placements: 10, impatientTaps: 0, peerWatch: 2 })).toBeCloseTo(1)
+    expect(sessionAccuracy({ placements: 10, impatientTaps: 0, peerWatch: -1 })).toBeCloseTo(0.5)
   })
 })
 

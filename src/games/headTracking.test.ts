@@ -3,6 +3,7 @@ import {
   angDiffDeg,
   beginHeadWindow,
   headMetrics,
+  headWatchProportion,
   sampleHeadPose,
 } from './headTracking'
 
@@ -12,6 +13,33 @@ describe('angDiffDeg', () => {
     expect(angDiffDeg(0, 10)).toBe(-10)
     expect(angDiffDeg(170, -170)).toBe(-20) // across the ±180 seam
     expect(angDiffDeg(-170, 170)).toBe(20)
+  })
+})
+
+describe('headWatchProportion (attention during a peer turn, R9)', () => {
+  it('is 0 for an empty window', () => {
+    beginHeadWindow(1000)
+    expect(headWatchProportion(40)).toBe(0)
+  })
+
+  it('is the fraction of samples spent looking within tolerance of the bearing', () => {
+    beginHeadWindow(1000)
+    sampleHeadPose(40, 0, 1000) // on the peer (±20 of 40)
+    sampleHeadPose(35, 0, 1100) // on the peer
+    sampleHeadPose(0, 0, 1200) // looking away
+    sampleHeadPose(5, 0, 1300) // looking away
+    expect(headWatchProportion(40, 20)).toBeCloseTo(0.5)
+  })
+
+  it('is 1 when the child watched the peer the whole turn, 0 when never', () => {
+    beginHeadWindow(1000)
+    sampleHeadPose(40, 0, 1000)
+    sampleHeadPose(42, 0, 1100)
+    expect(headWatchProportion(40, 20)).toBe(1)
+    beginHeadWindow(2000)
+    sampleHeadPose(-50, 0, 2000)
+    sampleHeadPose(-48, 0, 2100)
+    expect(headWatchProportion(40, 20)).toBe(0)
   })
 })
 

@@ -74,6 +74,23 @@ export function latestYawDeg(): number {
   return buf.length ? buf[buf.length - 1].yaw : 0
 }
 
+/**
+ * Fraction of the samples in the current window whose yaw was within `tolDeg`
+ * of `targetBearingDeg` — i.e. how much of a window the child spent *looking at*
+ * a thing at that bearing. Used to score attention during a peer's turn in
+ * Playroom 360 (review R9), where the thing to watch is the active peer rather
+ * than an answer the child is scanning toward. Returns 0 for an empty window.
+ */
+export function headWatchProportion(
+  targetBearingDeg: number,
+  tolDeg: number = TARGET_TOL_DEG,
+): number {
+  const s = buf.filter((p) => p.t >= windowStart)
+  if (s.length === 0) return 0
+  const within = s.filter((p) => Math.abs(angDiffDeg(p.yaw, targetBearingDeg)) <= tolDeg).length
+  return within / s.length
+}
+
 /** Record one camera pose (called by <HeadSampler>; degrees). */
 export function sampleHeadPose(
   yawDeg: number,

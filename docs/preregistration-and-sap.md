@@ -294,4 +294,5 @@ a full session; flag any Smileyometer-vs-behaviour discrepancy.
 
 | Date | Section | Change | Justification | Made before/after unblinding |
 |------|---------|--------|---------------|------------------------------|
+| 2026-10-03 | §6 / §9 | Playroom 360 session accuracy redefined from `placements / (placements + out-of-turn taps)` to the average of that in-turn ratio and the mean peer-watch proportion (fraction of each peer turn the child's head was within 20° of the active peer). Own-turn placement latency is recorded but not scored. | The old metric scored the *absence* of a behaviour as success: a fully passive child earned a perfect score, indistinguishable from a genuine turn-taker. The composite scores attention/engagement, not just inhibition. Latency stays descriptive so calm waiting is never penalised. Changes the per-game pass/mastery accuracy for Playroom 360. (Review R9.) | Before unblinding (pre-pilot) |
 | — | — | — | — | — |

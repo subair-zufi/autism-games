@@ -102,10 +102,52 @@ export function peerWaitMs(base: number, jitter: number, rng: () => number = Mat
  * stars, and the game itself never ends early.
  */
 export function starsFor(placements: number, actions: number): number {
-  const ratio = actions > 0 ? placements / actions : 0
-  if (ratio >= 0.8) return 3
-  if (ratio >= 0.5) return 2
+  return starsForAccuracy(actions > 0 ? placements / actions : 0)
+}
+
+/** 1–3 stars from a 0–1 session accuracy — the same thresholds, shared by the
+ *  composite score (R9) and the legacy in-turn ratio. */
+export function starsForAccuracy(accuracy: number): number {
+  if (accuracy >= 0.8) return 3
+  if (accuracy >= 0.5) return 2
   return 1
+}
+
+/* ---- R9 composite session score --------------------------------------------
+ * Stars were placements / (placements + out-of-turn taps). That scores the
+ * ABSENCE of a behaviour as success: a completely passive child — never taps out
+ * of turn, never watches a peer, just places when prompted — earned a perfect
+ * three stars, indistinguishable from a real turn-taker. The composite adds
+ * attention during peer turns so engagement, not just inhibition, is scored.
+ * Own-turn latency is also measured, but it is REPORTED only, never scored:
+ * penalising a slow-but-calm placement would invert the self-regulation this
+ * game trains ("calm waiting is never penalised"), so it stays a descriptor.
+ */
+
+/** in-turn placements vs out-of-turn taps (0–1) — the original waiting measure */
+export function inTurnRatio(placements: number, impatientTaps: number): number {
+  const actions = placements + impatientTaps
+  return actions > 0 ? placements / actions : 0
+}
+
+export interface PlayroomScoreParts {
+  /** blocks the child placed in turn */
+  placements: number
+  /** taps out of turn / during a hand-off */
+  impatientTaps: number
+  /** mean fraction of peer turns the child spent looking at the active peer (0–1) */
+  peerWatch: number
+}
+
+/**
+ * The session accuracy both the child-facing stars and the recorded accuracy
+ * derive from: the average of the in-turn ratio and the peer-watch proportion,
+ * so a child who never taps out of turn but also never watches no longer scores
+ * a perfect session. Own-turn latency is intentionally not a term here.
+ */
+export function sessionAccuracy(parts: PlayroomScoreParts): number {
+  const watch = Math.max(0, Math.min(1, parts.peerWatch))
+  return (inTurnRatio(parts.placements, parts.impatientTaps) + watch) / 2
 }
 
 /** Blocks per tower before it is set aside and a new one begins — with the
