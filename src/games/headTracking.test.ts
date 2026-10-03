@@ -2,10 +2,17 @@ import { describe, expect, it } from 'vitest'
 import {
   angDiffDeg,
   beginHeadWindow,
+  firstLookMetrics,
   headMetrics,
   headWatchProportion,
   sampleHeadPose,
 } from './headTracking'
+
+const SECTORS = [
+  { id: 'left', bearingDeg: -40 },
+  { id: 'mid', bearingDeg: 0 },
+  { id: 'right', bearingDeg: 40 },
+]
 
 describe('angDiffDeg', () => {
   it('is the shortest signed difference, wrapped to (−180, 180]', () => {
@@ -40,6 +47,56 @@ describe('headWatchProportion (attention during a peer turn, R9)', () => {
     sampleHeadPose(-50, 0, 2000)
     sampleHeadPose(-48, 0, 2100)
     expect(headWatchProportion(40, 20)).toBe(0)
+  })
+})
+
+describe('firstLookMetrics (looked at the target first, R11)', () => {
+  it('returns nulls for an empty window', () => {
+    beginHeadWindow(1000)
+    const m = firstLookMetrics(SECTORS, 'right')
+    expect(m.firstLookSector).toBeNull()
+    expect(m.followedCue).toBeNull()
+    expect(m.timeToTargetLookMs).toBeNull()
+  })
+
+  it('reports a sustained look at the target as followedCue = true', () => {
+    beginHeadWindow(1000)
+    sampleHeadPose(40, 0, 1000)
+    sampleHeadPose(41, 0, 1100)
+    sampleHeadPose(39, 0, 1200) // 3 consecutive on the right → sustained
+    const m = firstLookMetrics(SECTORS, 'right')
+    expect(m.firstLookSector).toBe('right')
+    expect(m.followedCue).toBe(true)
+    expect(m.firstLookMs).toBe(0)
+    expect(m.timeToTargetLookMs).toBe(0)
+  })
+
+  it('a look at a distractor first is followedCue = false, with time-to-target later', () => {
+    beginHeadWindow(1000)
+    // three samples on the left distractor first (a sustained look)
+    sampleHeadPose(-40, 0, 1000)
+    sampleHeadPose(-41, 0, 1100)
+    sampleHeadPose(-39, 0, 1200)
+    // then settle on the target
+    sampleHeadPose(40, 0, 1500)
+    sampleHeadPose(41, 0, 1600)
+    sampleHeadPose(39, 0, 1700)
+    const m = firstLookMetrics(SECTORS, 'right')
+    expect(m.firstLookSector).toBe('left')
+    expect(m.followedCue).toBe(false)
+    expect(m.timeToTargetLookMs).toBe(500)
+  })
+
+  it('ignores a glance that only passes through a sector (dwell threshold)', () => {
+    beginHeadWindow(1000)
+    sampleHeadPose(-40, 0, 1000) // one sample on left — not sustained
+    sampleHeadPose(0, 0, 1100) // one on mid — not sustained
+    sampleHeadPose(40, 0, 1200)
+    sampleHeadPose(40, 0, 1300)
+    sampleHeadPose(40, 0, 1400) // three on right → the first sustained look
+    const m = firstLookMetrics(SECTORS, 'right')
+    expect(m.firstLookSector).toBe('right')
+    expect(m.followedCue).toBe(true)
   })
 })
 

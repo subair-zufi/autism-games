@@ -29,7 +29,7 @@ import { useVrSessionActive } from '../vrSession'
 import { VRWaitingRoom } from '../VRWaitingRoom'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
-import { beginHeadWindow, headMetrics } from '../headTracking'
+import { beginHeadWindow, firstLookMetrics, headMetrics } from '../headTracking'
 import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
 import { BilingualPromptBanner } from '../../components/BilingualPromptBanner'
 
@@ -336,6 +336,12 @@ export function Football360Game() {
     // never inflates it; coincides with latencyMs when no cue was spoken
     const latencyFromPromptEndMs = promptEndAt.current === null ? null : Math.round(now - promptEndAt.current)
     const head = headMetrics(playerHeadingDeg(rally.to, config.partners))
+    // which teammate the child *looked at first* — did they read the ready cue,
+    // or pass to whoever they landed on (review R11)
+    const firstLook = firstLookMetrics(
+      players.slice(1).map((p, j) => ({ id: p.id, bearingDeg: playerHeadingDeg(j + 1, config.partners) })),
+      players[rally.to].id,
+    )
     if (result === 'correct') {
       const firstAttempt = attempts === 0
       const nextStreak = firstAttempt ? streak + 1 : 0
@@ -364,6 +370,7 @@ export function Football360Game() {
           latencyMs,
           latencyFromPromptEndMs,
           ...head,
+          ...firstLook,
           points,
           score: nextScore,
           returned: nextReturned,
@@ -391,6 +398,7 @@ export function Football360Game() {
         latencyMs,
         latencyFromPromptEndMs,
         ...head,
+        ...firstLook,
         targetBearingDeg: playerHeadingDeg(rally.to, config.partners),
       })
       setStage('reject')

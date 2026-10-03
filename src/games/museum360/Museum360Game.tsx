@@ -34,7 +34,7 @@ import { useVrSessionActive } from '../vrSession'
 import { VRWaitingRoom } from '../VRWaitingRoom'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
-import { beginHeadWindow, headMetrics } from '../headTracking'
+import { beginHeadWindow, firstLookMetrics, headMetrics } from '../headTracking'
 import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
 
 const META = GAME_LIST.find((g) => g.id === 'museum360')!
@@ -198,6 +198,12 @@ export function Museum360Game() {
     const latencyMs = cueReadyAt.current === null ? null : Math.round(performance.now() - cueReadyAt.current)
     // what the child's head actually did between cue onset and this tap
     const head = headMetrics(targetBearingDeg(round))
+    // which exhibit the child *looked at first* — the orienting response the tap
+    // only reports (review R11): did they follow the cue, or search and get lucky?
+    const firstLook = firstLookMetrics(
+      round.visible.map((exhibit, i) => ({ id: exhibit, bearingDeg: slotHeadingDeg(i, round.visible.length) })),
+      round.target,
+    )
     if (id === round.target) {
       const firstAttempt = wrongPicks.length === 0
       const nextStreak = firstAttempt ? streak + 1 : 0
@@ -216,7 +222,7 @@ export function Museum360Game() {
       recordStep(
         'answer',
         // visibleCount drives the guessing baseline server-side (1/n), same as Museum Look
-        { correct: true, target: round.target, picked: id, cue, cueKind, visibleCount: round.visible.length, targetBearingDeg: targetBearingDeg(round), firstAttempt, latencyMs, ...head, points, score: nextScore, found: nextFound },
+        { correct: true, target: round.target, picked: id, cue, cueKind, visibleCount: round.visible.length, targetBearingDeg: targetBearingDeg(round), firstAttempt, latencyMs, ...head, ...firstLook, points, score: nextScore, found: nextFound },
         { score: nextScore },
       )
       if (nextFound >= goal) {
@@ -258,6 +264,7 @@ export function Museum360Game() {
         targetBearingDeg: targetBearingDeg(round),
         latencyMs,
         ...head,
+        ...firstLook,
         errorType: errorType(round.visible, round.target, id),
       })
       // least-to-most: an error immediately brings one rung of support back

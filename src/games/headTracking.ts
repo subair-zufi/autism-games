@@ -91,6 +91,102 @@ export function headWatchProportion(
   return within / s.length
 }
 
+/** a thing in the scene the child might look at, at a signed bearing (deg) */
+export interface LookSector {
+  id: string
+  bearingDeg: number
+}
+
+export interface FirstLookMetrics {
+  /** id of the first sector the child's gaze SUSTAINED on, or null if none did */
+  firstLookSector: string | null
+  /** ms from window open to that first sustained look */
+  firstLookMs: number | null
+  /** ms from window open to the first sustained look at the TARGET sector */
+  timeToTargetLookMs: number | null
+  /** whether that first sustained look was the cued target (null if no look) */
+  followedCue: boolean | null
+}
+
+/** a sector must hold the gaze this many consecutive samples (~300ms @ 10Hz) to
+ *  count as a *look* rather than a glance passing through on the way elsewhere */
+const FIRST_LOOK_DWELL = 3
+/** nearest-sector assignment tolerance (deg) */
+const FIRST_LOOK_TOL_DEG = 18
+
+const EMPTY_FIRST_LOOK: FirstLookMetrics = {
+  firstLookSector: null,
+  firstLookMs: null,
+  timeToTargetLookMs: null,
+  followedCue: null,
+}
+
+/**
+ * Which thing the child *looked at first*, from the current head window — the
+ * orienting response that the tap only reports downstream (review R11). Each
+ * sample is assigned to the nearest sector within tolerance; the first sector to
+ * hold the gaze for `dwell` consecutive samples is the first sustained look.
+ * This separates "followed the cue" from "searched and got lucky", which the
+ * adjacent/far tap taxonomy can only approximate.
+ */
+export function firstLookMetrics(
+  sectors: LookSector[],
+  targetId: string,
+  tolDeg: number = FIRST_LOOK_TOL_DEG,
+  dwell: number = FIRST_LOOK_DWELL,
+): FirstLookMetrics {
+  const s = buf.filter((p) => p.t >= windowStart)
+  if (s.length === 0 || sectors.length === 0) return { ...EMPTY_FIRST_LOOK }
+
+  const nearest = (yaw: number): string | null => {
+    let bestId: string | null = null
+    let bestD = tolDeg
+    for (const sec of sectors) {
+      const d = Math.abs(angDiffDeg(yaw, sec.bearingDeg))
+      if (d <= bestD) {
+        bestD = d
+        bestId = sec.id
+      }
+    }
+    return bestId
+  }
+
+  let firstLookSector: string | null = null
+  let firstLookMs: number | null = null
+  let timeToTargetLookMs: number | null = null
+  let runId: string | null = null
+  let runLen = 0
+  let runStart = 0
+
+  for (const p of s) {
+    const id = nearest(p.yaw)
+    if (id !== null && id === runId) {
+      runLen++
+    } else {
+      runId = id
+      runLen = id === null ? 0 : 1
+      runStart = p.t
+    }
+    if (id !== null && runLen >= dwell) {
+      if (firstLookSector === null) {
+        firstLookSector = id
+        firstLookMs = Math.max(0, Math.round(runStart - windowStart))
+      }
+      if (id === targetId && timeToTargetLookMs === null) {
+        timeToTargetLookMs = Math.max(0, Math.round(runStart - windowStart))
+      }
+    }
+    if (firstLookSector !== null && timeToTargetLookMs !== null) break
+  }
+
+  return {
+    firstLookSector,
+    firstLookMs,
+    timeToTargetLookMs,
+    followedCue: firstLookSector === null ? null : firstLookSector === targetId,
+  }
+}
+
 /** Record one camera pose (called by <HeadSampler>; degrees). */
 export function sampleHeadPose(
   yawDeg: number,

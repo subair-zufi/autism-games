@@ -202,6 +202,13 @@ block as a process/attention measure within the VR trials instead.
 - **Columns:** accuracy, `latency_from_prompt_end_ms`, and the head-scan block
   (`head_yaw_travel_deg`, `head_yaw_range_deg`, `head_reversals`, `head_to_target_ms`)
   as objective attention markers — does scanning become more direct as accuracy rises?
+- **Cue-following (the orienting response, not just the tap):** `first_look_sector`,
+  `time_to_target_look_ms` and `followed_cue` (Museum 360, Park 360, Football 360). These
+  come from the per-trial head window: the first exhibit/teammate/surprise the child's gaze
+  *settled* on, when they first looked at the cued target, and whether that first sustained
+  look was the target. `followed_cue = 1` with a correct tap is genuine cue-following;
+  `followed_cue = 0` on a correct tap is "searched and got lucky" — the tap alone cannot
+  tell these apart. `followed_cue` is blank when no look was sustained long enough to score.
 - **If you do look at desktop rows**, it is a descriptive comparison of a demo surface
   against the intervention, confounded by who played what and when. Label it exploratory,
   never as O5 evidence.

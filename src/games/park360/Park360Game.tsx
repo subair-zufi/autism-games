@@ -32,7 +32,7 @@ import { useVrSessionActive } from '../vrSession'
 import { VRWaitingRoom } from '../VRWaitingRoom'
 import { useVrGameOverPanel } from '../gameOverPanel'
 import { useGameAnalytics } from '../useGameAnalytics'
-import { beginHeadWindow, headMetrics } from '../headTracking'
+import { beginHeadWindow, firstLookMetrics, headMetrics } from '../headTracking'
 import { VRPracticeScene } from '../vrPractice/VRPracticeScene'
 
 const META = GAME_LIST.find((g) => g.id === 'park360')!
@@ -318,6 +318,15 @@ export function Park360Game() {
     // the head's scan across this whole round: headToTargetMs = time to first
     // look at the surprise, and the range/travel span the turn to the friend
     const head = headMetrics(discoveryBearingDeg(round.discovery))
+    // which did the child look at first — the surprise or the friend (review R11):
+    // looking at the surprise first is the orienting half of the IJA bid
+    const firstLook = firstLookMetrics(
+      [
+        { id: round.discovery, bearingDeg: discoveryBearingDeg(round.discovery) },
+        { id: 'friend', bearingDeg: round.friendBearingDeg },
+      ],
+      round.discovery,
+    )
     recordStep(
       'share',
       {
@@ -332,6 +341,7 @@ export function Park360Game() {
         // longer a constant, so its cost can be modelled per trial (R2)
         friendBearingDeg: round.friendBearingDeg,
         ...head,
+        ...firstLook,
         points,
         score: nextScore,
         found: nextShared,
