@@ -563,6 +563,15 @@ const TRAIL_DOTS = 4
 // but a child who doesn't orient at all still gets the cue eventually
 const EYE_CONTACT_TOL_DEG = 15
 const EYE_CONTACT_TIMEOUT_S = 6
+// gaze cue cadence — the responding-to-joint-attention alternation (review R10):
+// look at the child (bid) → shift to the target → a brief glance BACK to the
+// child (the back-reference that marks the attention as shared) → target again,
+// then repeat. The back-reference is what turns a one-way point into a shared
+// exchange in the developmental literature.
+const GAZE_CYCLE_S = 3.0
+const GAZE_BID_S = 0.75 // opening attention bid, looking at the child
+const GAZE_BACKREF_AT_S = 2.1 // when in the cycle the back-reference glance begins
+const GAZE_BACKREF_DUR_S = 0.45 // how long that glance holds
 const UP = new THREE.Vector3(0, 1, 0)
 const FWD = new THREE.Vector3(0, 0, 1)
 // scratch objects reused every frame
@@ -641,9 +650,19 @@ function HelperFigure({
     yaw.current += (yawGoal - yaw.current) * k
     b.rotation.y = yaw.current
 
-    // head: look at the child first (the attention bid), then at the target;
-    // gaze trials repeat the shift every few seconds so it reads as motion
-    const inBid = mode === 'gaze' ? t % 3.0 < 0.75 : t < 0.45
+    // head: look at the child first (the attention bid), shift to the target,
+    // then glance BACK to the child (the back-reference, review R10) before
+    // repeating — the canonical child → target → child alternation. Hand rungs
+    // keep the simpler one-shot shift.
+    let inBid: boolean
+    if (mode === 'gaze') {
+      const tc = t % GAZE_CYCLE_S
+      inBid =
+        tc < GAZE_BID_S ||
+        (tc >= GAZE_BACKREF_AT_S && tc < GAZE_BACKREF_AT_S + GAZE_BACKREF_DUR_S)
+    } else {
+      inBid = t < 0.45
+    }
     lookM.lookAt(inBid ? CHILD_EYES : aimPoint, HEAD_POS, UP)
     qHead.setFromRotationMatrix(lookM)
     h.quaternion.slerp(qHead, Math.min(1, dt * 6))
