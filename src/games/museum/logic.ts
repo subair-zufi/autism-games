@@ -52,6 +52,14 @@ export const START_TIER: Record<Difficulty, number> = { easy: 0, medium: 1, hard
 /** consecutive first-attempt finds needed to fade the hand cue one rung */
 export const FADE_STREAK = 3
 
+/*
+ * NOTE (review R14): the within-session stepping of the hand rung is now driven
+ * by the shared adaptive engine in `src/games/mastery.ts`, which both Museum
+ * twins use (rungCount = HAND_LADDER.length, floor = START_TIER[difficulty]).
+ * `fadedTier` / `supportedTier` remain as the single-step ladder primitives the
+ * engine's behaviour mirrors (step up one, capped; step down one, floored), kept
+ * and unit-tested so the ladder's semantics stay documented in one place.
+ */
 export function fadedTier(tier: number): number {
   return Math.min(tier + 1, HAND_LADDER.length - 1)
 }

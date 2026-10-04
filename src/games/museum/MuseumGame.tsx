@@ -11,20 +11,19 @@ import { praise, speak } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
-  FADE_STREAK,
   GOAL,
+  HAND_LADDER,
   START_TIER,
   cueSchedule,
   errorType,
-  fadedTier,
   makeRound,
   pointsFor,
   starsFor,
-  supportedTier,
   trialCue,
   type ExhibitId,
   type Round,
 } from './logic'
+import { initMastery, stepMastery, type MasteryConfig } from '../mastery'
 import { museumLine, exhibitLabel } from './strings'
 import { MuseumScene } from './MuseumScene'
 import { useGameAnalytics } from '../useGameAnalytics'
@@ -40,9 +39,12 @@ export function MuseumGame() {
   const goal = GOAL[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
-  /** rung on the hand's prompt-fading ladder — starts at the difficulty's entry
-   * rung, thins with success streaks, regains one rung of support after an error */
-  const [tier, setTier] = useState(() => START_TIER[difficulty])
+  /** the hand's prompt-support rung, driven by the shared adaptive engine
+   * (review R14): starts at the difficulty's entry rung (the floor), thins after
+   * a run of first-try finds, regains support after erred trials, never below
+   * the mentor-set floor */
+  const mastery: MasteryConfig = { rungCount: HAND_LADDER.length, floor: START_TIER[difficulty] }
+  const [rung, setRung] = useState(() => initMastery(mastery))
   const [round, setRound] = useState<Round>(() => makeRound(difficulty, null))
   const [score, setScore] = useState(0) // child-facing points
   const [found, setFound] = useState(0) // correct finds this session
@@ -60,7 +62,7 @@ export function MuseumGame() {
   // "only at the top of the fade ladder" behaviour allowed.
   const schedule = useMemo(() => cueSchedule(difficulty), [difficulty])
   const cueKind = schedule[Math.min(found, schedule.length - 1)]
-  const cue = trialCue(cueKind, tier, wrongPicks.length > 0)
+  const cue = trialCue(cueKind, rung.rung, wrongPicks.length > 0)
 
   // Malayalam-aware speech + level captions (surface the cue-fading ladder).
   const say = (key: Parameters<typeof museumLine>[0], params?: Record<string, string>) =>
@@ -73,7 +75,7 @@ export function MuseumGame() {
 
   function start() {
     resetSession()
-    setTier(START_TIER[difficulty])
+    setRung(initMastery(mastery))
     setScore(0)
     setFound(0)
     setFirstTries(0)
@@ -112,11 +114,14 @@ export function MuseumGame() {
       setFound(nextFound)
       setFirstTries(nextFirstTries)
       setStreak(nextStreak)
+      // fold this trial into the shared adaptive engine (review R14)
+      setRung((r) => stepMastery(r, mastery, { firstTryCorrect: firstAttempt }))
       recordStep(
         'answer',
         // visibleCount drives the guessing baseline server-side (1/n) now that
-        // the cue no longer identifies the difficulty
-        { correct: true, target: round.target, picked: id, cue, cueKind, visibleCount: round.visible.length, firstAttempt, latencyMs, points, score: nextScore, found: nextFound },
+        // the cue no longer identifies the difficulty; rung is the active
+        // adaptive difficulty rung (R14)
+        { correct: true, target: round.target, picked: id, cue, cueKind, rung: rung.rung, visibleCount: round.visible.length, firstAttempt, latencyMs, points, score: nextScore, found: nextFound },
         { score: nextScore },
       )
       if (nextFound >= goal) {
@@ -133,9 +138,6 @@ export function MuseumGame() {
         setWrongPicks([])
         setLocked(false)
         setCelebrate(0)
-        // prompt fading: every FADE_STREAK-th consecutive independent find
-        // thins the cue one rung (pulse -> hover -> distal -> gaze)
-        if (nextStreak > 0 && nextStreak % FADE_STREAK === 0) setTier((t) => fadedTier(t))
         setRound((r) => makeRound(difficulty, r.target))
       }, 1400)
     } else {
@@ -151,13 +153,16 @@ export function MuseumGame() {
         picked: id,
         cue,
         cueKind,
+        rung: rung.rung,
         visibleCount: round.visible.length,
         latencyMs,
         errorType: errorType(round.visible, round.target, id),
       })
-      // least-to-most: an error immediately brings one rung of support back
-      // (the retry happens under the easier cue, recorded as such)
-      setTier((t) => supportedTier(t, difficulty))
+      // The immediate within-trial support still returns at once via the retry's
+      // cue (hasErred above). The across-trial rung is stepped once per trial by
+      // the shared engine when the trial resolves correct, so a single slip no
+      // longer eases the baseline support — two erred trials in the window do
+      // (review R14).
     }
   }
 

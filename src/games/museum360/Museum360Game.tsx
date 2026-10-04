@@ -11,21 +11,20 @@ import { praise, speak } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
-  FADE_STREAK,
   GOAL,
+  HAND_LADDER,
   START_TIER,
   cueSchedule,
   errorType,
-  fadedTier,
   makeRound,
   pointsFor,
   slotHeadingDeg,
   starsFor,
-  supportedTier,
   trialCue,
   type ExhibitId,
   type Round,
 } from './logic'
+import { initMastery, stepMastery, type MasteryConfig } from '../mastery'
 import { useLevelProgress } from '../progression'
 import { museum360Line, exhibitLabel } from './strings'
 import { Museum360Scene } from './Museum360Scene'
@@ -64,9 +63,12 @@ export function Museum360Game() {
   const goal = GOAL[difficulty]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
-  /** rung on the hand's prompt-fading ladder — starts at the difficulty's entry
-   * rung, thins with success streaks, regains one rung of support after an error */
-  const [tier, setTier] = useState(() => START_TIER[difficulty])
+  /** the hand's prompt-support rung is now driven by the shared adaptive engine
+   * (review R14): it starts at the difficulty's entry rung (the floor), thins
+   * after a run of first-try finds, and regains support after erred trials —
+   * never below the mentor-set floor */
+  const mastery: MasteryConfig = { rungCount: HAND_LADDER.length, floor: START_TIER[difficulty] }
+  const [rung, setRung] = useState(() => initMastery(mastery))
   const [round, setRound] = useState<Round>(() => makeRound(difficulty, null))
   const [score, setScore] = useState(0) // child-facing points
   const [found, setFound] = useState(0) // correct finds this session
@@ -129,7 +131,7 @@ export function Museum360Game() {
   // share of gaze trials per session, same schedule as Museum Look.
   const schedule = useMemo(() => cueSchedule(difficulty), [difficulty])
   const cueKind = schedule[Math.min(found, schedule.length - 1)]
-  const cue = trialCue(cueKind, tier, wrongPicks.length > 0)
+  const cue = trialCue(cueKind, rung.rung, wrongPicks.length > 0)
   // The prompt names the cue the child should follow this trial, so a pointing
   // trial and a look-only trial ask for different things instead of one vague
   // line. A missed gaze trial that falls back to the hand reads as pointing.
@@ -153,7 +155,7 @@ export function Museum360Game() {
 
   function start() {
     resetSession()
-    setTier(START_TIER[difficulty])
+    setRung(initMastery(mastery))
     setScore(0)
     setFound(0)
     setFirstTries(0)
@@ -219,10 +221,14 @@ export function Museum360Game() {
       setFound(nextFound)
       setFirstTries(nextFirstTries)
       setStreak(nextStreak)
+      // fold this trial into the shared adaptive engine: a clean find advances
+      // toward a thinner cue, an erred one toward more support (review R14)
+      setRung((r) => stepMastery(r, mastery, { firstTryCorrect: firstAttempt }))
       recordStep(
         'answer',
-        // visibleCount drives the guessing baseline server-side (1/n), same as Museum Look
-        { correct: true, target: round.target, picked: id, cue, cueKind, visibleCount: round.visible.length, targetBearingDeg: targetBearingDeg(round), firstAttempt, latencyMs, ...head, ...firstLook, points, score: nextScore, found: nextFound },
+        // visibleCount drives the guessing baseline server-side (1/n), same as Museum Look;
+        // rung is the active adaptive difficulty rung (R14)
+        { correct: true, target: round.target, picked: id, cue, cueKind, rung: rung.rung, visibleCount: round.visible.length, targetBearingDeg: targetBearingDeg(round), firstAttempt, latencyMs, ...head, ...firstLook, points, score: nextScore, found: nextFound },
         { score: nextScore },
       )
       if (nextFound >= goal) {
@@ -242,9 +248,6 @@ export function Museum360Game() {
         setWrongPicks([])
         setLocked(false)
         setCelebrate(0)
-        // prompt fading: every FADE_STREAK-th consecutive independent find
-        // thins the cue one rung (pulse -> hover -> distal -> gaze)
-        if (nextStreak > 0 && nextStreak % FADE_STREAK === 0) setTier((t) => fadedTier(t))
         setRound((r) => makeRound(difficulty, r.target))
       }, 1000)
     } else {
@@ -260,6 +263,7 @@ export function Museum360Game() {
         picked: id,
         cue,
         cueKind,
+        rung: rung.rung,
         visibleCount: round.visible.length,
         targetBearingDeg: targetBearingDeg(round),
         latencyMs,
@@ -267,9 +271,11 @@ export function Museum360Game() {
         ...firstLook,
         errorType: errorType(round.visible, round.target, id),
       })
-      // least-to-most: an error immediately brings one rung of support back
-      // (the retry happens under the easier cue, recorded as such)
-      setTier((t) => supportedTier(t, difficulty))
+      // The immediate within-trial support still returns at once: the retry's
+      // cue is computed with hasErred = wrongPicks.length > 0 (see `cue` above).
+      // The across-trial rung is stepped once per trial by the shared engine
+      // when the trial resolves correct, so a single slip no longer eases the
+      // baseline support — two erred trials in the window do (review R14).
     }
   }
 
