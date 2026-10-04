@@ -61,6 +61,10 @@ export interface Playroom360SceneProps {
   onPlace: () => void
   onIllegal: () => void
   onHandoff: () => void
+  /** a peer giving a contingent "almost your turn!" reply to an out-of-turn tap,
+   *  or null — a visible, non-punishing response from the peer (review R13) */
+  replyIndex: number | null
+  replyText: string
   /** child-facing HUD lines mirrored inside VR, where the DOM overlay is invisible */
   hudScore: string
   hudPrompt: string
@@ -597,7 +601,7 @@ function PlayroomRoom() {
 /* ---- the play: table, tower, the child's block, the friends ----------------- */
 
 function SceneInner(props: Playroom360SceneProps) {
-  const { players, placed, activeIndex, reaching, childNext, childTurn, nextChildSpec, handoffIndex, onPlace, onIllegal, onHandoff, bubbleTap } = props
+  const { players, placed, activeIndex, reaching, childNext, childTurn, nextChildSpec, handoffIndex, onPlace, onIllegal, onHandoff, bubbleTap, replyIndex, replyText } = props
 
   // Completed towers are set aside as minis so the active stack stays short
   // and no friend's face ever hides behind it.
@@ -648,6 +652,7 @@ function SceneInner(props: Playroom360SceneProps) {
             reaching={i === activeIndex && reaching}
             handoffTarget={i === handoffIndex}
             bubbleTap={bubbleTap}
+            reply={i === replyIndex ? replyText : null}
             onTap={() => onHandoff()}
           />
         )
@@ -853,6 +858,7 @@ function Kid360({
   reaching,
   handoffTarget,
   bubbleTap,
+  reply,
   onTap,
 }: {
   player: Player
@@ -862,6 +868,7 @@ function Kid360({
   reaching: boolean
   handoffTarget: boolean
   bubbleTap: string
+  reply: string | null
   onTap: () => void
 }) {
   const g = useRef<THREE.Group>(null)
@@ -1044,6 +1051,19 @@ function Kid360({
             font={110}
             bg="rgba(255, 246, 226, 0.95)"
             fg="#b45309"
+            rotY={faceChild}
+          />
+        )}
+        {/* the active peer's gentle reply to an out-of-turn tap (review R13) */}
+        {reply && !handoffTarget && (
+          <TextPanel
+            text={reply}
+            position={[0, 2.02, 0]}
+            width={1.5}
+            height={0.36}
+            font={104}
+            bg="rgba(226, 242, 255, 0.95)"
+            fg="#2563a6"
             rotY={faceChild}
           />
         )}

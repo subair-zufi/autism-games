@@ -100,6 +100,10 @@ export function Playroom360Game() {
   const ownTurnLatencySum = useRef(0)
   const ownTurnCount = useRef(0)
   const ownTurnStart = useRef<number | null>(null)
+  // the peer currently giving a contingent "almost your turn!" reply to an
+  // out-of-turn tap, so the exchange is social rather than silent (review R13)
+  const [replyIndex, setReplyIndex] = useState<number | null>(null)
+  const replyTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** the one-time "drag to look around" hint, dismissed on the first look */
   const [hintSeen, setHintSeen] = useState(false)
   /** whether this browser can enter immersive VR (Quest etc.) — shows the button */
@@ -134,6 +138,13 @@ export function Playroom360Game() {
     () => sequence.slice(0, index).filter((t) => t.kind === 'child').length,
     [sequence, index],
   )
+
+  // clear any lingering "almost your turn!" peer reply when the turn advances,
+  // and the reply timer on unmount
+  useEffect(() => {
+    setReplyIndex(null)
+  }, [index])
+  useEffect(() => () => void (replyTimer.current && clearTimeout(replyTimer.current)), [])
 
   useEffect(() => {
     void vrSupported().then(setCanVR)
@@ -181,6 +192,8 @@ export function Playroom360Game() {
     ownTurnLatencySum.current = 0
     ownTurnCount.current = 0
     ownTurnStart.current = null
+    if (replyTimer.current) clearTimeout(replyTimer.current)
+    setReplyIndex(null)
     setPhase('playing')
   }
 
@@ -326,6 +339,14 @@ export function Playroom360Game() {
       recordStep('impatient_tap', { round, during: 'handoff', source: 'tap', peerWaitMs: lastPeerWaitMs.current })
       return
     }
+    // the active peer replies instead of staying silent — a gentle, visible,
+    // non-punishing response that makes the out-of-turn tap a social exchange
+    // (review R13)
+    if (turn && turn.kind === 'peer') {
+      setReplyIndex(turn.playerIndex)
+      if (replyTimer.current) clearTimeout(replyTimer.current)
+      replyTimer.current = setTimeout(() => setReplyIndex(null), 1600)
+    }
     say('sayWaitTurn')
     recordStep('impatient_tap', {
       round,
@@ -408,6 +429,8 @@ export function Playroom360Game() {
             onPlace={succeedPlace}
             onIllegal={impatient}
             onHandoff={passHandoff}
+            replyIndex={replyIndex}
+            replyText={prLine('bubbleAlmost', lang)}
             celebrate={celebrating}
             hudScore={`🧱 ${score} / ${config.rounds}`}
             hudPrompt={prLine(promptKey, lang, promptParams)}

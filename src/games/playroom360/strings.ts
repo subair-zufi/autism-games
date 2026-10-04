@@ -85,6 +85,9 @@ const MESSAGES = {
   bubbleMyTurn: { en: 'Tap me!', ml: 'എന്നെ തൊടൂ!' },
   // Gaze-dwell wording for the hand-off friend's bubble ("Look at me!").
   bubbleMyTurnGaze: { en: 'Look at me!', ml: 'എന്നെ നോക്കൂ!' },
+  // The active peer's gentle, contingent reply when the child taps out of turn
+  // (review R13): a visible response from the peer rather than silence.
+  bubbleAlmost: { en: 'Almost your turn!', ml: 'അടുത്തത് നിന്റെ ഊഴം!' },
 
   // Fallback peer label if the roster is momentarily empty.
   friend: { en: 'A friend', ml: 'ഒരു കൂട്ടുകാരൻ' },
