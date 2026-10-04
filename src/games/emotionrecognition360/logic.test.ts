@@ -15,6 +15,8 @@ import {
   pointsFor,
   roundChance,
   starsFor,
+  TIER_LADDER,
+  tierFloor,
 } from './logic'
 
 function seededRng(seed: number) {
@@ -156,6 +158,29 @@ describe('scoring', () => {
   it('reports the guessing baseline as 1 / boards', () => {
     expect(roundChance(makeRound('happy', 'easy', seededRng(1)))).toBeCloseTo(0.5)
     expect(roundChance(makeRound('happy', 'hard', seededRng(1)))).toBeCloseTo(1 / 3)
+  })
+})
+
+describe('adaptive tier ladder (R14)', () => {
+  it('orders tiers low -> mixed -> high', () => {
+    expect(TIER_LADDER).toEqual(['low', 'mixed', 'high'])
+  })
+
+  it('floors each difficulty on its own config tier', () => {
+    expect(tierFloor('easy')).toBe(0) // low
+    expect(tierFloor('medium')).toBe(1) // mixed
+    expect(tierFloor('hard')).toBe(2) // high
+    for (const d of ['easy', 'medium', 'hard'] as Difficulty[]) {
+      expect(TIER_LADDER[tierFloor(d)]).toBe(CONFIG[d].tier)
+    }
+  })
+
+  it('makeRound honours a tier override but keeps the level board count', () => {
+    // easy is a 2-board level; adapting the tier up to "high" must not change that
+    const r = makeRound('happy', 'easy', seededRng(3), 0, 'high')
+    expect(r.boards).toHaveLength(CONFIG.easy.boardCount)
+    expect(r.answerIndex).toBe(0)
+    expect(r.boards[0].emotion).toBe('happy')
   })
 })
 

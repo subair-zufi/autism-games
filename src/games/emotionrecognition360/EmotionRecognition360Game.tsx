@@ -12,6 +12,7 @@ import { t, whoFeelsQuestion } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
   CONFIG,
+  TIER_LADDER,
   answerBearingDeg,
   buildAnswerSlots,
   buildTargets,
@@ -19,8 +20,10 @@ import {
   pointsFor,
   roundChance,
   starsFor,
+  tierFloor,
   type Round,
 } from './logic'
+import { initMastery, stepMastery, type MasteryConfig } from '../mastery'
 import { useLevelProgress } from '../progression'
 import { roomLine } from './strings'
 import { EmotionRecognition360Scene } from './EmotionRecognition360Scene'
@@ -60,6 +63,11 @@ export function EmotionRecognition360Game() {
   // same pair the `level_result` step already records.
   const { submit } = useLevelProgress('emotionrecognition360')
   const cfg = CONFIG[difficulty]
+  // within-session adaptive distractor difficulty (review R14): the rung steps
+  // the distractor tier up/down from the mentor-set floor. Held in a ref because
+  // it is read and advanced inside the round timers, never rendered directly.
+  const mastery: MasteryConfig = { rungCount: TIER_LADDER.length, floor: tierFloor(difficulty) }
+  const rungRef = useRef(initMastery(mastery))
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   // Lazily populated with a real (if throwaway) round rather than `[]`/`null`,
@@ -156,6 +164,7 @@ export function EmotionRecognition360Game() {
     const seq = buildTargets(difficulty)
     setTargets(seq)
     answerSlots.current = buildAnswerSlots(difficulty)
+    rungRef.current = initMastery(mastery)
     setRoundIdx(0)
     setPhase('playing')
     beginRound(seq, 0)
@@ -179,7 +188,8 @@ export function EmotionRecognition360Game() {
     hintFiredRef.current = false
     setActive(false)
     readyAt.current = null
-    const next = makeRound(seq[idx], difficulty, Math.random, answerSlots.current[idx])
+    // the current adaptive rung's distractor tier (board count stays the level's)
+    const next = makeRound(seq[idx], difficulty, Math.random, answerSlots.current[idx], TIER_LADDER[rungRef.current.rung])
     setRound(next)
     // a calm beat, then the boards appear and the question is asked
     gapTimer.current = setTimeout(() => {
@@ -230,6 +240,10 @@ export function EmotionRecognition360Game() {
     const latencyFromPromptEndMs = promptEndAt.current === null ? null : Math.round(now - promptEndAt.current)
     const head = headMetrics(answerBearingDeg(round))
     const hinted = hintFiredRef.current
+    // the adaptive rung/tier this round was presented at (R14), captured before
+    // the outcome steps it for the next round
+    const activeRung = rungRef.current.rung
+    const activeTier = TIER_LADDER[activeRung]
     setPickedIndex(i)
     setAnswered(true)
     setHint(false)
@@ -265,10 +279,17 @@ export function EmotionRecognition360Game() {
         latencyFromPromptEndMs,
         ...head,
         hinted,
+        rung: activeRung,
+        tier: activeTier,
         mode: 'practice',
       },
       { score: nextScore },
     )
+
+    // fold this trial into the shared adaptive engine: a first-try-correct find
+    // steps toward more confusable distractors, an erred one steps back toward
+    // the mentor-set floor (review R14)
+    rungRef.current = stepMastery(rungRef.current, mastery, { firstTryCorrect: correct })
 
     // reveal the correct face for a beat, then move on
     advanceTimer.current = setTimeout(() => advance(nextScore, nextCorrect), FEEDBACK_MS)

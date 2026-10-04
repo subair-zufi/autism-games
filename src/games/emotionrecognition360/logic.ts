@@ -67,6 +67,20 @@ export const CONFIG: Record<Difficulty, RoundConfig> = {
   hard: { boardCount: 3, tier: 'high', hintAfterMs: null, goal: 10 },
 }
 
+/**
+ * The within-session adaptive-difficulty ladder (review R14): the distractor
+ * confusability the shared mastery engine steps through. A higher rung pairs the
+ * target with more confusable wrong faces. Board count stays at the mentor-set
+ * level's value — only the perceptual difficulty adapts — so the scene geometry
+ * and the answer-slot counterbalancing are untouched.
+ */
+export const TIER_LADDER: DistractorTier[] = ['low', 'mixed', 'high']
+
+/** the rung a difficulty starts on (and never drops below) — its config tier */
+export function tierFloor(difficulty: Difficulty): number {
+  return TIER_LADDER.indexOf(CONFIG[difficulty].tier)
+}
+
 /** One face on one board. */
 export interface Board {
   emotion: EmotionId
@@ -116,9 +130,13 @@ export function makeRound(
    *  Real sessions should pass a slot from `buildAnswerSlots` so the correct
    *  board doesn't land disproportionately on one side across a session. */
   answerSlot?: number,
+  /** distractor confusability for this round; omit for the level's base tier.
+   *  Real sessions pass the adaptive rung's tier (review R14); board count stays
+   *  the level's, so only perceptual difficulty adapts. */
+  tier?: DistractorTier,
 ): Round {
   const cfg = CONFIG[difficulty]
-  const distractors = shuffle(pickDistractors(target, cfg.boardCount - 1, cfg.tier, rng), rng)
+  const distractors = shuffle(pickDistractors(target, cfg.boardCount - 1, tier ?? cfg.tier, rng), rng)
   const slot = answerSlot ?? Math.floor(rng() * cfg.boardCount)
   const emotions: EmotionId[] = []
   let di = 0
