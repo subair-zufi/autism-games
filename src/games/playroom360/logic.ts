@@ -72,6 +72,22 @@ export const CONFIG: Record<Difficulty, BlockConfig> = {
 }
 
 /**
+ * The within-session adaptive-difficulty ladder (review R14): the peer-wait
+ * jitter band the shared mastery engine steps through. A higher rung is a less
+ * predictable wait — a harder waiting task. Player (peer) count stays the
+ * mentor-set level's value, so the number of avatars around the table (scene
+ * geometry) and the turn rotation are untouched; only the waiting difficulty
+ * adapts.
+ */
+export const JITTER_LADDER = [0, 0.2, 0.4]
+
+/** the rung a difficulty starts on (and never drops below) — its config jitter */
+export function jitterFloor(difficulty: Difficulty): number {
+  const i = JITTER_LADDER.indexOf(CONFIG[difficulty].jitter)
+  return i >= 0 ? i : 0
+}
+
+/**
  * The actual think-time for one peer turn: the base wait varied by ±`jitter`.
  * With jitter 0 it returns the base unchanged (easy stays perfectly
  * predictable); higher tiers vary the wait so the child must tolerate

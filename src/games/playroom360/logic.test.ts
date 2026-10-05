@@ -9,8 +9,10 @@ import {
   TOWER_BEARING,
   TOWER_MAX,
   blockY,
+  JITTER_LADDER,
   buildPlayers,
   inTurnRatio,
+  jitterFloor,
   sessionAccuracy,
   starsFor,
   starsForAccuracy,
@@ -80,6 +82,16 @@ describe('playroom360 logic (same rotation as Block Buddies)', () => {
     expect(CONFIG.easy.jitter).toBe(0)
     expect(CONFIG.easy.jitter).toBeLessThan(CONFIG.medium.jitter)
     expect(CONFIG.medium.jitter).toBeLessThan(CONFIG.hard.jitter)
+  })
+
+  it('the adaptive jitter ladder floors each difficulty on its config jitter (R14)', () => {
+    expect(JITTER_LADDER).toEqual([0, 0.2, 0.4])
+    expect(jitterFloor('easy')).toBe(0)
+    expect(jitterFloor('medium')).toBe(1)
+    expect(jitterFloor('hard')).toBe(2)
+    for (const d of ['easy', 'medium', 'hard'] as const) {
+      expect(JITTER_LADDER[jitterFloor(d)]).toBe(CONFIG[d].jitter)
+    }
   })
 
   it('blocks stack on the table top by BLOCK_H', () => {

@@ -11,8 +11,10 @@ import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
   CONFIG,
+  JITTER_LADDER,
   buildPlayers,
   inTurnRatio,
+  jitterFloor,
   makeSequence,
   peerBearingDeg,
   peerWaitMs,
@@ -21,6 +23,7 @@ import {
   type Player,
   type TurnSpec,
 } from './logic'
+import { initMastery, stepMastery, type MasteryConfig } from '../mastery'
 import { useLevelProgress } from '../progression'
 import { prLine, prLines, prSpeak, type Playroom360MessageKey } from './strings'
 import { Playroom360Scene } from './Playroom360Scene'
@@ -100,6 +103,15 @@ export function Playroom360Game() {
   const ownTurnLatencySum = useRef(0)
   const ownTurnCount = useRef(0)
   const ownTurnStart = useRef<number | null>(null)
+  // within-session adaptive waiting difficulty (review R14): the rung steps the
+  // peer-wait jitter band up after clean turns and down after impatient ones,
+  // never below the mentor-set floor. Peer count stays the level's value.
+  const mastery: MasteryConfig = { rungCount: JITTER_LADDER.length, floor: jitterFloor(difficulty) }
+  const [rung, setRung] = useState(() => initMastery(mastery))
+  const activeJitter = JITTER_LADDER[rung.rung]
+  // whether the child tapped out of turn since their last placement — the error
+  // signal the engine steps on (a clean turn is a "first-try" waiting success)
+  const erredSincePlacement = useRef(false)
   // the peer currently giving a contingent "almost your turn!" reply to an
   // out-of-turn tap, so the exchange is social rather than silent (review R13)
   const [replyIndex, setReplyIndex] = useState<number | null>(null)
@@ -194,6 +206,8 @@ export function Playroom360Game() {
     ownTurnStart.current = null
     if (replyTimer.current) clearTimeout(replyTimer.current)
     setReplyIndex(null)
+    setRung(initMastery(mastery))
+    erredSincePlacement.current = false
     setPhase('playing')
   }
 
@@ -251,9 +265,10 @@ export function Playroom360Game() {
       // measure whether the child watched the active peer rather than tuning out
       // (review R9) — not just at hand-off as before
       beginHeadWindow()
-      // a fresh jittered wait for this turn (easy = the flat base, higher tiers
-      // vary it so the interval is no longer perfectly predictable)
-      const wait = peerWaitMs(config.peerTurnMs, config.jitter)
+      // a fresh jittered wait for this turn, at the adaptive rung's jitter band
+      // (R14): the flat base at the floor, more variable as the child proves they
+      // can tolerate uncertainty
+      const wait = peerWaitMs(config.peerTurnMs, activeJitter)
       lastPeerWaitMs.current = wait
       const t1 = setTimeout(() => setReaching(true), wait * 0.55)
       const t2 = setTimeout(() => {
@@ -267,6 +282,7 @@ export function Playroom360Game() {
           peerBearingDeg: peerBearing,
           watchProportion: Math.round(watch * 100) / 100,
           peerWaitMs: wait,
+          rung: rung.rung,
           ...headMetrics(peerBearing),
         })
         setReaching(false)
@@ -316,10 +332,16 @@ export function Playroom360Game() {
         method: 'tap',
         peerWaitMs: lastPeerWaitMs.current,
         ownTurnLatencyMs,
+        rung: rung.rung,
         ...headMetrics(),
       },
       { score: score + 1 },
     )
+    // fold this turn into the shared adaptive engine (R14): a turn reached with
+    // no out-of-turn tap is a clean waiting success (step toward more jitter);
+    // a turn with an impatient tap is an error (step back toward a steadier wait)
+    setRung((r) => stepMastery(r, mastery, { firstTryCorrect: !erredSincePlacement.current }))
+    erredSincePlacement.current = false
     // Drop the block now (it appears), then require an explicit hand-off to
     // the next player before their turn begins — unless this was the last turn.
     const nextTurn = sequence[index + 1] ?? null
@@ -333,6 +355,9 @@ export function Playroom360Game() {
     if (phase !== 'playing') return
     playGentle()
     setImpatientTaps((n) => n + 1)
+    // mark this turn cycle as erred, so the adaptive engine eases the wait jitter
+    // after two such turns (review R14)
+    erredSincePlacement.current = true
     if (handoffTo) {
       // tapped the block mid hand-off: remind them to pass first
       say('sayPassFirst', { name: handoffTo.name })
