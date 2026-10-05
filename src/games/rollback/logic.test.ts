@@ -2,12 +2,14 @@ import { describe, it, expect } from 'vitest'
 import {
   CONFIG,
   GOAL,
+  CUE_LADDER,
   POINTS,
   STREAK_LEN,
   buildInitiateSchedule,
   buildPlayers,
   makeSequence,
   classifyReturn,
+  cueFloor,
   pointsFor,
   starsFor,
   type Rally,
@@ -34,6 +36,16 @@ describe('rollback logic (reciprocal turn-taking)', () => {
     expect(CONFIG.easy.cue).toBe('verbal')
     expect(CONFIG.medium.cue).toBe('gesture')
     expect(CONFIG.hard.cue).toBe('orient')
+  })
+
+  it('the adaptive cue ladder floors each difficulty on its config cue (R14)', () => {
+    expect(CUE_LADDER).toEqual(['verbal', 'gesture', 'orient'])
+    expect(cueFloor('easy')).toBe(0)
+    expect(cueFloor('medium')).toBe(1)
+    expect(cueFloor('hard')).toBe(2)
+    for (const d of ['easy', 'medium', 'hard'] as const) {
+      expect(CUE_LADDER[cueFloor(d)]).toBe(CONFIG[d].cue)
+    }
   })
 
   it('only hard mode asks the child to initiate rallies (a fixed count)', () => {

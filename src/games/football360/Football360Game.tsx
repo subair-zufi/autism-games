@@ -11,16 +11,19 @@ import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
   CONFIG,
+  CUE_LADDER,
   GOAL,
   buildPlayers,
   makeSequence,
   classifyReturn,
+  cueFloor,
   playerHeadingDeg,
   pointsFor,
   starsFor,
   type Player,
   type Rally,
 } from './logic'
+import { initMastery, stepMastery, type MasteryConfig } from '../mastery'
 import { useLevelProgress } from '../progression'
 import { Football360Scene } from './Football360Scene'
 import { fbLine, fbLines, fbSpeak, type Football360MessageKey } from './strings'
@@ -90,6 +93,14 @@ export function Football360Game() {
   // when the spoken line finishes, so latency can also be measured from there.
   const say = (key: Football360MessageKey, params?: Params, onEnd?: () => void) =>
     speakAll(fbSpeak(key, lang, params), onEnd)
+
+  // within-session adaptive cue difficulty (review R14): the rung steps the
+  // ready-cue modality up/down from the mentor-set floor; partner count stays
+  // the level's value. In state (not a ref) because the active cue drives the
+  // scene cue visual and the prompt.
+  const mastery: MasteryConfig = { rungCount: CUE_LADDER.length, floor: cueFloor(difficulty) }
+  const [rung, setRung] = useState(() => initMastery(mastery))
+  const activeCue = CUE_LADDER[rung.rung]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [players, setPlayers] = useState<Player[]>([])
@@ -173,6 +184,7 @@ export function Football360Game() {
     setFirstTries(0)
     setStreak(0)
     setAttempts(0)
+    setRung(initMastery(mastery))
     setLives(MAX_LIVES)
     setShake(0)
     setStars(0)
@@ -212,15 +224,15 @@ export function Football360Game() {
       recordStep('cue_ready', {
         rally: ri,
         to: players[rally.to].id,
-        cue: config.cue,
+        cue: activeCue,
         partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
         initiate: true, // every round is child-initiated in this flow
         // how far the child must turn to face the ready teammate — the 360
         // attention-shift size, recorded like Museum 360's targetBearingDeg
         targetBearingDeg: playerHeadingDeg(rally.to, config.partners),
       })
-      if (config.cue === 'verbal') say('sayVerbalCue', { name: biName(players[rally.to]) }, markEnd)
-      else if (config.cue === 'gesture') say('sayGestureCue', undefined, markEnd)
+      if (activeCue === 'verbal') say('sayVerbalCue', { name: biName(players[rally.to]) }, markEnd)
+      else if (activeCue === 'gesture') say('sayGestureCue', undefined, markEnd)
       else if (ri === 0) say('sayOrientCue', undefined, markEnd)
       // no spoken cue this rally (orient after the first) — the prompt-end
       // latency then simply coincides with the cue onset
@@ -323,7 +335,7 @@ export function Football360Game() {
         rally: ri,
         picked: players[i]?.id,
         during: stage,
-        cue: config.cue,
+        cue: activeCue,
         partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
         initiate: true, // every round is child-initiated in this flow
       })
@@ -363,8 +375,9 @@ export function Football360Game() {
           rally: ri,
           target: players[rally.to].id,
           picked: players[i].id,
-          cue: config.cue,
+          cue: activeCue,
           partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
+          rung: rung.rung, // the active adaptive cue rung (R14)
           initiate: true, // every round is child-initiated in this flow
           firstAttempt,
           latencyMs,
@@ -378,6 +391,9 @@ export function Football360Game() {
         },
         { score: nextScore },
       )
+      // fold this rally into the shared adaptive engine: a first-try return
+      // steps toward a thinner cue, an erred one toward more cue support (R14)
+      setRung((r) => stepMastery(r, mastery, { firstTryCorrect: firstAttempt }))
       setStage('rolling')
     } else {
       // wrong-partner: they trap it, look puzzled, and pass it straight back
@@ -392,8 +408,9 @@ export function Football360Game() {
         rally: ri,
         target: players[rally.to].id,
         picked: players[i].id,
-        cue: config.cue,
+        cue: activeCue,
         partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
+        rung: rung.rung, // the active adaptive cue rung (R14)
         initiate: true, // every round is child-initiated in this flow
         latencyMs,
         latencyFromPromptEndMs,
@@ -440,11 +457,11 @@ export function Football360Game() {
     promptKey = 'promptPause'
   } else if (!cueShown) {
     promptKey = ri === 0 ? 'promptStart' : 'promptYourTurn'
-  } else if (config.cue === 'verbal') {
+  } else if (activeCue === 'verbal') {
     promptKey = 'promptVerbal'
     promptParams = { name: biName(rally ? players[rally.to] : undefined) }
   } else {
-    promptKey = config.cue === 'gesture' ? 'promptGesture' : 'promptOrient'
+    promptKey = activeCue === 'gesture' ? 'promptGesture' : 'promptOrient'
   }
 
   return (
@@ -454,7 +471,7 @@ export function Football360Game() {
         <div className="game-canvas" onPointerDown={() => setHintSeen(true)}>
           <Football360Scene
             players={players}
-            cue={config.cue}
+            cue={activeCue}
             ballOwner={ballOwner}
             readyIndex={rally && cueShown && stage === 'hold' ? rally.to : null}
             rollerIndex={rally && stage === 'returning' ? rally.to : null}

@@ -10,15 +10,18 @@ import { praise, speakAll } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
   CONFIG,
+  CUE_LADDER,
   GOAL,
   buildPlayers,
   makeSequence,
   classifyReturn,
+  cueFloor,
   pointsFor,
   starsFor,
   type Player,
   type Rally,
 } from './logic'
+import { initMastery, stepMastery, type MasteryConfig } from '../mastery'
 import { RollBackScene } from './RollBackScene'
 import { rbLine, rbLines, rbSpeak, type RollBackMessageKey } from './strings'
 import { useGameAnalytics } from '../useGameAnalytics'
@@ -53,6 +56,13 @@ export function RollBackGame() {
 
   // Speak a line in the chosen language.
   const say = (key: RollBackMessageKey, params?: Params) => speakAll(rbSpeak(key, lang, params))
+
+  // within-session adaptive cue difficulty (review R14), kept identical to
+  // Football 360: the rung steps the ready-cue modality from the mentor-set
+  // floor; partner count stays the level's value.
+  const mastery: MasteryConfig = { rungCount: CUE_LADDER.length, floor: cueFloor(difficulty) }
+  const [rung, setRung] = useState(() => initMastery(mastery))
+  const activeCue = CUE_LADDER[rung.rung]
 
   const [phase, setPhase] = useState<'start' | 'playing' | 'over'>('start')
   const [players, setPlayers] = useState<Player[]>([])
@@ -90,6 +100,7 @@ export function RollBackGame() {
     setReturned(0)
     setStreak(0)
     setAttempts(0)
+    setRung(initMastery(mastery))
     setLives(MAX_LIVES)
     setShake(0)
     setStars(0)
@@ -121,12 +132,12 @@ export function RollBackGame() {
       recordStep('cue_ready', {
         rally: ri,
         to: players[rally.to].id,
-        cue: config.cue,
+        cue: activeCue,
         partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
         initiate: rally.initiate,
       })
-      if (config.cue === 'verbal') say('sayVerbalCue', { name: biName(players[rally.to]) })
-      else if (config.cue === 'gesture') say('sayGestureCue')
+      if (activeCue === 'verbal') say('sayVerbalCue', { name: biName(players[rally.to]) })
+      else if (activeCue === 'gesture') say('sayGestureCue')
       else if (ri === 0) say('sayOrientCue')
     }, config.readyDelayMs)
     return () => clearTimeout(t)
@@ -203,7 +214,7 @@ export function RollBackGame() {
         rally: ri,
         picked: players[i]?.id,
         during: stage,
-        cue: config.cue,
+        cue: activeCue,
         partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
         initiate: rally.initiate,
       })
@@ -231,8 +242,9 @@ export function RollBackGame() {
           rally: ri,
           target: players[rally.to].id,
           picked: players[i].id,
-          cue: config.cue,
+          cue: activeCue,
           partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
+          rung: rung.rung, // the active adaptive cue rung (R14)
           initiate: rally.initiate,
           firstAttempt,
           latencyMs,
@@ -242,6 +254,8 @@ export function RollBackGame() {
         },
         { score: nextScore },
       )
+      // fold this rally into the shared adaptive engine (review R14)
+      setRung((r) => stepMastery(r, mastery, { firstTryCorrect: firstAttempt }))
       setStage('rolling')
     } else {
       // wrong-partner: they catch it, look puzzled, and roll it straight back
@@ -256,8 +270,9 @@ export function RollBackGame() {
         rally: ri,
         target: players[rally.to].id,
         picked: players[i].id,
-        cue: config.cue,
+        cue: activeCue,
         partners: config.partners, // set size, logged alongside cue so the two difficulty axes can be modelled apart (R7)
+        rung: rung.rung, // the active adaptive cue rung (R14)
         initiate: rally.initiate,
         latencyMs,
       })
@@ -280,11 +295,11 @@ export function RollBackGame() {
     promptKey = 'promptRolling'
   } else if (!cueShown) {
     promptKey = rally?.initiate ? 'promptInitiate' : 'promptCaught'
-  } else if (config.cue === 'verbal') {
+  } else if (activeCue === 'verbal') {
     promptKey = 'promptVerbal'
     promptParams = { name: biName(rally ? players[rally.to] : undefined) }
   } else {
-    promptKey = config.cue === 'gesture' ? 'promptGesture' : 'promptOrient'
+    promptKey = activeCue === 'gesture' ? 'promptGesture' : 'promptOrient'
   }
 
   return (
@@ -294,7 +309,7 @@ export function RollBackGame() {
         <div className="game-canvas">
           <RollBackScene
             players={players}
-            cue={config.cue}
+            cue={activeCue}
             ballOwner={ballOwner}
             readyIndex={rally && cueShown && stage !== 'rolling' ? rally.to : null}
             rollerIndex={rally && stage === 'incoming' && !rally.initiate ? rally.from : null}

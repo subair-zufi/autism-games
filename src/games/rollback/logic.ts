@@ -112,6 +112,19 @@ export function buildInitiateSchedule(count: number, rounds: number): boolean[] 
 /** correct returns needed to win a session (mirrors Museum's GOAL). */
 export const GOAL: Record<Difficulty, number> = { easy: 5, medium: 7, hard: 10 }
 
+/**
+ * The within-session adaptive-difficulty ladder (review R14): the ready-cue
+ * modality the shared mastery engine steps through (verbal → gesture → orient),
+ * a higher rung being a thinner cue. Partner count stays the mentor-set level's
+ * value. Kept identical to Football 360's twin.
+ */
+export const CUE_LADDER: CueMode[] = ['verbal', 'gesture', 'orient']
+
+/** the rung a difficulty starts on (and never drops below) — its config cue */
+export function cueFloor(difficulty: Difficulty): number {
+  return CUE_LADDER.indexOf(CONFIG[difficulty].cue)
+}
+
 /** Friendly Kerala peer roster (sliced to the partner count). Names are in
  * Malayalam script — labels render via DOM overlays, prompts speak them. */
 const PEER_ROSTER: ReadonlyArray<{ name: string; nameEn: string; emoji: string; look: Look }> = [
