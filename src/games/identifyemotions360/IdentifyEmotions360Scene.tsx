@@ -100,7 +100,14 @@ export function IdentifyEmotions360Scene(props: IdentifyEmotions360SceneProps) {
         <directionalLight position={[3, 10, 4]} intensity={0.5} color="#fff2dc" />
         <directionalLight position={[-5, 7, -3]} intensity={0.22} color="#eaf1ff" />
         <LookControls />
-        <HeadSelect />
+        {/* Two-stage confirm with the ✓ parked BELOW the chosen card: the child
+            looks at each answer card to read it, then has to look DOWN to the
+            tick mark to actually answer. Reading the choices is part of the
+            task, so a confirm that sits on the line of sight (the "on" default)
+            risks a glance at a card answering before the child has decided.
+            Parking the tick below keeps reading a card separate from choosing
+            it. See HeadSelect's `confirmSide`. */}
+        <HeadSelect confirmSide="below" />
         <XRCameraHome />
         <RemoteMirror />
         <VRGameOver />

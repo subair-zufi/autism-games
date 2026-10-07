@@ -43,19 +43,24 @@ import {
  * what let a child with an unsteady head answer at all, and how far each one
  * goes is the child's steadiness profile. See `headAim.ts`.
  *
- * `confirmSide` picks where the chip parks. `"on"` — the default, and what
- * every scene now uses — hovers it just in front of the candidate's own
- * surface, along the same ray the gaze already used to arm it, so confirming
- * needs no head movement at all, not even a nod.
+ * `confirmSide` picks where the chip parks. `"on"` — the default — hovers it
+ * just in front of the candidate's own surface, along the same ray the gaze
+ * already used to arm it, so confirming needs no head movement at all, not
+ * even a nod. The scenes where looking at the options is *not* itself the
+ * task (Museum, Park, Playroom, Football) use it.
  *
  * `"below"` floats it under the candidate instead, which asks for a downward
- * nod AND a sustained hold in neck flexion. That was the original default and
- * the emotion games kept it longest; participant testing retired it. It is the
- * worst case for a child with poor head control — exactly the children the
- * dwell forgiveness in `headAim.ts` exists for — and it also requires looking
- * away from the very thing the trial is about right after correctly orienting
- * to it. Kept, with its cone ceiling below, for a scene where the chip would
- * cover something the child must keep seeing; nothing uses it today.
+ * nod AND a sustained hold in neck flexion. It costs more head control — the
+ * worst case for a child with poor head control, exactly the children the
+ * dwell forgiveness in `headAim.ts` exists for — but it buys a clean
+ * separation between *reading* an option and *choosing* it: a gaze resting on
+ * a face can never answer for it, only a deliberate look down to the tick can.
+ * The two emotion games (Emotion Room 360, Emotion Cinema 360) use it, because
+ * there the question is answered by scanning every face/card, so a confirm on
+ * the line of sight risks a glance at the right option answering before the
+ * child has decided — the Midas-touch failure the two stages exist to prevent.
+ * Its cone ceiling (below) keeps the tolerance cone from ever reaching back to
+ * the candidate's own surface, so resting on a face can't quietly confirm.
  */
 
 /** Reticle size as a fraction of its distance — ~2.5° wide at any range. */

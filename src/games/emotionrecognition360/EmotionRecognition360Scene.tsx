@@ -74,7 +74,15 @@ export function EmotionRecognition360Scene(props: EmotionRecognition360SceneProp
         <directionalLight position={[3, 14, 4]} intensity={0.7} color="#fff6e4" />
         <directionalLight position={[-6, 8, -6]} intensity={0.25} />
         <LookControls />
-        <HeadSelect />
+        {/* Two-stage confirm with the ✓ parked BELOW the chosen face: the child
+            looks at a face board to read it, then has to look DOWN to the tick
+            mark to actually answer. Looking at the options is the task here —
+            the "Who feels ___?" question is answered by scanning every face —
+            so a confirm that sits on the line of sight (the "on" default) risks
+            a glance at the right face answering before the child has decided.
+            Parking the tick below keeps reading a face separate from choosing
+            it. See HeadSelect's `confirmSide`. */}
+        <HeadSelect confirmSide="below" />
         <XRCameraHome />
         <RemoteMirror />
         <VRGameOver />
