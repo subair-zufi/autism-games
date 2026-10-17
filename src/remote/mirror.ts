@@ -12,15 +12,23 @@
  * `RemoteMirror.tsx` returns immediately while it is.
  *
  * Frames are small JPEGs. On a headset that is running a 360 scene at 72fps,
- * the budget matters far more than the picture does — the trainer needs to see
- * where the child is looking, not read text off it.
+ * the budget still matters more than the picture does — but the trainer has to
+ * be able to read where the child is looking and which answer the ✓ is sitting
+ * on, so the frame is sized to the relay's documented budget rather than cut to
+ * the bone. A 512x288 JPEG at this quality lands around 25-45KB, well under the
+ * relay's 400KB ceiling (see `server/app/routers/remote.py`), and the capture is
+ * still gated to ~1.5fps and skipped entirely when no console is watching.
  */
 
-/** Mirror resolution. 16:9 so it matches the shape of a phone held sideways. */
-export const MIRROR_WIDTH = 384
-export const MIRROR_HEIGHT = 216
-/** JPEG quality — low enough to keep a frame near 20KB. */
-export const MIRROR_QUALITY = 0.55
+/** Mirror resolution. 16:9 so it matches the shape of a phone held sideways.
+ *  512x288 is what the relay budget is written around and is sharp enough on a
+ *  high-DPR phone to make out the child's gaze target without chasing the full
+ *  headset resolution, which the capture cost does not justify. */
+export const MIRROR_WIDTH = 512
+export const MIRROR_HEIGHT = 288
+/** JPEG quality. High enough to keep text and answer tiles legible; a frame at
+ *  this size still lands well inside the relay's per-frame ceiling. */
+export const MIRROR_QUALITY = 0.72
 /** Default gap between frames. ~1.5fps: enough to follow a head turn. */
 export const DEFAULT_MIRROR_INTERVAL_MS = 700
 /** A mirror asked for but not fed for this long is reported as unavailable

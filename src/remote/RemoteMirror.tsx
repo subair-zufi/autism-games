@@ -40,7 +40,12 @@ export function RemoteMirror() {
   const camera = useThree((s) => s.camera)
 
   const kit = useMemo(() => {
-    const target = new THREE.WebGLRenderTarget(MIRROR_WIDTH, MIRROR_HEIGHT)
+    // 4x MSAA on the offscreen target. The scene is drawn once more at a small
+    // size, so the extra cost is slight, but it is what stops the 360 panorama
+    // and the answer tiles reading as a jagged, aliased mess on the trainer's
+    // phone — the single biggest difference to how clear the mirror looks.
+    // three resolves the multisample buffer before the readback below.
+    const target = new THREE.WebGLRenderTarget(MIRROR_WIDTH, MIRROR_HEIGHT, { samples: 4 })
     const mirrorCam = new THREE.PerspectiveCamera(75, MIRROR_WIDTH / MIRROR_HEIGHT, 0.1, 400)
     const pixels = new Uint8Array(MIRROR_WIDTH * MIRROR_HEIGHT * 4)
     const canvas =
