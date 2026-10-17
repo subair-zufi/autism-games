@@ -37,12 +37,12 @@ const SALIENCY_SCALE: Record<Saliency, number> = { big: 1.35, medium: 1, subtle:
  *  sparkle floats just above this, not at a fixed height, so it hugs small
  *  models and large ones alike */
 const MODEL_TOP: Record<DiscoveryId, number> = {
-  butterfly: 0.2,
-  bunny: 0.65,
-  bird: 0.3,
-  flower: 0.4,
-  gem: 0.35,
-  rainbow: 1.1,
+  butterfly: 0.42,
+  bunny: 0.72,
+  bird: 0.34,
+  flower: 0.52,
+  gem: 0.4,
+  rainbow: 1.2,
 }
 
 /** world height of each surprise model's centre (fence rail for the bird, sky for the rainbow) */
@@ -585,111 +585,203 @@ function SurpriseModel({ id }: { id: DiscoveryId }) {
     case 'bunny':
       return (
         <group>
-          {/* body + head */}
+          {/* plump body */}
           <mesh position={[0, 0, 0]} scale={[1, 0.85, 1]}>
-            <sphereGeometry args={[0.26, 14, 14]} />
-            <meshStandardMaterial color="#f5f1ea" />
+            <sphereGeometry args={[0.27, 18, 18]} />
+            <meshStandardMaterial color="#fbf7f1" />
           </mesh>
-          <mesh position={[0, 0.28, 0.05]}>
-            <sphereGeometry args={[0.17, 14, 14]} />
-            <meshStandardMaterial color="#f5f1ea" />
+          {/* fluffy cotton tail */}
+          <mesh position={[0, 0.02, -0.24]}>
+            <sphereGeometry args={[0.1, 12, 12]} />
+            <meshStandardMaterial color="#ffffff" />
           </mesh>
-          {/* ears */}
+          {/* head */}
+          <mesh position={[0, 0.3, 0.06]}>
+            <sphereGeometry args={[0.18, 18, 18]} />
+            <meshStandardMaterial color="#fbf7f1" />
+          </mesh>
+          {/* ears with a soft pink inner lining */}
           {[-0.07, 0.07].map((ex) => (
-            <mesh key={ex} position={[ex, 0.52, 0.02]} rotation={[0, 0, ex * -1.2]}>
-              <capsuleGeometry args={[0.045, 0.2, 4, 8]} />
-              <meshStandardMaterial color="#f0dede" />
-            </mesh>
+            <group key={ex} position={[ex, 0.55, 0.02]} rotation={[0, 0, ex * -1.2]}>
+              <mesh>
+                <capsuleGeometry args={[0.05, 0.22, 6, 10]} />
+                <meshStandardMaterial color="#fbf7f1" />
+              </mesh>
+              <mesh position={[0, 0, 0.03]} scale={[0.5, 0.82, 0.5]}>
+                <capsuleGeometry args={[0.05, 0.22, 6, 10]} />
+                <meshStandardMaterial color="#ff9ec4" emissive="#e06a98" emissiveIntensity={0.2} />
+              </mesh>
+            </group>
           ))}
-          {/* eyes + nose */}
-          {[-0.06, 0.06].map((ex) => (
-            <mesh key={ex} position={[ex, 0.3, 0.19]}>
-              <sphereGeometry args={[0.02, 8, 8]} />
-              <meshStandardMaterial color="#2b2620" />
-            </mesh>
+          {/* big friendly eyes with a bright highlight */}
+          {[-0.07, 0.07].map((ex) => (
+            <group key={ex} position={[ex, 0.32, 0.21]}>
+              <mesh>
+                <sphereGeometry args={[0.035, 12, 12]} />
+                <meshStandardMaterial color="#2b2620" />
+              </mesh>
+              <mesh position={[0.013, 0.013, 0.025]}>
+                <sphereGeometry args={[0.013, 8, 8]} />
+                <meshBasicMaterial color="#ffffff" />
+              </mesh>
+            </group>
           ))}
-          <mesh position={[0, 0.25, 0.21]}>
-            <sphereGeometry args={[0.02, 8, 8]} />
-            <meshStandardMaterial color="#d98a8a" />
+          {/* pink nose */}
+          <mesh position={[0, 0.27, 0.23]}>
+            <sphereGeometry args={[0.027, 10, 10]} />
+            <meshStandardMaterial color="#ff7eb0" emissive="#d85c90" emissiveIntensity={0.2} />
           </mesh>
+          {/* rosy cheeks */}
+          {[-0.11, 0.11].map((ex) => (
+            <mesh key={ex} position={[ex, 0.25, 0.17]}>
+              <sphereGeometry args={[0.03, 8, 8]} />
+              <meshStandardMaterial color="#ffb3c8" />
+            </mesh>
+          ))}
         </group>
       )
     case 'bird':
       return (
         <group>
-          <mesh scale={[1.15, 0.9, 0.9]}>
+          {/* round body */}
+          <mesh scale={[1.2, 0.95, 0.95]}>
+            <sphereGeometry args={[0.2, 18, 18]} />
+            <meshStandardMaterial color="#4aa3e0" />
+          </mesh>
+          {/* pale belly */}
+          <mesh position={[0.06, -0.06, 0.1]} scale={[0.7, 0.6, 0.6]}>
+            <sphereGeometry args={[0.18, 16, 16]} />
+            <meshStandardMaterial color="#fdf3d0" />
+          </mesh>
+          {/* head */}
+          <mesh position={[0.15, 0.17, 0]}>
+            <sphereGeometry args={[0.14, 18, 18]} />
+            <meshStandardMaterial color="#4aa3e0" />
+          </mesh>
+          {/* beak */}
+          <mesh position={[0.31, 0.17, 0]} rotation={[0, 0, -Math.PI / 2]}>
+            <coneGeometry args={[0.05, 0.14, 10]} />
+            <meshStandardMaterial color="#f5a623" emissive="#c07e18" emissiveIntensity={0.2} />
+          </mesh>
+          {/* eyes with a bright catch-light */}
+          {[-0.07, 0.07].map((ez) => (
+            <group key={ez} position={[0.2, 0.21, ez]}>
+              <mesh>
+                <sphereGeometry args={[0.035, 10, 10]} />
+                <meshStandardMaterial color="#ffffff" />
+              </mesh>
+              <mesh position={[0.025, 0, 0]}>
+                <sphereGeometry args={[0.02, 8, 8]} />
+                <meshStandardMaterial color="#1c1712" />
+              </mesh>
+            </group>
+          ))}
+          {/* folded wing */}
+          <mesh position={[-0.03, 0.03, 0]} rotation={[0, 0, 0.3]} scale={[0.9, 1, 0.4]}>
             <sphereGeometry args={[0.16, 14, 14]} />
-            <meshStandardMaterial color="#5aa9e6" />
+            <meshStandardMaterial color="#2f7fc0" />
           </mesh>
-          <mesh position={[0.1, 0.14, 0]}>
-            <sphereGeometry args={[0.1, 12, 12]} />
-            <meshStandardMaterial color="#5aa9e6" />
-          </mesh>
-          <mesh position={[0.2, 0.14, 0]} rotation={[0, 0, -Math.PI / 2]}>
-            <coneGeometry args={[0.035, 0.09, 8]} />
-            <meshStandardMaterial color="#f5a623" />
-          </mesh>
-          <mesh position={[0.11, 0.17, 0.07]}>
-            <sphereGeometry args={[0.018, 8, 8]} />
-            <meshStandardMaterial color="#2b2620" />
-          </mesh>
-          {/* tail */}
-          <mesh position={[-0.17, 0.04, 0]} rotation={[0, 0, 0.7]}>
-            <boxGeometry args={[0.16, 0.05, 0.08]} />
-            <meshStandardMaterial color="#3f7fb5" />
+          {/* perky tail */}
+          <mesh position={[-0.22, 0.06, 0]} rotation={[0, 0, 0.8]}>
+            <coneGeometry args={[0.08, 0.24, 4]} />
+            <meshStandardMaterial color="#2f7fc0" />
           </mesh>
         </group>
       )
     case 'flower':
       return (
         <group>
-          <mesh position={[0, -0.05, 0]}>
-            <cylinderGeometry args={[0.03, 0.035, 0.5, 8]} />
-            <meshStandardMaterial color="#4d8a3d" />
+          {/* stem */}
+          <mesh position={[0, -0.12, 0]}>
+            <cylinderGeometry args={[0.03, 0.04, 0.55, 8]} />
+            <meshStandardMaterial color="#4c9a4c" />
           </mesh>
-          {/* petals around a golden centre */}
+          {/* leaf */}
+          <mesh position={[0.11, -0.1, 0]} rotation={[0, 0, -0.6]} scale={[1, 0.5, 0.3]}>
+            <sphereGeometry args={[0.13, 12, 12]} />
+            <meshStandardMaterial color="#5cb85c" />
+          </mesh>
+          {/* glowing petals */}
           {[0, 1, 2, 3, 4, 5].map((i) => {
             const a = (i / 6) * Math.PI * 2
             return (
-              <mesh key={i} position={[Math.cos(a) * 0.12, 0.24, Math.sin(a) * 0.12]}>
-                <sphereGeometry args={[0.09, 10, 10]} />
-                <meshStandardMaterial color="#f473b9" />
+              <mesh key={i} position={[Math.cos(a) * 0.17, 0.26 + Math.sin(a) * 0.17, 0]} scale={[1, 1, 0.45]}>
+                <sphereGeometry args={[0.11, 12, 12]} />
+                <meshStandardMaterial color="#ff8ac2" emissive="#c74e8f" emissiveIntensity={0.25} />
               </mesh>
             )
           })}
-          <mesh position={[0, 0.24, 0]}>
-            <sphereGeometry args={[0.09, 10, 10]} />
-            <meshStandardMaterial color="#f5c542" />
+          {/* sunny glowing centre */}
+          <mesh position={[0, 0.26, 0.05]}>
+            <sphereGeometry args={[0.1, 16, 16]} />
+            <meshStandardMaterial color="#ffd54a" emissive="#c79a17" emissiveIntensity={0.35} />
           </mesh>
         </group>
       )
     case 'gem':
       return (
-        <mesh>
-          <octahedronGeometry args={[0.3]} />
-          <meshStandardMaterial color="#3fd0e0" emissive="#1f8aa0" emissiveIntensity={0.5} metalness={0.3} roughness={0.2} />
-        </mesh>
+        <group>
+          {/* faceted crystal */}
+          <mesh>
+            <octahedronGeometry args={[0.3]} />
+            <meshStandardMaterial color="#5be4f0" emissive="#1f8aa0" emissiveIntensity={0.7} metalness={0.4} roughness={0.12} />
+          </mesh>
+          {/* glowing inner core */}
+          <mesh scale={0.58}>
+            <octahedronGeometry args={[0.3]} />
+            <meshBasicMaterial color="#d6fbff" />
+          </mesh>
+          {/* little sparkles winking around the gem */}
+          {([
+            [0.34, 0.26, 0],
+            [-0.3, -0.2, 0.12],
+            [0.1, -0.3, -0.18],
+          ] as [number, number, number][]).map((p, i) => (
+            <mesh key={i} position={p}>
+              <octahedronGeometry args={[0.05]} />
+              <meshBasicMaterial color="#ffffff" />
+            </mesh>
+          ))}
+        </group>
       )
     case 'rainbow':
       return (
         <group>
+          {/* a full six-band arc, each band gently glowing */}
           {[
             { r: 1.0, c: '#e2554c' },
-            { r: 0.86, c: '#f5c542' },
-            { r: 0.72, c: '#6fb35d' },
+            { r: 0.88, c: '#f5922e' },
+            { r: 0.76, c: '#f5c542' },
+            { r: 0.64, c: '#6fb35d' },
+            { r: 0.52, c: '#5a8fd6' },
+            { r: 0.4, c: '#9a7bd0' },
           ].map(({ r, c }) => (
             <mesh key={c}>
-              <torusGeometry args={[r, 0.06, 10, 40, Math.PI]} />
-              <meshStandardMaterial color={c} />
+              <torusGeometry args={[r, 0.055, 12, 48, Math.PI]} />
+              <meshStandardMaterial color={c} emissive={c} emissiveIntensity={0.25} />
             </mesh>
           ))}
-          {/* little clouds at the feet of the arc */}
+          {/* fluffy clouds at the feet of the arc */}
           {[-1, 1].map((s) => (
-            <mesh key={s} position={[s, 0, 0]}>
-              <sphereGeometry args={[0.18, 12, 12]} />
-              <meshStandardMaterial color="#ffffff" />
-            </mesh>
+            <group key={s} position={[s * 0.95, 0, 0]}>
+              {([
+                [0, 0, 0, 0.22],
+                [0.18, 0.06, 0, 0.17],
+                [-0.16, 0.04, 0, 0.16],
+                [0.04, 0.14, 0, 0.14],
+              ] as [number, number, number, number][]).map(([x, y, z, rr], i) => (
+                <mesh key={i} position={[x, y, z]}>
+                  <sphereGeometry args={[rr, 12, 12]} />
+                  <meshStandardMaterial color="#ffffff" emissive="#dfefff" emissiveIntensity={0.15} />
+                </mesh>
+              ))}
+            </group>
           ))}
+          {/* a sunny sparkle crowning the arc */}
+          <mesh position={[0, 1.12, 0]}>
+            <sphereGeometry args={[0.08, 12, 12]} />
+            <meshBasicMaterial color="#fff3c2" />
+          </mesh>
         </group>
       )
   }
@@ -697,8 +789,8 @@ function SurpriseModel({ id }: { id: DiscoveryId }) {
 
 /** gentle wing-flap so the butterfly reads as alive even at subtle saliency */
 function Butterfly() {
-  const wingL = useRef<THREE.Mesh>(null)
-  const wingR = useRef<THREE.Mesh>(null)
+  const wingL = useRef<THREE.Group>(null)
+  const wingR = useRef<THREE.Group>(null)
   useFrame((state) => {
     const a = Math.sin(state.clock.elapsedTime * 7) * 0.7
     if (wingL.current) wingL.current.rotation.y = a
@@ -706,18 +798,45 @@ function Butterfly() {
   })
   return (
     <group>
+      {/* slender body */}
       <mesh>
-        <capsuleGeometry args={[0.035, 0.2, 4, 8]} />
-        <meshStandardMaterial color="#3a3230" />
+        <capsuleGeometry args={[0.045, 0.3, 6, 12]} />
+        <meshStandardMaterial color="#3a2e20" />
       </mesh>
-      <mesh ref={wingL} position={[-0.02, 0.02, 0]}>
-        <boxGeometry args={[0.34, 0.26, 0.02]} />
-        <meshStandardMaterial color="#f5a623" side={THREE.DoubleSide} />
+      {/* head */}
+      <mesh position={[0, 0.24, 0]}>
+        <sphereGeometry args={[0.07, 12, 12]} />
+        <meshStandardMaterial color="#2b2218" />
       </mesh>
-      <mesh ref={wingR} position={[0.02, 0.02, 0]}>
-        <boxGeometry args={[0.34, 0.26, 0.02]} />
-        <meshStandardMaterial color="#f47bb0" side={THREE.DoubleSide} />
-      </mesh>
+      {/* antennae */}
+      {[-1, 1].map((s) => (
+        <mesh key={s} position={[s * 0.035, 0.33, 0]} rotation={[0, 0, -s * 0.4]}>
+          <cylinderGeometry args={[0.006, 0.006, 0.16, 6]} />
+          <meshStandardMaterial color="#2b2218" />
+        </mesh>
+      ))}
+      {/* two wing groups, each pivoting at the body: a big pink upper wing, a
+          round orange lower wing, and a glowing spot — so the flap carries real
+          colour, not a flat flap of card */}
+      {[
+        { s: -1 as number, ref: wingL },
+        { s: 1 as number, ref: wingR },
+      ].map(({ s, ref }) => (
+        <group key={s} ref={ref}>
+          <mesh position={[s * 0.26, 0.1, 0]} scale={[1, 1.1, 0.12]}>
+            <sphereGeometry args={[0.26, 16, 16]} />
+            <meshStandardMaterial color="#ff5ea8" emissive="#c02f6e" emissiveIntensity={0.3} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[s * 0.22, -0.17, 0]} scale={[1, 0.85, 0.12]}>
+            <sphereGeometry args={[0.2, 16, 16]} />
+            <meshStandardMaterial color="#ffb63d" emissive="#c07e18" emissiveIntensity={0.3} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[s * 0.3, 0.12, 0.015]}>
+            <sphereGeometry args={[0.045, 10, 10]} />
+            <meshStandardMaterial color="#fff3c2" emissive="#f5d76e" emissiveIntensity={0.45} />
+          </mesh>
+        </group>
+      ))}
     </group>
   )
 }
