@@ -59,6 +59,10 @@ import {
  * there the question is answered by scanning every face/card, so a confirm on
  * the line of sight risks a glance at the right option answering before the
  * child has decided — the Midas-touch failure the two stages exist to prevent.
+ *
+ * `"above"` is the same two-stage separation with the chip over the candidate's
+ * top edge: it still needs a deliberate shift of gaze off the face, but toward
+ * the screen rather than down, so no sustained neck flexion.
  * Its cone ceiling (below) keeps the tolerance cone from ever reaching back to
  * the candidate's own surface, so resting on a face can't quietly confirm.
  */
@@ -78,6 +82,8 @@ const IDLE_COLOR = '#ffffff'
 
 /** Default clearance (× chip scale) past the candidate's edge, "below" mode. */
 const DEFAULT_GAP_BELOW = 1.1
+/** Default clearance (× chip scale) past the candidate's top edge, "above" mode. */
+const DEFAULT_GAP_ABOVE = 0.9
 /** Default clearance (× chip scale) in front of the candidate, "on" mode. */
 const DEFAULT_GAP_ON = 0.5
 
@@ -85,7 +91,7 @@ export function HeadSelect({
   confirmSide = 'on',
   confirmGap,
 }: {
-  confirmSide?: 'below' | 'on'
+  confirmSide?: 'below' | 'above' | 'on'
   /** Override the clearance past the candidate's edge (or surface, in "on"
    *  mode), in chip-scale units. Smaller sits closer to (or just touching)
    *  the candidate. */
@@ -95,7 +101,9 @@ export function HeadSelect({
   const inputMethod = useSettings((s) => s.inputMethod)
   const profile = useSettings((s) => s.dwellProfile)
   if (!session || inputMethod !== 'dwell') return null
-  const gap = confirmGap ?? (confirmSide === 'on' ? DEFAULT_GAP_ON : DEFAULT_GAP_BELOW)
+  const gap =
+    confirmGap ??
+    (confirmSide === 'on' ? DEFAULT_GAP_ON : confirmSide === 'above' ? DEFAULT_GAP_ABOVE : DEFAULT_GAP_BELOW)
   return <HeadSelectActive confirmSide={confirmSide} confirmGap={gap} profile={profile} />
 }
 
@@ -104,7 +112,7 @@ function HeadSelectActive({
   confirmGap,
   profile,
 }: {
-  confirmSide: 'below' | 'on'
+  confirmSide: 'below' | 'above' | 'on'
   confirmGap: number
   profile: DwellProfile
 }) {
@@ -345,9 +353,13 @@ function HeadSelectActive({
           const dist = Math.max(camPos.distanceTo(centre), 0.3)
           // x/z stay pinned to the candidate's own bearing — only the pitch
           // changes, so confirming never asks for a head turn, only a nod.
+          // "above" parks it over the top edge instead, so the child glances
+          // up a few degrees rather than flexing the neck down and holding.
           chip.current.position.set(
             centre.x,
-            box.min.y - dist * CHIP_ANGULAR * confirmGap,
+            confirmSide === 'above'
+              ? box.max.y + dist * CHIP_ANGULAR * confirmGap
+              : box.min.y - dist * CHIP_ANGULAR * confirmGap,
             centre.z,
           )
           chip.current.quaternion.copy(camera.quaternion)
