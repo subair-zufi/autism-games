@@ -221,7 +221,13 @@ Two separate problems fall out:
    pull as cue-following behaviour. This is a confound in the Museum 360 accuracy measure
    independent of the overlap.
 
-One change fixes both — equalise *angular* size (§4.4).
+**Resolved (2026-11-15), but only half of it.** The overlap is fixed by clamping each
+exhibit's tap/gaze volume to the gap it actually has (§4.4). The salience asymmetry is **left
+standing**: the change that would also have fixed it — scaling the models themselves to a
+constant angle — flattens the row's depth cues, which the child uses to work out which exhibit
+the avatar's pointing vector lands on. That is a study-design trade, not a bug fix, so it is
+the researcher's call. If you want it, the equal-angular-size variant is a two-line change on
+top of what shipped; if you don't, note the 55% centre-option advantage as a limitation.
 
 ### C5 — Museum 360 has no timer cleanup at all
 
@@ -484,59 +490,41 @@ export function speakThenPraise(text: string, lang: Lang = 'en') {
 Also consider delaying `playSuccess()`'s third tone or dropping the chord to two notes, so the
 chime has finished before the voice starts.
 
-### 4.4 — Equalise Museum 360's exhibit angular size (fixes both halves of C4)
+### 4.4 — Clamp Museum 360's tap targets to the gap they have (fixes the C4 overlap)
 
-Give every option the same apparent size from the child. This removes the hit-box overlap **and**
-the centre-option salience advantage in one change, with no edit to the research design.
+> **Shipped 2026-11-15 as described below.** An earlier draft of this section equalised the
+> models' *apparent size* instead, which fixed the salience asymmetry too but flattened the
+> row's perspective. Reverted in favour of the target-only clamp; see the note under C4.
+
+Each target is sized from its own neighbour gap, so no bearing can ever reach two exhibits,
+and the models keep their natural perspective.
 
 ```ts
 // museum360/logic.ts
-/**
- * Every exhibit is drawn at the same APPARENT size from the child.
- *
- * The arc is centred on the AVATAR, so pedestal distance from the CHILD varies
- * (3.20 m at the centre to 4.98 m at the edges on hard). At a fixed 1 m model
- * width that made the centre option subtend 17.8° and the outermost 11.5° — a
- * 55% salience advantage for one response option — and made the outer pairs'
- * hit boxes overlap by ~3.1°, so a look at the outer exhibit selected its
- * nearer neighbour and scored an `adjacent` error.
- *
- * 9° is chosen to clear the tightest neighbour gap on hard (10.2°).
- */
-export const EXHIBIT_ANGULAR_DEG = 9
+export const HIT_RADIUS_MAX = 0.6        // the padding uncrowded positions keep
+const HIT_GAP_SHARE = 0.45               // two neighbours leave 10% of the gap as guard band
 
-/** Uniform scale for exhibit `index` of `n` (models + hit box are authored ~1 m). */
-export function exhibitScale(index: number, n: number): number {
-  const [x, z] = slotPosition(index, n)
-  const dist = Math.hypot(x, z)
-  return 2 * dist * Math.tan((EXHIBIT_ANGULAR_DEG * Math.PI) / 360)
+export function hitRadius(index: number, n: number): number {
+  const gap = neighbourGapDeg(index, n)
+  if (!Number.isFinite(gap)) return HIT_RADIUS_MAX
+  const budgetRad = (gap * HIT_GAP_SHARE * Math.PI) / 180
+  return Math.min(HIT_RADIUS_MAX, slotDistance(index, n) * Math.sin(budgetRad))
 }
 ```
 
-```tsx
-// Museum360Scene.tsx — SceneInner
-  <Exhibit
-    key={id}
-    id={id}
-    position={[x, 0, z]}
-+   sizeScale={exhibitScale(i, n)}
-    …
-  />
+In the scene the volume becomes a **sphere** (a box's silhouette widens toward its diagonal as
+the child looks along the row, so its real angular width depended on viewing angle) and a
+**sibling** of the animated model group rather than a child of it — otherwise the hover swell
+and the celebration wobble could grow a target back into its neighbour.
 
-// …Exhibit: scale the model + hit-box group only, leaving the pedestal at full size
-- function Exhibit({ id, position, disabled, celebrating, onPick }: { … }) {
-+ function Exhibit({ id, position, sizeScale, disabled, celebrating, onPick }: { … }) {
-    useFrame((state, dt) => {
-      …
-      let scale = hover && !disabled ? 1.12 : 1
-      …
--     g.scale.setScalar(scale)
-+     g.scale.setScalar(scale * sizeScale)
-    })
-```
+Resulting half-angles on hard: 4.61° / 4.61° / 10.16° / 4.61° / 4.61°, against neighbour gaps of
+10.3° and 22.6° — every pair clear with margin. Easy and medium are entirely unclamped.
 
-Resulting sizes on hard: 0.50 m at the centre, 0.78 m at the edges — each **9°** from the child,
-with a 1.2° guard band between neighbours. Worth a unit test asserting non-overlap for n ∈ {3,4,5}.
+**The cost, stated plainly:** hard's exhibits 1 and 3 give up ~1.5° per side, so roughly 10 cm
+of an ~80 cm model at 3.74 m is no longer tappable. Every other exhibit at every level keeps a
+target *larger* than its model. This is the floor the geometry allows — at 10.3° of separation
+there is no way to have generous non-overlapping targets, which is itself an argument for
+reconsidering 5 exhibits on hard.
 
 ### 4.5 — Wire a calm mode into the scene loops (D1)
 
@@ -655,14 +643,18 @@ rasteriser-bound and will not predict the headset's fill cost.
 
 ## 5. Priority
 
+> **Status (2026-11-15):** items 1, 2, 3 and 6 below are shipped — commits `af9e1be` and
+> `c00bbae`. Items 4, 5 and 7 remain open, and the salience half of C4 is deliberately left to
+> the researcher (see C4).
+
 | | Item | Why first |
 |---|---|---|
-| 1 | **C1** — Park 360 timer chain (§4.1) | Corrupts study data silently and plays audio at a child who has left. Confirmed, patch verified. |
-| 2 | **C4** — Museum 360 hit-box overlap + salience (§4.4) | Contaminates the primary DV at the hardest level. One contained change. |
-| 3 | **C2 / C3** — audio sequencing (§4.3) | Sensory risk and it destroys the IJA payoff line. Small change. |
+| 1 | ✅ **C1** — Park 360 timer chain (§4.1) | Corrupts study data silently and plays audio at a child who has left. Confirmed, patch verified, regression test added. |
+| 2 | ✅ **C4 overlap** — Museum 360 tap-target clamp (§4.4) | Contaminated the primary DV at the hardest level. The salience half is a design call, left open. |
+| 3 | ✅ **C2 / C3** — audio sequencing (§4.3) | Sensory risk and it destroyed the IJA payoff line. |
 | 4 | **D2** — gaze-cue legibility at 7.5 m | Decide **before** the next data collection: if it is below threshold, Hard gaze trials measure acuity. Needs an on-device pilot, not a code change. |
 | 5 | **D1** — sensory profile + volume (§4.5) | The single largest accessibility gap. Also closes U3 from the July review. |
-| 6 | **C5, C6, 4.8** | Correctness and clinical-safety tidy-up. |
+| 6 | ✅ **C5** and **§4.8** · ⬜ **C6** | C5 and the four minor items shipped. C6 (Hard's rescue nudge) changes what the intervention does on the no-nudge tier — left as the researcher's call. |
 | 7 | **D5** — lazy-follow HUD / pre-recorded Malayalam prompts | Still the right fix; the Malayalam arm is the exposure. |
 
 ## Verify on device (cannot be settled from the code)
