@@ -5,22 +5,23 @@ import {
   cueSchedule,
   dragDistance,
   errorType,
-  EXHIBIT_ANGULAR_DEG,
-  exhibitAngularSpan,
   exhibitMeta,
   EXHIBITS,
-  exhibitScale,
   FADE_STREAK,
   fadedTier,
   GAZE_TRIALS,
   GOAL,
   HAND_LADDER,
+  HIT_RADIUS_MAX,
+  hitHalfAngleDeg,
+  hitRadius,
   isDragTail,
   lookDrag,
   makeRound,
   OBJECT_RADIUS,
   pointsFor,
   slotBearing,
+  slotDistance,
   slotHeadingDeg,
   slotPosition,
   starsFor,
@@ -241,39 +242,52 @@ test('the default confirm cone stays narrower than the gap between pedestals', (
   }
 })
 
-/* ---- exhibit layout: equal salience, no overlapping hit boxes -------------
+/* ---- tap / gaze targets: generous, but never into a neighbour -------------
  * The arc is centred on the AVATAR, so distance from the CHILD varies: on hard
- * the centre pedestal is 3.20m away and the outermost 4.98m. At a fixed ~1m
- * model that made the centre option subtend 17.8deg and the outermost 11.5deg
- * (a 55% salience advantage between response options in a forced-choice task),
- * and made the outer pairs' hit boxes overlap by ~3.1deg — where the raycaster
- * returns the NEARER one, so a look at the outer exhibit selected its
- * neighbour and the trial was logged as an `adjacent` cue-following error.
+ * the centre pedestal is 3.20m away and the outermost 4.98m. Every exhibit
+ * nevertheless carried the same ~1m hit box, so the outer pairs — only 10.3deg
+ * apart in heading — overlapped by ~3.1deg, and in that band the raycaster
+ * returns the NEARER one. A child looking squarely at the outermost exhibit
+ * selected its neighbour, recorded as an `adjacent` cue-following error.
  */
 for (const n of [3, 4, 5]) {
-  test(`every one of ${n} exhibits subtends the same angle`, () => {
-    for (let i = 0; i < n; i++) {
-      const [lo, hi] = exhibitAngularSpan(i, n)
-      expect(hi - lo).toBeCloseTo(EXHIBIT_ANGULAR_DEG, 6)
+  test(`no two of ${n} exhibits' targets can ever overlap`, () => {
+    for (let i = 1; i < n; i++) {
+      const combined = hitHalfAngleDeg(i - 1, n) + hitHalfAngleDeg(i, n)
+      const gap = Math.abs(slotHeadingDeg(i, n) - slotHeadingDeg(i - 1, n))
+      // strictly separated: no bearing may ever reach two different exhibits
+      expect(combined).toBeLessThan(gap)
     }
   })
 
-  test(`neighbouring hit boxes never overlap with ${n} exhibits`, () => {
-    for (let i = 1; i < n; i++) {
-      const [, prevHi] = exhibitAngularSpan(i - 1, n)
-      const [lo] = exhibitAngularSpan(i, n)
-      // strictly separated: no bearing may ever select two different exhibits
-      expect(lo).toBeGreaterThan(prevHi)
+  test(`every one of ${n} exhibits keeps a usable target`, () => {
+    for (let i = 0; i < n; i++) {
+      // never a pinprick: at least 4deg of half-angle, i.e. 8deg across
+      expect(hitHalfAngleDeg(i, n)).toBeGreaterThan(4)
+      expect(hitRadius(i, n)).toBeLessThanOrEqual(HIT_RADIUS_MAX)
     }
   })
 }
 
-test('each exhibit is scaled by its own distance from the child', () => {
-  // hard: the centre pedestal is nearest, so it is drawn physically smallest
-  const scales = Array.from({ length: 5 }, (_, i) => exhibitScale(i, 5))
-  expect(scales[2]).toBeLessThan(scales[1])
-  expect(scales[1]).toBeLessThan(scales[0])
-  // and mirrored, since the arc is symmetric
-  expect(scales[0]).toBeCloseTo(scales[4], 6)
-  expect(scales[1]).toBeCloseTo(scales[3], 6)
+test('uncrowded exhibits keep the full padded target', () => {
+  // easy (n=3) has 32.8deg between neighbours, so nothing needs clamping
+  for (let i = 0; i < 3; i++) expect(hitRadius(i, 3)).toBeCloseTo(HIT_RADIUS_MAX, 6)
+  // hard's centre exhibit has 22.6deg either side — also uncrowded
+  expect(hitRadius(2, 5)).toBeGreaterThan(0.5)
+})
+
+test('only the crowded hard positions are clamped, and only a little', () => {
+  // exhibits 1 and 3 sit 10.3deg from the outermost pair and give up the most
+  expect(hitRadius(1, 5)).toBeLessThan(hitRadius(2, 5))
+  expect(hitRadius(1, 5)).toBeCloseTo(hitRadius(3, 5), 6)
+  expect(hitRadius(0, 5)).toBeCloseTo(hitRadius(4, 5), 6)
+  // still comfortably bigger than a fingertip-sized target at 3.74m
+  expect(hitRadius(1, 5)).toBeGreaterThan(0.25)
+})
+
+test('the target scales with distance, so equal gaps give equal angles', () => {
+  // the outer pair and their neighbours share a 10.3deg gap and so share a
+  // half-angle, even though they stand at different distances
+  expect(hitHalfAngleDeg(0, 5)).toBeCloseTo(hitHalfAngleDeg(1, 5), 6)
+  expect(slotDistance(0, 5)).toBeGreaterThan(slotDistance(1, 5))
 })

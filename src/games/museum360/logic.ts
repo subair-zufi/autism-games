@@ -191,46 +191,80 @@ export function slotHeadingDeg(index: number, n: number): number {
   return Math.round((Math.atan2(x, -z) * 180) / Math.PI)
 }
 
-/**
- * Every exhibit is drawn at the same APPARENT size from where the child stands.
+/* ---- tap / gaze targets: large, but never into a neighbour ----------------
  *
- * The arc is centred on the AVATAR (see above), which is right for keeping the
- * avatar's pointing angles distinct — but it means distance from the CHILD
- * varies a lot: on hard the centre pedestal is 3.20 m away and the outermost
- * 4.98 m. At a fixed ~1 m model and hit box that produced two separate faults,
- * both of which landed in the outcome measure rather than in the child:
+ * The arc is centred on the AVATAR (see above), which keeps the avatar's own
+ * pointing angles distinct — but it means distance from the CHILD varies a
+ * lot: on hard the centre pedestal is 3.20 m away and the outermost 4.98 m.
+ * Every exhibit nevertheless carried the same ~1 m hit box, so from the child
+ * those boxes subtended anywhere from 11.5° to 17.8° while the two outer pairs
+ * sat only 10.3° apart.
  *
- *  1. The outer pairs' hit boxes OVERLAPPED. Exhibit 0 spanned −38.6°…−27.1°
- *     and exhibit 1 spanned −30.2°…−15.0°, a 3.1° band in which the raycaster
- *     returns whichever is NEARER — exhibit 1. So a child looking squarely at
- *     the inner edge of the outermost exhibit selected its neighbour, and the
- *     trial was logged as `errorType: 'adjacent'`, which is a *behavioural*
- *     category meaning "followed the cue's direction but not far enough".
- *  2. The options were not equally SALIENT: the centre subtended 17.8° and the
- *     outermost 11.5°, a 55% apparent-size advantage. In a forced-choice task a
- *     nearer, larger, easier-to-hit option pulls errors toward itself, and the
- *     adjacent/far taxonomy reads that pull as cue-following behaviour.
+ * They therefore OVERLAPPED: exhibit 0 spanned −38.6°…−27.1° and exhibit 1
+ * spanned −30.2°…−15.0°, and in that shared 3.1° band the raycaster returns
+ * whichever is NEARER — exhibit 1. A child looking squarely at the inner edge
+ * of the outermost exhibit selected its neighbour instead, and the trial was
+ * recorded as `errorType: 'adjacent'`, a *behavioural* category meaning
+ * "followed the cue's direction but not far enough". A geometry defect was
+ * being read as a child's attention failing.
  *
- * Scaling each exhibit by its own distance fixes both at once, and costs
- * nothing in the research design: 9° clears the tightest neighbour gap on hard
- * (10.2°) with a guard band, and every option now presents the same target.
+ * So each target is sized from the gap it actually has. The volume is a SPHERE
+ * rather than a box: a box's silhouette widens toward its diagonal as the
+ * child looks along the row, so its true angular width depends on viewing
+ * angle, while a sphere presents the same disc from everywhere and the
+ * arithmetic below is exact.
+ *
+ * Deliberately NOT equalising apparent size. Scaling the models themselves to
+ * a constant angle would also have fixed this, but it flattens the row's depth
+ * cues — and the child uses those to work out which exhibit the avatar's
+ * pointing vector lands on. Natural perspective is kept; only the invisible
+ * target shrinks.
+ *
+ * The cost, stated plainly: on hard, exhibits 1 and 3 end up with about 1.5°
+ * of visible model on each side that is not tappable (~10 cm on an ~80 cm
+ * model at 3.74 m). Every other exhibit at every level keeps a target LARGER
+ * than its model, which is the generous padding this game has always had.
  */
-export const EXHIBIT_ANGULAR_DEG = 9
 
-/** Uniform scale for exhibit `index` of `n`. Models and the shared hit box are
- *  authored roughly 1 m across, so this is the factor that makes them subtend
- *  `EXHIBIT_ANGULAR_DEG` from the child at the origin. */
-export function exhibitScale(index: number, n: number): number {
+/** The biggest a target ever gets — a little wider than the ~1 m models, which
+ *  is the padding the uncrowded positions keep. */
+export const HIT_RADIUS_MAX = 0.6
+
+/** Fraction of a neighbour gap one exhibit's target may claim. Two neighbours
+ *  each claiming this leaves 1 − 2×0.45 = 10% of the gap as a guard band. */
+const HIT_GAP_SHARE = 0.45
+
+/** Distance from the child (at the origin) to pedestal `index` of `n`. */
+export function slotDistance(index: number, n: number): number {
   const [x, z] = slotPosition(index, n)
-  const dist = Math.hypot(x, z)
-  return 2 * dist * Math.tan((EXHIBIT_ANGULAR_DEG * Math.PI) / 360)
+  return Math.hypot(x, z)
 }
 
-/** The angular span an exhibit occupies from the child, in degrees — the
- *  measure the overlap above was a failure of. Exported for the layout test. */
-export function exhibitAngularSpan(index: number, n: number): [number, number] {
-  const heading = slotHeadingDeg(index, n)
-  return [heading - EXHIBIT_ANGULAR_DEG / 2, heading + EXHIBIT_ANGULAR_DEG / 2]
+/** The smallest heading gap between exhibit `index` and an adjacent one (deg). */
+export function neighbourGapDeg(index: number, n: number): number {
+  const self = slotHeadingDeg(index, n)
+  let gap = Infinity
+  for (const j of [index - 1, index + 1]) {
+    if (j < 0 || j >= n) continue
+    gap = Math.min(gap, Math.abs(slotHeadingDeg(j, n) - self))
+  }
+  return gap
+}
+
+/** Radius (m) of exhibit `index`'s tap/gaze sphere — capped so it stays a
+ *  generous target, and clamped so it can never reach a neighbour. */
+export function hitRadius(index: number, n: number): number {
+  const gap = neighbourGapDeg(index, n)
+  if (!Number.isFinite(gap)) return HIT_RADIUS_MAX
+  const budgetRad = (gap * HIT_GAP_SHARE * Math.PI) / 180
+  return Math.min(HIT_RADIUS_MAX, slotDistance(index, n) * Math.sin(budgetRad))
+}
+
+/** Half the angle that target subtends from the child (deg) — the quantity the
+ *  overlap above was a failure of, and what the layout test asserts on. */
+export function hitHalfAngleDeg(index: number, n: number): number {
+  const d = slotDistance(index, n)
+  return (Math.asin(Math.min(1, hitRadius(index, n) / d)) * 180) / Math.PI
 }
 
 /** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z).

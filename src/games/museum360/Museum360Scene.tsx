@@ -20,7 +20,7 @@ import {
   OBJECT_RADIUS,
   bearingToXZ,
   dragDistance,
-  exhibitScale,
+  hitRadius,
   isDragTail,
   lookDrag,
   slotPosition,
@@ -476,10 +476,10 @@ function SceneInner({ round, active, locked, disabledIds, celebrate, cue, onPick
             key={id}
             id={id}
             position={[x, 0, z]}
-            // same apparent size from the child whatever the pedestal's
-            // distance, so no option is easier to see or hit than another and
-            // neighbouring hit boxes cannot overlap (see logic.ts)
-            sizeScale={exhibitScale(i, n)}
+            // the invisible target only — sized from this exhibit's own gap to
+            // its neighbour, so a look at one can never select the next (the
+            // models keep their natural perspective; see logic.ts)
+            hitRadius={hitRadius(i, n)}
             disabled={locked || disabledIds.includes(id)}
             celebrating={celebrate > 0 && id === round.target}
             onPick={() => onPick(id)}
@@ -831,15 +831,16 @@ function TargetRing({ x, z }: { x: number; z: number }) {
 function Exhibit({
   id,
   position,
-  sizeScale,
+  hitRadius,
   disabled,
   celebrating,
   onPick,
 }: {
   id: ExhibitId
   position: [number, number, number]
-  /** uniform scale giving this exhibit the same apparent size as every other */
-  sizeScale: number
+  /** radius of the invisible tap/gaze sphere, clamped so neighbouring targets
+   *  never overlap — see `hitRadius` in logic.ts */
+  hitRadius: number
   disabled: boolean
   celebrating: boolean
   onPick: () => void
@@ -872,56 +873,61 @@ function Exhibit({
     } else {
       g.position.y = EXHIBIT_Y + Math.sin(state.clock.elapsedTime * 1.5 + position[0]) * 0.04
     }
-    // hover/celebration animate ON TOP of the distance scale, never replace it
-    g.scale.setScalar(scale * sizeScale)
+    g.scale.setScalar(scale)
   })
 
   return (
     <group position={position}>
-      {/* Slim pedestal — kept narrow so the row hides less of the avatar.
-          Its WIDTH follows the exhibit's distance scale so the plinth stays in
-          proportion to what stands on it, but its HEIGHT does not: every
-          exhibit must sit at the same world height, or the nearer ones would
-          drop and the child would be looking down at the centre of the row. */}
-      <mesh position={[0, PEDESTAL_H / 2, 0]} scale={[sizeScale, 1, sizeScale]}>
+      {/* slim pedestal — kept narrow so the row hides less of the avatar */}
+      <mesh position={[0, PEDESTAL_H / 2, 0]}>
         <cylinderGeometry args={[0.28, 0.34, PEDESTAL_H, 20]} />
         <meshStandardMaterial color="#bcae98" />
       </mesh>
-      <mesh position={[0, PEDESTAL_H + 0.03, 0]} scale={[sizeScale, 1, sizeScale]}>
+      <mesh position={[0, PEDESTAL_H + 0.03, 0]}>
         <cylinderGeometry args={[0.34, 0.34, 0.1, 20]} />
         <meshStandardMaterial color="#cdbfa6" />
       </mesh>
 
-      {/* the exhibit model + a transparent click target around it */}
+      {/* the exhibit model — spins, bobs and wobbles, and is never the target */}
       <group ref={model} position={[0, EXHIBIT_Y, 0]}>
         <ExhibitModel id={id} />
-        <mesh
-          visible={false}
-          // a locked exhibit must not arm the gaze reticle
-          userData={{ headSelect: !disabled }}
-          onClick={(e) => {
-            e.stopPropagation()
-            // a drag that ends on a pedestal is looking around, not a pick.
-            // Checked against LookControls' own measurement (recent drag) AND
-            // the event's drag distance where available — XR trigger/pinch
-            // events carry neither and count as clean taps (dragDistance
-            // swallows their throwing delta getter).
-            if (isDragTail() || dragDistance(e) > 8) return
-            if (!disabled) onPick()
-          }}
-          onPointerOver={(e) => {
-            e.stopPropagation()
-            setHover(true)
-            if (!disabled) document.body.style.cursor = 'pointer'
-          }}
-          onPointerOut={() => {
-            setHover(false)
-            document.body.style.cursor = 'auto'
-          }}
-        >
-          <boxGeometry args={[1, 1.2, 1]} />
-        </mesh>
       </group>
+
+      {/* The transparent tap/gaze target.
+          A SIBLING of the model, not a child of it, so the hover swell and the
+          celebration wobble cannot change the target's size — a target that
+          grew 12% when looked at could grow back into its neighbour, which is
+          the fault this clamp exists to remove.
+          A sphere, not a box: a box's silhouette widens toward its diagonal as
+          the child looks along the row, so its real angular width depends on
+          viewing angle; a sphere presents the same disc from every bearing. */}
+      <mesh
+        position={[0, EXHIBIT_Y, 0]}
+        visible={false}
+        // a locked exhibit must not arm the gaze reticle
+        userData={{ headSelect: !disabled }}
+        onClick={(e) => {
+          e.stopPropagation()
+          // a drag that ends on a pedestal is looking around, not a pick.
+          // Checked against LookControls' own measurement (recent drag) AND
+          // the event's drag distance where available — XR trigger/pinch
+          // events carry neither and count as clean taps (dragDistance
+          // swallows their throwing delta getter).
+          if (isDragTail() || dragDistance(e) > 8) return
+          if (!disabled) onPick()
+        }}
+        onPointerOver={(e) => {
+          e.stopPropagation()
+          setHover(true)
+          if (!disabled) document.body.style.cursor = 'pointer'
+        }}
+        onPointerOut={() => {
+          setHover(false)
+          document.body.style.cursor = 'auto'
+        }}
+      >
+        <sphereGeometry args={[hitRadius, 16, 12]} />
+      </mesh>
     </group>
   )
 }
