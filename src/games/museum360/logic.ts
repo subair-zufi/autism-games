@@ -267,6 +267,100 @@ export function hitHalfAngleDeg(index: number, n: number): number {
   return (Math.asin(Math.min(1, hitRadius(index, n) / d)) * 180) / Math.PI
 }
 
+/* ---- the helper avatar, and whether the child can actually see it ---------
+ *
+ * These live here, beside the pedestal layout they have to clear, because the
+ * two are one geometry problem. In a headset the camera sits at the WEARER's
+ * real eye height (`local-floor`) and nothing re-centres the world for a short
+ * one, so a 7–10 year-old views this room from 1.05–1.35 m rather than the
+ * 1.7 m the scene declares. Everything then rises in their view — and on the
+ * odd slot counts (easy's 3, hard's 5) one pedestal sits exactly on the
+ * avatar's bearing, 3.2 m away against the avatar's 7.4 m. It cut the avatar
+ * off at the waist and swallowed the pointing hand.
+ *
+ * `handClearanceDeg` is the property that must hold, and the test pins it at
+ * the shortest eye height we design for. The scene imports these constants, so
+ * lowering the podium or shrinking the avatar fails that test rather than
+ * silently hiding the cue again.
+ */
+
+/** Podium height — the avatar's feet stand here. */
+export const HELPER_LIFT = 1.2
+/** The avatar's body is drawn this much larger than life (see Museum360Scene). */
+export const HELPER_SCALE = 1.3
+/** Shoulder height above the avatar's feet, body-local (before the scale). */
+export const HELPER_SHOULDER_Y = 1.4
+/** Shoulder to fingertip, body-local (before the scale). */
+export const HELPER_ARM_LEN = 1.05
+
+/** Tallest exhibit model's top above `EXHIBIT_Y` — the worst-case occluder. */
+export const EXHIBIT_MODEL_TOP = 0.62
+/** World height of an exhibit's centre (pedestal height + half the model). */
+export const EXHIBIT_Y = 1.1
+
+/** The shortest eye height the room is expected to work at (a seated child). */
+export const MIN_DESIGN_EYE_Y = 0.95
+
+/**
+ * How far below the shoulder the pointing arm may ever angle.
+ *
+ * Aimed straight at the plinth the arm dropped ~24°, putting the hand behind
+ * the centre pedestal for a child. Levelling it entirely clears the row, but
+ * costs too much the other way: on odd slot counts the avatar, the centre
+ * exhibit and the child are collinear, so a level arm points straight down the
+ * child's line of sight and foreshortens into a dot. 12° clears the row at
+ * `MIN_DESIGN_EYE_Y` with ~1.5° to spare while leaving that worst-case gesture
+ * ~2.7° of visible extent.
+ */
+export const MAX_POINT_DEPRESSION_DEG = 12
+
+function elevationDeg(y: number, dist: number, eyeY: number): number {
+  return (Math.atan((y - eyeY) / dist) * 180) / Math.PI
+}
+
+/**
+ * Elevation below which the centre pedestal hides whatever is behind it, for a
+ * child whose eyes are at `eyeY`. Returns −Infinity for an even `n`, where no
+ * pedestal sits on the avatar's bearing and nothing is occluded.
+ */
+export function centreOccluderElevationDeg(n: number, eyeY: number): number {
+  const centre = (n - 1) / 2
+  if (!Number.isInteger(centre)) return -Infinity
+  const [x, z] = slotPosition(centre, n)
+  return elevationDeg(EXHIBIT_Y + EXHIBIT_MODEL_TOP, Math.hypot(x, z), eyeY)
+}
+
+/**
+ * How far above the centre pedestal's top edge the pointing fingertip sits
+ * when the avatar points at exhibit `index` of `n`, in degrees. Negative means
+ * the gesture is hidden behind the pedestal.
+ *
+ * The arm aims at the exhibit but never angles further down than
+ * `MAX_POINT_DEPRESSION_DEG`, which is what keeps the hand above the row.
+ */
+export function handClearanceDeg(index: number, n: number, eyeY: number): number {
+  const [tx, tz] = slotPosition(index, n)
+  const yaw = Math.atan2(tx, tz - AVATAR_Z)
+  const shoulder = {
+    x: Math.cos(yaw) * 0.3 * HELPER_SCALE,
+    y: HELPER_LIFT + HELPER_SHOULDER_Y * HELPER_SCALE,
+    z: AVATAR_Z - Math.sin(yaw) * 0.3 * HELPER_SCALE,
+  }
+  const dx = tx - shoulder.x
+  const dz = tz - shoulder.z
+  let dy = EXHIBIT_Y - shoulder.y
+  const horiz = Math.hypot(dx, dz)
+  // the same clamp the scene applies each frame
+  const maxDrop = horiz * Math.tan((MAX_POINT_DEPRESSION_DEG * Math.PI) / 180)
+  if (dy < -maxDrop) dy = -maxDrop
+  const len = Math.hypot(dx, dy, dz)
+  const reach = HELPER_ARM_LEN * HELPER_SCALE
+  const fx = shoulder.x + (dx / len) * reach
+  const fy = shoulder.y + (dy / len) * reach
+  const fz = shoulder.z + (dz / len) * reach
+  return elevationDeg(fy, Math.hypot(fx, fz), eyeY) - centreOccluderElevationDeg(n, eyeY)
+}
+
 /** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z).
  *  Used for wall decor arranged around the rotunda (centred on the child). */
 export function bearingToXZ(bearing: number, radius: number): [number, number] {

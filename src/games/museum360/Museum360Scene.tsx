@@ -20,7 +20,12 @@ import {
   OBJECT_RADIUS,
   bearingToXZ,
   dragDistance,
+  HELPER_ARM_LEN,
+  HELPER_LIFT,
+  HELPER_SCALE,
+  HELPER_SHOULDER_Y,
   hitRadius,
+  MAX_POINT_DEPRESSION_DEG,
   isDragTail,
   lookDrag,
   slotPosition,
@@ -33,7 +38,7 @@ import {
 // lower so they clear the helper avatar standing behind the row (the avatar's
 // face and pointing arm stay readable above the exhibits)
 const PEDESTAL_H = 0.6
-const EXHIBIT_Y = PEDESTAL_H + 0.5
+const EXHIBIT_Y = PEDESTAL_H + 0.5 // must match logic.ts EXHIBIT_Y
 /** the child's eye height — the camera stands here, at the centre of the rotunda */
 const EYE_Y = 1.7
 
@@ -533,12 +538,38 @@ const HELPER_Z = AVATAR_Z // the avatar stands at the arc's centre, behind the r
 // podium height — on odd-count levels one exhibit sits on the avatar's forward
 // axis, so the avatar stands high enough that its head, torso and pointing arm
 // all clear the row and only its legs pass behind the centre exhibit
-const HELPER_LIFT = 1.0
+/**
+ * The avatar's body is drawn this much larger than life.
+ *
+ * In a headset the camera sits at the WEARER's real eye height (`local-floor`),
+ * and nothing re-centres the world for a short one — `VRHudAnchor` moves the
+ * HUD only, because the exhibits are furniture. So a 7–10 year-old views this
+ * room from 1.05–1.35 m, not the 1.7 m the scene declares, and two things got
+ * worse at once: the helper's head is only ~4.5° across at 7.4 m (the cue the
+ * hard tier rests on), and the centre pedestal — which on odd counts sits
+ * exactly on the avatar's bearing — rose up the child's view until it cut the
+ * avatar off at the waist and swallowed the pointing hand.
+ *
+ * Scaling the avatar rather than moving it closer is what fixes the first
+ * without worsening the second. The exhibit arc is centred on the AVATAR, so
+ * walking it forward drags the whole row toward the child, where the centre
+ * pedestal subtends MORE and occludes more (−9.8° of clearance at z = −6.0,
+ * against −4.1° today). Standing still and growing costs nothing geometrically:
+ * at 1.3× the head reads as big as an unscaled one at 5.7 m, and clearance
+ * improves rather than degrades. It is a stylised helper in a room with a 6 m
+ * sign; nobody reads it as the wrong size.
+ */
 const HELPER_POS = new THREE.Vector3(0, HELPER_LIFT, HELPER_Z)
-const HEAD_POS = new THREE.Vector3(0, HELPER_LIFT + 1.74, HELPER_Z) // head pivot, world space
+/** head pivot, world space — body-local 1.74 carried through the body scale */
+const HEAD_POS = new THREE.Vector3(0, HELPER_LIFT + 1.74 * HELPER_SCALE, HELPER_Z)
 const CHILD_EYES = new THREE.Vector3(0, 1.5, 0) // roughly the child's face
-const SHOULDER_LOCAL = new THREE.Vector3(0.3, 1.4, 0) // right shoulder, body-local
-const ARM_LEN = 1.05 // shoulder to fingertip along the arm's +z
+const SHOULDER_LOCAL = new THREE.Vector3(0.3, HELPER_SHOULDER_Y, 0) // right shoulder, body-local
+/** the same shoulder as a WORLD offset from `HELPER_POS` (body-local × scale) */
+const SHOULDER_OFFSET = SHOULDER_LOCAL.clone().multiplyScalar(HELPER_SCALE)
+const ARM_LEN = HELPER_ARM_LEN // shoulder to fingertip along the arm's +z, body-local
+const ARM_LEN_WORLD = ARM_LEN * HELPER_SCALE
+/** precomputed tangent of the arm's depression limit (see logic.ts) */
+const MAX_POINT_DEPRESSION_TAN = Math.tan((MAX_POINT_DEPRESSION_DEG * Math.PI) / 180)
 const TRAIL_DOTS = 4
 // gaze cue: the shift to the target only starts once the child actually
 // looks back at the avatar (real eye contact), not on a blind timer —
@@ -640,8 +671,25 @@ function HelperFigure({
     // every hand rung: the whole arm points from the shoulder with a thrust
     const a = arm.current
     if (a && handMode) {
-      vShoulder.copy(SHOULDER_LOCAL).applyAxisAngle(UP, yaw.current).add(HELPER_POS)
-      vDir.copy(aimPoint).sub(vShoulder).normalize()
+      vShoulder.copy(SHOULDER_OFFSET).applyAxisAngle(UP, yaw.current).add(HELPER_POS)
+      // Aim at the exhibit, but never let the arm angle further DOWN than
+      // MAX_POINT_DEPRESSION. Aimed straight at the plinth it dropped ~24°
+      // below the shoulder, which from a child's eye height put the hand
+      // behind the centre pedestal — hiding the scaffold rungs
+      // (pulse/hover/distal) from exactly the children who lean on them, while
+      // the unsupported gaze rung stayed readable.
+      //
+      // The clamp is a limit, not a flattening. Every exhibit stands at the
+      // same height, so the arm's pitch distinguishes nothing between them and
+      // only its BEARING ever carried the cue — but pitch is not free to throw
+      // away either: on odd slot counts the avatar, the centre exhibit and the
+      // child are collinear, so a perfectly level arm points straight down the
+      // child's line of sight and foreshortens into a dot. Keeping 12° leaves
+      // that gesture ~2.7° of visible extent while still clearing the row.
+      vDir.copy(aimPoint).sub(vShoulder)
+      const maxDrop = Math.hypot(vDir.x, vDir.z) * MAX_POINT_DEPRESSION_TAN
+      if (vDir.y < -maxDrop) vDir.y = -maxDrop
+      vDir.normalize()
       qArm.setFromUnitVectors(FWD, vDir)
       qBodyInv.setFromAxisAngle(UP, yaw.current).invert()
       qArm.premultiply(qBodyInv) // world → body-local (arm is a child of the body)
@@ -657,7 +705,12 @@ function HelperFigure({
           const dot = dots.current[i]
           if (!dot) continue
           const phase = (t * 0.55 + i / TRAIL_DOTS) % 1
-          vDot.copy(vShoulder).addScaledVector(vDir, ARM_LEN + thrust + 0.15 + phase * 1.1).sub(HELPER_POS)
+          // world units: the dots hang outside the scaled body group, so that
+          // growing the avatar never stretches the trail away from its hand
+          vDot
+            .copy(vShoulder)
+            .addScaledVector(vDir, ARM_LEN_WORLD + thrust + 0.15 + phase * 1.1)
+            .sub(HELPER_POS)
           dot.position.copy(vDot)
           ;(dot.material as THREE.MeshBasicMaterial).opacity = inBid ? 0 : 0.85 * (1 - phase)
         }
@@ -674,6 +727,11 @@ function HelperFigure({
   const shirt = '#7f8fb6'
   return (
     <group position={HELPER_POS.toArray()}>
+      {/* Everything with a body is drawn inside one scaled group, so the whole
+          figure keeps its proportions and every body-local number below stays
+          exactly as authored. The trail sits OUTSIDE it, in world units — see
+          where its dots are positioned in useFrame. */}
+      <group scale={HELPER_SCALE}>
       {/* body (yaw only): legs, torso and the pointing arm */}
       <group ref={body}>
         {/* legs + shoes */}
@@ -797,12 +855,17 @@ function HelperFigure({
           <meshStandardMaterial color="#9a5b4a" />
         </mesh>
       </group>
+      </group>
 
-      {/* fingertip direction trail (pulse/hover support; positioned in useFrame) */}
+      {/* fingertip direction trail (pulse/hover support; positioned in useFrame).
+          Deliberately a sibling of the scaled body, not a child: useFrame places
+          these from the WORLD shoulder along the WORLD aim direction, so putting
+          them inside the scale would multiply those offsets a second time and
+          fling the trail past the exhibits. Their own size is scaled by hand. */}
       <group visible={trailOn}>
         {Array.from({ length: TRAIL_DOTS }, (_, i) => (
           <mesh key={i} ref={(m) => { dots.current[i] = m }}>
-            <sphereGeometry args={[0.05, 8, 8]} />
+            <sphereGeometry args={[0.05 * HELPER_SCALE, 8, 8]} />
             <meshBasicMaterial color="#ffd95e" transparent opacity={0} />
           </mesh>
         ))}

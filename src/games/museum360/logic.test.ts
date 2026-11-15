@@ -2,6 +2,7 @@ import { expect, test } from 'vitest'
 import {
   AVATAR_Z,
   bearingToXZ,
+  centreOccluderElevationDeg,
   cueSchedule,
   dragDistance,
   errorType,
@@ -12,12 +13,15 @@ import {
   GAZE_TRIALS,
   GOAL,
   HAND_LADDER,
+  handClearanceDeg,
   HIT_RADIUS_MAX,
   hitHalfAngleDeg,
   hitRadius,
   isDragTail,
   lookDrag,
   makeRound,
+  MAX_POINT_DEPRESSION_DEG,
+  MIN_DESIGN_EYE_Y,
   OBJECT_RADIUS,
   pointsFor,
   slotBearing,
@@ -290,4 +294,52 @@ test('the target scales with distance, so equal gaps give equal angles', () => {
   // half-angle, even though they stand at different distances
   expect(hitHalfAngleDeg(0, 5)).toBeCloseTo(hitHalfAngleDeg(1, 5), 6)
   expect(slotDistance(0, 5)).toBeGreaterThan(slotDistance(1, 5))
+})
+
+/* ---- the helper avatar must stay visible to a CHILD ----------------------
+ * In a headset the camera rides at the wearer's real eye height, and nothing
+ * re-centres the world for a short one. From 0.95-1.35m the exhibit row rises
+ * in the child's view, and on the odd slot counts one pedestal sits exactly on
+ * the avatar's bearing, 3.2m away against the avatar's 7.4m. It used to cut
+ * the avatar off at the waist and swallow the pointing hand — hiding the
+ * SCAFFOLD rungs (pulse/hover/distal) from the children who depend on them,
+ * while the unsupported gaze rung stayed readable.
+ */
+for (const n of [3, 4, 5]) {
+  test(`the pointing hand clears the row for a child, with ${n} exhibits`, () => {
+    for (let i = 0; i < n; i++) {
+      expect(handClearanceDeg(i, n, MIN_DESIGN_EYE_Y)).toBeGreaterThan(0)
+      // and with headroom at the heights most children will actually play at
+      expect(handClearanceDeg(i, n, 1.15)).toBeGreaterThan(2)
+    }
+  })
+}
+
+test('an adult at the authored camera height sees the hand too', () => {
+  for (const n of [3, 4, 5]) {
+    for (let i = 0; i < n; i++) expect(handClearanceDeg(i, n, 1.7)).toBeGreaterThan(0)
+  }
+})
+
+test('even slot counts put nothing on the avatar bearing at all', () => {
+  expect(centreOccluderElevationDeg(4, MIN_DESIGN_EYE_Y)).toBe(-Infinity)
+  expect(centreOccluderElevationDeg(3, MIN_DESIGN_EYE_Y)).toBeGreaterThan(0)
+  expect(centreOccluderElevationDeg(5, MIN_DESIGN_EYE_Y)).toBeGreaterThan(0)
+})
+
+test('the occluder rises as the child gets shorter', () => {
+  // the whole reason the authored 1.7m camera never showed this
+  expect(centreOccluderElevationDeg(5, 0.95)).toBeGreaterThan(centreOccluderElevationDeg(5, 1.15))
+  expect(centreOccluderElevationDeg(5, 1.15)).toBeGreaterThan(centreOccluderElevationDeg(5, 1.7))
+})
+
+test('the arm keeps enough pitch to read as a gesture, not a dot', () => {
+  // On odd counts the avatar, the centre exhibit and the child are collinear,
+  // so a perfectly level arm would point straight down the line of sight.
+  expect(MAX_POINT_DEPRESSION_DEG).toBeGreaterThan(8)
+  // ...but not so much that it drops back behind the row
+  for (const n of [3, 5]) {
+    const centre = (n - 1) / 2
+    expect(handClearanceDeg(centre, n, MIN_DESIGN_EYE_Y)).toBeGreaterThan(0)
+  }
 })
