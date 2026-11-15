@@ -13,7 +13,8 @@ import { playGentle, playSuccess, playTap } from '../../services/sounds'
 import {
   CONFIG,
   NO_SHARE_TIMEOUT_MS,
-  discoveryBearingDeg,
+  spotBearingDeg,
+  spotRadius,
   makeRound,
   pickFriend,
   pointsFor,
@@ -193,7 +194,7 @@ export function Park360Game() {
     start()
   }
 
-  function beginRound(prev: Round['discovery'] | null) {
+  function beginRound(prev: Round | null) {
     setRoundPhase('waiting')
     setFound(false)
     setCalled(false)
@@ -215,14 +216,19 @@ export function Park360Game() {
       beginHeadWindow()
       recordStep('event_ready', {
         discovery: next.discovery,
+        // WHERE it appeared, recorded separately from WHAT appeared: the two
+        // are drawn independently, so analysis can test for a spot effect (a
+        // side bias, a near/far effect) without it hiding inside the species
+        spot: next.spot,
         saliency: cfg.saliency,
         nudgeAfterMs: cfg.nudgeAfterMs,
         // how far the child must turn to face the surprise — the 360 games'
         // attention-shift measure (signed degrees left/right)
-        targetBearingDeg: discoveryBearingDeg(next.discovery),
+        targetBearingDeg: spotBearingDeg(next.spot),
+        targetRadius: spotRadius(next.spot),
       })
       armNudge()
-      armNoShareTimeout(next.discovery)
+      armNoShareTimeout(next)
     }, spawnDelayMs())
   }
 
@@ -240,7 +246,7 @@ export function Park360Game() {
    * Takes the discovery explicitly (not the `round` state) since this fires
    * from inside the same spawn callback that just set it, before the next render.
    */
-  function armNoShareTimeout(discovery: Round['discovery']) {
+  function armNoShareTimeout(r: Round) {
     if (cfg.nudgeAfterMs !== null) return
     noShareTimer.current = setTimeout(() => {
       // clearTimers() (called from completeShare) already cancels this timer
@@ -248,10 +254,11 @@ export function Park360Game() {
       // share; noShareLogged just guards against a second timer somehow firing
       if (noShareLogged.current) return
       noShareLogged.current = true
-      const head = headMetrics(discoveryBearingDeg(discovery))
+      const head = headMetrics(spotBearingDeg(r.spot))
       recordStep('no_share', {
-        discovery,
-        targetBearingDeg: discoveryBearingDeg(discovery),
+        discovery: r.discovery,
+        spot: r.spot,
+        targetBearingDeg: spotBearingDeg(r.spot),
         timedOutAfterMs: NO_SHARE_TIMEOUT_MS,
         foundOnly: foundRef.current,
         calledOnly: calledRef.current,
@@ -335,7 +342,7 @@ export function Park360Game() {
     speakThenPraise(last ? `${wow} ${parkLine('sayWin', lang)}` : wow, lang)
     // the head's scan across this whole round: headToTargetMs = time to first
     // look at the surprise, and the range/travel span the turn to the friend
-    const head = headMetrics(discoveryBearingDeg(round.discovery))
+    const head = headMetrics(spotBearingDeg(round.spot))
     recordStep(
       'share',
       {
@@ -345,7 +352,9 @@ export function Park360Game() {
         latencyMs: shareLatency.current, // onset -> friend tap, the initiation latency
         order,
         discovery: round.discovery,
-        targetBearingDeg: discoveryBearingDeg(round.discovery),
+        spot: round.spot,
+        targetBearingDeg: spotBearingDeg(round.spot),
+        targetRadius: spotRadius(round.spot),
         ...head,
         points,
         score: nextScore,
@@ -361,7 +370,7 @@ export function Park360Game() {
       celebrateTimer.current = setTimeout(() => setPhase('over'), 1600)
       return
     }
-    celebrateTimer.current = setTimeout(() => beginRound(round.discovery), 2000)
+    celebrateTimer.current = setTimeout(() => beginRound(round), 2000)
   }
 
   // one-time, unscored warm-up before this child's very first real session
@@ -383,6 +392,7 @@ export function Park360Game() {
         <div className="game-canvas" onPointerDown={() => setHintSeen(true)}>
           <Park360Scene
             discovery={round.discovery}
+            spot={round.spot}
             active={roundPhase !== 'waiting'}
             saliency={cfg.saliency}
             found={found}

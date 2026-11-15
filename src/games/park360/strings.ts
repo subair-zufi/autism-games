@@ -61,14 +61,29 @@ const MESSAGES = {
 
 export type ParkKey = keyof typeof MESSAGES
 
-/** Localized surprise names (spoken in the friend's "wow" reaction). */
+/**
+ * Localized surprise names (spoken in the friend's "wow" reaction).
+ *
+ * Everyday child vocabulary in both languages, not the zoological term — the
+ * line is a friend saying "Wow! A bunny!", so it should land the way a child
+ * would say it. The Malayalam diminutives for the puppy and kitten
+ * (നായ്ക്കുട്ടി, പൂച്ചക്കുട്ടി) are the ordinary spoken forms.
+ *
+ * `ladybird` has no single settled Malayalam name in common use; പുള്ളിവണ്ട്
+ * ("spotted beetle") is descriptive and immediately understood by a child.
+ * Worth confirming with the local team along with the rest of this file.
+ */
 const DISCOVERY_LABELS: Record<DiscoveryId, Entry> = {
   butterfly: { en: 'Butterfly', ml: 'പൂമ്പാറ്റ' },
   bunny: { en: 'Bunny', ml: 'മുയൽ' },
-  bird: { en: 'Bird', ml: 'പക്ഷി' },
-  flower: { en: 'Flower', ml: 'പൂവ്' },
-  gem: { en: 'Gem', ml: 'രത്നം' },
-  rainbow: { en: 'Rainbow', ml: 'മഴവില്ല്' },
+  parrot: { en: 'Parrot', ml: 'തത്ത' },
+  sunflower: { en: 'Sunflower', ml: 'സൂര്യകാന്തി' },
+  puppy: { en: 'Puppy', ml: 'നായ്ക്കുട്ടി' },
+  kitten: { en: 'Kitten', ml: 'പൂച്ചക്കുട്ടി' },
+  squirrel: { en: 'Squirrel', ml: 'അണ്ണാൻ' },
+  duckling: { en: 'Duckling', ml: 'താറാവിൻകുഞ്ഞ്' },
+  ladybird: { en: 'Ladybird', ml: 'പുള്ളിവണ്ട്' },
+  peacock: { en: 'Peacock', ml: 'മയിൽ' },
 }
 
 export function parkLine(key: ParkKey, lang: Lang, params?: Record<string, string>): string {

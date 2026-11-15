@@ -19,49 +19,114 @@ import type { Difficulty } from '../../types'
  * when the child does look around.
  */
 
-export type DiscoveryId = 'butterfly' | 'bunny' | 'bird' | 'flower' | 'gem' | 'rainbow'
+/**
+ * The ten surprises — every one a living thing a child already knows and likes.
+ *
+ * They replace a set that mixed animals with abstractions (a gem, a rainbow).
+ * The task is to SHOW something to a friend, and a child shows a rabbit or a
+ * peacock with far more of the shared delight this game exists to produce than
+ * they show a floating crystal. Ten rather than six also means a child playing
+ * all three levels in one session meets far fewer repeats.
+ *
+ * Kerala-familiar on purpose, since that is where this deploys: a parrot, a
+ * peacock and a squirrel are everyday garden sights there, not exotica.
+ */
+export type DiscoveryId =
+  | 'butterfly'
+  | 'bunny'
+  | 'parrot'
+  | 'sunflower'
+  | 'puppy'
+  | 'kitten'
+  | 'squirrel'
+  | 'duckling'
+  | 'ladybird'
+  | 'peacock'
 
-export interface DiscoveryMeta {
-  id: DiscoveryId
-  /** signed bearing from straight-ahead, degrees left(−)/right(+) — all in the front arc */
+export const DISCOVERIES: DiscoveryId[] = [
+  'butterfly',
+  'bunny',
+  'parrot',
+  'sunflower',
+  'puppy',
+  'kitten',
+  'squirrel',
+  'duckling',
+  'ladybird',
+  'peacock',
+]
+
+/** half-width of the playable arc: nothing interactive sits beyond ±this */
+export const FRONT_HALF_ARC_DEG = 55
+
+/** A place on the lawn a surprise can appear. */
+export interface Spot {
+  /** signed bearing from straight-ahead, degrees left(−)/right(+) */
   bearingDeg: number
   /** distance from the child (the child never moves) */
   radius: number
 }
 
-/** half-width of the playable arc: nothing interactive sits beyond ±this */
-export const FRONT_HALF_ARC_DEG = 55
-
 /**
- * Surprise spots spread across the front arc, all well away from the friend
- * (who stands on the right edge of the arc, busy with the flowerbed).
+ * Where a surprise can appear — nine spots, held SEPARATELY from what appears
+ * in them.
+ *
+ * They used to be one and the same: each surprise owned a bearing, so the bird
+ * was always dead ahead at 6.2 m and the bunny always 18° to the left. A child
+ * only has to notice that once and the search stops being a search — they learn
+ * where to look from what they heard, and attention-getting turns into recall.
+ * Ten surprises across nine spots gives ninety combinations instead of six
+ * fixed ones, so where to look can only ever be found by looking.
+ *
+ * Every spot also has to stay clear of the FRIEND, and by more than it first
+ * looks. The friend's widest part is not their body (7.5° at 4.6 m) but the
+ * name plate floating over their head, which is 1.1 m across — 13.6°. Add the
+ * widest a surprise ever gets (16.4° for a big-saliency one at the nearest
+ * spot) and a surprise needs 17° of bearing clearance before it stops
+ * overlapping them on screen. A first pass used a flat 10° rule and put a spot
+ * at +25°, where the easy-tier butterfly sat squarely across the friend's name
+ * tag — findable, but ambiguous with the very person the child is meant to
+ * turn and show it to, which is the other half of the two-tap loop.
+ *
+ * With the friend at +40° that caps the usable right side at about +23°, and
+ * the arc only reaches +55°, so there is nothing beyond them either. The spread
+ * is therefore still left-leaning — less so than the old set, where five of six
+ * surprises sat at negative bearings, but the lawn's right-hand side belongs to
+ * the friend and cannot be shared. Balancing it properly means moving or
+ * alternating the friend, which changes the turn-to-friend cost the study
+ * records, so it is left as a separate decision.
  */
-export const DISCOVERIES: DiscoveryMeta[] = [
-  { id: 'flower', bearingDeg: -52, radius: 4.6 },
-  { id: 'butterfly', bearingDeg: -38, radius: 5.0 },
-  { id: 'bunny', bearingDeg: -18, radius: 5.6 },
-  { id: 'bird', bearingDeg: 0, radius: 6.2 }, // perched on the front fence
-  { id: 'rainbow', bearingDeg: -26, radius: 11 }, // up in the sky beyond the fence
-  { id: 'gem', bearingDeg: 14, radius: 5.4 },
+export const SPOTS: Spot[] = [
+  { bearingDeg: -50, radius: 4.8 },
+  { bearingDeg: -42, radius: 6.0 },
+  { bearingDeg: -34, radius: 4.5 },
+  { bearingDeg: -26, radius: 5.8 },
+  { bearingDeg: -18, radius: 4.9 },
+  { bearingDeg: -10, radius: 6.4 },
+  { bearingDeg: -2, radius: 5.2 },
+  { bearingDeg: 6, radius: 6.1 },
+  { bearingDeg: 14, radius: 5.5 },
 ]
+
+/** Widest a surprise ever gets from the child: the normalised half-extent
+ *  (`NOMINAL_HALF`) at the largest saliency, seen from the nearest spot. */
+export const MAX_SURPRISE_HALF_DEG = 12.2
+/** The friend's floating name plate, their widest part, as a half-angle. */
+export const FRIEND_HALF_DEG = 6.8
 
 /** the friend plays at the right edge of the arc, absorbed in their flowerbed */
 export const FRIEND_BEARING_DEG = 40
 export const FRIEND_RADIUS = 4.6
-
-export function discoveryMeta(id: DiscoveryId): DiscoveryMeta {
-  return DISCOVERIES.find((d) => d.id === id)!
-}
 
 /** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z). */
 export function bearingToXZ(bearingRad: number, radius: number): [number, number] {
   return [Math.sin(bearingRad) * radius, -Math.cos(bearingRad) * radius]
 }
 
-/** Floor [x, z] of a discovery's spot. */
-export function discoveryPosition(id: DiscoveryId): [number, number] {
-  const m = discoveryMeta(id)
-  return bearingToXZ((m.bearingDeg * Math.PI) / 180, m.radius)
+/** Floor [x, z] of spot `index`. */
+export function spotPosition(index: number): [number, number] {
+  const s = SPOTS[index] ?? SPOTS[0]
+  return bearingToXZ((s.bearingDeg * Math.PI) / 180, s.radius)
 }
 
 /** Floor [x, z] where the friend stands. */
@@ -69,10 +134,16 @@ export function friendPosition(): [number, number] {
   return bearingToXZ((FRIEND_BEARING_DEG * Math.PI) / 180, FRIEND_RADIUS)
 }
 
-/** The child's head-turn to face the surprise, in signed degrees — recorded
+/** The child's head-turn to face spot `index`, in signed degrees — recorded
  *  per round as the attention-shift size (same measure as Museum 360). */
-export function discoveryBearingDeg(id: DiscoveryId): number {
-  return discoveryMeta(id).bearingDeg
+export function spotBearingDeg(index: number): number {
+  return (SPOTS[index] ?? SPOTS[0]).bearingDeg
+}
+
+/** Distance from the child to spot `index` — recorded alongside the bearing so
+ *  analysis can tell a far surprise from a near one. */
+export function spotRadius(index: number): number {
+  return (SPOTS[index] ?? SPOTS[0]).radius
 }
 
 /** How loudly the surprise announces itself when it appears. */
@@ -133,11 +204,25 @@ export function starsFor(spontaneousShares: number, goal: number): number {
 
 export interface Round {
   discovery: DiscoveryId
+  /** index into `SPOTS` — drawn independently of the surprise itself */
+  spot: number
 }
 
-export function makeRound(prev: DiscoveryId | null, rng: () => number = Math.random): Round {
-  const pool = DISCOVERIES.filter((d) => d.id !== prev)
-  return { discovery: pool[Math.floor(rng() * pool.length)].id }
+/**
+ * Deal the next round: a surprise, and somewhere for it to appear.
+ *
+ * The two are drawn independently, and neither repeats the round before — so
+ * the child can never predict where to look from what they just saw, and never
+ * sees the same thing twice running. Passing the whole previous round (rather
+ * than just the previous surprise) is what lets the spot avoid repeating too.
+ */
+export function makeRound(prev: Round | null, rng: () => number = Math.random): Round {
+  const things = DISCOVERIES.filter((d) => d !== prev?.discovery)
+  const spots = SPOTS.map((_, i) => i).filter((i) => i !== prev?.spot)
+  return {
+    discovery: things[Math.floor(rng() * things.length)],
+    spot: spots[Math.floor(rng() * spots.length)],
+  }
 }
 
 /** ms the calm empty park lingers before the next surprise pops (randomised). */

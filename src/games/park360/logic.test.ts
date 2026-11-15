@@ -8,9 +8,9 @@ import {
   NO_SHARE_TIMEOUT_MS,
   POINTS,
   STREAK_LEN,
-  discoveryBearingDeg,
-  discoveryMeta,
-  discoveryPosition,
+  FRIEND_HALF_DEG,
+  MAX_SURPRISE_HALF_DEG,
+  SPOTS,
   friendPosition,
   isDragTail,
   lookDrag,
@@ -18,6 +18,9 @@ import {
   pickFriend,
   pointsFor,
   spawnDelayMs,
+  spotBearingDeg,
+  spotPosition,
+  spotRadius,
   starsFor,
 } from './logic'
 
@@ -29,20 +32,55 @@ function seededRng(seed: number) {
   }
 }
 
-describe('park360 discoveries (identical game design to Look What I Found!)', () => {
-  it('has 6 surprises with front-arc spots', () => {
-    expect(DISCOVERIES).toHaveLength(6)
-    for (const d of DISCOVERIES) {
-      expect(discoveryMeta(d.id)).toBe(d)
+describe('park360 surprises and the spots they appear in', () => {
+  it('offers ten surprises, every one a living thing a child knows', () => {
+    expect(DISCOVERIES).toHaveLength(10)
+    expect(new Set(DISCOVERIES).size).toBe(10)
+  })
+
+  it('keeps every spot inside the front half-circle — nothing behind the child', () => {
+    SPOTS.forEach((spot, i) => {
+      expect(Math.abs(spot.bearingDeg)).toBeLessThanOrEqual(FRONT_HALF_ARC_DEG)
+      // and in front means negative z in world space
+      const [, z] = spotPosition(i)
+      expect(z).toBeLessThan(0)
+      expect(spotBearingDeg(i)).toBe(spot.bearingDeg)
+      expect(spotRadius(i)).toBe(spot.radius)
+    })
+  })
+
+  it('uses the whole arc the friend leaves free, evenly', () => {
+    // The old set clustered: five of six surprises sat at negative bearings,
+    // and the child always turned left to find and right to share — one drilled
+    // motor pattern rather than a varied search. What matters is not a
+    // left/right count, though: the friend owns the right-hand side of the arc
+    // and a surprise cannot share it without overlapping them (see SPOTS). The
+    // property worth holding is that the spots spread EVENLY across everything
+    // that is usable, so no part of the search space is over- or under-sampled.
+    const bearings = SPOTS.map((s) => s.bearingDeg).sort((a, b) => a - b)
+    expect(bearings[0]).toBeLessThanOrEqual(-45) // reaches the left edge
+    expect(bearings[bearings.length - 1]).toBeGreaterThanOrEqual(12) // and as far right as it may
+    const gaps = bearings.slice(1).map((b, i) => b - bearings[i])
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(2)
+  })
+
+  it('never puts a surprise where it would overlap the friend on screen', () => {
+    // Not a rule-of-thumb gap: the real criterion is the two half-widths. The
+    // friend's widest part is their floating NAME PLATE (1.1m), not their body,
+    // and a big-saliency surprise at the nearest spot is wider still. A flat
+    // 10deg rule passed a spot at +25deg where the easy butterfly sat squarely
+    // across the name tag — ambiguous with the very person the child has to
+    // turn and show it to.
+    const needed = MAX_SURPRISE_HALF_DEG + FRIEND_HALF_DEG
+    for (const spot of SPOTS) {
+      expect(Math.abs(spot.bearingDeg - FRIEND_BEARING_DEG)).toBeGreaterThan(needed)
     }
   })
 
-  it('keeps every surprise inside the front half-circle — nothing behind the child', () => {
-    for (const d of DISCOVERIES) {
-      expect(Math.abs(d.bearingDeg)).toBeLessThanOrEqual(FRONT_HALF_ARC_DEG)
-      // and in front means negative z in world space
-      const [, z] = discoveryPosition(d.id)
-      expect(z).toBeLessThan(0)
+  it('spaces the spots far enough apart to be distinct places', () => {
+    const sorted = [...SPOTS].map((s) => s.bearingDeg).sort((a, b) => a - b)
+    for (let i = 1; i < sorted.length; i++) {
+      expect(sorted[i] - sorted[i - 1]).toBeGreaterThanOrEqual(8)
     }
   })
 
@@ -51,31 +89,52 @@ describe('park360 discoveries (identical game design to Look What I Found!)', ()
     const [, z] = friendPosition()
     expect(z).toBeLessThan(0)
   })
-
-  it('reports the signed head-turn bearing per surprise', () => {
-    for (const d of DISCOVERIES) {
-      expect(discoveryBearingDeg(d.id)).toBe(d.bearingDeg)
-    }
-  })
 })
 
 describe('makeRound', () => {
   it('never repeats the previous surprise', () => {
     const rng = seededRng(7)
-    let prev = makeRound(null, rng).discovery
+    let prev = makeRound(null, rng)
     for (let i = 0; i < 200; i++) {
-      const next = makeRound(prev, rng).discovery
-      expect(next).not.toBe(prev)
+      const next = makeRound(prev, rng)
+      expect(next.discovery).not.toBe(prev.discovery)
       prev = next
     }
   })
 
-  it('always returns a valid discovery id', () => {
-    const rng = seededRng(3)
-    const ids = DISCOVERIES.map((d) => d.id)
-    for (let i = 0; i < 50; i++) {
-      expect(ids).toContain(makeRound(null, rng).discovery)
+  it('never repeats the previous spot either', () => {
+    const rng = seededRng(11)
+    let prev = makeRound(null, rng)
+    for (let i = 0; i < 200; i++) {
+      const next = makeRound(prev, rng)
+      expect(next.spot).not.toBe(prev.spot)
+      prev = next
     }
+  })
+
+  it('always returns a valid surprise and a valid spot', () => {
+    const rng = seededRng(3)
+    for (let i = 0; i < 100; i++) {
+      const r = makeRound(null, rng)
+      expect(DISCOVERIES).toContain(r.discovery)
+      expect(r.spot).toBeGreaterThanOrEqual(0)
+      expect(r.spot).toBeLessThan(SPOTS.length)
+    }
+  })
+
+  it('draws WHAT appears independently of WHERE, so neither predicts the other', () => {
+    // the whole point of splitting them: when a surprise owned a bearing, a
+    // child who learned "bunny means 18 degrees left" stopped searching and
+    // started recalling, and the game stopped measuring attention-getting
+    const rng = seededRng(29)
+    const seen = new Map<string, Set<number>>()
+    for (let i = 0; i < 600; i++) {
+      const r = makeRound(null, rng)
+      if (!seen.has(r.discovery)) seen.set(r.discovery, new Set())
+      seen.get(r.discovery)!.add(r.spot)
+    }
+    // every surprise should turn up in most of the nine spots
+    for (const [, spots] of seen) expect(spots.size).toBeGreaterThanOrEqual(7)
   })
 })
 
