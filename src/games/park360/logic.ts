@@ -210,9 +210,72 @@ export const FRIEND_SPOTS: Record<Difficulty, FriendSpot[]> = {
 export const MIN_FRIEND_SPREAD_DEG = 12
 
 /** Draw this session's friend spot for `difficulty`. */
-export function pickFriendSpot(difficulty: Difficulty, rng: () => number = Math.random): FriendSpot {
-  const options = FRIEND_SPOTS[difficulty]
-  return options[Math.floor(rng() * options.length)]
+/**
+ * Draw this session's friend spot, given where they were last session.
+ *
+ * Not a fresh uniform draw. Hard holds three spots on each side, and drawing
+ * independently every session meant a one-in-eight chance of three lefts in a
+ * row and a one-in-sixteen chance of four — which is exactly what came back
+ * from play: "the hard level is on the left only". Reloading the page between
+ * plays makes it worse, because every draw is then independent of every other.
+ * Random and varied are not the same thing, and the child only experiences the
+ * sequence they actually got.
+ *
+ * So the side ALTERNATES wherever a level has both, and the position never
+ * repeats. Strict alternation is predictable in principle, but no child is
+ * modelling it, and it guarantees what matters twice over: they meet their
+ * friend on both sides, and the study gets left/right exposure counterbalanced
+ * rather than left to chance — the same reasoning that put the emotion games'
+ * answer bearings on a shuffled cycle instead of an independent draw.
+ *
+ * `last` is the previous session's spot, or null for a child's first ever go.
+ */
+export function pickFriendSpot(
+  difficulty: Difficulty,
+  last: FriendSpot | null = null,
+  rng: () => number = Math.random,
+): FriendSpot {
+  const all = FRIEND_SPOTS[difficulty]
+  if (!last) return all[Math.floor(rng() * all.length)]
+  // never the same patch of lawn twice running
+  const moved = all.filter((s) => s.bearingDeg !== last.bearingDeg)
+  // and where the level has both sides, always the other one: which way they
+  // had to turn is the thing a child actually notices
+  const swapped = moved.filter((s) => Math.sign(s.bearingDeg) !== Math.sign(last.bearingDeg))
+  const pool = swapped.length > 0 ? swapped : moved
+  return pool[Math.floor(rng() * pool.length)]
+}
+
+/**
+ * Where the friend was last session, per level, remembered across reloads.
+ *
+ * It has to outlive the page: a facilitator restarting the headset browser
+ * between runs is the normal case, not the exception, and an in-memory cycle
+ * would start afresh each time and hand back the same independent draw this
+ * exists to avoid. Kept beside the picker rather than in the settings store
+ * because it is this game's bookkeeping, not a choice anybody made about the
+ * child. Every read and write is guarded: a private window, cleared site data
+ * or a thrown accessor just means the next draw is a free one.
+ */
+const LAST_FRIEND_KEY = 'park360-last-friend'
+
+export function rememberedFriendSpot(difficulty: Difficulty): FriendSpot | null {
+  try {
+    const raw = localStorage.getItem(`${LAST_FRIEND_KEY}-${difficulty}`)
+    if (!raw) return null
+    const bearing = Number(raw)
+    return FRIEND_SPOTS[difficulty].find((s) => s.bearingDeg === bearing) ?? null
+  } catch {
+    return null
+  }
+}
+
+export function rememberFriendSpot(difficulty: Difficulty, spot: FriendSpot): void {
+  try {
+    localStorage.setItem(`${LAST_FRIEND_KEY}-${difficulty}`, String(spot.bearingDeg))
+  } catch {
+    /* no storage: the next session simply draws freely */
+  }
 }
 
 /** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z). */

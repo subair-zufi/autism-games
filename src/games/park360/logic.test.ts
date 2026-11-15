@@ -18,6 +18,8 @@ import {
   placeOnLawn,
   POINTS,
   pointsFor,
+  rememberedFriendSpot,
+  rememberFriendSpot,
   SCENERY_FRONT_CLEAR_DEG,
   spawnDelayMs,
   SPOT_COUNT,
@@ -139,8 +141,51 @@ describe('where the friend kneels, by level', () => {
   it('draws a spot belonging to the level it was asked for', () => {
     const rng = seededRng(13)
     for (const level of ['easy', 'medium', 'hard'] as const) {
+      let last: ReturnType<typeof pickFriendSpot> | null = null
       for (let i = 0; i < 40; i++) {
-        expect(FRIEND_SPOTS[level]).toContainEqual(pickFriendSpot(level, rng))
+        last = pickFriendSpot(level, last, rng)
+        expect(FRIEND_SPOTS[level]).toContainEqual(last)
+      }
+    }
+  })
+
+  it('alternates sides on hard, instead of leaving it to chance', () => {
+    // Reported from play: "the hard level is on the left only". It was an
+    // independent uniform draw over three left spots and three right ones, so
+    // three lefts running had a one-in-eight chance and four a one-in-sixteen
+    // — and reloading between plays made every draw independent of the last.
+    // Random is not varied; the child only experiences the run they got.
+    const rng = seededRng(17)
+    let last = pickFriendSpot('hard', null, rng)
+    const sides = [Math.sign(last.bearingDeg)]
+    for (let i = 0; i < 60; i++) {
+      last = pickFriendSpot('hard', last, rng)
+      sides.push(Math.sign(last.bearingDeg))
+    }
+    for (let i = 1; i < sides.length; i++) expect(sides[i]).not.toBe(sides[i - 1])
+  })
+
+  it('never puts the friend on the same patch of lawn twice running', () => {
+    const rng = seededRng(23)
+    for (const level of ['easy', 'medium', 'hard'] as const) {
+      let last = pickFriendSpot(level, null, rng)
+      for (let i = 0; i < 60; i++) {
+        const next = pickFriendSpot(level, last, rng)
+        expect(next.bearingDeg).not.toBe(last.bearingDeg)
+        last = next
+      }
+    }
+  })
+
+  it('keeps easy on the left and medium on the right while it varies them', () => {
+    // alternating must not be allowed to override the per-level side: a level
+    // with only one side has nowhere to swap to, and must move position instead
+    const rng = seededRng(31)
+    for (const [level, want] of [['easy', -1], ['medium', 1]] as const) {
+      let last = pickFriendSpot(level, null, rng)
+      for (let i = 0; i < 40; i++) {
+        last = pickFriendSpot(level, last, rng)
+        expect(Math.sign(last.bearingDeg)).toBe(want)
       }
     }
   })
@@ -148,11 +193,25 @@ describe('where the friend kneels, by level', () => {
   it('reaches every one of a level\'s spots over a run of sessions', () => {
     const rng = seededRng(5)
     for (const level of ['easy', 'medium', 'hard'] as const) {
-      const seen = new Set(
-        Array.from({ length: 200 }, () => pickFriendSpot(level, rng).bearingDeg),
-      )
+      let last = pickFriendSpot(level, null, rng)
+      const seen = new Set([last.bearingDeg])
+      for (let i = 0; i < 200; i++) {
+        last = pickFriendSpot(level, last, rng)
+        seen.add(last.bearingDeg)
+      }
       expect(seen.size).toBe(FRIEND_SPOTS[level].length)
     }
+  })
+
+  it('remembers across a reload, which is what made it look random', () => {
+    // a facilitator restarting the headset browser between runs is the normal
+    // case; an in-memory cycle would start afresh each time and hand back the
+    // very independent draw this exists to avoid
+    const first = FRIEND_SPOTS.hard[0]
+    rememberFriendSpot('hard', first)
+    expect(rememberedFriendSpot('hard')).toEqual(first)
+    const next = pickFriendSpot('hard', rememberedFriendSpot('hard'), seededRng(41))
+    expect(Math.sign(next.bearingDeg)).not.toBe(Math.sign(first.bearingDeg))
   })
 })
 

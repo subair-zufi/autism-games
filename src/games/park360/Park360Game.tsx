@@ -15,6 +15,8 @@ import {
   NO_SHARE_TIMEOUT_MS,
   makeRound,
   pickFriendSpot,
+  rememberFriendSpot,
+  rememberedFriendSpot,
   placeOnLawn,
   spotsFor,
   type FriendSpot,
@@ -70,7 +72,9 @@ export function Park360Game() {
   /** Where the friend kneels this session — left on easy, right on medium,
    *  either side on hard, and varied within each level so their place never
    *  becomes a landmark to be memorised (see FRIEND_SPOTS). */
-  const [friendSpot, setFriendSpot] = useState<FriendSpot>(() => pickFriendSpot(difficulty))
+  const [friendSpot, setFriendSpot] = useState<FriendSpot>(() =>
+    pickFriendSpot(difficulty, rememberedFriendSpot(difficulty)),
+  )
   /** The surprise spots for THIS friend: they fill whichever side of the lawn
    *  the friend is not on, so the search area follows the friend rather than
    *  staying bunched on one side forever. */
@@ -192,7 +196,11 @@ export function Park360Game() {
     setStreak(0)
     setStars(0)
     setFriend(pickFriend())
-    setFriendSpot(pickFriendSpot(difficulty))
+    // alternates sides from wherever they were last session, so hard cannot
+    // land on the same side several runs together (see pickFriendSpot)
+    const nextFriendSpot = pickFriendSpot(difficulty, rememberedFriendSpot(difficulty))
+    rememberFriendSpot(difficulty, nextFriendSpot)
+    setFriendSpot(nextFriendSpot)
     setPhase('playing')
     beginRound(null)
   }
