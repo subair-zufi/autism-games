@@ -17,10 +17,8 @@ import { VRHudAnchor } from '../VRHudAnchor'
 import {
   bearingToXZ,
   dragDistance,
-  friendPosition,
   isDragTail,
   lookDrag,
-  spotPosition,
   type DiscoveryId,
   type Friend,
   type Saliency,
@@ -38,9 +36,12 @@ const SALIENCY_SCALE: Record<Saliency, number> = { big: 1.35, medium: 1, subtle:
 export interface Park360SceneProps {
   /** the current surprise (only rendered while `active`) */
   discovery: DiscoveryId
-  /** which of the nine lawn spots it appeared in — drawn independently of the
+  /** floor [x, z] of the spot it appeared in — drawn independently of the
    *  surprise itself, so where to look can never be learned from what appeared */
-  spot: number
+  spotXZ: [number, number]
+  /** floor [x, z] where the friend kneels this session: left on easy, right on
+   *  medium, either side on hard (see FRIEND_SPOTS in logic.ts) */
+  friendXZ: [number, number]
   /** true from the moment the surprise pops in until the round ends */
   active: boolean
   saliency: Saliency
@@ -307,21 +308,6 @@ function ParkWorld() {
         <meshStandardMaterial color="#c8b08a" />
       </Instanced>
 
-      {/* the friend's flowerbed — what they are busy looking at */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[FLOWERBED[0], 0.01, FLOWERBED[2]]}>
-        <circleGeometry args={[0.9, 24]} />
-        <meshStandardMaterial color="#9a7a52" />
-      </mesh>
-      <Instanced items={FLOWER_STEMS}>
-        <cylinderGeometry args={[0.025, 0.025, 0.4, 6]} />
-        <meshStandardMaterial color="#4d8a3d" />
-      </Instanced>
-      {/* the blooms differ only in colour, which instancing carries per-instance */}
-      <Instanced items={FLOWER_BLOOMS}>
-        <sphereGeometry args={[0.11, 10, 10]} />
-        <meshStandardMaterial />
-      </Instanced>
-
       {/* sun + a few drifting-still clouds */}
       <mesh position={[16, 22, -26]}>
         <sphereGeometry args={[2.6, 16, 16]} />
@@ -412,24 +398,54 @@ const FENCE_RAILS: Placement[] = FENCE_BEARINGS.slice(0, -1).map((deg) => {
   }
 })
 
-/** where the friend's flowerbed sits */
-const FLOWERBED: [number, number, number] = (() => {
-  const [x, z] = bearingToXZ((53 * Math.PI) / 180, 4.9)
-  return [x, 0, z]
-})()
-
 const FLOWER_COLORS = ['#e2554c', '#f5c542', '#b07fe0', '#f473b9', '#5aa9e6']
 const FLOWER_OFFSETS = FLOWER_COLORS.map((_, i) => {
   const a = (i / FLOWER_COLORS.length) * Math.PI * 2
   return [Math.cos(a) * 0.45, Math.sin(a) * 0.45] as const
 })
-const FLOWER_STEMS: Placement[] = FLOWER_OFFSETS.map(([ox, oz]) => ({
-  pos: [FLOWERBED[0] + ox, 0.2, FLOWERBED[2] + oz],
-}))
-const FLOWER_BLOOMS: Placement[] = FLOWER_OFFSETS.map(([ox, oz], i) => ({
-  pos: [FLOWERBED[0] + ox, 0.44, FLOWERBED[2] + oz],
-  color: FLOWER_COLORS[i],
-}))
+
+/**
+ * The friend's flowerbed — what they are busy looking at, and therefore wholly
+ * dependent on where they are.
+ *
+ * It used to be a fixed patch at +53°, which was fine while the friend was
+ * nailed to +40°. Now that they kneel left on easy, right on medium and either
+ * side on hard, a fixed bed would leave them absorbed in a flowerbed on the
+ * far side of the park. It is placed along the direction they are actually
+ * FACING when turned away, so whichever way they are looking, that is where
+ * their flowers are.
+ */
+function Flowerbed({ at }: { at: [number, number] }) {
+  const stems = useMemo(
+    () => FLOWER_OFFSETS.map(([ox, oz]) => ({ pos: [at[0] + ox, 0.2, at[1] + oz] as [number, number, number] })),
+    [at],
+  )
+  const blooms = useMemo(
+    () =>
+      FLOWER_OFFSETS.map(([ox, oz], i) => ({
+        pos: [at[0] + ox, 0.44, at[1] + oz] as [number, number, number],
+        color: FLOWER_COLORS[i],
+      })),
+    [at],
+  )
+  return (
+    <group>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[at[0], 0.01, at[1]]}>
+        <circleGeometry args={[0.9, 24]} />
+        <meshStandardMaterial color="#9a7a52" />
+      </mesh>
+      <Instanced items={stems}>
+        <cylinderGeometry args={[0.025, 0.025, 0.4, 6]} />
+        <meshStandardMaterial color="#4d8a3d" />
+      </Instanced>
+      {/* the blooms differ only in colour, which instancing carries per-instance */}
+      <Instanced items={blooms}>
+        <sphereGeometry args={[0.11, 10, 10]} />
+        <meshStandardMaterial />
+      </Instanced>
+    </group>
+  )
+}
 
 /** four puffs make a cloud; the instance scale carries both the puff's own
  *  radius and the cloud's overall size */
@@ -454,14 +470,14 @@ const CLOUD_PUFFS: Placement[] = [
 /* ---- the play layer -------------------------------------------------------- */
 
 function SceneInner(props: Park360SceneProps) {
-  const { discovery, spot, active, saliency, found, nudge } = props
-  const [dx, dz] = spotPosition(spot)
+  const { discovery, spotXZ, active, saliency, found, nudge } = props
+  const [dx, dz] = spotXZ
 
   return (
     <group>
       {active && (
         <Surprise
-          key={`${discovery}-${spot}`}
+          key={`${discovery}-${dx.toFixed(2)}-${dz.toFixed(2)}`}
           id={discovery}
           x={dx}
           z={dz}
@@ -580,7 +596,8 @@ function Surprise({
  * texture panels (not DOM overlays) so they show inside VR too.
  */
 function FriendKid({
-  spot,
+  spotXZ,
+  friendXZ,
   friend,
   friendLabel,
   friendState,
@@ -593,7 +610,7 @@ function FriendKid({
   const armL = useRef<THREE.Group>(null)
   const armR = useRef<THREE.Group>(null)
   const ring = useRef<THREE.Mesh>(null)
-  const [x, z] = friendPosition()
+  const [x, z] = friendXZ
   const look = friend.look
   const initialized = useRef(false)
 
@@ -605,14 +622,25 @@ function FriendKid({
 
   // facing: toward the flowerbed (away), toward the child at the origin
   // (curious), or toward the discovery being shown (celebrating)
-  const [dxp, dzp] = spotPosition(spot)
+  const [dxp, dzp] = spotXZ
   const faceChild = Math.atan2(0 - x, 0 - z)
+  // Turn OUTWARD, whichever side of the lawn they are on. `awayYaw` is how far
+  // off the child they are turned; its sign is which way round. Left unmirrored
+  // it rotated the same direction from either side, so a friend on the left
+  // turned back across the play area — toward the child rather than away from
+  // them, which is the opposite of the "busy, not available" the scaffold
+  // needs. The magnitude, the thing the levels actually fade, is untouched.
+  const away = faceChild + awayYaw * Math.sign(x || 1)
   const face =
     friendState === 'curious'
       ? faceChild
       : friendState === 'celebrating'
         ? Math.atan2(dxp - x, dzp - z)
-        : faceChild + awayYaw
+        : away
+
+  // Their flowerbed sits where they are looking when turned away, so it is
+  // always in front of them wherever this session put them.
+  const bed: [number, number] = [x + Math.sin(away) * 0.95, z + Math.cos(away) * 0.95]
 
   const handsUp = friendState === 'celebrating'
 
@@ -649,6 +677,8 @@ function FriendKid({
   })
 
   return (
+    <>
+    <Flowerbed at={bed} />
     <group
       ref={g}
       position={[x, 0, z]}
@@ -739,6 +769,7 @@ function FriendKid({
       {friendState === 'celebrating' && <SpeechBubble text={'🤩 !'} y={2.35} accent="#22c55e" />}
       {friendState === 'curious' && <SpeechBubble text={'?'} y={2.35} accent="#f5a623" />}
     </group>
+    </>
   )
 }
 

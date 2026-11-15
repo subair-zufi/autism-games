@@ -96,55 +96,108 @@ export interface Spot {
  * alternating the friend, which changes the turn-to-friend cost the study
  * records, so it is left as a separate decision.
  */
-export const SPOTS: Spot[] = [
-  { bearingDeg: -50, radius: 4.8 },
-  { bearingDeg: -42, radius: 6.0 },
-  { bearingDeg: -34, radius: 4.5 },
-  { bearingDeg: -26, radius: 5.8 },
-  { bearingDeg: -18, radius: 4.9 },
-  { bearingDeg: -10, radius: 6.4 },
-  { bearingDeg: -2, radius: 5.2 },
-  { bearingDeg: 6, radius: 6.1 },
-  { bearingDeg: 14, radius: 5.5 },
-]
+/** How many places a surprise can appear in any one session. */
+export const SPOT_COUNT = 9
 
 /** Widest a surprise ever gets from the child: the normalised half-extent
  *  (`NOMINAL_HALF`) at the largest saliency, seen from the nearest spot. */
 export const MAX_SURPRISE_HALF_DEG = 12.2
 /** The friend's floating name plate, their widest part, as a half-angle. */
 export const FRIEND_HALF_DEG = 6.8
+/** Bearing a surprise must keep from the friend: both their half-widths. */
+export const FRIEND_CLEARANCE_DEG = MAX_SURPRISE_HALF_DEG + FRIEND_HALF_DEG
 
-/** the friend plays at the right edge of the arc, absorbed in their flowerbed */
-export const FRIEND_BEARING_DEG = 40
-export const FRIEND_RADIUS = 4.6
+/** Distances the spots cycle through, so the row is never a flat arc. */
+const SPOT_RADII = [4.8, 6.0, 4.5, 5.8, 4.9, 6.4, 5.2, 6.1, 5.5]
+
+/**
+ * Lay the surprise spots out around wherever the friend happens to be today.
+ *
+ * They used to be a fixed list that dodged one fixed friend, which left them
+ * permanently bunched to the left. Deriving them instead means the surprises
+ * always fill whichever side of the lawn the friend is NOT on — so when the
+ * friend moves (see `FRIEND_SPOTS`) the search area moves with them, and
+ * across sessions the child turns left to find as often as right.
+ *
+ * The friend always kneels toward one edge of the arc, so the band their
+ * clearance zone eats is at one end and what remains is a single stretch. The
+ * spots then spread evenly across it, which is the property that matters: no
+ * part of the child's search space over- or under-sampled.
+ */
+export function spotsFor(friendBearingDeg: number): Spot[] {
+  const onLeft = friendBearingDeg < 0
+  const lo = onLeft ? friendBearingDeg + FRIEND_CLEARANCE_DEG : -FRONT_HALF_ARC_DEG
+  const hi = onLeft ? FRONT_HALF_ARC_DEG : friendBearingDeg - FRIEND_CLEARANCE_DEG
+  const step = (hi - lo) / (SPOT_COUNT - 1)
+  return Array.from({ length: SPOT_COUNT }, (_, i) => ({
+    bearingDeg: Math.round(lo + i * step),
+    radius: SPOT_RADII[i % SPOT_RADII.length],
+  }))
+}
+
+/**
+ * Where the friend kneels at their flowerbed — chosen per LEVEL, and varied
+ * within each level across sessions.
+ *
+ * They used to stand at +40° in every round of every session of every level.
+ * That makes the friend-directed head turn a constant: the child learns one
+ * movement and repeats it, and "turn to your friend" stops being an act of
+ * seeking somebody out. It also means the analysis cannot tell the cost of
+ * turning to the friend apart from the habit of turning right.
+ *
+ * So the levels place them differently, and the placement itself is part of
+ * the fading scaffold the rest of this file already builds:
+ *
+ *  - easy   — always on the LEFT, and the nearer of the two spots. The child's
+ *             first experience of showing somebody something is the shortest,
+ *             most forgiving turn, toward a friend who is always where they
+ *             were last time.
+ *  - medium — always on the RIGHT. A mirror of what easy taught, so a child
+ *             cannot carry the direction over and must read the scene afresh.
+ *  - hard   — EITHER side, and furthest out. The child has to find their friend
+ *             before they can show them anything, which is the last piece of
+ *             scaffolding left to remove.
+ *
+ * Two spots per level rather than one so that the position is not a landmark
+ * to be memorised even within a level; which of them is used is drawn once per
+ * session, and recorded on every step so analysis can model the turn.
+ */
+export interface FriendSpot {
+  bearingDeg: number
+  radius: number
+}
+
+export const FRIEND_SPOTS: Record<Difficulty, FriendSpot[]> = {
+  easy: [
+    { bearingDeg: -36, radius: 4.4 },
+    { bearingDeg: -43, radius: 4.8 },
+  ],
+  medium: [
+    { bearingDeg: 38, radius: 4.8 },
+    { bearingDeg: 45, radius: 5.1 },
+  ],
+  hard: [
+    { bearingDeg: -51, radius: 5.4 },
+    { bearingDeg: 51, radius: 5.4 },
+  ],
+}
+
+/** Draw this session's friend spot for `difficulty`. */
+export function pickFriendSpot(difficulty: Difficulty, rng: () => number = Math.random): FriendSpot {
+  const options = FRIEND_SPOTS[difficulty]
+  return options[Math.floor(rng() * options.length)]
+}
 
 /** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z). */
 export function bearingToXZ(bearingRad: number, radius: number): [number, number] {
   return [Math.sin(bearingRad) * radius, -Math.cos(bearingRad) * radius]
 }
 
-/** Floor [x, z] of spot `index`. */
-export function spotPosition(index: number): [number, number] {
-  const s = SPOTS[index] ?? SPOTS[0]
-  return bearingToXZ((s.bearingDeg * Math.PI) / 180, s.radius)
+/** Floor [x, z] of anything placed on the lawn by bearing and distance. */
+export function placeOnLawn(at: { bearingDeg: number; radius: number }): [number, number] {
+  return bearingToXZ((at.bearingDeg * Math.PI) / 180, at.radius)
 }
 
-/** Floor [x, z] where the friend stands. */
-export function friendPosition(): [number, number] {
-  return bearingToXZ((FRIEND_BEARING_DEG * Math.PI) / 180, FRIEND_RADIUS)
-}
-
-/** The child's head-turn to face spot `index`, in signed degrees — recorded
- *  per round as the attention-shift size (same measure as Museum 360). */
-export function spotBearingDeg(index: number): number {
-  return (SPOTS[index] ?? SPOTS[0]).bearingDeg
-}
-
-/** Distance from the child to spot `index` — recorded alongside the bearing so
- *  analysis can tell a far surprise from a near one. */
-export function spotRadius(index: number): number {
-  return (SPOTS[index] ?? SPOTS[0]).radius
-}
 
 /** How loudly the surprise announces itself when it appears. */
 export type Saliency = 'big' | 'medium' | 'subtle'
@@ -218,7 +271,7 @@ export interface Round {
  */
 export function makeRound(prev: Round | null, rng: () => number = Math.random): Round {
   const things = DISCOVERIES.filter((d) => d !== prev?.discovery)
-  const spots = SPOTS.map((_, i) => i).filter((i) => i !== prev?.spot)
+  const spots = Array.from({ length: SPOT_COUNT }, (_, i) => i).filter((i) => i !== prev?.spot)
   return {
     discovery: things[Math.floor(rng() * things.length)],
     spot: spots[Math.floor(rng() * spots.length)],

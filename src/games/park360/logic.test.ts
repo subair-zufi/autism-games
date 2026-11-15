@@ -2,26 +2,24 @@ import { describe, expect, it } from 'vitest'
 import {
   CONFIG,
   DISCOVERIES,
-  FRIEND_BEARING_DEG,
+  FRIEND_CLEARANCE_DEG,
+  FRIEND_SPOTS,
   FRIENDS,
   FRONT_HALF_ARC_DEG,
-  NO_SHARE_TIMEOUT_MS,
-  POINTS,
-  STREAK_LEN,
-  FRIEND_HALF_DEG,
-  MAX_SURPRISE_HALF_DEG,
-  SPOTS,
-  friendPosition,
   isDragTail,
   lookDrag,
   makeRound,
+  NO_SHARE_TIMEOUT_MS,
   pickFriend,
+  pickFriendSpot,
+  placeOnLawn,
+  POINTS,
   pointsFor,
   spawnDelayMs,
-  spotBearingDeg,
-  spotPosition,
-  spotRadius,
+  SPOT_COUNT,
+  spotsFor,
   starsFor,
+  STREAK_LEN,
 } from './logic'
 
 function seededRng(seed: number) {
@@ -32,62 +30,106 @@ function seededRng(seed: number) {
   }
 }
 
-describe('park360 surprises and the spots they appear in', () => {
+describe('park360 surprises, and the spots they appear in', () => {
   it('offers ten surprises, every one a living thing a child knows', () => {
     expect(DISCOVERIES).toHaveLength(10)
     expect(new Set(DISCOVERIES).size).toBe(10)
   })
 
-  it('keeps every spot inside the front half-circle — nothing behind the child', () => {
-    SPOTS.forEach((spot, i) => {
-      expect(Math.abs(spot.bearingDeg)).toBeLessThanOrEqual(FRONT_HALF_ARC_DEG)
-      // and in front means negative z in world space
-      const [, z] = spotPosition(i)
-      expect(z).toBeLessThan(0)
-      expect(spotBearingDeg(i)).toBe(spot.bearingDeg)
-      expect(spotRadius(i)).toBe(spot.radius)
-    })
-  })
+  // whichever side the friend takes, the same properties have to hold
+  const everyFriendSpot = Object.values(FRIEND_SPOTS).flat()
 
-  it('uses the whole arc the friend leaves free, evenly', () => {
-    // The old set clustered: five of six surprises sat at negative bearings,
-    // and the child always turned left to find and right to share — one drilled
-    // motor pattern rather than a varied search. What matters is not a
-    // left/right count, though: the friend owns the right-hand side of the arc
-    // and a surprise cannot share it without overlapping them (see SPOTS). The
-    // property worth holding is that the spots spread EVENLY across everything
-    // that is usable, so no part of the search space is over- or under-sampled.
-    const bearings = SPOTS.map((s) => s.bearingDeg).sort((a, b) => a - b)
-    expect(bearings[0]).toBeLessThanOrEqual(-45) // reaches the left edge
-    expect(bearings[bearings.length - 1]).toBeGreaterThanOrEqual(12) // and as far right as it may
-    const gaps = bearings.slice(1).map((b, i) => b - bearings[i])
-    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(2)
+  it('keeps every spot inside the front half-circle — nothing behind the child', () => {
+    for (const f of everyFriendSpot) {
+      for (const spot of spotsFor(f.bearingDeg)) {
+        expect(Math.abs(spot.bearingDeg)).toBeLessThanOrEqual(FRONT_HALF_ARC_DEG)
+        // and in front means negative z in world space
+        const [, z] = placeOnLawn(spot)
+        expect(z).toBeLessThan(0)
+      }
+    }
   })
 
   it('never puts a surprise where it would overlap the friend on screen', () => {
     // Not a rule-of-thumb gap: the real criterion is the two half-widths. The
     // friend's widest part is their floating NAME PLATE (1.1m), not their body,
-    // and a big-saliency surprise at the nearest spot is wider still. A flat
-    // 10deg rule passed a spot at +25deg where the easy butterfly sat squarely
-    // across the name tag — ambiguous with the very person the child has to
-    // turn and show it to.
-    const needed = MAX_SURPRISE_HALF_DEG + FRIEND_HALF_DEG
-    for (const spot of SPOTS) {
-      expect(Math.abs(spot.bearingDeg - FRIEND_BEARING_DEG)).toBeGreaterThan(needed)
+    // and a big-saliency surprise is wider still. An earlier flat 10deg rule
+    // passed a spot where the easy butterfly sat across the name tag —
+    // ambiguous with the very person the child has to turn and show it to.
+    for (const f of everyFriendSpot) {
+      for (const spot of spotsFor(f.bearingDeg)) {
+        expect(Math.abs(spot.bearingDeg - f.bearingDeg)).toBeGreaterThanOrEqual(FRIEND_CLEARANCE_DEG)
+      }
     }
   })
 
-  it('spaces the spots far enough apart to be distinct places', () => {
-    const sorted = [...SPOTS].map((s) => s.bearingDeg).sort((a, b) => a - b)
-    for (let i = 1; i < sorted.length; i++) {
-      expect(sorted[i] - sorted[i - 1]).toBeGreaterThanOrEqual(8)
+  it('spreads the spots evenly across whatever the friend leaves free', () => {
+    // no part of the child's search space over- or under-sampled
+    for (const f of everyFriendSpot) {
+      const bearings = spotsFor(f.bearingDeg).map((s) => s.bearingDeg)
+      const gaps = bearings.slice(1).map((b, i) => b - bearings[i])
+      expect(Math.min(...gaps)).toBeGreaterThan(0)
+      expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThanOrEqual(2)
     }
+  })
+
+  it('moves the search area to the side the friend is NOT on', () => {
+    // the whole point: with one fixed friend the spots stayed bunched left
+    // forever, so the child turned left to find and right to share every single
+    // round of every session
+    const leftFriend = spotsFor(-36).map((s) => s.bearingDeg)
+    const rightFriend = spotsFor(38).map((s) => s.bearingDeg)
+    expect(leftFriend.filter((b) => b > 0).length).toBeGreaterThan(leftFriend.length / 2)
+    expect(rightFriend.filter((b) => b < 0).length).toBeGreaterThan(rightFriend.length / 2)
   })
 
   it('keeps the friend inside the front half-circle too', () => {
-    expect(Math.abs(FRIEND_BEARING_DEG)).toBeLessThanOrEqual(FRONT_HALF_ARC_DEG)
-    const [, z] = friendPosition()
-    expect(z).toBeLessThan(0)
+    for (const f of everyFriendSpot) {
+      expect(Math.abs(f.bearingDeg)).toBeLessThanOrEqual(FRONT_HALF_ARC_DEG)
+      const [, z] = placeOnLawn(f)
+      expect(z).toBeLessThan(0)
+    }
+  })
+})
+
+describe('where the friend kneels, by level', () => {
+  it('puts the friend on the LEFT for every easy session', () => {
+    expect(FRIEND_SPOTS.easy.every((f) => f.bearingDeg < 0)).toBe(true)
+  })
+
+  it('mirrors them to the RIGHT on medium, so the direction cannot carry over', () => {
+    expect(FRIEND_SPOTS.medium.every((f) => f.bearingDeg > 0)).toBe(true)
+  })
+
+  it('uses BOTH sides on hard, so the child has to find their friend', () => {
+    const sides = new Set(FRIEND_SPOTS.hard.map((f) => Math.sign(f.bearingDeg)))
+    expect(sides.size).toBe(2)
+  })
+
+  it('never settles on one landmark within a level', () => {
+    // two spots per level, drawn per session: the position must not be
+    // memorisable even by a child who plays the same level repeatedly
+    for (const level of ['easy', 'medium', 'hard'] as const) {
+      expect(FRIEND_SPOTS[level].length).toBeGreaterThanOrEqual(2)
+      expect(new Set(FRIEND_SPOTS[level].map((f) => f.bearingDeg)).size).toBe(
+        FRIEND_SPOTS[level].length,
+      )
+    }
+  })
+
+  it('draws a spot belonging to the level it was asked for', () => {
+    const rng = seededRng(13)
+    for (const level of ['easy', 'medium', 'hard'] as const) {
+      for (let i = 0; i < 40; i++) {
+        expect(FRIEND_SPOTS[level]).toContainEqual(pickFriendSpot(level, rng))
+      }
+    }
+  })
+
+  it('reaches both of a level\'s spots over a run of sessions', () => {
+    const rng = seededRng(5)
+    const seen = new Set(Array.from({ length: 60 }, () => pickFriendSpot('hard', rng).bearingDeg))
+    expect(seen.size).toBe(2)
   })
 })
 
@@ -118,14 +160,14 @@ describe('makeRound', () => {
       const r = makeRound(null, rng)
       expect(DISCOVERIES).toContain(r.discovery)
       expect(r.spot).toBeGreaterThanOrEqual(0)
-      expect(r.spot).toBeLessThan(SPOTS.length)
+      expect(r.spot).toBeLessThan(SPOT_COUNT)
     }
   })
 
   it('draws WHAT appears independently of WHERE, so neither predicts the other', () => {
-    // the whole point of splitting them: when a surprise owned a bearing, a
-    // child who learned "bunny means 18 degrees left" stopped searching and
-    // started recalling, and the game stopped measuring attention-getting
+    // when a surprise owned a bearing, a child who learned "bunny means 18
+    // degrees left" stopped searching and started recalling, and the game
+    // stopped measuring attention-getting
     const rng = seededRng(29)
     const seen = new Map<string, Set<number>>()
     for (let i = 0; i < 600; i++) {

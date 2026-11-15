@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { GAME_LIST } from '../../types'
 import { useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
@@ -13,9 +13,12 @@ import { playGentle, playSuccess, playTap } from '../../services/sounds'
 import {
   CONFIG,
   NO_SHARE_TIMEOUT_MS,
-  spotBearingDeg,
-  spotRadius,
   makeRound,
+  pickFriendSpot,
+  placeOnLawn,
+  spotsFor,
+  type FriendSpot,
+  type Spot,
   pickFriend,
   pointsFor,
   spawnDelayMs,
@@ -64,6 +67,15 @@ export function Park360Game() {
   const [roundPhase, setRoundPhase] = useState<'waiting' | 'active' | 'celebrating'>('waiting')
   const [round, setRound] = useState<Round>(() => makeRound(null))
   const [friend, setFriend] = useState<Friend>(() => pickFriend())
+  /** Where the friend kneels this session — left on easy, right on medium,
+   *  either side on hard, and varied within each level so their place never
+   *  becomes a landmark to be memorised (see FRIEND_SPOTS). */
+  const [friendSpot, setFriendSpot] = useState<FriendSpot>(() => pickFriendSpot(difficulty))
+  /** The surprise spots for THIS friend: they fill whichever side of the lawn
+   *  the friend is not on, so the search area follows the friend rather than
+   *  staying bunched on one side forever. */
+  const spots: Spot[] = useMemo(() => spotsFor(friendSpot.bearingDeg), [friendSpot])
+  const spotAt = (i: number) => spots[i] ?? spots[0]
   const [score, setScore] = useState(0) // child-facing points
   const [shared, setShared] = useState(0) // completed share loops this session
   const [spontCount, setSpontCount] = useState(0) // shares completed with zero nudges
@@ -180,6 +192,7 @@ export function Park360Game() {
     setStreak(0)
     setStars(0)
     setFriend(pickFriend())
+    setFriendSpot(pickFriendSpot(difficulty))
     setPhase('playing')
     beginRound(null)
   }
@@ -224,8 +237,11 @@ export function Park360Game() {
         nudgeAfterMs: cfg.nudgeAfterMs,
         // how far the child must turn to face the surprise — the 360 games'
         // attention-shift measure (signed degrees left/right)
-        targetBearingDeg: spotBearingDeg(next.spot),
-        targetRadius: spotRadius(next.spot),
+        targetBearingDeg: spotAt(next.spot).bearingDeg,
+        targetRadius: spotAt(next.spot).radius,
+        // where the friend is this session — the turn-to-friend cost is no
+        // longer a constant, so it has to travel with the data
+        friendBearingDeg: friendSpot.bearingDeg,
       })
       armNudge()
       armNoShareTimeout(next)
@@ -254,11 +270,12 @@ export function Park360Game() {
       // share; noShareLogged just guards against a second timer somehow firing
       if (noShareLogged.current) return
       noShareLogged.current = true
-      const head = headMetrics(spotBearingDeg(r.spot))
+      const head = headMetrics(spotAt(r.spot).bearingDeg)
       recordStep('no_share', {
         discovery: r.discovery,
         spot: r.spot,
-        targetBearingDeg: spotBearingDeg(r.spot),
+        targetBearingDeg: spotAt(r.spot).bearingDeg,
+        friendBearingDeg: friendSpot.bearingDeg,
         timedOutAfterMs: NO_SHARE_TIMEOUT_MS,
         foundOnly: foundRef.current,
         calledOnly: calledRef.current,
@@ -342,7 +359,7 @@ export function Park360Game() {
     speakThenPraise(last ? `${wow} ${parkLine('sayWin', lang)}` : wow, lang)
     // the head's scan across this whole round: headToTargetMs = time to first
     // look at the surprise, and the range/travel span the turn to the friend
-    const head = headMetrics(spotBearingDeg(round.spot))
+    const head = headMetrics(spotAt(round.spot).bearingDeg)
     recordStep(
       'share',
       {
@@ -353,8 +370,9 @@ export function Park360Game() {
         order,
         discovery: round.discovery,
         spot: round.spot,
-        targetBearingDeg: spotBearingDeg(round.spot),
-        targetRadius: spotRadius(round.spot),
+        targetBearingDeg: spotAt(round.spot).bearingDeg,
+        targetRadius: spotAt(round.spot).radius,
+        friendBearingDeg: friendSpot.bearingDeg,
         ...head,
         points,
         score: nextScore,
@@ -392,7 +410,8 @@ export function Park360Game() {
         <div className="game-canvas" onPointerDown={() => setHintSeen(true)}>
           <Park360Scene
             discovery={round.discovery}
-            spot={round.spot}
+            spotXZ={placeOnLawn(spotAt(round.spot))}
+            friendXZ={placeOnLawn(friendSpot)}
             active={roundPhase !== 'waiting'}
             saliency={cfg.saliency}
             found={found}
