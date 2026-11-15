@@ -107,8 +107,10 @@ export const FRIEND_HALF_DEG = 6.8
 /** Bearing a surprise must keep from the friend: both their half-widths. */
 export const FRIEND_CLEARANCE_DEG = MAX_SURPRISE_HALF_DEG + FRIEND_HALF_DEG
 
-/** Distances the spots cycle through, so the row is never a flat arc. */
-const SPOT_RADII = [4.8, 6.0, 4.5, 5.8, 4.9, 6.4, 5.2, 6.1, 5.5]
+/** Distances the spots cycle through, so the row is never a flat arc. Every
+ *  one stays INSIDE the fence (see FENCE_R): a surprise beyond it was being
+ *  cut in half by the rails. */
+const SPOT_RADII = [4.8, 5.8, 4.5, 5.6, 4.9, 5.9, 5.2, 5.7, 5.4]
 
 /**
  * Lay the surprise spots out around wherever the friend happens to be today.
@@ -125,9 +127,15 @@ const SPOT_RADII = [4.8, 6.0, 4.5, 5.8, 4.9, 6.4, 5.2, 6.1, 5.5]
  * part of the child's search space over- or under-sampled.
  */
 export function spotsFor(friendBearingDeg: number): Spot[] {
-  const onLeft = friendBearingDeg < 0
-  const lo = onLeft ? friendBearingDeg + FRIEND_CLEARANCE_DEG : -FRONT_HALF_ARC_DEG
-  const hi = onLeft ? FRONT_HALF_ARC_DEG : friendBearingDeg - FRIEND_CLEARANCE_DEG
+  // The friend's clearance zone splits the arc in two. Take the WIDER side and
+  // leave the sliver on their far side alone: a surprise out there would sit
+  // beyond the friend from the child's point of view, so finding it would mean
+  // looking straight past the person they are about to show it to.
+  const leftWidth = friendBearingDeg - FRIEND_CLEARANCE_DEG - -FRONT_HALF_ARC_DEG
+  const rightWidth = FRONT_HALF_ARC_DEG - (friendBearingDeg + FRIEND_CLEARANCE_DEG)
+  const useRight = rightWidth >= leftWidth
+  const lo = useRight ? friendBearingDeg + FRIEND_CLEARANCE_DEG : -FRONT_HALF_ARC_DEG
+  const hi = useRight ? FRONT_HALF_ARC_DEG : friendBearingDeg - FRIEND_CLEARANCE_DEG
   const step = (hi - lo) / (SPOT_COUNT - 1)
   return Array.from({ length: SPOT_COUNT }, (_, i) => ({
     bearingDeg: Math.round(lo + i * step),
@@ -169,18 +177,37 @@ export interface FriendSpot {
 
 export const FRIEND_SPOTS: Record<Difficulty, FriendSpot[]> = {
   easy: [
-    { bearingDeg: -36, radius: 4.4 },
-    { bearingDeg: -43, radius: 4.8 },
+    { bearingDeg: -28, radius: 4.2 },
+    { bearingDeg: -41, radius: 4.7 },
+    { bearingDeg: -54, radius: 5.2 },
   ],
   medium: [
-    { bearingDeg: 38, radius: 4.8 },
-    { bearingDeg: 45, radius: 5.1 },
+    { bearingDeg: 28, radius: 4.2 },
+    { bearingDeg: 41, radius: 4.7 },
+    { bearingDeg: 54, radius: 5.2 },
   ],
   hard: [
-    { bearingDeg: -51, radius: 5.4 },
-    { bearingDeg: 51, radius: 5.4 },
+    { bearingDeg: -54, radius: 5.2 },
+    { bearingDeg: -41, radius: 4.7 },
+    { bearingDeg: -28, radius: 4.2 },
+    { bearingDeg: 28, radius: 4.2 },
+    { bearingDeg: 41, radius: 4.7 },
+    { bearingDeg: 54, radius: 5.2 },
   ],
 }
+
+/**
+ * The smallest move between two of a level's spots that still reads as the
+ * friend being somewhere ELSE.
+ *
+ * A first attempt gave each level two spots 7° apart. The code did exactly what
+ * it said — easy drew left, medium drew right — but 7° at four metres is about
+ * a shoulder's width, so from inside the headset the friend was in the same
+ * place every single session and the variation may as well not have existed.
+ * Spots are now 13° apart across a 26° spread, which is an unmistakably
+ * different patch of lawn.
+ */
+export const MIN_FRIEND_SPREAD_DEG = 12
 
 /** Draw this session's friend spot for `difficulty`. */
 export function pickFriendSpot(difficulty: Difficulty, rng: () => number = Math.random): FriendSpot {
@@ -192,6 +219,49 @@ export function pickFriendSpot(difficulty: Difficulty, rng: () => number = Math.
 export function bearingToXZ(bearingRad: number, radius: number): [number, number] {
   return [Math.sin(bearingRad) * radius, -Math.cos(bearingRad) * radius]
 }
+
+/* ---- scenery, and why none of it stands in the child's way ---------------
+ *
+ * These live here, beside the spot layout they have to keep clear of, because
+ * the two are one problem — exactly as the avatar's geometry sits beside the
+ * pedestal row in Museum 360. Keeping them here also makes "the play area stays
+ * clear" a property a test can hold, rather than something that has to be
+ * noticed in a screenshot.
+ *
+ * The tree ring used to run the whole way round at 13-19 m, which put four
+ * crowns INSIDE the play arc, at +15, +48, -20 and -52 degrees. A surprise
+ * never vanished behind one — it is metres nearer — but a small animal against
+ * two metres of dark green crown is a figure with no ground, and the subtle
+ * tier is exactly where that costs a child the find.
+ *
+ * The bushes were worse. Two sat at -47 and +29 degrees at 4.7 m and 5.3 m,
+ * NEARER than several surprise spots, so they did not merely clutter the
+ * background: they stood in front of the surprise and hid it outright.
+ */
+
+/** Nothing decorative stands within this many degrees of straight ahead. */
+export const SCENERY_FRONT_CLEAR_DEG = 78
+
+/** The tree line: wrapping the back, leaving the whole front open. */
+export const TREE_PLACEMENTS: Array<{ bearingDeg: number; radius: number; scale: number }> =
+  Array.from({ length: 10 }, (_, i) => ({
+    bearingDeg:
+      SCENERY_FRONT_CLEAR_DEG + (i * (360 - 2 * SCENERY_FRONT_CLEAR_DEG)) / 9,
+    radius: 15 + (i % 3) * 2.5,
+    scale: 1.6 + (i % 2) * 0.5,
+  }))
+
+/** Bushes, flanking and behind the child rather than among the surprises. */
+export const BUSH_PLACEMENTS: Array<{ bearingDeg: number; radius: number }> = [
+  { bearingDeg: -82, radius: 5.2 },
+  { bearingDeg: 86, radius: 5.6 },
+  { bearingDeg: 128, radius: 4.8 },
+  { bearingDeg: -134, radius: 5.0 },
+]
+
+/** The picket fence, set clear of the furthest surprise spot so its rails
+ *  never cut across one (it used to sit inside the spot range). */
+export const FENCE_RADIUS = 7.6
 
 /** Floor [x, z] of anything placed on the lawn by bearing and distance. */
 export function placeOnLawn(at: { bearingDeg: number; radius: number }): [number, number] {

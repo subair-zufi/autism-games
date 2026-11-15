@@ -15,6 +15,9 @@ import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
 import { VRHudAnchor } from '../VRHudAnchor'
 import {
+  BUSH_PLACEMENTS,
+  FENCE_RADIUS,
+  TREE_PLACEMENTS,
   bearingToXZ,
   dragDistance,
   isDragTail,
@@ -333,20 +336,10 @@ function ParkWorld() {
 const TRUNK_Y = 0.8
 const CROWN_Y = 2.1
 
-/** a loose ring of trees all around the lawn (decor only, outside the play arc) */
-const TREES: { x: number; z: number; scale: number }[] = (() => {
-  const ring = [15, 48, 80, 112, 145, 178, 210, 243, 275, 308, 340]
-  const out = ring.map((deg, i) => {
-    const a = (deg * Math.PI) / 180
-    const [x, z] = bearingToXZ(a, 13 + (i % 3) * 3)
-    return { x, z, scale: 1.6 + (i % 2) * 0.5 }
-  })
-  // nearer trees framing the play arc from the sides (outside it)
-  const [nlx, nlz] = bearingToXZ((-72 * Math.PI) / 180, 8)
-  const [nrx, nrz] = bearingToXZ((70 * Math.PI) / 180, 8.5)
-  out.push({ x: nlx, z: nlz, scale: 1.3 }, { x: nrx, z: nrz, scale: 1.2 })
-  return out
-})()
+const TREES = TREE_PLACEMENTS.map((t) => {
+  const [x, z] = bearingToXZ((t.bearingDeg * Math.PI) / 180, t.radius)
+  return { x, z, scale: t.scale }
+})
 
 const TREE_TRUNKS: Placement[] = TREES.map((t) => ({
   pos: [t.x, TRUNK_Y * t.scale, t.z],
@@ -357,15 +350,13 @@ const TREE_CROWNS: Placement[] = TREES.map((t) => ({
   scale: t.scale,
 }))
 
-const BUSHES: Placement[] = [
-  [-3.4, -3.2],
-  [2.6, -4.6],
-  [4.4, 1.8],
-  [-4.2, 2.6],
-].map(([x, z]) => ({ pos: [x, 0.32, z] as [number, number, number] }))
+const BUSHES: Placement[] = BUSH_PLACEMENTS.map((b) => {
+  const [x, z] = bearingToXZ((b.bearingDeg * Math.PI) / 180, b.radius)
+  return { pos: [x, 0.32, z] as [number, number, number] }
+})
 
 /** the picket fence: posts on a constant radius, rails bridging each pair */
-const FENCE_R = 6.2
+const FENCE_R = FENCE_RADIUS
 const FENCE_STEP_DEG = 7.25
 const FENCE_BEARINGS: number[] = (() => {
   const out: number[] = []

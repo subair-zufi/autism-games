@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BUSH_PLACEMENTS,
   CONFIG,
   DISCOVERIES,
+  FENCE_RADIUS,
   FRIEND_CLEARANCE_DEG,
   FRIEND_SPOTS,
   FRIENDS,
@@ -9,18 +11,26 @@ import {
   isDragTail,
   lookDrag,
   makeRound,
+  MIN_FRIEND_SPREAD_DEG,
   NO_SHARE_TIMEOUT_MS,
   pickFriend,
   pickFriendSpot,
   placeOnLawn,
   POINTS,
   pointsFor,
+  SCENERY_FRONT_CLEAR_DEG,
   spawnDelayMs,
   SPOT_COUNT,
   spotsFor,
   starsFor,
   STREAK_LEN,
+  TREE_PLACEMENTS,
 } from './logic'
+
+/** shortest signed angle from straight ahead, in degrees */
+function angleFromFront(deg: number): number {
+  return ((((deg + 180) % 360) + 360) % 360) - 180
+}
 
 function seededRng(seed: number) {
   let s = seed
@@ -106,14 +116,23 @@ describe('where the friend kneels, by level', () => {
     expect(sides.size).toBe(2)
   })
 
-  it('never settles on one landmark within a level', () => {
-    // two spots per level, drawn per session: the position must not be
-    // memorisable even by a child who plays the same level repeatedly
+  it('moves the friend FAR enough between sessions to be noticed', () => {
+    // The first attempt gave each level two spots 7deg apart. The code did
+    // exactly what it claimed — easy drew left, medium drew right — but 7deg at
+    // four metres is about a shoulder's width, so from inside the headset the
+    // friend was in the same place every session and the variation may as well
+    // not have existed. Distinctness on paper is not the property worth
+    // holding; being somewhere visibly else is.
     for (const level of ['easy', 'medium', 'hard'] as const) {
-      expect(FRIEND_SPOTS[level].length).toBeGreaterThanOrEqual(2)
-      expect(new Set(FRIEND_SPOTS[level].map((f) => f.bearingDeg)).size).toBe(
-        FRIEND_SPOTS[level].length,
-      )
+      const spots = FRIEND_SPOTS[level]
+      expect(spots.length).toBeGreaterThanOrEqual(3)
+      const sorted = [...spots].map((f) => f.bearingDeg).sort((a, b) => a - b)
+      const sameSideGaps = sorted
+        .slice(1)
+        .map((b, i) => ({ gap: b - sorted[i], crossesMiddle: Math.sign(b) !== Math.sign(sorted[i]) }))
+        .filter((g) => !g.crossesMiddle)
+        .map((g) => g.gap)
+      for (const gap of sameSideGaps) expect(gap).toBeGreaterThanOrEqual(MIN_FRIEND_SPREAD_DEG)
     }
   })
 
@@ -126,10 +145,50 @@ describe('where the friend kneels, by level', () => {
     }
   })
 
-  it('reaches both of a level\'s spots over a run of sessions', () => {
+  it('reaches every one of a level\'s spots over a run of sessions', () => {
     const rng = seededRng(5)
-    const seen = new Set(Array.from({ length: 60 }, () => pickFriendSpot('hard', rng).bearingDeg))
-    expect(seen.size).toBe(2)
+    for (const level of ['easy', 'medium', 'hard'] as const) {
+      const seen = new Set(
+        Array.from({ length: 200 }, () => pickFriendSpot(level, rng).bearingDeg),
+      )
+      expect(seen.size).toBe(FRIEND_SPOTS[level].length)
+    }
+  })
+})
+
+describe('the play area stays clear of scenery', () => {
+  const everyFriendSpot = Object.values(FRIEND_SPOTS).flat()
+
+  it('keeps every tree and bush out of the front of the park', () => {
+    // Four tree crowns used to sit inside the play arc, and two bushes sat
+    // NEARER than several surprise spots — not merely cluttering the backdrop
+    // but standing in front of the surprise and hiding it.
+    for (const t of TREE_PLACEMENTS) {
+      expect(Math.abs(angleFromFront(t.bearingDeg))).toBeGreaterThanOrEqual(SCENERY_FRONT_CLEAR_DEG)
+    }
+    for (const b of BUSH_PLACEMENTS) {
+      expect(Math.abs(angleFromFront(b.bearingDeg))).toBeGreaterThanOrEqual(FRONT_HALF_ARC_DEG)
+    }
+  })
+
+  it('leaves nothing standing in front of a surprise, at any friend spot', () => {
+    for (const f of everyFriendSpot) {
+      for (const spot of spotsFor(f.bearingDeg)) {
+        for (const b of BUSH_PLACEMENTS) {
+          // a bush nearer than the surprise and on its bearing would occlude it
+          const sameWay = Math.abs(angleFromFront(b.bearingDeg - spot.bearingDeg)) < 20
+          if (b.radius < spot.radius) expect(sameWay).toBe(false)
+        }
+      }
+    }
+  })
+
+  it('keeps every surprise inside the fence, so no rail cuts across one', () => {
+    for (const f of everyFriendSpot) {
+      for (const spot of spotsFor(f.bearingDeg)) {
+        expect(spot.radius).toBeLessThan(FENCE_RADIUS)
+      }
+    }
   })
 })
 
