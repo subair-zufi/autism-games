@@ -56,6 +56,94 @@ export const DISCOVERIES: DiscoveryId[] = [
   'peacock',
 ]
 
+/* ---- how big each surprise is drawn, and where its feet land -------------
+ *
+ * One measured table, from which the scale, the ground height, the sparkle
+ * height and the tap volume are all derived. They used to be three hand-kept
+ * tables — a size factor, a world height for the model's CENTRE, and a top
+ * offset — and the middle one could not work: the height was a constant while
+ * the scale varied by model AND by level, so a model sank further into the
+ * grass the bigger it was drawn. Six of the ten were underground on easy, the
+ * duckling by 65 cm, and no amount of tuning the constant could fix it because
+ * the right value differed per level.
+ *
+ * Placing them from their own measured underside instead puts every surprise
+ * on the grass at every level, by construction.
+ */
+export interface ModelExtent {
+  /** model-local y of the lowest point */
+  bottom: number
+  /** model-local y of the highest point */
+  top: number
+  /** model-local half-width, the larger of x and z */
+  halfW: number
+  /** metres of air under it: 0 stands on the grass, more for anything in flight */
+  hover: number
+}
+
+export const MODEL_EXTENTS: Record<DiscoveryId, ModelExtent> = {
+  butterfly: { bottom: -0.292, top: 0.398, halfW: 0.433, hover: 0.95 }, // in flight
+  bunny: { bottom: -0.299, top: 0.524, halfW: 0.287, hover: 0 },
+  parrot: { bottom: -0.465, top: 0.324, halfW: 0.182, hover: 0 },
+  sunflower: { bottom: -0.51, top: 0.438, halfW: 0.318, hover: 0 },
+  puppy: { bottom: -0.295, top: 0.305, halfW: 0.277, hover: 0 },
+  kitten: { bottom: -0.27, top: 0.312, halfW: 0.269, hover: 0 },
+  squirrel: { bottom: -0.268, top: 0.516, halfW: 0.305, hover: 0 },
+  duckling: { bottom: -0.218, top: 0.21, halfW: 0.213, hover: 0 },
+  ladybird: { bottom: -0.118, top: 0.16, halfW: 0.418, hover: 0 },
+  peacock: { bottom: -0.255, top: 0.896, halfW: 0.668, hover: 0 },
+}
+
+/** The half-extent every surprise is normalised to, in model units. */
+export const NOMINAL_HALF = 0.36
+/**
+ * Overall size of the surprises.
+ *
+ * Dropped from 2.0 after play: a big-saliency surprise came out 1.94 m across,
+ * a bunny the size of a sofa. The saliency ladder is compressed a little with
+ * it, so that easy loses the most and hard — which nobody complained was too
+ * big — loses the least.
+ */
+export const MODEL_SCALE = 1.6
+export const SALIENCY_SCALE: Record<Saliency, number> = { big: 1.25, medium: 1, subtle: 0.8 }
+
+/** The nearest a surprise ever stands (the smallest of `SPOT_RADII`). */
+export const MIN_SPOT_RADIUS = 4.5
+
+/** This model's own normalisation, so no species is bigger than another. */
+export function modelFit(id: DiscoveryId): number {
+  const e = MODEL_EXTENTS[id]
+  return NOMINAL_HALF / Math.max(e.halfW, (e.top - e.bottom) / 2)
+}
+
+/** Uniform scale the scene draws this surprise at, for this level. */
+export function surpriseScale(id: DiscoveryId, saliency: Saliency): number {
+  return SALIENCY_SCALE[saliency] * MODEL_SCALE * modelFit(id)
+}
+
+/** World y the model's ORIGIN goes to, so its underside rests on the grass
+ *  (plus any hover, for the things that fly). */
+export function surpriseGroundY(id: DiscoveryId, saliency: Saliency): number {
+  const e = MODEL_EXTENTS[id]
+  return e.hover - e.bottom * surpriseScale(id, saliency)
+}
+
+/** World y of the model's highest point — where the "found" sparkle goes. */
+export function surpriseTopY(id: DiscoveryId, saliency: Saliency): number {
+  return surpriseGroundY(id, saliency) + MODEL_EXTENTS[id].top * surpriseScale(id, saliency)
+}
+
+/** Model-local centre and half-size of the invisible tap/gaze volume. It is
+ *  centred on the model rather than on its origin, which sits at neither end. */
+export function hitCentreLocal(id: DiscoveryId): number {
+  const e = MODEL_EXTENTS[id]
+  return (e.top + e.bottom) / 2
+}
+export function hitHalfLocal(id: DiscoveryId): number {
+  const e = MODEL_EXTENTS[id]
+  return Math.max(e.halfW, (e.top - e.bottom) / 2) * 1.2
+}
+
 /** half-width of the playable arc: nothing interactive sits beyond ±this */
 export const FRONT_HALF_ARC_DEG = 55
 
@@ -99,9 +187,11 @@ export interface Spot {
 /** How many places a surprise can appear in any one session. */
 export const SPOT_COUNT = 9
 
-/** Widest a surprise ever gets from the child: the normalised half-extent
- *  (`NOMINAL_HALF`) at the largest saliency, seen from the nearest spot. */
-export const MAX_SURPRISE_HALF_DEG = 12.2
+/** Widest a surprise ever gets from the child: the normalised half-extent at
+ *  the largest saliency, seen from the nearest spot. Derived, so shrinking the
+ *  models automatically gives the spots their room back. */
+export const MAX_SURPRISE_HALF_DEG =
+  (Math.atan((NOMINAL_HALF * MODEL_SCALE * SALIENCY_SCALE.big) / MIN_SPOT_RADIUS) * 180) / Math.PI
 /** The friend's floating name plate, their widest part, as a half-angle. */
 export const FRIEND_HALF_DEG = 6.8
 /** Bearing a surprise must keep from the friend: both their half-widths. */

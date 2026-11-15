@@ -8,11 +8,16 @@ import {
   FRIEND_SPOTS,
   FRIENDS,
   FRONT_HALF_ARC_DEG,
+  hitCentreLocal,
+  hitHalfLocal,
   isDragTail,
   lookDrag,
   makeRound,
   MIN_FRIEND_SPREAD_DEG,
+  MODEL_EXTENTS,
+  MODEL_SCALE,
   NO_SHARE_TIMEOUT_MS,
+  NOMINAL_HALF,
   pickFriend,
   pickFriendSpot,
   placeOnLawn,
@@ -20,12 +25,16 @@ import {
   pointsFor,
   rememberedFriendSpot,
   rememberFriendSpot,
+  SALIENCY_SCALE,
   SCENERY_FRONT_CLEAR_DEG,
   spawnDelayMs,
   SPOT_COUNT,
   spotsFor,
   starsFor,
   STREAK_LEN,
+  surpriseGroundY,
+  surpriseScale,
+  surpriseTopY,
   TREE_PLACEMENTS,
 } from './logic'
 
@@ -212,6 +221,72 @@ describe('where the friend kneels, by level', () => {
     expect(rememberedFriendSpot('hard')).toEqual(first)
     const next = pickFriendSpot('hard', rememberedFriendSpot('hard'), seededRng(41))
     expect(Math.sign(next.bearingDeg)).not.toBe(Math.sign(first.bearingDeg))
+  })
+})
+
+describe('every surprise stands on the grass, at every level', () => {
+  const LEVELS = ['big', 'medium', 'subtle'] as const
+
+  it('never buries a surprise in the lawn', () => {
+    // Six of the ten were underground on easy, the duckling by 65cm. The old
+    // placement set a fixed world height for the model's CENTRE, while the
+    // scale varied per model AND per level — so a surprise sank further the
+    // bigger it was drawn, and no value of the constant could be right for
+    // every level at once.
+    for (const id of DISCOVERIES) {
+      for (const sal of LEVELS) {
+        const foot = surpriseGroundY(id, sal) + MODEL_EXTENTS[id].bottom * surpriseScale(id, sal)
+        expect(foot).toBeCloseTo(MODEL_EXTENTS[id].hover, 6)
+      }
+    }
+  })
+
+  it('leaves only the things that fly off the ground', () => {
+    for (const id of DISCOVERIES) {
+      const hover = MODEL_EXTENTS[id].hover
+      if (id === 'butterfly') expect(hover).toBeGreaterThan(0)
+      else expect(hover).toBe(0)
+    }
+  })
+
+  it('puts the found-sparkle above the model, not inside it', () => {
+    for (const id of DISCOVERIES) {
+      for (const sal of LEVELS) {
+        expect(surpriseTopY(id, sal)).toBeGreaterThan(surpriseGroundY(id, sal))
+      }
+    }
+  })
+
+  it('keeps every surprise the same apparent size whatever it is', () => {
+    for (const sal of LEVELS) {
+      const widths = DISCOVERIES.map((id) => {
+        const e = MODEL_EXTENTS[id]
+        return Math.max(e.halfW, (e.top - e.bottom) / 2) * surpriseScale(id, sal)
+      })
+      for (const w of widths) expect(w).toBeCloseTo(widths[0], 6)
+    }
+  })
+
+  it('draws them smaller than the first attempt, easy most of all', () => {
+    // reported from play: on easy they were 1.94m across, a bunny the size of
+    // a sofa. Hard was never the complaint, so it gives up the least.
+    const across = (sal: (typeof LEVELS)[number]) => NOMINAL_HALF * MODEL_SCALE * SALIENCY_SCALE[sal] * 2
+    expect(across('big')).toBeLessThan(1.6)
+    expect(across('big')).toBeGreaterThan(across('medium'))
+    expect(across('medium')).toBeGreaterThan(across('subtle'))
+    // the saliency ladder has to survive the shrink
+    expect(across('big') / across('subtle')).toBeGreaterThan(1.4)
+  })
+
+  it('gives every surprise a tap volume that actually contains it', () => {
+    for (const id of DISCOVERIES) {
+      const e = MODEL_EXTENTS[id]
+      const half = hitHalfLocal(id)
+      const centre = hitCentreLocal(id)
+      expect(centre + half).toBeGreaterThanOrEqual(e.top)
+      expect(centre - half).toBeLessThanOrEqual(e.bottom)
+      expect(half).toBeGreaterThanOrEqual(e.halfW)
+    }
   })
 })
 

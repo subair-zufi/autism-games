@@ -30,67 +30,10 @@ import type { DiscoveryId } from './logic'
  * equal findability matters more here than a butterfly being smaller than a
  * puppy, and unequal target salience would be a confound in the measure.
  *
- * `MODEL_TOP` and `MODEL_Y` below carry the two numbers the scene needs: how
- * tall each one stands, and how far its centre sits above the grass.
+ * How tall each one stands and where its underside is are measured, not
+ * declared here: see `MODEL_EXTENTS` in logic.ts, which is what places them on
+ * the grass and sizes their tap volume.
  */
-
-/** Model-local height of each surprise's top, for placing the "found" sparkle. */
-export const MODEL_TOP: Record<DiscoveryId, number> = {
-  butterfly: 0.42,
-  bunny: 0.62,
-  parrot: 0.46,
-  sunflower: 0.52,
-  puppy: 0.48,
-  kitten: 0.48,
-  squirrel: 0.76,
-  duckling: 0.40,
-  ladybird: 0.26,
-  peacock: 0.92,
-}
-
-/**
- * Per-model size normalisation, so no surprise is easier to spot than another
- * purely because of its species.
- *
- * Measured from each model's own bounding box, these ranged from 0.18 (the
- * parrot, tall and narrow) to 0.66 (the peacock, once its train is open) — a
- * 3.6x spread. Left alone, the level's saliency setting would be riding on top
- * of an accidental three-fold difference between surprises, and "how big was
- * it" would be confounded with "which one was it" in every latency the study
- * records. The same confound was found and fixed in Museum 360's exhibit row.
- *
- * Each factor brings the model's largest half-extent to `NOMINAL_HALF`. The
- * peacock still READS as the grandest thing in the set — it is the one with a
- * fanned train — it just no longer occupies three times the visual field.
- */
-export const NOMINAL_HALF = 0.36
-
-export const MODEL_FIT: Record<DiscoveryId, number> = {
-  butterfly: 0.83,
-  bunny: 0.88,
-  parrot: 0.91,
-  sunflower: 0.76,
-  puppy: 1.2,
-  kitten: 1.24,
-  squirrel: 0.92,
-  duckling: 1.68,
-  ladybird: 0.86,
-  peacock: 0.54,
-}
-
-/** World height of each surprise's centre above the lawn it stands on. */
-export const MODEL_Y: Record<DiscoveryId, number> = {
-  butterfly: 1.45, // in flight, at a child's eye level
-  bunny: 0.46,
-  parrot: 1.15, // perched, head-height for a small child
-  sunflower: 0.74,
-  puppy: 0.44,
-  kitten: 0.42,
-  squirrel: 0.48,
-  duckling: 0.34,
-  ladybird: 0.52, // on a leaf
-  peacock: 0.62,
-}
 
 /* ---- shared materials ----------------------------------------------------
  * One instance of each, created at module load and reused by every model, so

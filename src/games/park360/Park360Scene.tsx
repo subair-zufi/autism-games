@@ -19,21 +19,24 @@ import {
   FENCE_RADIUS,
   TREE_PLACEMENTS,
   bearingToXZ,
+  hitCentreLocal,
+  hitHalfLocal,
   dragDistance,
   isDragTail,
   lookDrag,
+  surpriseGroundY,
+  surpriseScale,
+  surpriseTopY,
   type DiscoveryId,
   type Friend,
   type Saliency,
 } from './logic'
-import { MODEL_FIT, MODEL_TOP, MODEL_Y, SurpriseModel } from './surprises'
+import { SurpriseModel } from './surprises'
 
 /** the child's eye height — the camera stands here, on the lawn */
 const EYE_Y = 1.5
 
 /** the surprises sit metres away now, not in a diorama — scaled up to match */
-const MODEL_SCALE = 2.0
-const SALIENCY_SCALE: Record<Saliency, number> = { big: 1.35, medium: 1, subtle: 0.72 }
 
 
 export interface Park360SceneProps {
@@ -506,7 +509,7 @@ function Surprise({
   const grow = useRef(0) // 0 -> 1 pop-in spring
   // level saliency x the shared scale x this model's own normalisation, so
   // the level's manipulation is the only thing changing the apparent size
-  const target = SALIENCY_SCALE[saliency] * MODEL_SCALE * MODEL_FIT[id]
+  const target = surpriseScale(id, saliency)
 
   // Tapping the surprise ends the round and unmounts this while the pointer is
   // still over it, so `onPointerOut` never fires and the hand cursor sticks.
@@ -535,7 +538,10 @@ function Surprise({
     }
   })
 
-  const y = MODEL_Y[id]
+  // the model's ORIGIN, placed so its measured underside rests on the grass —
+  // a fixed centre height could not work, because the scale varies per model
+  // and per level, so a surprise sank further the bigger it was drawn
+  const y = surpriseGroundY(id, saliency)
   return (
     <group position={[x, 0, z]}>
       {showRing && (
@@ -546,8 +552,14 @@ function Surprise({
       )}
       <group ref={group} position={[0, y, 0]} scale={0}>
         <SurpriseModel id={id} />
-        {/* transparent tap target, comfortably larger than the model */}
+        {/* Transparent tap target, comfortably larger than the model and
+            CENTRED on it. It used to be a fixed cube at the model's origin,
+            which sits at neither end: the peacock's origin is near its feet,
+            so the top third of a fanned train was outside its own tap volume.
+            Both numbers come from the same measured extents that put the model
+            on the grass. */}
         <mesh
+          position={[0, hitCentreLocal(id), 0]}
           visible={false}
           userData={{ headSelect: true }}
           onClick={(e) => {
@@ -561,13 +573,13 @@ function Surprise({
           onPointerOver={() => (document.body.style.cursor = 'pointer')}
           onPointerOut={() => (document.body.style.cursor = 'auto')}
         >
-          <boxGeometry args={[1.1, 1.1, 1.1]} />
+          <boxGeometry args={[hitHalfLocal(id) * 2, hitHalfLocal(id) * 2, hitHalfLocal(id) * 2]} />
         </mesh>
       </group>
       {/* found marker: the child's "point" planted on the discovery — a gold
           sparkle mesh, not a DOM overlay, so it shows inside VR too */}
       {found && (
-        <mesh ref={spark} position={[0, y + MODEL_TOP[id] * target + 0.3, 0]}>
+        <mesh ref={spark} position={[0, surpriseTopY(id, saliency) + 0.3, 0]}>
           <octahedronGeometry args={[0.16]} />
           <meshBasicMaterial color="#ffd95e" />
         </mesh>
