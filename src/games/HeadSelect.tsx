@@ -496,6 +496,10 @@ function ConfirmChip() {
     return tex
   }, [])
 
+  // every other canvas texture in these scenes disposes on unmount; this one
+  // was leaking a 256x256 texture per game entry
+  useEffect(() => () => texture.dispose(), [texture])
+
   return (
     <mesh onClick={(e) => e.stopPropagation()}>
       <planeGeometry args={[1, 1]} />

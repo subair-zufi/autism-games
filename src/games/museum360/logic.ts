@@ -191,6 +191,48 @@ export function slotHeadingDeg(index: number, n: number): number {
   return Math.round((Math.atan2(x, -z) * 180) / Math.PI)
 }
 
+/**
+ * Every exhibit is drawn at the same APPARENT size from where the child stands.
+ *
+ * The arc is centred on the AVATAR (see above), which is right for keeping the
+ * avatar's pointing angles distinct — but it means distance from the CHILD
+ * varies a lot: on hard the centre pedestal is 3.20 m away and the outermost
+ * 4.98 m. At a fixed ~1 m model and hit box that produced two separate faults,
+ * both of which landed in the outcome measure rather than in the child:
+ *
+ *  1. The outer pairs' hit boxes OVERLAPPED. Exhibit 0 spanned −38.6°…−27.1°
+ *     and exhibit 1 spanned −30.2°…−15.0°, a 3.1° band in which the raycaster
+ *     returns whichever is NEARER — exhibit 1. So a child looking squarely at
+ *     the inner edge of the outermost exhibit selected its neighbour, and the
+ *     trial was logged as `errorType: 'adjacent'`, which is a *behavioural*
+ *     category meaning "followed the cue's direction but not far enough".
+ *  2. The options were not equally SALIENT: the centre subtended 17.8° and the
+ *     outermost 11.5°, a 55% apparent-size advantage. In a forced-choice task a
+ *     nearer, larger, easier-to-hit option pulls errors toward itself, and the
+ *     adjacent/far taxonomy reads that pull as cue-following behaviour.
+ *
+ * Scaling each exhibit by its own distance fixes both at once, and costs
+ * nothing in the research design: 9° clears the tightest neighbour gap on hard
+ * (10.2°) with a guard band, and every option now presents the same target.
+ */
+export const EXHIBIT_ANGULAR_DEG = 9
+
+/** Uniform scale for exhibit `index` of `n`. Models and the shared hit box are
+ *  authored roughly 1 m across, so this is the factor that makes them subtend
+ *  `EXHIBIT_ANGULAR_DEG` from the child at the origin. */
+export function exhibitScale(index: number, n: number): number {
+  const [x, z] = slotPosition(index, n)
+  const dist = Math.hypot(x, z)
+  return 2 * dist * Math.tan((EXHIBIT_ANGULAR_DEG * Math.PI) / 360)
+}
+
+/** The angular span an exhibit occupies from the child, in degrees — the
+ *  measure the overlap above was a failure of. Exported for the layout test. */
+export function exhibitAngularSpan(index: number, n: number): [number, number] {
+  const heading = slotHeadingDeg(index, n)
+  return [heading - EXHIBIT_ANGULAR_DEG / 2, heading + EXHIBIT_ANGULAR_DEG / 2]
+}
+
 /** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z).
  *  Used for wall decor arranged around the rotunda (centred on the child). */
 export function bearingToXZ(bearing: number, radius: number): [number, number] {

@@ -7,7 +7,7 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { praise, speak } from '../../services/speech'
+import { speak, speakThenPraise } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
@@ -95,6 +95,14 @@ export function Museum360Game() {
   /** last pick, to swallow duplicate click events — the XR layer forwards
    * HTML events alongside r3f's own, so one tap can reach pick() twice */
   const lastPick = useRef<{ id: ExhibitId; at: number } | null>(null)
+  /** the post-answer pause that deals the next round (or shows the results).
+   *  Held so leaving mid-celebration — the in-world Quit, or the trainer moving
+   *  the child on from their phone — cannot land a round on a dead component. */
+  const roundTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => {
+    if (roundTimer.current) clearTimeout(roundTimer.current)
+  }, [])
 
   useEffect(() => {
     void vrSupported().then(setCanVR)
@@ -195,7 +203,7 @@ export function Museum360Game() {
     // latency from cue arrival, not round start, so the hand's travel time never
     // inflates it — in 360 the latency *includes* the time spent turning to look,
     // which is exactly the attention-shift the game measures
-    const latencyMs = cueReadyAt.current === null ? null : Math.round(performance.now() - cueReadyAt.current)
+    const latencyMs = cueReadyAt.current === null ? null : Math.round(now - cueReadyAt.current)
     // what the child's head actually did between cue onset and this tap
     const head = headMetrics(targetBearingDeg(round))
     if (id === round.target) {
@@ -208,7 +216,6 @@ export function Museum360Game() {
       setLocked(true)
       setCelebrate((c) => c + 1)
       playSuccess()
-      praise()
       setScore(nextScore)
       setFound(nextFound)
       setFirstTries(nextFirstTries)
@@ -219,19 +226,24 @@ export function Museum360Game() {
         { correct: true, target: round.target, picked: id, cue, cueKind, visibleCount: round.visible.length, targetBearingDeg: targetBearingDeg(round), firstAttempt, latencyMs, ...head, points, score: nextScore, found: nextFound },
         { score: nextScore },
       )
+      // One voice at a time: the spoken line first, the cheer after it. These
+      // used to be `praise()` (a WebAudio clip) and `say(...)` (speechSynthesis)
+      // started together — two different subsystems, so they overlapped rather
+      // than queued, and the exhibit's name, the only vocabulary teaching here,
+      // was lost under a cheering voice.
       if (nextFound >= goal) {
         setStars(starsFor(nextFirstTries, goal))
-        say('sayWin')
+        speakThenPraise(museum360Line('sayWin', lang), lang)
         reportScore('museum360', nextScore)
         void submit(difficulty, nextFirstTries, goal)
         finishGame(nextScore)
-        setTimeout(() => setPhase('over'), 1200)
+        roundTimer.current = setTimeout(() => setPhase('over'), 1200)
         return
       }
-      say('sayCorrect', { label: exhibitLabel(id, lang) })
+      speakThenPraise(museum360Line('sayCorrect', lang, { label: exhibitLabel(id, lang) }), lang)
       // short pause: long enough for the star + wobble to land, short enough
       // that the next trial doesn't feel laggy (Quest pilot feedback)
-      setTimeout(() => {
+      roundTimer.current = setTimeout(() => {
         cueReadyAt.current = null
         setWrongPicks([])
         setLocked(false)

@@ -1,27 +1,30 @@
 import { expect, test } from 'vitest'
 import {
-  EXHIBITS,
-  FADE_STREAK,
-  GAZE_TRIALS,
-  GOAL,
-  HAND_LADDER,
-  START_TIER,
   AVATAR_Z,
-  OBJECT_RADIUS,
   bearingToXZ,
   cueSchedule,
   dragDistance,
   errorType,
+  EXHIBIT_ANGULAR_DEG,
+  exhibitAngularSpan,
+  exhibitMeta,
+  EXHIBITS,
+  exhibitScale,
+  FADE_STREAK,
+  fadedTier,
+  GAZE_TRIALS,
+  GOAL,
+  HAND_LADDER,
   isDragTail,
   lookDrag,
-  exhibitMeta,
-  fadedTier,
   makeRound,
+  OBJECT_RADIUS,
   pointsFor,
   slotBearing,
   slotHeadingDeg,
   slotPosition,
   starsFor,
+  START_TIER,
   supportedTier,
   trialCue,
 } from './logic'
@@ -236,4 +239,41 @@ test('the default confirm cone stays narrower than the gap between pedestals', (
       expect(headings[i] - headings[i - 1]).toBeGreaterThan(CONFIRM_TOL_DEG)
     }
   }
+})
+
+/* ---- exhibit layout: equal salience, no overlapping hit boxes -------------
+ * The arc is centred on the AVATAR, so distance from the CHILD varies: on hard
+ * the centre pedestal is 3.20m away and the outermost 4.98m. At a fixed ~1m
+ * model that made the centre option subtend 17.8deg and the outermost 11.5deg
+ * (a 55% salience advantage between response options in a forced-choice task),
+ * and made the outer pairs' hit boxes overlap by ~3.1deg — where the raycaster
+ * returns the NEARER one, so a look at the outer exhibit selected its
+ * neighbour and the trial was logged as an `adjacent` cue-following error.
+ */
+for (const n of [3, 4, 5]) {
+  test(`every one of ${n} exhibits subtends the same angle`, () => {
+    for (let i = 0; i < n; i++) {
+      const [lo, hi] = exhibitAngularSpan(i, n)
+      expect(hi - lo).toBeCloseTo(EXHIBIT_ANGULAR_DEG, 6)
+    }
+  })
+
+  test(`neighbouring hit boxes never overlap with ${n} exhibits`, () => {
+    for (let i = 1; i < n; i++) {
+      const [, prevHi] = exhibitAngularSpan(i - 1, n)
+      const [lo] = exhibitAngularSpan(i, n)
+      // strictly separated: no bearing may ever select two different exhibits
+      expect(lo).toBeGreaterThan(prevHi)
+    }
+  })
+}
+
+test('each exhibit is scaled by its own distance from the child', () => {
+  // hard: the centre pedestal is nearest, so it is drawn physically smallest
+  const scales = Array.from({ length: 5 }, (_, i) => exhibitScale(i, 5))
+  expect(scales[2]).toBeLessThan(scales[1])
+  expect(scales[1]).toBeLessThan(scales[0])
+  // and mirrored, since the arc is symmetric
+  expect(scales[0]).toBeCloseTo(scales[4], 6)
+  expect(scales[1]).toBeCloseTo(scales[3], 6)
 })

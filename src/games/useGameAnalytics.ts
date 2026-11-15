@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { analytics } from '../services/analytics'
 import { useSettings } from '../state/settings'
 import { visibilityMetrics } from '../services/visibility'
@@ -28,6 +28,25 @@ interface XrStoreLike {
 export function useGameAnalytics(gameKey: GameId, xrStore?: XrStoreLike) {
   const sessionId = useRef<string | null>(null)
   const starting = useRef<Promise<string | null> | null>(null)
+  /**
+   * Whether the game this hook belongs to is still on screen.
+   *
+   * A stray timer that outlives its game must not keep writing to the study.
+   * Park 360 had one: a celebration timeout the unmount cleanup did not know
+   * about restarted the round loop on an unmounted component, and because
+   * `ensureSession` happily opens a session when there isn't one, every nudge
+   * it then fired landed in a BRAND-NEW park360 session that no child was
+   * playing — nudges, no shares, which is exactly the recorded signature of a
+   * non-initiating child. The timer itself is fixed where it was created; this
+   * is the backstop, so no future game can reintroduce the same corruption.
+   */
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   const ensureSession = useCallback(async (): Promise<string | null> => {
     if (sessionId.current) return sessionId.current
@@ -79,6 +98,7 @@ export function useGameAnalytics(gameKey: GameId, xrStore?: XrStoreLike) {
 
   const recordStep = useCallback(
     (eventType: string, payload?: Record<string, unknown>, opts?: { stepIndex?: number; score?: number }) => {
+      if (!mounted.current) return
       const enriched = { ...(payload ?? {}), ...inputContext() }
       void ensureSession().then((id) =>
         analytics.recordStep(gameKey, eventType, enriched, { ...opts, sessionId: id ?? undefined }),

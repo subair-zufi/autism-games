@@ -90,6 +90,24 @@ export function praise() {
 }
 
 /**
+ * Speak a line, then cheer — in that order, never on top of each other.
+ *
+ * `praise()` is a pre-recorded WebAudio clip and `speak()` is speechSynthesis:
+ * two different subsystems, so calling them back-to-back started BOTH at once
+ * and the child heard two human voices saying different words simultaneously.
+ * That is an overload risk for an auditory-hypersensitive child, and it buries
+ * the one piece of vocabulary teaching in these games ("Yes! The Butterfly!")
+ * under a cheer.
+ *
+ * `speak`'s `onEnd` fires synchronously when speech is unavailable or muted —
+ * which is every standalone VR browser, where TTS ships no voices — so the
+ * cheer still lands immediately there rather than being swallowed.
+ */
+export function speakThenPraise(text: string, lang: Lang = 'en') {
+  speak(text, lang, () => praise())
+}
+
+/**
  * Speak several localized lines back-to-back (one cancel, then queued) so a
  * bilingual prompt reads e.g. Malayalam first, then English, without the
  * second line cutting off the first. `onEnd` fires after the LAST line ends.

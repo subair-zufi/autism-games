@@ -515,6 +515,12 @@ function Surprise({
   const spark = useRef<THREE.Mesh>(null)
   const grow = useRef(0) // 0 -> 1 pop-in spring
   const target = SALIENCY_SCALE[saliency] * MODEL_SCALE
+
+  // Tapping the surprise ends the round and unmounts this while the pointer is
+  // still over it, so `onPointerOut` never fires and the hand cursor sticks.
+  useEffect(() => () => {
+    document.body.style.cursor = 'auto'
+  }, [])
   // the pulse ring announces the surprise on `big` saliency or a find-nudge,
   // and disappears once found — sharing, not finding, is then the open step
   const showRing = (saliency === 'big' || nudged) && !found
@@ -868,6 +874,12 @@ function FriendKid({
   const [x, z] = friendPosition()
   const look = friend.look
   const initialized = useRef(false)
+
+  // same as Surprise: the share completes and the game navigates away while the
+  // pointer is still on the friend, so the hand cursor would be left behind
+  useEffect(() => () => {
+    document.body.style.cursor = 'auto'
+  }, [])
 
   // facing: toward the flowerbed (away), toward the child at the origin
   // (curious), or toward the discovery being shown (celebrating)

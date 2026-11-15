@@ -20,6 +20,7 @@ import {
   OBJECT_RADIUS,
   bearingToXZ,
   dragDistance,
+  exhibitScale,
   isDragTail,
   lookDrag,
   slotPosition,
@@ -475,6 +476,10 @@ function SceneInner({ round, active, locked, disabledIds, celebrate, cue, onPick
             key={id}
             id={id}
             position={[x, 0, z]}
+            // same apparent size from the child whatever the pedestal's
+            // distance, so no option is easier to see or hit than another and
+            // neighbouring hit boxes cannot overlap (see logic.ts)
+            sizeScale={exhibitScale(i, n)}
             disabled={locked || disabledIds.includes(id)}
             celebrating={celebrate > 0 && id === round.target}
             onPick={() => onPick(id)}
@@ -826,12 +831,15 @@ function TargetRing({ x, z }: { x: number; z: number }) {
 function Exhibit({
   id,
   position,
+  sizeScale,
   disabled,
   celebrating,
   onPick,
 }: {
   id: ExhibitId
   position: [number, number, number]
+  /** uniform scale giving this exhibit the same apparent size as every other */
+  sizeScale: number
   disabled: boolean
   celebrating: boolean
   onPick: () => void
@@ -843,6 +851,13 @@ function Exhibit({
   useEffect(() => {
     if (celebrating) wob.current = 0
   }, [celebrating])
+
+  // `onPointerOut` resets the cursor, but a correct pick advances the round and
+  // unmounts this exhibit while the pointer is still over it — so that handler
+  // never runs and the whole app is left showing a hand cursor.
+  useEffect(() => () => {
+    document.body.style.cursor = 'auto'
+  }, [])
 
   useFrame((state, dt) => {
     const g = model.current
@@ -857,17 +872,22 @@ function Exhibit({
     } else {
       g.position.y = EXHIBIT_Y + Math.sin(state.clock.elapsedTime * 1.5 + position[0]) * 0.04
     }
-    g.scale.setScalar(scale)
+    // hover/celebration animate ON TOP of the distance scale, never replace it
+    g.scale.setScalar(scale * sizeScale)
   })
 
   return (
     <group position={position}>
-      {/* slim pedestal — kept narrow so the row hides less of the avatar */}
-      <mesh position={[0, PEDESTAL_H / 2, 0]}>
+      {/* Slim pedestal — kept narrow so the row hides less of the avatar.
+          Its WIDTH follows the exhibit's distance scale so the plinth stays in
+          proportion to what stands on it, but its HEIGHT does not: every
+          exhibit must sit at the same world height, or the nearer ones would
+          drop and the child would be looking down at the centre of the row. */}
+      <mesh position={[0, PEDESTAL_H / 2, 0]} scale={[sizeScale, 1, sizeScale]}>
         <cylinderGeometry args={[0.28, 0.34, PEDESTAL_H, 20]} />
         <meshStandardMaterial color="#bcae98" />
       </mesh>
-      <mesh position={[0, PEDESTAL_H + 0.03, 0]}>
+      <mesh position={[0, PEDESTAL_H + 0.03, 0]} scale={[sizeScale, 1, sizeScale]}>
         <cylinderGeometry args={[0.34, 0.34, 0.1, 20]} />
         <meshStandardMaterial color="#cdbfa6" />
       </mesh>

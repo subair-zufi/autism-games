@@ -7,7 +7,7 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { praise, speak } from '../../services/speech'
+import { speak, speakThenPraise } from '../../services/speech'
 import { t } from '../../i18n/strings'
 import { playGentle, playSuccess, playTap } from '../../services/sounds'
 import {
@@ -99,6 +99,25 @@ export function Park360Game() {
   /** Hard only: logs once if the round goes unacted-on this long (review §3.6) */
   const noShareTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const noShareLogged = useRef(false)
+  /**
+   * The celebration pause that schedules the next round (or the results panel).
+   *
+   * Held in a ref like every other timer here because `clearTimers` has to be
+   * able to cancel it. It used to be a bare `setTimeout`, which the unmount
+   * cleanup could not reach: quitting during the 2s celebration — the in-world
+   * Quit button, or the trainer sending the child to the next game from their
+   * phone — let it fire on an unmounted component, where it called
+   * `beginRound` and armed a fresh `spawnTimer` that nothing could ever clear.
+   * That restarted the whole round machine: a chime, a spoken nudge and a
+   * recorded step every few seconds, for the life of the tab, over whatever
+   * the child was doing next.
+   */
+  const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** `gazeSelect` for timer callbacks, which capture the render that armed them
+   *  — a child who entered VR mid-round would otherwise be told to "tap" when
+   *  their only way to answer is to look. */
+  const gazeSelectRef = useRef(false)
+  gazeSelectRef.current = gazeSelect
 
   useEffect(() => () => clearTimers(), [])
 
@@ -135,9 +154,11 @@ export function Park360Game() {
     if (spawnTimer.current) clearTimeout(spawnTimer.current)
     if (nudgeTimer.current) clearTimeout(nudgeTimer.current)
     if (noShareTimer.current) clearTimeout(noShareTimer.current)
+    if (celebrateTimer.current) clearTimeout(celebrateTimer.current)
     spawnTimer.current = null
     nudgeTimer.current = null
     noShareTimer.current = null
+    celebrateTimer.current = null
   }
 
   // Malayalam-aware speech + level captions (surface the fading scaffold).
@@ -244,7 +265,9 @@ export function Park360Game() {
     nudgeCount.current += 1
     setNudge(kind)
     playGentle()
-    say(kind === 'find' ? 'nudgeFind' : gazeSelect ? 'nudgeShareGaze' : 'nudgeShare')
+    // read through the ref: this fires from a timer armed one or more renders
+    // ago, and the child may have entered VR since
+    say(kind === 'find' ? 'nudgeFind' : gazeSelectRef.current ? 'nudgeShareGaze' : 'nudgeShare')
     recordStep('nudge', { kind, count: nudgeCount.current })
     armNudge()
   }
@@ -302,8 +325,14 @@ export function Park360Game() {
     setShared(nextShared)
     setSpontCount(nextSpont)
     setStreak(nextStreak)
-    say('sayWow', { label: discoveryLabel(round.discovery, lang) })
-    praise()
+    // The shared-affect payoff, spoken as ONE utterance with the cheer after it.
+    // It used to be `say('sayWow'); praise()` — two subsystems starting at once,
+    // so the label was buried under a cheering voice — and on the final share
+    // the `sayWin` below then cancelled it mid-word ("Wow! A Butt—"), destroying
+    // the one moment this game exists to deliver.
+    const wow = parkLine('sayWow', lang, { label: discoveryLabel(round.discovery, lang) })
+    const last = nextShared >= cfg.goal
+    speakThenPraise(last ? `${wow} ${parkLine('sayWin', lang)}` : wow, lang)
     // the head's scan across this whole round: headToTargetMs = time to first
     // look at the surprise, and the range/travel span the turn to the friend
     const head = headMetrics(discoveryBearingDeg(round.discovery))
@@ -324,16 +353,15 @@ export function Park360Game() {
       },
       { score: nextScore },
     )
-    if (nextShared >= cfg.goal) {
+    if (last) {
       setStars(starsFor(nextSpont, cfg.goal))
-      say('sayWin')
       reportScore('park360', nextScore)
       void submit(difficulty, nextSpont, cfg.goal)
       finishGame(nextScore)
-      setTimeout(() => setPhase('over'), 1600)
+      celebrateTimer.current = setTimeout(() => setPhase('over'), 1600)
       return
     }
-    setTimeout(() => beginRound(round.discovery), 2000)
+    celebrateTimer.current = setTimeout(() => beginRound(round.discovery), 2000)
   }
 
   // one-time, unscored warm-up before this child's very first real session
