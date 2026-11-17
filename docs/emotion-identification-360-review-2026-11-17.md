@@ -29,7 +29,7 @@
 - All 25 face photos measured for pixel dimensions and aspect.
 - Angular geometry computed from the shipped constants (reproduced inline below).
 
-> **Status.** **C1, C2 and C3 are fixed**, and the volume half of **D1** shipped with them.
+> **Status.** **C1, C2, C3 and D4 are fixed**, and the volume half of **D1** shipped with them.
 > Everything else here is as found at `d014fcf`.
 >
 > **Caveat on the screenshots.** The headless renderer is SwiftShader (software), so frame
@@ -492,7 +492,7 @@ emotion (a rain/cloud image beside the sad child), which is a route to the right
 not involve reading a face at all. Re-cropping to head-and-shoulders on a neutral ground fixes
 both — and §4.2 is re-cropping the assets anyway, so this is close to free.
 
-**D4 — Neither game logs a non-response, and Cinema logs no replays.** The event vocabulary for
+**D4 — Neither game logs a non-response, and Cinema logs no replays. `[FIXED 2026-11-17]`** The event vocabulary for
 these two games is `event_ready`, `hint`, `answer`, `cause_answer`, `level_result`. There is:
 
 - **no no-response event.** Emotion Room Hard has `hintAfterMs: null` and Cinema has no timeout
@@ -511,6 +511,33 @@ these two games is `event_ready`, `hint`, `answer`, `cause_answer`, `level_resul
   self-describing the way Room's is.
 
 See §4.6 for all four — they are small additions and they close a real hole in the dataset.
+
+> **Resolved 2026-11-17.** All four are in, as **logging only**:
+>
+> - `no_answer` — in both games, once per question at 20 s (matching Park 360's
+>   `NO_SHARE_TIMEOUT_MS`), carrying the target, the level, and whether a cue had already been
+>   given. It does **not** prompt, replay or advance. Lending Hard a scaffold it does not have
+>   by design would change what the level is, which is the same study-design decision left open
+>   as **C6** for Park 360 — so a child on Emotion Room Hard is still left in silence, and that
+>   remains the researcher's call. The tests pin the inertness as well as the event.
+> - `replay` — in Cinema, with `source: 'child' | 'scaffold'` separating a voluntary second look
+>   from the one the game imposes after an error, plus `afterFreezeMs`, so the in-world "Watch
+>   again" card can finally be shown to be used.
+> - `clip_frozen` — Cinema's missing trial-onset event, the counterpart to Emotion Room's
+>   `event_ready`. It records `attempt`, so a re-asked question is distinguishable from a first
+>   asking, and both `freezeTime` and `actualFreezeTime` (see §4.7).
+> - `chance` on Cinema's `level_result`.
+>
+> The flat Emotion Clips twin was deliberately **not** given the same events. The blueprint is
+> explicit that the desktop builds are demonstration only and that "desktop play contributes
+> nothing to O1 or O3", with analysis filtered to `xr_presenting = 1` — so logging there would
+> be weight without analytic value. (The audio fixes went into it anyway, because child safety
+> does not depend on whether the data counts.)
+>
+> Two incidental fixes went in with it: both games' deferred timers now call `recordStep`
+> through a ref. Its identity changes when the child enters VR, because it carries the
+> presenting flag, so a captured copy could stamp a headset trial as a flat one — the same
+> stale-closure class the 2026-11-15 review flagged for Park 360's `fireNudge`.
 
 **D5 — Emotion Cinema's answer cards appear without warning, mid-task.** `AnswerLayer` returns
 `null` until `frozen`, so four cards pop into existence at the instant the picture freezes.
@@ -836,6 +863,10 @@ Note that `coneLimit` is computed from the chip's final position, so it adapts a
 
 ### 4.6 — Close the four data gaps (D4)
 
+> **Shipped 2026-11-17**, with one deliberate change from the sketch below: the `no_answer`
+> probe does **not** re-offer the hint. The sketch had it firing the scaffold on levels that
+> have one, which quietly makes the probe part of the intervention; it now only records.
+
 ```tsx
 // IdentifyEmotions360Game.tsx — in the freeze handler, next to beginHeadWindow()
 + recordStep('clip_frozen', {
@@ -931,6 +962,12 @@ useEffect(() => {
 
 Record `actualFreezeTime` either way (§4.6) so the residual slop is measurable rather than assumed.
 
+> **Partly addressed 2026-11-17.** `clip_frozen` now records `freezeTime` (what the clip was
+> authored to stop on) alongside `actualFreezeTime` (where it did), so the overshoot is
+> measurable in the data you are already collecting. The `requestVideoFrameCallback` switch
+> that would *remove* it is still open — measure the slop on device first, then decide whether
+> it is worth changing the mechanism under a study that is already running.
+
 ### 4.8 — Minor correctness
 
 | Where | Issue | Fix |
@@ -956,7 +993,7 @@ Record `actualFreezeTime` either way (§4.6) so the residual slop is measurable 
 | 3 | ✅ **C3** — two (three) voices at once (§4.3) | Fixed in both 360 games and the flat twin, along with two audio-lifetime holes found beside it. |
 | 4 | **C6** — per-round texture churn (§4.2) | Ten main-thread stalls per session is a judder source, and judder is a sickness source. Falls out of fixing C1 properly. |
 | 5 | **C5** / **C4** — confirm chip below the floor; 0.96° card gaps (§4.5, §4.4) | Ergonomics, and they tax exactly the children the dwell-forgiveness work exists for. Both need an on-device pilot before you pick a value. |
-| 6 | **D4** — no-response, replay and freeze logging (§4.6) | Cheap, and it closes a hole in data you are collecting now and cannot reconstruct later. |
+| 6 | ✅ **D4** — no-response, replay and freeze logging (§4.6) | Shipped 2026-11-17, logging only. The clinical question it exposes — a child left in silence on Hard — is unchanged and still open (see C6's equivalent for Park 360). |
 | 7 | ✅ volume · ⬜ **D1** motion | The audio half shipped 2026-11-17. The visual half — `sensoryLevel` and `prefers-reduced-motion` in the scene loops — is still the largest accessibility gap, open since 2026-07 (U3). |
 | 8 | **§4.7**, **§4.8** | Correctness and measurement precision; the three marked regressions should go in with whatever else touches these files. |
 

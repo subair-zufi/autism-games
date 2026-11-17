@@ -38,6 +38,18 @@ const META = GAME_LIST.find((g) => g.id === 'emotionrecognition360')!
 const FEEDBACK_MS = 1600
 /** calm beat before the boards for the next round appear */
 const ROUND_GAP_MS = 700
+/**
+ * How long an unanswered round waits before it is recorded as one.
+ *
+ * Logging only: nothing here prompts the child or ends the round. Hard has no
+ * hint by design (`hintAfterMs: null`), and lending it one would change what
+ * the level is — that is a study-design decision, not a logging fix. But a
+ * round the child never answered used to leave no trace at all, so "did not
+ * respond" and "the session stopped here" were indistinguishable in the data,
+ * and non-response is the clinically most interesting category. Matches Park
+ * 360's `NO_SHARE_TIMEOUT_MS`.
+ */
+const NO_ANSWER_MS = 20_000
 
 /**
  * Emotion Recognition 360 — the immersive copy of the flat "Who feels ___?"
@@ -108,6 +120,13 @@ export function EmotionRecognition360Game() {
   const hintFiredRef = useRef(false)
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const gapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** fires once per round if nothing is tapped (see NO_ANSWER_MS) */
+  const noAnswerTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Both timers below outlive the render that armed them, and `recordStep`'s
+  // identity changes when the child enters VR (it carries the presenting
+  // flag), so a captured copy could stamp a headset trial as a flat one.
+  const recordRef = useRef(recordStep)
+  recordRef.current = recordStep
 
   useEffect(
     () => () => {
@@ -151,7 +170,7 @@ export function EmotionRecognition360Game() {
   })
 
   function clearTimers() {
-    for (const timer of [hintTimer, advanceTimer, gapTimer]) {
+    for (const timer of [hintTimer, advanceTimer, gapTimer, noAnswerTimer]) {
       if (timer.current) clearTimeout(timer.current)
       timer.current = null
     }
@@ -213,7 +232,26 @@ export function EmotionRecognition360Game() {
         targetBearingDeg: answerBearingDeg(next),
       })
       armHint()
+      armNoAnswer(next)
     }, ROUND_GAP_MS)
+  }
+
+  /** Start the clock on an unanswered round. Records once and stops: a child
+   *  who sits for three minutes is still one non-response, and wherever a
+   *  round IS eventually answered the duration is already in `latencyMs`. */
+  function armNoAnswer(round: Round) {
+    noAnswerTimer.current = setTimeout(() => {
+      noAnswerTimer.current = null
+      recordRef.current('no_answer', {
+        target: round.target,
+        boardCount: round.boards.length,
+        targetBearingDeg: answerBearingDeg(round),
+        afterMs: NO_ANSWER_MS,
+        // whether the child had already been given the look-around cue when
+        // the round ran out — on hard there is none to give
+        hinted: hintFiredRef.current,
+      })
+    }, NO_ANSWER_MS)
   }
 
   /** arm the gentle "look around" hint — never on hard */
@@ -224,7 +262,7 @@ export function EmotionRecognition360Game() {
       hintFiredRef.current = true
       playGentle()
       speak(roomLine('hintLook', lang), lang)
-      recordStep('hint', {})
+      recordRef.current('hint', {})
     }, cfg.hintAfterMs)
   }
 

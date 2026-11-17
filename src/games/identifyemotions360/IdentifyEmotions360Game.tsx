@@ -12,6 +12,7 @@ import { playGentle, playSuccess } from '../../services/sounds'
 import { t, videoFreezeQuestion, whyQuestion } from '../../i18n/strings'
 import type { EmotionId } from '../emotionVocab'
 import {
+  CHOICE_COUNT,
   buildQuiz,
   pointsFor,
   sessionLength,
@@ -38,6 +39,17 @@ const CELEBRATE_MS = 1300
 const REPLAY_DELAY_MS = 250
 /** how long a praise clip needs before the clip's own audio may come back */
 const CHEER_MS = 700
+/**
+ * How long an unanswered question waits before it is recorded as one.
+ *
+ * Nothing here ends the round or prompts the child — a scaffold on the level
+ * that has none by design would change what the intervention is. This only
+ * makes the non-response visible: without it a trial the child never answered
+ * left no trace at all, so "did not respond" and "the session stopped here"
+ * were the same thing in the data, and non-response is the clinically most
+ * interesting category. Matches Park 360's `NO_SHARE_TIMEOUT_MS`.
+ */
+const NO_ANSWER_MS = 20_000
 
 /**
  * Emotion Clips 360 — the immersive copy of Emotion Clips. Same quiz (clips,
@@ -131,11 +143,22 @@ export function IdentifyEmotions360Game() {
   const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   /** guards the "let's look again" onEnd against a round that has moved on */
   const replayTok = useRef(0)
+  /** fires once per question if nothing is answered (see NO_ANSWER_MS) */
+  const noAnswerTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // the current question, in a ref so the video listeners never read stale state
   const qRef = useRef<VideoQuestion | null>(null)
 
   const q: VideoQuestion | undefined = quiz[idx]
   qRef.current = q ?? null
+
+  // Same reason as `qRef`: the freeze listeners are registered once, for the
+  // life of the element, so they must not hold the first render's copy.
+  // `recordStep`'s identity changes when the child enters VR (it carries the
+  // presenting flag), and a stale one would stamp headset trials as flat ones.
+  const recordRef = useRef(recordStep)
+  recordRef.current = recordStep
+  const difficultyRef = useRef(difficulty)
+  difficultyRef.current = difficulty
 
   useEffect(() => {
     void vrSupported().then(setCanVR)
@@ -153,6 +176,37 @@ export function IdentifyEmotions360Game() {
 
   // Freeze the clip on its expressive frame, once, when it reaches the target.
   useEffect(() => {
+    /**
+     * The freeze is where the trial actually starts — it is when the question
+     * can be answered and where `latencyMs` is measured from — and it was the
+     * only 360 game not to record that moment (Emotion Room has
+     * `event_ready`). Without it there is no record of when a trial began, how
+     * long the clip took to get there, or that a re-watched question was asked
+     * a second time.
+     */
+    const noteFreeze = (via: 'target' | 'ended') => {
+      const cur = qRef.current
+      if (!cur) return
+      recordRef.current('clip_frozen', {
+        clip: cur.clip.slug,
+        difficulty: difficultyRef.current,
+        freezeKind: cur.freezeKind,
+        // what the clip was authored to freeze on, and where it actually
+        // stopped. `timeupdate` fires about every 250ms, so the two differ —
+        // recording both makes that slop measurable instead of assumed, which
+        // matters on Hard, where `earlyTime` picks a partially-formed frame on
+        // a build only ~2s long.
+        freezeTime: cur.freezeTime,
+        actualFreezeTime: videoEl.currentTime,
+        via,
+        choiceCount: cur.choices.length,
+        chance: 1 / cur.choices.length,
+        // >0 means this freeze followed a replay, so the question is being
+        // asked again rather than for the first time
+        attempt: attemptRef.current,
+      })
+      armNoAnswer('emotion')
+    }
     const freezeAtTarget = () => {
       const cur = qRef.current
       if (pausedRef.current || !cur) return
@@ -165,6 +219,7 @@ export function IdentifyEmotions360Game() {
         // on the expressive frame — there is no scan target on the flat screen)
         beginHeadWindow()
         setFrozen(true)
+        noteFreeze('target')
       }
     }
     const onEnded = () => {
@@ -173,6 +228,7 @@ export function IdentifyEmotions360Game() {
       frozenAtRef.current = performance.now()
       beginHeadWindow()
       setFrozen(true)
+      noteFreeze('ended')
     }
     videoEl.addEventListener('timeupdate', freezeAtTarget)
     videoEl.addEventListener('ended', onEnded)
@@ -244,17 +300,50 @@ export function IdentifyEmotions360Game() {
     if (replayTimer.current) clearTimeout(replayTimer.current)
     if (advanceTimer.current) clearTimeout(advanceTimer.current)
     if (resumeTimer.current) clearTimeout(resumeTimer.current)
+    if (noAnswerTimer.current) clearTimeout(noAnswerTimer.current)
     replayTimer.current = null
     advanceTimer.current = null
     resumeTimer.current = null
+    noAnswerTimer.current = null
     // a pending speech callback must not replay a clip for a question the
     // child has already left
     replayTok.current += 1
   }
 
+  /**
+   * Start the clock on an unanswered question (see NO_ANSWER_MS).
+   *
+   * Logs once and stops: a child who sits for three minutes rather than
+   * twenty-five seconds is still one non-response, and for every trial that is
+   * eventually answered the duration is already recoverable from `latencyMs`.
+   * Deliberately does NOT prompt, replay or advance — the scaffold a level has
+   * is part of what that level is.
+   */
+  function armNoAnswer(stage: 'emotion' | 'cause') {
+    if (noAnswerTimer.current) clearTimeout(noAnswerTimer.current)
+    const cur = qRef.current
+    noAnswerTimer.current = setTimeout(() => {
+      noAnswerTimer.current = null
+      recordRef.current('no_answer', {
+        clip: cur?.clip.slug ?? null,
+        difficulty: difficultyRef.current,
+        stage,
+        afterMs: NO_ANSWER_MS,
+        attempt: attemptRef.current,
+      })
+    }, NO_ANSWER_MS)
+  }
+
+  function cancelNoAnswer() {
+    if (noAnswerTimer.current) clearTimeout(noAnswerTimer.current)
+    noAnswerTimer.current = null
+  }
+
   function playFrom(src: string) {
     pausedRef.current = false
     setFrozen(false)
+    // nothing is answerable while the clip runs; the next freeze re-arms it
+    cancelNoAnswer()
     if (videoEl.src !== new URL(src, document.baseURI).href) {
       videoEl.src = src
       videoEl.load()
@@ -301,14 +390,36 @@ export function IdentifyEmotions360Game() {
     start()
   }
 
-  /** "Watch again" — rewind and replay up to the freeze. */
-  function replay() {
-    if (locked) return
-    playFrom(qRef.current!.clip.src)
+  /**
+   * "Watch again" — rewind and replay up to the freeze.
+   *
+   * `source` separates the two callers, because they mean opposite things. A
+   * `child` replay is the "Watch again" card (or its DOM twin): a voluntary
+   * second look, i.e. information-seeking under uncertainty, which is a
+   * behavioural measure in its own right — and the in-world card exists
+   * precisely so a child in a headset can do this without paying an error for
+   * it. A `scaffold` replay is the automatic one after a wrong answer, which
+   * the game imposed. Neither was recorded at all, so the card could not be
+   * shown to be used.
+   */
+  function replay(source: 'child' | 'scaffold' = 'child') {
+    const cur = qRef.current
+    if (locked || !cur) return
+    recordStep('replay', {
+      clip: cur.clip.slug,
+      difficulty,
+      source,
+      attempt: attemptRef.current,
+      // how long the child looked at the frozen frame before asking again
+      afterFreezeMs:
+        frozenAtRef.current === null ? null : Math.round(performance.now() - frozenAtRef.current),
+    })
+    playFrom(cur.clip.src)
   }
 
   function pick(id: EmotionId) {
     if (!frozen || locked || stage !== 'emotion' || wrong.includes(id) || !q) return
+    cancelNoAnswer()
     attemptRef.current += 1
     const now = performance.now()
     const latencyMs = frozenAtRef.current !== null ? Math.round(now - frozenAtRef.current) : null
@@ -348,6 +459,9 @@ export function IdentifyEmotions360Game() {
           setStage('cause')
           causeAtRef.current = performance.now()
           speak(whyQuestion(q.clip.gender, q.answer, lang), lang)
+          // the "why?" cards are three whole sentences — the likeliest place
+          // in either game for a child to stall
+          armNoAnswer('cause')
         } else {
           advance(nextScore, nextFirstTry)
         }
@@ -367,13 +481,14 @@ export function IdentifyEmotions360Game() {
       const tok = ++replayTok.current
       speak(clipLine('sayLookAgain', lang), lang, () => {
         if (replayTok.current !== tok) return
-        replayTimer.current = setTimeout(replay, REPLAY_DELAY_MS)
+        replayTimer.current = setTimeout(() => replay('scaffold'), REPLAY_DELAY_MS)
       })
     }
   }
 
   function pickCause(i: number) {
     if (stage !== 'cause' || causePicked !== null || !q?.cause) return
+    cancelNoAnswer()
     const correct = i === q.cause.answerIndex
     const latencyMs = causeAtRef.current !== null ? Math.round(performance.now() - causeAtRef.current) : null
     setCausePicked(i)
@@ -414,6 +529,10 @@ export function IdentifyEmotions360Game() {
         firstTryCorrect: nextFirstTry,
         total,
         accuracy: total > 0 ? nextFirstTry / total : 0,
+        // self-describing, like Emotion Room's. The server derives it from the
+        // level too (`CLIPS_CHANCE`), but a step that carries its own baseline
+        // can be read without knowing which build wrote it.
+        chance: 1 / CHOICE_COUNT[difficulty],
         score: nextScore,
       })
       finishGame(nextScore)
@@ -474,7 +593,7 @@ export function IdentifyEmotions360Game() {
               onPickCause={pickCause}
               onNextFromCause={nextFromCause}
               nextLabel={t(idx + 1 >= quiz.length ? 'finish' : 'next', lang)}
-              onReplay={replay}
+              onReplay={() => replay('child')}
               replayLabel={t('watchAgain', lang)}
               celebrating={celebrating}
               lang={lang}
@@ -489,7 +608,7 @@ export function IdentifyEmotions360Game() {
               the flat game has); inside a headset the DOM is invisible and the
               scene card is the one that does the work */}
           {stage === 'emotion' && frozen && (
-            <button className="replay-btn" onClick={replay} disabled={locked}>
+            <button className="replay-btn" onClick={() => replay('child')} disabled={locked}>
               {t('watchAgain', lang)}
             </button>
           )}
