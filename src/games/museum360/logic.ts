@@ -284,10 +284,20 @@ export function hitHalfAngleDeg(index: number, n: number): number {
  * silently hiding the cue again.
  */
 
-/** Podium height — the avatar's feet stand here. */
-export const HELPER_LIFT = 1.2
+/**
+ * Podium height — the avatar's feet stand here.
+ *
+ * Lowered from 1.2 after play: following the avatar's GAZE meant holding the
+ * head up at 17-19 degrees for most of a session, and sustained upward gaze is
+ * the uncomfortable direction (see hudAnchor.ts). It cannot simply come down,
+ * though — the avatar has to clear the exhibit row 3.2 m in front of it, which
+ * is why it was raised in the first place. The room gives that back by setting
+ * the exhibits lower too (`PEDESTAL_H`), so the whole scene drops together and
+ * the hand keeps exactly the clearance it had.
+ */
+export const HELPER_LIFT = 0.8
 /** The avatar's body is drawn this much larger than life (see Museum360Scene). */
-export const HELPER_SCALE = 1.3
+export const HELPER_SCALE = 1.25
 /** Shoulder height above the avatar's feet, body-local (before the scale). */
 export const HELPER_SHOULDER_Y = 1.4
 /** Shoulder to fingertip, body-local (before the scale). */
@@ -295,8 +305,18 @@ export const HELPER_ARM_LEN = 1.05
 
 /** Tallest exhibit model's top above `EXHIBIT_Y` — the worst-case occluder. */
 export const EXHIBIT_MODEL_TOP = 0.62
+/**
+ * Pedestal height, and with it the whole row's height.
+ *
+ * Lowered alongside the podium. It is what buys the avatar's drop: the thing
+ * the avatar must see over is the top of this row, so taking 0.2 m off the
+ * plinths lets the helper come down 0.4 m for the same clearance. It also
+ * suits the players — the exhibits now sit a little BELOW a child's eye line
+ * rather than on it, and down is the restful direction to look.
+ */
+export const PEDESTAL_H = 0.4
 /** World height of an exhibit's centre (pedestal height + half the model). */
-export const EXHIBIT_Y = 1.1
+export const EXHIBIT_Y = PEDESTAL_H + 0.5
 
 /** The shortest eye height the room is expected to work at (a seated child). */
 export const MIN_DESIGN_EYE_Y = 0.95
@@ -312,7 +332,7 @@ export const MIN_DESIGN_EYE_Y = 0.95
  * `MIN_DESIGN_EYE_Y` with ~1.5° to spare while leaving that worst-case gesture
  * ~2.7° of visible extent.
  */
-export const MAX_POINT_DEPRESSION_DEG = 12
+export const MAX_POINT_DEPRESSION_DEG = 10
 
 function elevationDeg(y: number, dist: number, eyeY: number): number {
   return (Math.atan((y - eyeY) / dist) * 180) / Math.PI
@@ -359,6 +379,20 @@ export function handClearanceDeg(index: number, n: number, eyeY: number): number
   const fy = shoulder.y + (dy / len) * reach
   const fz = shoulder.z + (dz / len) * reach
   return elevationDeg(fy, Math.hypot(fx, fz), eyeY) - centreOccluderElevationDeg(n, eyeY)
+}
+
+/**
+ * How far a child whose eyes are at `eyeY` must look UP to meet the avatar's.
+ *
+ * The gaze rung asks them to hold that look while the avatar makes its bid and
+ * shifts, so it is a sustained posture, not a glance. Past roughly 20 degrees
+ * it is the uncomfortable direction, and play found 17-19 degrees already too
+ * much. Paired with `handClearanceDeg`: lowering the avatar improves this one
+ * and costs the other, so both are pinned.
+ */
+export function avatarEyeElevationDeg(eyeY: number): number {
+  const eyes = HELPER_LIFT + 1.77 * HELPER_SCALE
+  return elevationDeg(eyes, Math.abs(AVATAR_Z), eyeY)
 }
 
 /** Convert a bearing to floor coordinates (bearing 0 = forward, toward -z).

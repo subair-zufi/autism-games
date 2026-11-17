@@ -1,11 +1,13 @@
 import { expect, test } from 'vitest'
 import {
   AVATAR_Z,
+  avatarEyeElevationDeg,
   bearingToXZ,
   centreOccluderElevationDeg,
   cueSchedule,
   dragDistance,
   errorType,
+  EXHIBIT_Y,
   exhibitMeta,
   EXHIBITS,
   FADE_STREAK,
@@ -331,6 +333,38 @@ test('the occluder rises as the child gets shorter', () => {
   // the whole reason the authored 1.7m camera never showed this
   expect(centreOccluderElevationDeg(5, 0.95)).toBeGreaterThan(centreOccluderElevationDeg(5, 1.15))
   expect(centreOccluderElevationDeg(5, 1.15)).toBeGreaterThan(centreOccluderElevationDeg(5, 1.7))
+})
+
+/* ---- comfort: how far a child has to look UP at the helper ---------------
+ * The gaze rung asks them to HOLD that look while the avatar bids and shifts,
+ * so it is a sustained posture rather than a glance. Play found the first
+ * version too steep at 17-19 degrees. Lowering the avatar relieves this and
+ * costs hand clearance, so the two are pinned together: neither can be tuned
+ * without the other failing.
+ */
+test('a child does not have to crane up at the helper', () => {
+  for (const eyeY of [0.95, 1.05, 1.15, 1.35]) {
+    expect(avatarEyeElevationDeg(eyeY)).toBeLessThanOrEqual(16)
+  }
+  // and not so low that the face sinks toward the exhibit row behind it
+  expect(avatarEyeElevationDeg(1.35)).toBeGreaterThan(8)
+})
+
+test('the helper still clears the row it had to be raised above', () => {
+  // the other half of the same trade: this is what stopped the avatar simply
+  // being lowered until the gaze was comfortable
+  for (const n of [3, 4, 5]) {
+    for (let i = 0; i < n; i++) {
+      expect(handClearanceDeg(i, n, MIN_DESIGN_EYE_Y)).toBeGreaterThan(1)
+    }
+  }
+})
+
+test('the exhibits sit below a child\'s eye line, not above it', () => {
+  // down is the restful direction to look; the row used to sit ON the eye line
+  // of the shortest players
+  expect(EXHIBIT_Y).toBeLessThan(1.05)
+  expect(EXHIBIT_Y).toBeGreaterThan(0.7)
 })
 
 test('the arm keeps enough pitch to read as a gesture, not a dot', () => {
