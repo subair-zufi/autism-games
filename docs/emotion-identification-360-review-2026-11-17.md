@@ -29,6 +29,8 @@
 - All 25 face photos measured for pixel dimensions and aspect.
 - Angular geometry computed from the shipped constants (reproduced inline below).
 
+> **Status.** **C1 is fixed** (commit below); everything else here is as found at `d014fcf`.
+>
 > **Caveat on the screenshots.** The headless renderer is SwiftShader (software), so frame
 > rates and fill costs there mean nothing. Draw-call counts, texture-upload byte counts and
 > shader-compile counts are real; everything about *feel* on a Quest needs the device.
@@ -125,7 +127,7 @@ switch from `"below"` to `"above"` after a neck-strain report is the right call.
 
 ## 2. Critical issues
 
-### C1 — Emotion Room 360 renders every face geometrically distorted `[MEASURED]`
+### C1 — Emotion Room 360 renders every face geometrically distorted `[MEASURED]` `[FIXED 2026-11-17]`
 
 **This is the most serious finding in either game, because it corrupts the stimulus itself.**
 
@@ -151,9 +153,9 @@ they are not even one aspect among themselves:
 The scene comment says the board is *"near-square so portrait face photos don't distort"* — but
 over half the pool is **landscape**, so the near-square plane is the worst possible choice for it.
 
-Rendered head-on from the child's position, against the source:
+Rendered head-on from the child's position, before and after the fix:
 
-![aspect comparison](./emotion-360-aspect-compare.png)
+![aspect comparison](./emotion-360-aspect-compare.jpg)
 
 Three consequences, in severity order:
 
@@ -172,6 +174,31 @@ Three consequences, in severity order:
    measures this bug. `docs/study-blueprint-buds.md` treats the pair as the same task.
 
 Fix in §4.1. **Nothing else in this review matters as much as this one.**
+
+> **Resolved 2026-11-17 — the code half of §4.1 only.** `coverUv` now centre-crops each photo
+> to the board's aspect instead of letting the plane squeeze it, so every face renders at its
+> true proportions whatever shape the source file is. Verified three ways: five unit tests
+> covering the three shipped shapes plus two extremes and the undecoded-image fallback; a test
+> that reads the real PNG headers and fails if a future asset would lose more than 60% of its
+> frame to the crop; and every one of the 25 photos rendered at the crop and checked by eye —
+> **all 25 keep the face fully in frame, centred, with room to spare** (the tightest keeps 48%
+> of its pixels). See `docs/emotion-360-cover-crops.jpg`.
+>
+> Two things this did **not** do, deliberately:
+>
+> - **The assets are untouched**, so **C6 (per-round texture churn) is still open** — the fix
+>   changes which part of each 2816×1536 texture is sampled, not how big it is or how often it
+>   is uploaded. §4.2 is still the fix for that.
+> - **The framing now differs between builds**, where before the *geometry* did. The 360 board
+>   shows a centre crop and the flat twin still shows the whole frame
+>   (`object-fit: contain`). Both are undistorted, which is the part that mattered, but they
+>   are not identical stimuli. Closing that gap means re-cropping the source files so both
+>   builds show the same thing — which changes the flat game's stimuli too, and is a study-design
+>   call rather than a bug fix, so it is left to the researcher (§4.1, second half).
+>
+> A side benefit worth noting against **D3**: the crop discards the left and right thirds of
+> each photo, which in this pool is unrelated room background — including the weather poster
+> sitting beside the sad child.
 
 ### C2 — The video clips' audio is outside the mute and volume system entirely `[MEASURED]`
 
@@ -487,6 +514,10 @@ to turn to.
 ## 4. Code optimisation & fixes
 
 ### 4.1 — Stop distorting the faces (fixes C1)
+
+> **Shipped 2026-11-17**, as the first half below. The asset re-authoring in the second half is
+> still open and still the better end state — it is what would also close C6 and make the two
+> builds show the same stimulus.
 
 The minimal, immediate fix is a cover-fit on the texture, so the board crops the photo instead of
 squeezing it:
@@ -877,7 +908,7 @@ Record `actualFreezeTime` either way (§4.6) so the residual slop is measurable 
 
 | | Item | Why first |
 |---|---|---|
-| 1 | **C1** — face aspect distortion (§4.1) | The stimulus itself is wrong, it varies randomly within-subject, and it breaks the 2D↔360 comparison the study design rests on. **Nothing should be collected on Emotion Room 360 until this is fixed.** |
+| 1 | ✅ **C1** — face aspect distortion (§4.1) | The stimulus itself was wrong, varied randomly within-subject, and broke the 2D↔360 comparison the study design rests on. **Fixed 2026-11-17**; the asset re-crop that would also close C6 and equalise framing across builds is left to the researcher. |
 | 2 | **C2** — clip audio outside mute/volume + 41 dB loudness spread (§4.3) | Child-safety: the adult in the room cannot turn down the loudest thing in the game. Also a stimulus-control defect. |
 | 3 | **C3** — two (three) voices at once (§4.3) | Sensory risk, and it buries the vocabulary teaching under the cheer. A four-line fix; the helper already exists. |
 | 4 | **C6** — per-round texture churn (§4.2) | Ten main-thread stalls per session is a judder source, and judder is a sickness source. Falls out of fixing C1 properly. |
@@ -890,7 +921,9 @@ Record `actualFreezeTime` either way (§4.6) so the residual slop is measurable 
 
 - Whether `"above"` in Emotion Room crowds the prompt panel at 18.6° vs 21.4° (§4.5), and
   whether a 22° answer-card row in Cinema reads as four options or as two pairs (§4.4).
-- Whether a centre crop keeps the face in frame for all 25 photos (§4.1) — check every one by eye.
+- ~~Whether a centre crop keeps the face in frame for all 25 photos (§4.1)~~ — **checked, all 25
+  pass**; see `docs/emotion-360-cover-crops.jpg`. What still needs the headset is whether the
+  cropped board and the flat build's whole-frame presentation read as the same task to a child.
 - Whether `fear_hard_1`'s lightning flash startles children in your sample, with the clip at a
   normalised −23 LUFS and the headset at a realistic volume. If it does, the clip needs replacing,
   not turning down.

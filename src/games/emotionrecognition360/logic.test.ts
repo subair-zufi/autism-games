@@ -1,12 +1,19 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { Difficulty } from '../../types'
 import { CONFUSABLE_WITH } from '../emotionVocab'
+import { SINGLE_IMAGES } from '../emotionrecognition/content'
 import {
   AVAILABLE_EMOTIONS,
   BEARINGS,
+  BOARD_H,
+  BOARD_W,
   CONFIG,
   FRONT_HALF_ARC_DEG,
   answerBearingDeg,
+  coverKeptFraction,
+  coverUv,
   buildAnswerSlots,
   buildTargets,
   isDragTail,
@@ -169,3 +176,84 @@ describe('drag guard', () => {
     expect(isDragTail(1050)).toBe(false)
   })
 })
+
+
+describe('emotionrecognition360 photo fitting (review C1)', () => {
+  const BOARD_ASPECT = BOARD_W / BOARD_H
+
+  /** The aspect the child actually sees, given a UV window on a source image. */
+  function renderedAspect(imgW: number, imgH: number): number {
+    const { repeat } = coverUv(imgW, imgH)
+    return (imgW * repeat[0]) / (imgH * repeat[1])
+  }
+
+  it('shows every source shape at its true proportions, never squeezed', () => {
+    // the three shapes actually in public/emotions, plus two extremes
+    for (const [w, h] of [
+      [2816, 1536],
+      [1402, 1122],
+      [1254, 1254],
+      [512, 512],
+      [4000, 800],
+      [800, 4000],
+    ]) {
+      expect(renderedAspect(w, h)).toBeCloseTo(BOARD_ASPECT, 6)
+    }
+  })
+
+  it('crops a landscape photo at the sides and a tall one top and bottom', () => {
+    const wide = coverUv(2816, 1536)
+    expect(wide.repeat[1]).toBe(1) // full height kept
+    expect(wide.repeat[0]).toBeLessThan(1)
+    expect(wide.offset[0]).toBeCloseTo((1 - wide.repeat[0]) / 2, 6) // centred
+    expect(wide.offset[1]).toBe(0)
+
+    const tall = coverUv(1000, 2000)
+    expect(tall.repeat[0]).toBe(1) // full width kept
+    expect(tall.repeat[1]).toBeLessThan(1)
+    expect(tall.offset[1]).toBeCloseTo((1 - tall.repeat[1]) / 2, 6)
+    expect(tall.offset[0]).toBe(0)
+  })
+
+  it('leaves a photo already at the board aspect completely untouched', () => {
+    expect(coverUv(BOARD_W * 1000, BOARD_H * 1000)).toEqual({ repeat: [1, 1], offset: [0, 0] })
+  })
+
+  it('falls back to the whole frame for an image that has not decoded yet', () => {
+    for (const [w, h] of [
+      [0, 0],
+      [Number.NaN, 100],
+      [100, Number.NaN],
+      [-10, 10],
+    ]) {
+      expect(coverUv(w, h)).toEqual({ repeat: [1, 1], offset: [0, 0] })
+    }
+  })
+
+  it('keeps enough of every shipped photo that the face survives the crop', () => {
+    // A face sits in the middle of these photos, so a centre crop is safe at
+    // the shapes we ship (the widest keeps 48% of its pixels). A future asset
+    // far off the board's shape would crop away most of the frame, and the
+    // face with it — this is the guard for that, not a style rule.
+    const seen = new Map<string, number>()
+    for (const images of Object.values(SINGLE_IMAGES)) {
+      for (const img of images) {
+        const { width, height } = pngSize(img.src)
+        const kept = coverKeptFraction(width, height)
+        seen.set(`${width}x${height}`, kept)
+        expect(kept, `${img.src} (${width}x${height}) keeps only ${(kept * 100) | 0}%`)
+          .toBeGreaterThan(0.4)
+      }
+    }
+    expect(seen.size).toBeGreaterThan(0)
+  })
+})
+
+/** Read a PNG's pixel dimensions out of its IHDR chunk. */
+function pngSize(src: string): { width: number; height: number } {
+  // content.ts paths are browser-relative ('./emotions/x.png'); the files live
+  // under public/, and vitest runs from the repo root
+  const buf = readFileSync(resolve(process.cwd(), 'public', src.replace(/^\.?\//, '')))
+  expect(buf.subarray(1, 4).toString('ascii'), `${src} is not a PNG`).toBe('PNG')
+  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
+}

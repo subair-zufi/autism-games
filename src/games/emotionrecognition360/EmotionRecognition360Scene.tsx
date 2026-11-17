@@ -14,7 +14,10 @@ import { VRQuitButton } from '../VRQuitButton'
 import { VRInputSwitch } from '../VRInputSwitch'
 import { VRHudAnchor } from '../VRHudAnchor'
 import {
+  BOARD_H,
+  BOARD_W,
   boardPosition,
+  coverUv,
   dragDistance,
   isDragTail,
   lookDrag,
@@ -25,9 +28,6 @@ import {
 const EYE_Y = 1.5
 /** centre height of every board (a touch below eye level, like a gallery hang) */
 const BOARD_Y = 1.45
-/** board face size (metres) — near-square so portrait face photos don't distort */
-const BOARD_W = 1.5
-const BOARD_H = 1.7
 
 /** per-board display state, decided by the game and mirrored into the scene */
 export type BoardState = 'idle' | 'correct' | 'wrong' | 'dim'
@@ -384,7 +384,20 @@ function FaceBoard({
 
   // load the real face photo as a texture (no Suspense needed)
   const texture = useMemo(() => {
-    const tex = new THREE.TextureLoader().load(board.imageSrc)
+    const tex = new THREE.TextureLoader().load(board.imageSrc, (loaded) => {
+      // Crop the photo to the board's shape rather than letting the plane
+      // squeeze it to fit. The source pool is three different aspects and most
+      // of it is landscape, so without this a face is rendered up to 2.08x too
+      // narrow — and this game measures the geometry of a face. See `coverUv`.
+      // The image size is only known once it has decoded, which is why this
+      // runs in the load callback and not above.
+      const { repeat, offset } = coverUv(loaded.image.width, loaded.image.height)
+      loaded.repeat.set(repeat[0], repeat[1])
+      loaded.offset.set(offset[0], offset[1])
+      // repeat/offset feed texture.matrix, which the renderer refreshes every
+      // frame while matrixAutoUpdate is on — no needsUpdate, which would cost a
+      // second upload of a texture that has just been uploaded.
+    })
     tex.colorSpace = THREE.SRGBColorSpace
     // anisotropic filtering keeps the face crisp at the board's viewing angle,
     // instead of shimmering as the child turns their head

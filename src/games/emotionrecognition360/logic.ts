@@ -47,6 +47,79 @@ export const BEARINGS: Record<number, number[]> = {
 /** How far each board stands from the child (who never moves). */
 export const BOARD_RADIUS = 4.2
 
+/**
+ * Board face size in metres. Near-square, so a board is a comfortable tap/gaze
+ * target at `BOARD_RADIUS` without reaching its neighbour.
+ *
+ * It is NOT the aspect of the photos: `SINGLE_IMAGES` holds three different
+ * shapes (2816x1536 landscape, 1402x1122, and square), so whatever the board
+ * is, most photos will not match it. `coverUv` below is what reconciles them.
+ */
+export const BOARD_W = 1.5
+export const BOARD_H = 1.7
+
+/** UV transform that fits an image to a plane without distorting it. */
+export interface CoverUv {
+  /** texture.repeat */
+  repeat: [number, number]
+  /** texture.offset */
+  offset: [number, number]
+}
+
+/**
+ * Crop a photo to the board's shape instead of stretching it to fit.
+ *
+ * A plane maps its whole texture across its own width and height, so a photo
+ * whose aspect differs from the board's is SQUEEZED to it. That is fatal here
+ * and nowhere else in the app: this game scores a child on the geometry of a
+ * face — mouth width and curvature, eye aperture, brow angle — and over half
+ * the photo pool is 2816x1536 landscape, which on a 1.5x1.7 board was being
+ * compressed to 2.08x too narrow. Worse, the three source shapes compress by
+ * different amounts (2.08x / 1.42x / 1.13x) and `makeRound` draws a photo at
+ * random each trial, so the distortion was an uncontrolled within-subject
+ * variable sitting on the primary measure — and the flat twin renders the same
+ * files with `object-fit: contain`, undistorted, which broke the 2D-360
+ * comparison the study rests on.
+ *
+ * So: centre-crop to the board's aspect ("cover"), never scale the two axes
+ * differently. The alternative, letterboxing the whole frame inside the board
+ * ("contain"), keeps the geometry too but shrinks a landscape photo to a thin
+ * strip ~0.8m tall on a 1.7m board, which would put the face below legible
+ * size at 4.2m. Cropping also discards the left and right thirds of the
+ * background, which in this pool is unrelated room detail that competes with
+ * the face.
+ *
+ * Returns the identity transform for a missing or degenerate image size, so a
+ * photo that has not decoded yet renders as it does today rather than
+ * disappearing behind a zero-area UV window.
+ */
+export function coverUv(
+  imgW: number,
+  imgH: number,
+  planeW: number = BOARD_W,
+  planeH: number = BOARD_H,
+): CoverUv {
+  const identity: CoverUv = { repeat: [1, 1], offset: [0, 0] }
+  if (!(imgW > 0) || !(imgH > 0) || !(planeW > 0) || !(planeH > 0)) return identity
+  const imgAspect = imgW / imgH
+  const planeAspect = planeW / planeH
+  if (imgAspect > planeAspect) {
+    // wider than the board: keep the full height, crop the sides evenly
+    const r = planeAspect / imgAspect
+    return { repeat: [r, 1], offset: [(1 - r) / 2, 0] }
+  }
+  // taller than the board: keep the full width, crop top and bottom evenly
+  const r = imgAspect / planeAspect
+  return { repeat: [1, r], offset: [0, (1 - r) / 2] }
+}
+
+/** Fraction of a photo's pixels that survive `coverUv` — a future asset far
+ *  off the board's shape would lose most of its frame, and the face with it. */
+export function coverKeptFraction(imgW: number, imgH: number): number {
+  const { repeat } = coverUv(imgW, imgH)
+  return repeat[0] * repeat[1]
+}
+
 export interface RoundConfig {
   /** how many face-boards stand up each round (also the guessing denominator) */
   boardCount: number
