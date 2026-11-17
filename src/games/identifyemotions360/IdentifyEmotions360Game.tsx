@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { GAME_LIST } from '../../types'
-import { useSettings } from '../../state/settings'
+import { clampVolume, useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
 import { StartScreen } from '../../components/StartScreen'
 import { ScoreBar } from '../../components/ScoreBar'
@@ -33,8 +33,11 @@ const META = GAME_LIST.find((g) => g.id === 'identifyemotions360')!
 
 /** how long the ⭐ celebration shows before moving on */
 const CELEBRATE_MS = 1300
-/** pause before the automatic "let's look again" replay after a wrong pick */
-const REPLAY_DELAY_MS = 900
+/** pause before the automatic "let's look again" replay after a wrong pick,
+ *  once the spoken line has finished (it is chained off `speak`, not raced) */
+const REPLAY_DELAY_MS = 250
+/** how long a praise clip needs before the clip's own audio may come back */
+const CHEER_MS = 700
 
 /**
  * Emotion Clips 360 — the immersive copy of Emotion Clips. Same quiz (clips,
@@ -96,6 +99,23 @@ export function IdentifyEmotions360Game() {
     return v
   })
 
+  // The clips' audio was the only sound in the app outside `soundOn`: nothing
+  // ever set `muted` or `volume` on the element, so a trainer who muted for a
+  // sound-sensitive child still got it at full system level — and the pool
+  // itself spans 41 dB between its quietest and loudest clip, so "comfortable"
+  // on one clip is a startle on the next (review C2). Subscribed rather than
+  // set once, because the point of the trainer's remote is to reach a child
+  // who is already wearing the headset.
+  useEffect(() => {
+    const apply = () => {
+      const { soundOn, volume } = useSettings.getState()
+      videoEl.muted = !soundOn || volume <= 0
+      videoEl.volume = clampVolume(volume)
+    }
+    apply()
+    return useSettings.subscribe(apply)
+  }, [videoEl])
+
   const pausedRef = useRef(false)
   const frozenAtRef = useRef<number | null>(null)
   /** when the spoken freeze question finished — a TTS-unconfounded latency runs
@@ -107,6 +127,10 @@ export function IdentifyEmotions360Game() {
   const firstTryRef = useRef(true)
   const replayTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** the beat that lets the cheer finish before the clip's audio comes back */
+  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** guards the "let's look again" onEnd against a round that has moved on */
+  const replayTok = useRef(0)
   // the current question, in a ref so the video listeners never read stale state
   const qRef = useRef<VideoQuestion | null>(null)
 
@@ -162,6 +186,9 @@ export function IdentifyEmotions360Game() {
     () => () => {
       clearTimers()
       videoEl.pause()
+      // The win line is spoken in `advance()`; without this it carried on over
+      // the Home screen or the next game when the child left during it.
+      if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
     },
     [videoEl],
   )
@@ -216,8 +243,13 @@ export function IdentifyEmotions360Game() {
   function clearTimers() {
     if (replayTimer.current) clearTimeout(replayTimer.current)
     if (advanceTimer.current) clearTimeout(advanceTimer.current)
+    if (resumeTimer.current) clearTimeout(resumeTimer.current)
     replayTimer.current = null
     advanceTimer.current = null
+    resumeTimer.current = null
+    // a pending speech callback must not replay a clip for a question the
+    // child has already left
+    replayTok.current += 1
   }
 
   function playFrom(src: string) {
@@ -297,8 +329,13 @@ export function IdentifyEmotions360Game() {
       setCelebrating(true)
       playSuccess()
       praise()
-      // reward, then resume the clip to its peak before moving on
-      void videoEl.play().catch(() => {})
+      // Reward, THEN resume the clip to its peak — not both at once. The clip
+      // is unmuted by design (its reactions are part of the cue), so starting
+      // it here put the chime, a spoken cheer and the clip's own audio on top
+      // of each other (review C3). The praise clips run well under this beat.
+      resumeTimer.current = setTimeout(() => {
+        void videoEl.play().catch(() => {})
+      }, CHEER_MS)
       const firstTry = firstTryRef.current
       const nextScore = score + pointsFor(firstTry)
       const nextFirstTry = firstTryCount + (firstTry ? 1 : 0)
@@ -318,11 +355,20 @@ export function IdentifyEmotions360Game() {
     } else {
       recordStep('answer', { ...base, correct: false })
       playGentle()
-      speak(clipLine('sayLookAgain', lang), lang)
       firstTryRef.current = false
       setWrong((w) => [...w, id])
-      // make "let's look again" literal: replay the clip up to the freeze
-      replayTimer.current = setTimeout(replay, REPLAY_DELAY_MS)
+      // Make "let's look again" literal: replay the clip up to the freeze —
+      // but AFTER the line, not over it. The replay used to start on a fixed
+      // 900 ms timer while the spoken correction still had ~500 ms to run, so
+      // the clip's audio talked over the one sentence explaining what had
+      // happened. `speak`'s onEnd fires synchronously where speech is
+      // unavailable or muted (every standalone VR browser), so the replay
+      // still lands there.
+      const tok = ++replayTok.current
+      speak(clipLine('sayLookAgain', lang), lang, () => {
+        if (replayTok.current !== tok) return
+        replayTimer.current = setTimeout(replay, REPLAY_DELAY_MS)
+      })
     }
   }
 

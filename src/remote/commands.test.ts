@@ -173,6 +173,31 @@ describe('the rest of the controls', () => {
     expect(calls.settings).toEqual([{ inputMethod: 'dwell' }])
   })
 
+  it('clamps a volume the console asks for instead of dropping or trusting it', async () => {
+    const { ctx, calls } = makeCtx()
+    for (const volume of [0.5, 2, -1]) {
+      await applyRemoteCommand({ type: 'setting', payload: { volume } } as RemoteCommand, ctx)
+    }
+    // 1.5 from a newer console means "loudest", not "ignore me" — but a value
+    // out of range must never reach the gain nodes
+    expect(calls.settings).toEqual([{ volume: 0.5 }, { volume: 1 }, { volume: 0 }])
+  })
+
+  it('drops a volume that is not a number, rather than muting the child', async () => {
+    const { ctx, calls } = makeCtx()
+    await applyRemoteCommand(
+      { type: 'setting', payload: { volume: 'loud' } } as unknown as RemoteCommand,
+      ctx,
+    )
+    await applyRemoteCommand(
+      { type: 'setting', payload: { volume: Number.NaN } } as unknown as RemoteCommand,
+      ctx,
+    )
+    // an empty patch never reaches the store at all, so the level the child is
+    // already playing at is what stays
+    expect(calls.settings).toEqual([])
+  })
+
   it('lets the trainer loosen the dwell for an unsteady child mid-session', async () => {
     const { ctx, calls } = makeCtx()
     await applyRemoteCommand(

@@ -1,5 +1,5 @@
 import { beforeEach, expect, test } from 'vitest'
-import { useSettings } from './settings'
+import { nextVolumeStep, useSettings } from './settings'
 
 beforeEach(() => {
   localStorage.clear()
@@ -91,4 +91,74 @@ test('a store saved before the steadiness setting existed gets the standard one'
   )
   await useSettings.persist.rehydrate()
   expect(useSettings.getState().dwellProfile).toBe('standard')
+})
+
+
+test('volume keeps itself inside 0..1 however it is set', () => {
+  const { setVolume } = useSettings.getState()
+  setVolume(0.4)
+  expect(useSettings.getState().volume).toBe(0.4)
+  setVolume(5)
+  expect(useSettings.getState().volume).toBe(1)
+  setVolume(-2)
+  expect(useSettings.getState().volume).toBe(0)
+})
+
+test('a junk volume never silences the session — it falls back to what was set', () => {
+  const { setVolume } = useSettings.getState()
+  setVolume(0.8)
+  setVolume(Number.NaN)
+  // NaN would otherwise multiply every gain in the app to NaN, i.e. silence,
+  // and persist onto the headset for the next session too
+  expect(useSettings.getState().volume).toBe(1)
+})
+
+test('a store saved before the volume setting existed plays at full', async () => {
+  localStorage.setItem(
+    'autism-settings',
+    JSON.stringify({ state: { soundOn: true }, version: 0 }),
+  )
+  await useSettings.persist.rehydrate()
+  expect(useSettings.getState().volume).toBe(1)
+})
+
+test('a saved volume is kept', async () => {
+  localStorage.setItem(
+    'autism-settings',
+    JSON.stringify({ state: { volume: 0.25 }, version: 0 }),
+  )
+  await useSettings.persist.rehydrate()
+  expect(useSettings.getState().volume).toBe(0.25)
+})
+
+test('a corrupt saved volume leaves the level alone rather than silencing it', async () => {
+  useSettings.getState().setVolume(0.6)
+  localStorage.setItem(
+    'autism-settings',
+    JSON.stringify({ state: { volume: 'loud' }, version: 0 }),
+  )
+  await useSettings.persist.rehydrate()
+  // not 0, and not NaN — a bad value from an older or newer build must never
+  // be the reason a child's session has no sound
+  expect(useSettings.getState().volume).toBe(0.6)
+})
+
+
+test('the trainer’s volume chip steps down and wraps back to full', () => {
+  // a chip has no "direction", so getting stuck at 0 would leave the trainer
+  // no way back to sound without taking the headset off the child
+  expect(nextVolumeStep(1)).toBe(0.75)
+  expect(nextVolumeStep(0.75)).toBe(0.5)
+  expect(nextVolumeStep(0.5)).toBe(0.25)
+  expect(nextVolumeStep(0.25)).toBe(0)
+  expect(nextVolumeStep(0)).toBe(1)
+})
+
+test('the volume chip copes with a level that is not one of its steps', () => {
+  // Profile's slider moves in 5% steps, so the console is routinely handed a
+  // level that is between two chips
+  expect(nextVolumeStep(0.9)).toBe(0.75)
+  expect(nextVolumeStep(0.05)).toBe(0)
+  expect(nextVolumeStep(undefined)).toBe(0.75)
+  expect(nextVolumeStep(Number.NaN)).toBe(0.75)
 })

@@ -19,6 +19,8 @@ export const REMOTE_PROTOCOL_VERSION = 1
 export interface RemoteSettings {
   voiceOn: boolean
   soundOn: boolean
+  /** master level for everything the child hears, 0..1 (see state/settings) */
+  volume: number
   language: Lang
   inputMethod: InputMethod
   dwellProfile: DwellProfile

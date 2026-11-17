@@ -29,7 +29,8 @@
 - All 25 face photos measured for pixel dimensions and aspect.
 - Angular geometry computed from the shipped constants (reproduced inline below).
 
-> **Status.** **C1 is fixed** (commit below); everything else here is as found at `d014fcf`.
+> **Status.** **C1, C2 and C3 are fixed**, and the volume half of **D1** shipped with them.
+> Everything else here is as found at `d014fcf`.
 >
 > **Caveat on the screenshots.** The headless renderer is SwiftShader (software), so frame
 > rates and fill costs there mean nothing. Draw-call counts, texture-upload byte counts and
@@ -200,7 +201,7 @@ Fix in §4.1. **Nothing else in this review matters as much as this one.**
 > each photo, which in this pool is unrelated room background — including the weather poster
 > sitting beside the sad child.
 
-### C2 — The video clips' audio is outside the mute and volume system entirely `[MEASURED]`
+### C2 — The video clips' audio is outside the mute and volume system entirely `[MEASURED]` `[FIXED 2026-11-17 — code half]`
 
 `IdentifyEmotions360Game.tsx:88-97` creates the `<video>` with a comment that it is deliberately
 unmuted, "the clips' audio (reactions, exclamations) is part of the cue":
@@ -241,6 +242,26 @@ fall out of that, and the third is measurable.
    mitigation available to the adult in the room, and it is simultaneously a **stimulus-control
    problem**: auditory salience is confounded with clip identity and therefore with emotion.
 
+> **Resolved 2026-11-17 for problems 1 and 2; problem 3 is an asset change and is still open.**
+>
+> `volume` (0..1) is now a real setting: a slider in Profile, a stepping chip on the trainer's
+> phone, carried in the remote protocol and clamped on the way in so a junk value from a newer
+> console can never multiply every gain in the app by `NaN`. It is applied in the one place
+> every tone passes through (`sounds.ts`'s `emit`), on every praise clip, on every spoken
+> utterance, and — the actual hole — on the `<video>`, which now follows both `soundOn` and
+> `volume` **live**, because the trainer changes them while the child is still wearing the
+> headset. The same gap in the flat Emotion Clips twin is closed the same way.
+>
+> Pinned by `IdentifyEmotions360Game.audio.test.tsx`, which asserts the behaviour rather than
+> the wiring: the element mutes when the trainer switches sound off mid-session, follows the
+> level, and treats 0% as muted as well as zero-gain (some platforms ignore `volume` on the
+> element).
+>
+> **Problem 3 — the 41 dB loudness spread — is untouched**, and a volume control does not fix
+> it: one level cannot make `disgust_hard_2` (−53.8 LUFS) audible and `happy_2` (−12.5 LUFS)
+> comfortable at the same time. That needs the `loudnorm` pass in §4.3, which rewrites the
+> study's stimulus files and so is the researcher's call.
+
 **Related, and worth knowing even though it does *not* breach the photosensitivity threshold.**
 I measured per-frame mean luminance for all 24 clips. Two have large single-frame full-field
 transitions:
@@ -258,7 +279,7 @@ brightening across a 39°-wide screen in a headset, with no warning, no way to t
 no way to skip it, is a sensory-startle risk for precisely this population, and it lands on the
 *fear* trials where the child is already being shown a frightening expression.
 
-### C3 — Two human voices talk over each other on every correct answer (both games) `[REGRESSION]`
+### C3 — Two human voices talk over each other on every correct answer (both games) `[REGRESSION]` `[FIXED 2026-11-17]`
 
 The joint-attention review's **C3** was fixed on 2026-11-15 by adding `speakThenPraise`
 (`services/speech.ts:106`). It is used in `museum360` and `park360` and **nowhere else**:
@@ -301,6 +322,18 @@ replayTimer.current = setTimeout(replay, 900)    // clip audio starts ~500 ms be
 For an auditory-hypersensitive child this is an overload risk; for a child with receptive-language
 difficulty it makes the label — the one piece of vocabulary teaching in the game — unintelligible
 at the exact moment it is being reinforced. Fix in §4.3.
+
+> **Resolved 2026-11-17.** Emotion Room now uses `speakThenPraise`, the helper the
+> joint-attention fix added and never applied here. Emotion Cinema holds the clip's audio back
+> for 700 ms so the cheer lands first, and chains the post-error replay off the *end* of
+> "Let's look again" instead of racing it on a 900 ms timer — with a token so a callback can
+> never replay a clip for a question the child has already left. The flat twin had both
+> defects and is fixed the same way.
+>
+> Two audio-lifetime holes went with them: neither game cancelled `speechSynthesis` on unmount,
+> so the win line carried on over the Home screen or the next game, and the flat twin tracked
+> **none** of its timers — leaving during its celebration left one running that speaks the
+> "why?" question at whatever screen came next.
 
 ### C4 — Emotion Cinema's answer cards leave 0.96° of clear space between neighbours
 
@@ -399,7 +432,12 @@ mip chain for it on the fly, every round. Fix in §4.2 — which also fixes C1.
 
 ## 3. Design & UX recommendations
 
-**D1 — Ship a sensory profile. Still the biggest gap, and now a bigger one than in November.**
+**D1 — Ship a sensory profile. Half-closed on 2026-11-17: `volume` shipped, motion did not.**
+There is now one master level for everything the child hears, set in Profile and steppable from
+the trainer's phone mid-session (see C2). What follows still stands for everything *visual* —
+no `sensoryLevel`, and no scene loop consults `prefers-reduced-motion`.
+
+
 `state/settings.ts` exposes `voiceOn`/`soundOn` as booleans only: no volume, no speech rate, no
 stimulation level. `prefers-reduced-motion` appears **once** in `global.css` and in **zero** of
 the 7 `useFrame` animation loops in these two scenes. These two games make the gap worse than the
@@ -631,6 +669,11 @@ emotions this session's `buildTargets` will actually ask for. Either way the per
 goes to zero for repeats, which is most of them.
 
 ### 4.3 — Sequence the reinforcement audio (fixes C3)
+
+> **Shipped 2026-11-17**, with one change from the sketch below: the post-error replay is
+> chained off `speak`'s `onEnd` rather than left on a fixed timer, so it cannot race the
+> spoken correction on a device where speech is slower than expected. The `loudnorm` pass at
+> the end of this section is still open — it rewrites the study's stimulus files.
 
 ```tsx
 // EmotionRecognition360Game.tsx — pick()
@@ -909,12 +952,12 @@ Record `actualFreezeTime` either way (§4.6) so the residual slop is measurable 
 | | Item | Why first |
 |---|---|---|
 | 1 | ✅ **C1** — face aspect distortion (§4.1) | The stimulus itself was wrong, varied randomly within-subject, and broke the 2D↔360 comparison the study design rests on. **Fixed 2026-11-17**; the asset re-crop that would also close C6 and equalise framing across builds is left to the researcher. |
-| 2 | **C2** — clip audio outside mute/volume + 41 dB loudness spread (§4.3) | Child-safety: the adult in the room cannot turn down the loudest thing in the game. Also a stimulus-control defect. |
-| 3 | **C3** — two (three) voices at once (§4.3) | Sensory risk, and it buries the vocabulary teaching under the cheer. A four-line fix; the helper already exists. |
+| 2 | ✅ **C2** — clip audio outside mute/volume · ⬜ 41 dB loudness spread (§4.3) | The adult in the room can now turn down the loudest thing in the game, live. The loudness spread needs the asset pass and is still open. |
+| 3 | ✅ **C3** — two (three) voices at once (§4.3) | Fixed in both 360 games and the flat twin, along with two audio-lifetime holes found beside it. |
 | 4 | **C6** — per-round texture churn (§4.2) | Ten main-thread stalls per session is a judder source, and judder is a sickness source. Falls out of fixing C1 properly. |
 | 5 | **C5** / **C4** — confirm chip below the floor; 0.96° card gaps (§4.5, §4.4) | Ergonomics, and they tax exactly the children the dwell-forgiveness work exists for. Both need an on-device pilot before you pick a value. |
 | 6 | **D4** — no-response, replay and freeze logging (§4.6) | Cheap, and it closes a hole in data you are collecting now and cannot reconstruct later. |
-| 7 | **D1** — sensory profile + volume | The single largest accessibility gap in the whole app; still open from 2026-07 (U3) and 2026-11 (D1). |
+| 7 | ✅ volume · ⬜ **D1** motion | The audio half shipped 2026-11-17. The visual half — `sensoryLevel` and `prefers-reduced-motion` in the scene loops — is still the largest accessibility gap, open since 2026-07 (U3). |
 | 8 | **§4.7**, **§4.8** | Correctness and measurement precision; the three marked regressions should go in with whatever else touches these files. |
 
 ## Verify on device (cannot be settled from the code)

@@ -45,6 +45,13 @@ function cleanSettings(patch: Partial<RemoteSettings>): Partial<RemoteSettings> 
   const out: Partial<RemoteSettings> = {}
   if (typeof patch.voiceOn === 'boolean') out.voiceOn = patch.voiceOn
   if (typeof patch.soundOn === 'boolean') out.soundOn = patch.soundOn
+  // A level is the one setting here that is not an enum, so it is the one that
+  // can arrive as NaN or a string and poison every gain in the app. Clamped
+  // rather than dropped: a console asking for 1.5 means "loudest", not
+  // "ignore me".
+  if (typeof patch.volume === 'number' && Number.isFinite(patch.volume)) {
+    out.volume = Math.min(1, Math.max(0, patch.volume))
+  }
   if (LANGS.has(patch.language)) out.language = patch.language
   if (INPUT_METHODS.has(patch.inputMethod)) out.inputMethod = patch.inputMethod
   if (DWELL_PROFILES.has(patch.dwellProfile)) out.dwellProfile = patch.dwellProfile

@@ -7,7 +7,7 @@ import { ScoreBar } from '../../components/ScoreBar'
 import { PromptBanner } from '../../components/PromptBanner'
 import { GameOverDialog } from '../../components/GameOverDialog'
 import { WebGLGate } from '../../components/WebGLGate'
-import { praise, speak } from '../../services/speech'
+import { speak, speakThenPraise } from '../../services/speech'
 import { t, whoFeelsQuestion } from '../../i18n/strings'
 import { playGentle, playSuccess } from '../../services/sounds'
 import {
@@ -109,7 +109,17 @@ export function EmotionRecognition360Game() {
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const gapTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => () => clearTimers(), [])
+  useEffect(
+    () => () => {
+      clearTimers()
+      // The win line is spoken in `advance()` and nothing stopped it when the
+      // child or the trainer left during it, so it carried on over the Home
+      // screen or the next game. Unexplained speech from nowhere is exactly
+      // the wrong failure mode for a sound-sensitive child.
+      if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
+    },
+    [],
+  )
 
   useEffect(() => {
     void vrSupported().then(setCanVR)
@@ -242,8 +252,14 @@ export function EmotionRecognition360Game() {
 
     if (correct) {
       playSuccess()
-      speak(roomLine('sayCorrect', lang), lang)
-      praise()
+      // One voice at a time. `speak` is speechSynthesis and `praise` is a
+      // pre-recorded WebAudio clip, so starting both put two people saying
+      // different words over each other — an overload risk, and it buried the
+      // emotion label, which is the only vocabulary teaching in the game
+      // (review C3). `speakThenPraise` chains them, and falls straight through
+      // to the cheer where speech is unavailable, which is every standalone
+      // VR browser.
+      speakThenPraise(roomLine('sayCorrect', lang), lang)
     } else {
       playGentle()
       speak(roomLine('sayTryAgain', lang), lang)

@@ -6,6 +6,22 @@ import type { Lang } from '../i18n/strings'
 interface SettingsState {
   voiceOn: boolean
   soundOn: boolean
+  /**
+   * Master level for everything the child hears, 0..1 — the chimes, the praise
+   * clips, the spoken prompts, and the video clips in the two Emotion Clips
+   * games.
+   *
+   * `voiceOn`/`soundOn` are booleans, so until this existed the only lever a
+   * trainer had for a sound-sensitive child was off — which also removes the
+   * task's spoken instruction. Worse, the clips' own audio was outside even
+   * that: nothing ever set `muted` or `volume` on the <video>, so muting the
+   * app left the loudest thing in it playing at full level (review C2).
+   *
+   * Set at intake and changeable live from the trainer's phone, like
+   * `dwellProfile` — the point is to reach a child who is already wearing the
+   * headset.
+   */
+  volume: number
   // The single language every prompt, option and spoken line is shown in
   // (English or Malayalam), chosen in Profile → Language. Prompts used to show
   // both languages at once; now only this one is rendered and spoken.
@@ -29,12 +45,37 @@ interface SettingsState {
   vrPracticeDone: boolean
   setVoiceOn: (v: boolean) => void
   setSoundOn: (v: boolean) => void
+  setVolume: (v: number) => void
   setLanguage: (lang: Lang) => void
   setDifficulty: (game: GameId, d: Difficulty) => void
   setPlayMode: (mode: PlayMode) => void
   setInputMethod: (m: InputMethod) => void
   setDwellProfile: (p: DwellProfile) => void
   setVrPracticeDone: (v: boolean) => void
+}
+
+/** Keep a level in range, and treat junk (NaN, a string from an older console)
+ *  as "leave it alone" rather than silencing the child's session. */
+export function clampVolume(v: unknown, fallback = 1): number {
+  const n = typeof v === 'number' ? v : Number.NaN
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(1, Math.max(0, n))
+}
+
+/**
+ * The levels the trainer's remote steps through, loudest first.
+ *
+ * Their console has chips, not sliders — it gets pressed with one thumb while
+ * watching a child who has just flinched — so the control steps DOWN and wraps
+ * back to full at the bottom, because down is the direction someone reaching
+ * for it is almost always going.
+ */
+export const VOLUME_STEPS: readonly number[] = [1, 0.75, 0.5, 0.25, 0]
+
+/** The next level down from `current`, wrapping to full below the quietest. */
+export function nextVolumeStep(current: number | undefined): number {
+  const now = clampVolume(current)
+  return VOLUME_STEPS.find((v) => v < now - 0.01) ?? 1
 }
 
 const DWELL_PROFILE_IDS: ReadonlySet<string> = new Set<DwellProfile>([
@@ -48,6 +89,8 @@ export const useSettings = create<SettingsState>()(
     (set) => ({
       voiceOn: true,
       soundOn: true,
+      // full, which is how every session before this setting existed played
+      volume: 1,
       language: 'en',
       difficulty: { emotionrecognition: 'easy', emotionrecognition360: 'easy', blocks: 'easy', playroom360: 'easy', rollback: 'easy', football360: 'easy', museum: 'easy', museum360: 'easy', identifyemotions: 'easy', identifyemotions360: 'easy', calmcrew: 'easy', discovery: 'easy', park360: 'easy' },
       playMode: 'desktop',
@@ -59,6 +102,7 @@ export const useSettings = create<SettingsState>()(
       vrPracticeDone: false,
       setVoiceOn: (voiceOn) => set({ voiceOn }),
       setSoundOn: (soundOn) => set({ soundOn }),
+      setVolume: (v) => set({ volume: clampVolume(v) }),
       setLanguage: (language) => set({ language }),
       setDifficulty: (game, d) =>
         set((s) => ({ difficulty: { ...s.difficulty, [game]: d } })),
@@ -91,6 +135,9 @@ export const useSettings = create<SettingsState>()(
           dwellProfile: DWELL_PROFILE_IDS.has(p.dwellProfile as string)
             ? (p.dwellProfile as DwellProfile)
             : current.dwellProfile,
+          // a headset carrying a junk level would otherwise multiply every
+          // gain by NaN and leave the child with no sound at all
+          volume: clampVolume(p.volume, current.volume),
         }
       },
     },

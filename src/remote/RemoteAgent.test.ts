@@ -47,10 +47,12 @@ describe('what the headset reports about itself', () => {
     useSettings.getState().setLanguage('ml')
     useSettings.getState().setInputMethod('controller')
     useSettings.getState().setDwellProfile('high-support')
+    useSettings.getState().setVolume(0.5)
 
     expect(buildStatus().settings).toEqual({
       voiceOn: false,
       soundOn: true,
+      volume: 0.5,
       language: 'ml',
       inputMethod: 'controller',
       dwellProfile: 'high-support',

@@ -9,6 +9,7 @@ import { RemoteError, relayBase, remoteApi, setRelayBase } from '../remote/clien
 import { analytics } from '../services/analytics'
 import { flushOnReconnect } from '../services/writeQueue'
 import { DEFAULT_MIRROR_INTERVAL_MS } from '../remote/mirror'
+import { clampVolume, nextVolumeStep } from '../state/settings'
 import type { RemoteSettings, RemoteStatus } from '../remote/protocol'
 
 /**
@@ -476,6 +477,13 @@ function SettingsPanel({
           onClick={() => void send('setting', { soundOn: !settings.soundOn }, 'Sound')}
         >
           🔊 Sound {settings.soundOn ? 'on' : 'off'}
+        </button>
+        <button
+          type="button"
+          className="rc-chip"
+          onClick={() => void send('setting', { volume: nextVolumeStep(settings.volume) }, 'Volume')}
+        >
+          🔉 Volume {Math.round(clampVolume(settings.volume) * 100)}%
         </button>
         <button
           type="button"

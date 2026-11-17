@@ -94,6 +94,7 @@ export function RemoteAgent() {
         const s = useSettings.getState()
         if (patch.voiceOn !== undefined) s.setVoiceOn(patch.voiceOn)
         if (patch.soundOn !== undefined) s.setSoundOn(patch.soundOn)
+        if (patch.volume !== undefined) s.setVolume(patch.volume)
         if (patch.language !== undefined) s.setLanguage(patch.language)
         if (patch.inputMethod !== undefined) s.setInputMethod(patch.inputMethod)
         if (patch.dwellProfile !== undefined) s.setDwellProfile(patch.dwellProfile)
@@ -218,6 +219,7 @@ export function buildStatus(): RemoteStatus {
     settings: {
       voiceOn: settings.voiceOn,
       soundOn: settings.soundOn,
+      volume: settings.volume,
       language: settings.language,
       inputMethod: settings.inputMethod,
       dwellProfile: settings.dwellProfile,

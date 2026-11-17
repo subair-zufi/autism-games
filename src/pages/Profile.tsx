@@ -30,11 +30,13 @@ export function Profile() {
 
   const voiceOn = useSettings((s) => s.voiceOn)
   const soundOn = useSettings((s) => s.soundOn)
+  const volume = useSettings((s) => s.volume)
   const language = useSettings((s) => s.language)
   const inputMethod = useSettings((s) => s.inputMethod)
   const dwellProfile = useSettings((s) => s.dwellProfile)
   const setVoiceOn = useSettings((s) => s.setVoiceOn)
   const setSoundOn = useSettings((s) => s.setSoundOn)
+  const setVolume = useSettings((s) => s.setVolume)
   const setLanguage = useSettings((s) => s.setLanguage)
   const setInputMethod = useSettings((s) => s.setInputMethod)
   const setDwellProfile = useSettings((s) => s.setDwellProfile)
@@ -197,6 +199,31 @@ export function Profile() {
             🎵 Sounds {soundOn ? 'On' : 'Off'}
           </button>
         </div>
+
+        <label className="settings-label settings-volume" htmlFor="volume">
+          <span className="settings-label-title">Volume · {Math.round(volume * 100)}%</span>
+          <span className="settings-label-sub">
+            Chimes, spoken prompts, praise, and the video clips
+          </span>
+        </label>
+        <input
+          id="volume"
+          className="settings-range"
+          type="range"
+          min={0}
+          max={100}
+          step={5}
+          value={Math.round(volume * 100)}
+          onChange={(e) => setVolume(Number(e.target.value) / 100)}
+        />
+        <p className="settings-note">
+          Set this with the headset on the child, not on the desk — a headset's speakers sit far
+          closer to their ears than a laptop's, and the clips themselves vary a great deal in
+          loudness. It can also be changed mid-session from the trainer's phone, without taking
+          the headset off, which is the point: a child who flinches at a clip should not have to
+          wait for the session to end. At 0% the session is silent but the written prompt
+          remains, so the task still works for a child who reads it.
+        </p>
       </section>
 
       <RemoteControlCard />

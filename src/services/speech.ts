@@ -11,6 +11,8 @@ const SPEECH_LANG: Record<Lang, string> = { en: 'en-US', ml: 'ml-IN' }
 function utterance(text: string, lang: Lang): SpeechSynthesisUtterance {
   const u = new SpeechSynthesisUtterance(text)
   u.rate = 0.9 // slightly slow, clearer for students
+  // the master level covers everything the child hears, spoken prompts too
+  u.volume = useSettings.getState().volume
   u.lang = SPEECH_LANG[lang]
   if (lang !== 'en') {
     const voice = window.speechSynthesis

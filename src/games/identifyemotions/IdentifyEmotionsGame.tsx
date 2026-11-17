@@ -15,7 +15,7 @@
  * labeling. Author causes in `logic.ts` by watching the footage.
  */
 import { useEffect, useRef, useState } from 'react'
-import { useSettings } from '../../state/settings'
+import { clampVolume, useSettings } from '../../state/settings'
 import { useScores } from '../../state/scores'
 import { praise, speak } from '../../services/speech'
 import { playGentle, playSuccess } from '../../services/sounds'
@@ -43,8 +43,11 @@ export const GAME_KEY = 'identifyemotions'
 
 /** How long the ⭐ celebration shows before moving on. */
 const CELEBRATE_MS = 1300
-/** Pause before the automatic "let's look again" replay after a wrong pick. */
-const REPLAY_DELAY_MS = 900
+/** Pause before the automatic "let's look again" replay after a wrong pick,
+ *  once the spoken line has finished (it is chained off `speak`, not raced). */
+const REPLAY_DELAY_MS = 250
+/** How long a praise clip needs before the clip's own audio may come back. */
+const CHEER_MS = 700
 
 export function IdentifyEmotionsGame() {
   const lang = useSettings((s) => s.language)
@@ -71,11 +74,43 @@ export function IdentifyEmotionsGame() {
   const [frozen, setFrozen] = useState(false)
   const pausedRef = useRef(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  // Same hole as the 360 twin had (review C2): the clip's audio was outside
+  // `soundOn` entirely, so muting the app left the loudest thing in it
+  // playing. `key={q.clip.slug}` remounts the element per clip, so this has to
+  // re-apply on every render pass, not once.
+  const volume = useSettings((s) => s.volume)
+  const soundOn = useSettings((s) => s.soundOn)
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    v.muted = !soundOn || volume <= 0
+    v.volume = clampVolume(volume)
+  })
   // Latency anchors: when the freeze frame / cause question appeared.
   const frozenAtRef = useRef<number | null>(null)
   const causeAtRef = useRef<number | null>(null)
   const attemptRef = useRef(0)
   const firstTryRef = useRef(true)
+  const replayTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const resumeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const celebrateTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** guards the "let's look again" onEnd against a round that has moved on */
+  const replayTok = useRef(0)
+
+  // None of this screen's timers were tracked, so leaving during the
+  // celebration left one running that speaks the "why?" question — on the Home
+  // screen, or over the next game. Same class as the 360 twin's (review C3).
+  useEffect(
+    () => () => {
+      for (const t of [replayTimer, resumeTimer, celebrateTimer]) {
+        if (t.current) clearTimeout(t.current)
+        t.current = null
+      }
+      replayTok.current += 1
+      if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
+    },
+    [],
+  )
 
   const q: VideoQuestion | undefined = quiz[idx]
 
@@ -207,11 +242,13 @@ export function IdentifyEmotionsGame() {
       setCelebrating(true)
       playSuccess()
       praise()
-      // Positive reinforcement, then resume the clip before moving on.
-      void videoRef.current?.play()
+      // Positive reinforcement, THEN the clip — not both at once. The clip is
+      // unmuted by design, so resuming it here put the chime, the spoken cheer
+      // and the clip's own audio on top of each other (review C3).
+      resumeTimer.current = setTimeout(() => void videoRef.current?.play(), CHEER_MS)
       const nextScore = score + (firstTryRef.current ? 1 : 0)
       recordStep('answer', { ...base, correct: true, score: nextScore }, { score: nextScore })
-      setTimeout(() => {
+      celebrateTimer.current = setTimeout(() => {
         setScore(nextScore)
         setCelebrating(false)
         if (q.cause) {
@@ -226,12 +263,16 @@ export function IdentifyEmotionsGame() {
     } else {
       recordStep('answer', { ...base, correct: false })
       playGentle()
-      speak(t('sayLookAgain', lang), lang)
       firstTryRef.current = false
       setWrong((w) => [...w, id])
       // Make "let's look again" literal: automatically replay the clip up to
-      // the freeze frame so the learner re-inspects the expression.
-      setTimeout(replay, REPLAY_DELAY_MS)
+      // the freeze frame so the learner re-inspects the expression — after the
+      // spoken line, not over the top of it.
+      const tok = ++replayTok.current
+      speak(t('sayLookAgain', lang), lang, () => {
+        if (replayTok.current !== tok) return
+        replayTimer.current = setTimeout(replay, REPLAY_DELAY_MS)
+      })
     }
   }
 

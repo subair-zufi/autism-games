@@ -23,6 +23,8 @@ function audio(): AudioContext | null {
  */
 function tone(freq: number, startAt: number, duration: number, peak = 0.15) {
   if (!useSettings.getState().soundOn) return
+  // nothing to schedule at silence, and it saves building the context
+  if (useSettings.getState().volume <= 0) return
   if (ctx == null) {
     setTimeout(() => emit(freq, startAt, duration, peak), 0)
     return
@@ -33,6 +35,13 @@ function tone(freq: number, startAt: number, duration: number, peak = 0.15) {
 function emit(freq: number, startAt: number, duration: number, peak: number) {
   const ac = audio()
   if (!ac) return
+  // Read the level here rather than at the call site: every tone in the app
+  // passes through this one function, so this is the single place the master
+  // volume has to be applied (review D1). Deferred tones re-read it, which is
+  // what a trainer turning the level down mid-session should get.
+  const vol = useSettings.getState().volume
+  if (vol <= 0) return
+  peak *= vol
   const osc = ac.createOscillator()
   const gain = ac.createGain()
   const t = ac.currentTime + startAt
@@ -88,10 +97,15 @@ export function preloadClips(urls: readonly string[]) {
 }
 
 /** Play a bundled audio clip through the shared context. Caller gates on the
- *  relevant mute toggle (praise checks `voiceOn`), so this never checks it. */
+ *  relevant mute toggle (praise checks `voiceOn`), so this never checks it —
+ *  but the master level applies to everything the child hears, so it is
+ *  applied here. */
 export function playClip(url: string, volume = 1) {
   const ac = audio()
   if (!ac) return
+  const master = useSettings.getState().volume
+  if (master <= 0) return
+  volume *= master
   if (ac.state === 'suspended') void ac.resume()
   const start = (b: AudioBuffer) => {
     const src = ac.createBufferSource()
