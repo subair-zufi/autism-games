@@ -24,6 +24,8 @@ import {
   HELPER_LIFT,
   HELPER_SCALE,
   HELPER_SHOULDER_Y,
+  EXHIBIT_Y,
+  PEDESTAL_H,
   hitRadius,
   MAX_POINT_DEPRESSION_DEG,
   isDragTail,
@@ -37,8 +39,9 @@ import {
 // shorter pedestals than the flat-screen Museum Look: the exhibits sit a bit
 // lower so they clear the helper avatar standing behind the row (the avatar's
 // face and pointing arm stay readable above the exhibits)
-const PEDESTAL_H = 0.6
-const EXHIBIT_Y = PEDESTAL_H + 0.5 // must match logic.ts EXHIBIT_Y
+// both come from logic.ts, where the clearance maths that depends on them
+// lives — they used to be declared here too, with a comment asking the next
+// reader to keep them in step by hand
 /** the child's eye height — the camera stands here, at the centre of the rotunda */
 const EYE_Y = 1.7
 
@@ -562,7 +565,11 @@ const HELPER_Z = AVATAR_Z // the avatar stands at the arc's centre, behind the r
 const HELPER_POS = new THREE.Vector3(0, HELPER_LIFT, HELPER_Z)
 /** head pivot, world space — body-local 1.74 carried through the body scale */
 const HEAD_POS = new THREE.Vector3(0, HELPER_LIFT + 1.74 * HELPER_SCALE, HELPER_Z)
-const CHILD_EYES = new THREE.Vector3(0, 1.5, 0) // roughly the child's face
+// Roughly a child's face. 1.5 was a desk-height adult's, so the avatar made its
+// attention bid at a point above the head of the 1.05-1.35 m players it is
+// built for — looking over them rather than at them, which is a poor start to
+// an exchange whose whole currency is eye contact.
+const CHILD_EYES = new THREE.Vector3(0, 1.25, 0)
 const SHOULDER_LOCAL = new THREE.Vector3(0.3, HELPER_SHOULDER_Y, 0) // right shoulder, body-local
 /** the same shoulder as a WORLD offset from `HELPER_POS` (body-local × scale) */
 const SHOULDER_OFFSET = SHOULDER_LOCAL.clone().multiplyScalar(HELPER_SCALE)
